@@ -2,38 +2,78 @@
 import React, { useState } from "react";
 import { storage, db } from "../firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import "../assets/UploadForm.css";
 
 const UploadForm = ({ userData, site }) => {
   const [file, setFile] = useState(null);
   const [month, setMonth] = useState("");
   const [type, setType] = useState("In-House");
+  const [vendorName, setVendorName] = useState("");
+  const [equipmentName, setEquipmentName] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [success, setSuccess] = useState("");
-  
+  const [progress, setProgress] = useState(0);
+  const [message, setMessage] = useState("");
 
   const handleUpload = async () => {
-    if (!file || !month) return;
+    setMessage("");
 
-    const storageRef = ref(
-      storage,
-      `pm_files/${site}/${month}_${type}_${file.name}`
+    if (!file || !month || !type) {
+      setMessage("⚠️ Please fill in all required fields.");
+      return;
+    }
+
+    if (file.type !== "application/pdf") {
+      setMessage("❌ Only PDF files are allowed.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage("❌ File size exceeds 5MB limit.");
+      return;
+    }
+
+    // Check if same file name already exists
+    const reportsRef = collection(db, "pm_reports");
+    const q = query(
+      reportsRef,
+      where("site", "==", site),
+      where("month", "==", month),
+      where("type", "==", type)
     );
+    const snapshot = await getDocs(q);
+    const duplicate = snapshot.docs.some((doc) => {
+      const existingName = decodeURIComponent(doc.data().fileUrl.split("/").pop().split("?")[0]);
+      return existingName.includes(file.name);
+    });
+    if (duplicate) {
+      setMessage("⚠️ This exact file already exists for the selected month and type.");
+      return;
+    }
+
+    const path = `pm_files/${site}/${month}_${type}_${file.name}`;
+    const storageRef = ref(storage, path);
     const uploadTask = uploadBytesResumable(storageRef, file);
     setUploading(true);
+
     uploadTask.on(
       "state_changed",
-      null,
+      (snapshot) => {
+        const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+        setProgress(pct);
+      },
       (err) => {
-        alert("Upload error: " + err.message);
+        setMessage("❌ Upload error: " + err.message);
         setUploading(false);
       },
       async () => {
         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        await addDoc(collection(db, "pm_reports"), {
+        await addDoc(reportsRef, {
           site,
           month,
           type,
+          vendorName: type === "Vendor" ? vendorName : null,
+          equipmentName: type === "In-House" ? equipmentName : null,
           fileUrl: downloadURL,
           uploadedBy: {
             uid: userData.uid,
@@ -42,47 +82,82 @@ const UploadForm = ({ userData, site }) => {
           },
           timestamp: serverTimestamp()
         });
-        setSuccess("Uploaded successfully!");
+
+        setMessage("✅ File uploaded successfully!");
         setUploading(false);
         setFile(null);
         setMonth("");
-        setTimeout(() => setSuccess(""), 3000);
+        setVendorName("");
+        setEquipmentName("");
+        setProgress(0);
+
+        setTimeout(() => setMessage(""), 5000);
       }
     );
   };
 
   return (
-    <div className="mt-4">
-      <label className="block mb-1 text-sm">Month</label>
+    <div className="upload-form">
+      <label>Month:</label>
       <input
         type="month"
-        className="border p-1 w-full mb-2 rounded"
         value={month}
         onChange={(e) => setMonth(e.target.value)}
+        required
       />
-      <label className="block mb-1 text-sm">PM Type</label>
+
+      <label>PM Type:</label>
       <select
-        className="border p-1 w-full mb-2 rounded"
         value={type}
         onChange={(e) => setType(e.target.value)}
       >
-        <option>In-House</option>
-        <option>Vendor</option>
+        <option value="In-House">In-House</option>
+        <option value="Vendor">Vendor</option>
       </select>
+
+      {type === "Vendor" && (
+        <>
+          <label>Vendor Name:</label>
+          <input
+            type="text"
+            placeholder="Enter vendor name"
+            value={vendorName}
+            onChange={(e) => setVendorName(e.target.value)}
+            required
+          />
+        </>
+      )}
+
+      {type === "In-House" && (
+        <>
+          <label>Equipment Name:</label>
+          <input
+            type="text"
+            placeholder="Enter equipment name"
+            value={equipmentName}
+            onChange={(e) => setEquipmentName(e.target.value)}
+            required
+          />
+        </>
+      )}
+
+      <label>Choose PDF file:</label>
       <input
         type="file"
         accept="application/pdf"
-        className="mb-2"
         onChange={(e) => setFile(e.target.files[0])}
       />
+
       <button
-        disabled={uploading}
         onClick={handleUpload}
-        className="bg-green-600 text-white px-3 py-1 rounded disabled:opacity-50"
+        disabled={uploading}
+        className="upload-btn"
       >
-        {uploading ? "Uploading..." : "Upload PDF"}
+        {uploading ? `Uploading... ${progress}%` : "Upload PDF"}
       </button>
-      {success && <p className="text-green-600 text-sm mt-2">{success}</p>}
+
+      {uploading && <progress value={progress} max="100" />}
+      {message && <p className="upload-message">{message}</p>}
     </div>
   );
 };

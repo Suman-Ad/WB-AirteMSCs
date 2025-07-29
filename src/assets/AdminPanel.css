@@ -1,0 +1,89 @@
+.admin-panel {
+  padding: 1.5rem;
+}
+
+.admin-title {
+  font-size: 1.75rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.admin-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-filters select,
+.admin-filters input[type="month"],
+.admin-filters input[type="text"] {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.admin-table-wrapper {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.6rem;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.admin-table th {
+  background-color: #f1f5f9;
+}
+
+.admin-table td a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.admin-table .delete-btn {
+  color: #dc2626;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: bold;
+}
+
+.admin-table .delete-btn:hover {
+  color: #b91c1c;
+}
+
+.no-records {
+  text-align: center;
+  padding: 1rem;
+  color: #888;
+}
+
+.btn-promote {
+  background-color: #4caf50;
+  color: white;
+  padding: 0.3rem 0.5rem;
+  margin-right: 0.4rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-demote {
+  background-color: #f44336;
+  color: white;
+  padding: 0.3rem 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}

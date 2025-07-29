@@ -5,11 +5,16 @@ import {
   collection,
   getDocs,
   query,
-  orderBy
+  orderBy,
+  doc,
+  deleteDoc,
+  updateDoc
 } from "firebase/firestore";
+import "../assets/AdminPanel.css";
 
 const AdminPanel = ({ userData }) => {
   const [reports, setReports] = useState([]);
+  const [users, setUsers] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
 
   // Filters
@@ -18,6 +23,7 @@ const AdminPanel = ({ userData }) => {
   const [typeFilter, setTypeFilter] = useState("");
   const [searchUploader, setSearchUploader] = useState("");
 
+  // Fetch all PM reports
   const fetchAllReports = async () => {
     const q = query(collection(db, "pm_reports"), orderBy("timestamp", "desc"));
     const snapshot = await getDocs(q);
@@ -26,13 +32,23 @@ const AdminPanel = ({ userData }) => {
     setFilteredReports(data);
   };
 
+  // Fetch all users
+  const fetchAllUsers = async () => {
+    const snapshot = await getDocs(collection(db, "users"));
+    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    setUsers(data);
+  };
+
   useEffect(() => {
     fetchAllReports();
+    if (["Admin", "Super Admin"].includes(userData.role)) {
+      fetchAllUsers();
+    }
   }, []);
 
+  // Apply filters
   useEffect(() => {
     let filtered = reports;
-
     if (siteFilter) filtered = filtered.filter((r) => r.site === siteFilter);
     if (monthFilter) filtered = filtered.filter((r) => r.month === monthFilter);
     if (typeFilter) filtered = filtered.filter((r) => r.type === typeFilter);
@@ -41,24 +57,60 @@ const AdminPanel = ({ userData }) => {
         r.uploadedBy?.name?.toLowerCase().includes(searchUploader.toLowerCase()) ||
         r.uploadedBy?.email?.toLowerCase().includes(searchUploader.toLowerCase())
       );
-
     setFilteredReports(filtered);
   }, [siteFilter, monthFilter, typeFilter, searchUploader, reports]);
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this PM report?")) {
-      await db.collection("pm_reports").doc(id).delete();
+      await deleteDoc(doc(db, "pm_reports", id));
       fetchAllReports();
     }
   };
 
+  const handleRoleChange = async (userId, newRole) => {
+    try {
+      await updateDoc(doc(db, "users", userId), { role: newRole });
+      fetchAllUsers();
+    } catch (error) {
+      console.error("Role update failed:", error);
+    }
+  };
+
+  const canChangeRole = (targetUserRole, targetUserId) => {
+    if (!userData) return false;
+
+    const isSelf = targetUserId === userData.uid;
+
+    if (userData.role === "Super Admin") {
+      // Super Admin can change anyone's role (including own if needed)
+      return true;
+    }
+
+    if (userData.role === "Admin") {
+      if (isSelf) return false; // Admin cannot promote/demote self
+      if (targetUserRole === "Super Admin") return false; // Admin cannot touch Super Admin
+      return true; // Admin can manage users, super users, and other admins
+    }
+
+    return false;
+  };
+
+
+  const getNextRoles = (currentRole) => {
+    const roles = ["User", "Super User", "Admin", "Super Admin"];
+    const currentIndex = roles.indexOf(currentRole);
+    const next = roles[currentIndex + 1];
+    const prev = roles[currentIndex - 1];
+    return { promote: next, demote: prev };
+  };
+
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Admin Panel</h2>
+    <div className="admin-panel">
+      <h2 className="admin-title">Admin Panel</h2>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6">
-        <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)} className="border p-2 rounded">
+      <div className="admin-filters">
+        <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
           <option value="">All Sites</option>
           {[
             "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
@@ -73,10 +125,9 @@ const AdminPanel = ({ userData }) => {
           type="month"
           value={monthFilter}
           onChange={(e) => setMonthFilter(e.target.value)}
-          className="border p-2 rounded"
         />
 
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="border p-2 rounded">
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
           <option value="">All Types</option>
           <option value="In-House">In-House</option>
           <option value="Vendor">Vendor</option>
@@ -87,54 +138,46 @@ const AdminPanel = ({ userData }) => {
           placeholder="Search uploader name/email"
           value={searchUploader}
           onChange={(e) => setSearchUploader(e.target.value)}
-          className="border p-2 rounded"
         />
       </div>
 
-      {/* Data Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full border">
+      {/* PM Report Table */}
+      <div className="admin-table-wrapper">
+        <h3 className="admin-subtitle">📄 PM Reports Management</h3>
+        <table className="admin-table">
           <thead>
-            <tr className="bg-gray-200">
-              <th className="p-2 border">Site</th>
-              <th className="p-2 border">Month</th>
-              <th className="p-2 border">Type</th>
-              <th className="p-2 border">PDF</th>
-              <th className="p-2 border">Uploader</th>
-              <th className="p-2 border">Uploaded On</th>
-              <th className="p-2 border">Actions</th>
+            <tr>
+              <th>Site</th>
+              <th>Month</th>
+              <th>Type</th>
+              <th>Equipment / Vendor</th>
+              <th>PDF</th>
+              <th>Uploader</th>
+              <th>Uploaded On</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredReports.length ? (
               filteredReports.map((report) => (
                 <tr key={report.id}>
-                  <td className="p-2 border">{report.site}</td>
-                  <td className="p-2 border">{report.month}</td>
-                  <td className="p-2 border">{report.type}</td>
-                  <td className="p-2 border">
-                    <a
-                      href={report.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 underline"
-                    >
-                      View / Download
+                  <td>{report.site}</td>
+                  <td>{report.month}</td>
+                  <td>{report.type}</td>
+                  <td>{report.type === "Vendor" ? report.vendorName : report.equipmentName}</td>
+                  <td>
+                    <a href={report.fileUrl} target="_blank" rel="noopener noreferrer">
+                      View
                     </a>
                   </td>
-                  <td className="p-2 border">
+                  <td>
                     {report.uploadedBy?.name}
                     <br />
-                    <small className="text-gray-500">{report.uploadedBy?.email}</small>
+                    <small>{report.uploadedBy?.email}</small>
                   </td>
-                  <td className="p-2 border">
-                    {report.timestamp?.toDate().toLocaleString()}
-                  </td>
-                  <td className="p-2 border">
-                    <button
-                      onClick={() => handleDelete(report.id)}
-                      className="text-red-600 underline"
-                    >
+                  <td>{report.timestamp?.toDate().toLocaleString()}</td>
+                  <td>
+                    <button className="delete-btn" onClick={() => handleDelete(report.id)}>
                       Delete
                     </button>
                   </td>
@@ -142,14 +185,64 @@ const AdminPanel = ({ userData }) => {
               ))
             ) : (
               <tr>
-                <td colSpan="7" className="p-4 text-center text-gray-500">
-                  No matching records found.
-                </td>
+                <td colSpan="8" className="no-records">No matching records found.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {/* User Role Management */}
+      {["Admin", "Super Admin"].includes(userData.role) && (
+        <div className="admin-table-wrapper mt-10">
+          <h3 className="admin-subtitle">👥 User Role Management</h3>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Site</th>
+                <th>Role</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user) => {
+                const { promote, demote } = getNextRoles(user.role);
+                const canModify = canChangeRole(user.role, user.id);
+
+                return (
+                  <tr key={user.id}>
+                    <td>{user.name}</td>
+                    <td>{user.email}</td>
+                    <td>{user.site}</td>
+                    <td>{user.role}</td>
+                    <td>
+                      {promote && canModify && (
+                        <button
+                          className="btn-promote"
+                          onClick={() => handleRoleChange(user.id, promote)}
+                        >
+                          Promote to {promote}
+                        </button>
+                      )}
+                      {demote && canModify && (
+                        <button
+                          className="btn-demote"
+                          onClick={() => handleRoleChange(user.id, demote)}
+                        >
+                          Demote to {demote}
+                        </button>
+                      )}
+                      {!canModify && <span title="Not allowed">🔒</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

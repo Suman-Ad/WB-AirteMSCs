@@ -24,36 +24,36 @@ const Dashboard = ({ userData }) => {
   };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const uploadsRef = collection(db, "uploads");
-        const userUploadsQuery = query(
-          uploadsRef,
-          where("uploadedBy", "==", userData.email)
-        );
-        const snapshot = await getDocs(userUploadsQuery);
-        setUploadCount(snapshot.size);
+  const fetchStats = async () => {
+    try {
+      const reportsRef = collection(db, "pm_reports");
+      const userUploadsQuery = query(
+        reportsRef,
+        where("uploadedBy.email", "==", userData.email)
+      );
+      const snapshot = await getDocs(userUploadsQuery);
+      setUploadCount(snapshot.size);
 
-        const latestUploadQuery = query(
-          uploadsRef,
-          where("uploadedBy", "==", userData.email),
-          orderBy("uploadedAt", "desc"),
-          limit(1)
-        );
-        const latestSnapshot = await getDocs(latestUploadQuery);
-        if (!latestSnapshot.empty) {
-          const latestDoc = latestSnapshot.docs[0].data();
-          setLastUploadTime(latestDoc.uploadedAt.toDate().toLocaleString());
-        }
-      } catch (err) {
-        console.error("Error fetching upload stats:", err);
+      const latestUploadQuery = query(
+        reportsRef,
+        where("uploadedBy.email", "==", userData.email),
+        orderBy("timestamp", "desc"),
+        limit(1)
+      );
+      const latestSnapshot = await getDocs(latestUploadQuery);
+      if (!latestSnapshot.empty) {
+        const latestDoc = latestSnapshot.docs[0].data();
+        setLastUploadTime(latestDoc.timestamp.toDate().toLocaleString());
       }
-    };
-
-    if (userData?.email) {
-      fetchStats();
+    } catch (err) {
+      console.error("Error fetching upload stats:", err);
     }
-  }, [userData]);
+  };
+
+  if (userData?.email) {
+    fetchStats();
+  }
+}, [userData]);
 
   return (
     <div className="dashboard-container">

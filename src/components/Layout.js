@@ -19,7 +19,7 @@ const Layout = ({ userData, children }) => {
     <div className="layout">
       {/* Sidebar */}
       <div className={`sidebar ${collapsed ? "collapsed" : "expanded"}`}>
-        <Sidebar role={userData.role} collapsed={collapsed} />
+        <Sidebar userData={userData} collapsed={collapsed} />
       </div>
 
       {/* Main Area */}

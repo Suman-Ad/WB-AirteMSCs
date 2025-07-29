@@ -9,25 +9,32 @@ import {
   getDocs,
   deleteDoc,
   doc,
-  orderBy
+  orderBy,
 } from "firebase/firestore";
+import "../assets/SitePage.css";
 
 const SitePage = ({ userData }) => {
   const { siteName } = useParams();
   const [reports, setReports] = useState([]);
   const [filterMonth, setFilterMonth] = useState("");
+  const [message, setMessage] = useState("");
 
   const fetchReports = async () => {
-    let q = query(
-      collection(db, "pm_reports"),
-      where("site", "==", siteName),
-      orderBy("timestamp", "desc")
-    );
-    const snapshot = await getDocs(q);
-    const filtered = snapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .filter((doc) => (filterMonth ? doc.month === filterMonth : true));
-    setReports(filtered);
+    try {
+      const q = query(
+        collection(db, "pm_reports"),
+        where("site", "==", siteName),
+        orderBy("timestamp", "desc")
+      );
+      const snapshot = await getDocs(q);
+      let data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      if (filterMonth) {
+        data = data.filter((doc) => doc.month === filterMonth);
+      }
+      setReports(data);
+    } catch (err) {
+      console.error("Error fetching reports:", err);
+    }
   };
 
   useEffect(() => {
@@ -43,68 +50,47 @@ const SitePage = ({ userData }) => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this file?")) return;
     await deleteDoc(doc(db, "pm_reports", id));
+    setMessage("✅ Report deleted successfully.");
     fetchReports();
+    setTimeout(() => setMessage(""), 4000);
   };
 
-  return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-2">Site: {siteName}</h2>
-
-      <div className="mb-4">
-        <label className="mr-2">Filter by Month:</label>
-        <input
-          type="month"
-          value={filterMonth}
-          onChange={(e) => setFilterMonth(e.target.value)}
-          className="border px-2 py-1 rounded"
-        />
-        <button
-          onClick={() => setFilterMonth("")}
-          className="ml-2 text-blue-600 underline"
-        >
-          Clear
-        </button>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full border">
+  const renderTable = (type) => {
+    const filtered = reports.filter((r) => r.type === type);
+    return (
+      <div className="sitepage-table-wrapper">
+        <h3 className="sitepage-subheading">{type} PM Reports</h3>
+        <table className="sitepage-table">
           <thead>
-            <tr className="bg-gray-200">
-              <th className="p-2 border">Month</th>
-              <th className="p-2 border">Type</th>
-              <th className="p-2 border">PDF</th>
-              <th className="p-2 border">Uploaded By</th>
-              <th className="p-2 border">Uploaded On</th>
+            <tr>
+              <th>Month</th>
+              <th>{type === "Vendor" ? "Vendor Name" : "Equipment Name"}</th>
+              <th>PDF</th>
+              <th>Uploaded By</th>
+              <th>Uploaded On</th>
               {["Admin", "Super Admin", "Super User"].includes(userData.role) && (
-                <th className="p-2 border">Action</th>
+                <th>Action</th>
               )}
             </tr>
           </thead>
           <tbody>
-            {reports.length > 0 ? (
-              reports.map((report) => (
+            {filtered.length > 0 ? (
+              filtered.map((report) => (
                 <tr key={report.id}>
-                  <td className="p-2 border">{report.month}</td>
-                  <td className="p-2 border">{report.type}</td>
-                  <td className="p-2 border">
-                    <a
-                      href={report.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 underline"
-                    >
+                  <td>{report.month}</td>
+                  <td>{report.vendorName || report.equipmentName || "—"}</td>
+                  <td>
+                    <a href={report.fileUrl} target="_blank" rel="noreferrer">
                       View PDF
                     </a>
                   </td>
-                  <td className="p-2 border">{report.uploadedBy?.name}</td>
-                  <td className="p-2 border">
-                    {report.timestamp?.toDate().toLocaleString()}
-                  </td>
+                  <td>{report.uploadedBy?.name}</td>
+                  <td>{report.timestamp?.toDate().toLocaleString()}</td>
                   {canDelete(report) && (
-                    <td className="p-2 border">
+                    <td>
                       <button
+                        className="delete-btn"
                         onClick={() => handleDelete(report.id)}
-                        className="text-red-600 underline"
                       >
                         Delete
                       </button>
@@ -114,14 +100,37 @@ const SitePage = ({ userData }) => {
               ))
             ) : (
               <tr>
-                <td colSpan="6" className="p-4 text-center text-gray-500">
-                  No reports found.
+                <td colSpan="6" className="no-data">
+                  No {type} reports found.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+    );
+  };
+
+  return (
+    <div className="sitepage-container">
+      <h2 className="sitepage-title">Site: {siteName}</h2>
+
+      <div className="sitepage-filters">
+        <label>📅 Filter by Month:</label>
+        <input
+          type="month"
+          value={filterMonth}
+          onChange={(e) => setFilterMonth(e.target.value)}
+        />
+        <button onClick={() => setFilterMonth("")} className="clear-btn">
+          ❌ Clear
+        </button>
+      </div>
+
+      {message && <p className="sitepage-msg">{message}</p>}
+
+      {renderTable("In-House")}
+      {renderTable("Vendor")}
     </div>
   );
 };

@@ -1,6 +1,8 @@
+// src/pages/PMHistoryPage.js
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import "../assets/PMHistoryPage.css"; // optional for styling
 
 const PMHistoryPage = ({ userData }) => {
   const [uploads, setUploads] = useState([]);
@@ -10,16 +12,16 @@ const PMHistoryPage = ({ userData }) => {
     const fetchUploads = async () => {
       setLoading(true);
       try {
-        const uploadsRef = collection(db, "pmUploads");
+        const uploadsRef = collection(db, "pm_reports");
 
         let q;
         if (userData.role === "Admin" || userData.role === "Super Admin") {
-          q = query(uploadsRef, orderBy("createdAt", "desc"));
+          q = query(uploadsRef, orderBy("timestamp", "desc"));
         } else {
           q = query(
             uploadsRef,
             where("site", "==", userData.site),
-            orderBy("createdAt", "desc")
+            orderBy("timestamp", "desc")
           );
         }
 
@@ -41,42 +43,50 @@ const PMHistoryPage = ({ userData }) => {
   }, [userData]);
 
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">Uploaded PM History</h2>
+    <div className="pm-history-container">
+      <h2 className="pm-history-title">📁 Uploaded PM History</h2>
 
       {loading ? (
-        <p>Loading...</p>
+        <p className="loading">Loading...</p>
       ) : uploads.length === 0 ? (
-        <p>No uploads found.</p>
+        <p className="no-data">No uploads found.</p>
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th>File Name</th>
-              <th>PM Type</th>
-              <th>Site</th>
-              <th>Uploaded By</th>
-              <th>Date</th>
-              <th>Download</th>
-            </tr>
-          </thead>
-          <tbody>
-            {uploads.map((upload) => (
-              <tr key={upload.id} style={{ borderBottom: "1px solid #ccc" }}>
-                <td>{upload.fileName}</td>
-                <td>{upload.pmType}</td>
-                <td>{upload.site}</td>
-                <td>{upload.uploaderName} ({upload.uploaderRole})</td>
-                <td>{upload.createdAt?.toDate().toLocaleString()}</td>
-                <td>
-                  <a href={upload.fileUrl} target="_blank" rel="noreferrer">
-                    Download
-                  </a>
-                </td>
+        <div className="pm-history-wrapper">
+          <table className="pm-history-table">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Type</th>
+                <th>Site</th>
+                <th>Vendor / Equipment</th>
+                <th>Uploaded By</th>
+                <th>Uploaded On</th>
+                <th>View</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {uploads.map((upload) => (
+                <tr key={upload.id}>
+                  <td>{upload.month}</td>
+                  <td>{upload.type}</td>
+                  <td>{upload.site}</td>
+                  <td>
+                    {upload.type === "Vendor"
+                      ? upload.vendorName || "—"
+                      : upload.equipmentName || "—"}
+                  </td>
+                  <td>{upload.uploadedBy?.name}</td>
+                  <td>{upload.timestamp?.toDate().toLocaleString()}</td>
+                  <td>
+                    <a href={upload.fileUrl} target="_blank" rel="noreferrer" className="view-link">
+                      View PDF
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
