@@ -1,24 +1,104 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import AdminPanel from "./pages/AdminPanel";
+import SitePage from "./pages/SitePage";
+import Profile from "./pages/Profile"; // optional
+import PMHistoryPage from "./pages/PMHistoryPage";
+import Layout from "./components/Layout";
+import RoleProtectedRoute from "./components/RoleProtectedRoute";
 
 function App() {
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // 🔁 Restore login info on reload
+  useEffect(() => {
+    const storedUser = localStorage.getItem("userData");
+    if (storedUser) {
+      try {
+        setUserData(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Failed to parse user data:", e);
+        localStorage.removeItem("userData");
+      }
+    }
+    setLoading(false); // ⏳ Mark done loading
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login" element={<Login setUserData={setUserData} />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Protected Layout Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <RoleProtectedRoute userData={userData} allowedRoles={["User", "Super User", "Admin", "Super Admin"]}>
+              <Layout userData={userData}>
+                <Dashboard userData={userData} />
+              </Layout>
+            </RoleProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
+              <Layout userData={userData}>
+                <AdminPanel userData={userData} />
+              </Layout>
+            </RoleProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/site/:siteName"
+          element={
+            <RoleProtectedRoute userData={userData} allowedRoles={["Super User", "Admin", "Super Admin"]}>
+              <Layout userData={userData}>
+                <SitePage userData={userData} />
+              </Layout>
+            </RoleProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/history"
+          element={
+            <RoleProtectedRoute userData={userData} allowedRoles={["User", "Super User", "Admin", "Super Admin"]}>
+              <Layout userData={userData}>
+                <PMHistoryPage userData={userData} />
+              </Layout>
+            </RoleProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <RoleProtectedRoute userData={userData} allowedRoles={["User", "Super User", "Admin", "Super Admin"]}>
+              <Layout userData={userData}>
+                <Profile userData={userData} />
+              </Layout>
+            </RoleProtectedRoute>
+          }
+        />
+
+        {/* Fallback */}
+        <Route path="/" element={<Navigate to="/dashboard" />} />
+        <Route path="*" element={<Navigate to="/dashboard" />} />
+      </Routes>
+    </Router>
   );
 }
 

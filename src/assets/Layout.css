@@ -1,0 +1,103 @@
+/* layout.css */
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 240px;
+  background-color: #1f2937; /* dark gray */
+  color: white;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.sidebar h1 {
+  font-size: 20px;
+  margin-bottom: 30px;
+}
+
+.sidebar a {
+  display: block;
+  color: #ccc;
+  text-decoration: none;
+  padding: 10px 0;
+  border-bottom: 1px solid #333;
+}
+
+.sidebar a:hover {
+  color: white;
+  background-color: #374151; /* hover bg */
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.navbar {
+  height: 60px;
+  background-color: #f3f4f6; /* light gray */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid #ccc;
+}
+
+.navbar button {
+  background-color: #ef4444;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.content {
+  flex: 1;
+  padding: 20px;
+  background-color: #f9fafb;
+  overflow-y: auto;
+}
+
+/* Add to src/assets/layout.css */
+
+/* Responsive layout tweaks */
+.sidebar.collapsed {
+  width: 60px;
+  padding: 20px 10px;
+  overflow-x: hidden;
+  transition: width 0.3s ease;
+}
+
+.sidebar.expanded {
+  width: 240px;
+  transition: width 0.3s ease;
+}
+
+.sidebar a span.label {
+  display: inline;
+}
+
+.sidebar.collapsed a span.label {
+  display: none;
+}
+
+/* Toggle button style */
+.navbar .toggle-btn {
+  font-size: 24px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: #333;
+}
