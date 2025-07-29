@@ -66,6 +66,7 @@ const Register = () => {
   return (
     <div className="auth-container">
       <form onSubmit={handleRegister} className="auth-form">
+        <strong><h2>WB Airtel MSC's - Vertiv</h2></strong>
         <h2>Register</h2>
         {error && <p className="auth-error">{error}</p>}
         {successMsg && <p className="auth-success">{successMsg}</p>}

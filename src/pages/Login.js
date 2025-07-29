@@ -57,6 +57,8 @@ const Login = ({ setUserData }) => {
   return (
     <div className="auth-container">
       <form onSubmit={handleLogin} className="auth-form">
+        <strong><h2>WB Airtel MSC's - Vertiv</h2></strong>
+
         <h2 className="text-2xl font-bold mb-4">Login</h2>
         {error && <p className="auth-error">{error}</p>}
 
