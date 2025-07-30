@@ -24,36 +24,48 @@ const Dashboard = ({ userData }) => {
   };
 
   useEffect(() => {
-  const fetchStats = async () => {
-    try {
-      const reportsRef = collection(db, "pm_reports");
-      const userUploadsQuery = query(
-        reportsRef,
-        where("uploadedBy.email", "==", userData.email)
-      );
-      const snapshot = await getDocs(userUploadsQuery);
-      setUploadCount(snapshot.size);
+    const fetchStats = async () => {
+      try {
+        const reportsRef = collection(db, "pm_reports");
 
-      const latestUploadQuery = query(
-        reportsRef,
-        where("uploadedBy.email", "==", userData.email),
-        orderBy("timestamp", "desc"),
-        limit(1)
-      );
-      const latestSnapshot = await getDocs(latestUploadQuery);
-      if (!latestSnapshot.empty) {
-        const latestDoc = latestSnapshot.docs[0].data();
-        setLastUploadTime(latestDoc.timestamp.toDate().toLocaleString());
+        // Count all uploads by this user
+        const userUploadsQuery = query(
+          reportsRef,
+          where("uploadedBy.email", "==", userData.email)
+        );
+        const snapshot = await getDocs(userUploadsQuery);
+        setUploadCount(snapshot.size);
+
+        // Get latest upload with timestamp
+        const latestUploadQuery = query(
+          reportsRef,
+          where("uploadedBy.email", "==", userData.email),
+          orderBy("timestamp", "desc"),
+          limit(1)
+        );
+        const latestSnapshot = await getDocs(latestUploadQuery);
+
+        if (!latestSnapshot.empty) {
+          const latestDoc = latestSnapshot.docs[0].data();
+          if (latestDoc.timestamp?.toDate) {
+            setLastUploadTime(latestDoc.timestamp.toDate().toLocaleString());
+          } else {
+            console.warn("Missing or invalid timestamp:", latestDoc);
+          }
+        } else {
+          console.log("No uploads found for this user.");
+        }
+
+      } catch (err) {
+        console.error("Error fetching upload stats:", err);
       }
-    } catch (err) {
-      console.error("Error fetching upload stats:", err);
-    }
-  };
+    };
 
-  if (userData?.email) {
-    fetchStats();
-  }
-}, [userData]);
+    if (userData?.email) {
+      fetchStats();
+    }
+  }, [userData]);
+
 
   return (
     <div className="dashboard-container">

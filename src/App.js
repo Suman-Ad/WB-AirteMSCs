@@ -64,7 +64,7 @@ function App() {
         <Route
           path="/site/:siteName"
           element={
-            <RoleProtectedRoute userData={userData} allowedRoles={["Super User", "Admin", "Super Admin"]}>
+            <RoleProtectedRoute userData={userData} allowedRoles={["Super User", "Admin", "Super Admin", "User"]}>
               <Layout userData={userData}>
                 <SitePage userData={userData} />
               </Layout>
