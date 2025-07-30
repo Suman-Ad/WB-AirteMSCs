@@ -93,7 +93,7 @@ const Dashboard = ({ userData }) => {
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             rows={4}
-            className="w-full border p-2 rounded mb-2"
+            className="dashboard-instruction-panel"
           />
           <div className="flex gap-2">
             <button
@@ -117,7 +117,7 @@ const Dashboard = ({ userData }) => {
         </>
       ) : (
         <>
-          <p className="mb-2">{instructionText || "No instructions available."}</p>
+          <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
           {["Admin", "Super Admin"].includes(userData.role) && (
             <button
               className="text-blue-600 underline"

@@ -8,7 +8,7 @@ import {
   orderBy,
   doc,
   deleteDoc,
-  updateDoc
+  updateDoc,
 } from "firebase/firestore";
 import "../assets/AdminPanel.css";
 
@@ -16,14 +16,15 @@ const AdminPanel = ({ userData }) => {
   const [reports, setReports] = useState([]);
   const [users, setUsers] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({});
 
-  // Filters
-  const [siteFilter, setSiteFilter] = useState("");
-  const [monthFilter, setMonthFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [searchUploader, setSearchUploader] = useState("");
+  const siteList = [
+    "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
+    "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower",
+    "New Alipore", "SDF", "Siliguri"
+  ];
 
-  // Fetch all PM reports
   const fetchAllReports = async () => {
     const q = query(collection(db, "pm_reports"), orderBy("timestamp", "desc"));
     const snapshot = await getDocs(q);
@@ -32,7 +33,6 @@ const AdminPanel = ({ userData }) => {
     setFilteredReports(data);
   };
 
-  // Fetch all users
   const fetchAllUsers = async () => {
     const snapshot = await getDocs(collection(db, "users"));
     const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -46,7 +46,11 @@ const AdminPanel = ({ userData }) => {
     }
   }, []);
 
-  // Apply filters
+  const [siteFilter, setSiteFilter] = useState("");
+  const [monthFilter, setMonthFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [searchUploader, setSearchUploader] = useState("");
+
   useEffect(() => {
     let filtered = reports;
     if (siteFilter) filtered = filtered.filter((r) => r.site === siteFilter);
@@ -67,6 +71,38 @@ const AdminPanel = ({ userData }) => {
     }
   };
 
+  const handleEditClick = (report) => {
+    setEditingId(report.id);
+    setEditData({
+      site: report.site,
+      month: report.month,
+      type: report.type,
+      vendorName: report.vendorName || "",
+      equipmentName: report.equipmentName || "",
+    });
+  };
+
+  const handleEditSave = async (id) => {
+    const ref = doc(db, "pm_reports", id);
+    const payload = {
+      site: editData.site,
+      month: editData.month,
+      type: editData.type,
+      vendorName: editData.type === "Vendor" ? editData.vendorName : null,
+      equipmentName: editData.type === "In-House" ? editData.equipmentName : null,
+    };
+
+    await updateDoc(ref, payload);
+    setEditingId(null);
+    setEditData({});
+    fetchAllReports();
+  };
+
+  const handleEditCancel = () => {
+    setEditingId(null);
+    setEditData({});
+  };
+
   const handleRoleChange = async (userId, newRole) => {
     try {
       await updateDoc(doc(db, "users", userId), { role: newRole });
@@ -78,23 +114,15 @@ const AdminPanel = ({ userData }) => {
 
   const canChangeRole = (targetUserRole, targetUserId) => {
     if (!userData) return false;
-
     const isSelf = targetUserId === userData.uid;
 
-    if (userData.role === "Super Admin") {
-      // Super Admin can change anyone's role (including own if needed)
+    if (userData.role === "Super Admin") return true;
+    if (userData.role === "Admin") {
+      if (isSelf || targetUserRole === "Super Admin") return false;
       return true;
     }
-
-    if (userData.role === "Admin") {
-      if (isSelf) return false; // Admin cannot promote/demote self
-      if (targetUserRole === "Super Admin") return false; // Admin cannot touch Super Admin
-      return true; // Admin can manage users, super users, and other admins
-    }
-
     return false;
   };
-
 
   const getNextRoles = (currentRole) => {
     const roles = ["User", "Super User", "Admin", "Super Admin"];
@@ -112,20 +140,12 @@ const AdminPanel = ({ userData }) => {
       <div className="admin-filters">
         <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
           <option value="">All Sites</option>
-          {[
-            "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
-            "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower",
-            "New Alipore", "SDF", "Siliguri"
-          ].map((site) => (
+          {siteList.map((site) => (
             <option key={site} value={site}>{site}</option>
           ))}
         </select>
 
-        <input
-          type="month"
-          value={monthFilter}
-          onChange={(e) => setMonthFilter(e.target.value)}
-        />
+        <input type="month" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} />
 
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
           <option value="">All Types</option>
@@ -141,7 +161,7 @@ const AdminPanel = ({ userData }) => {
         />
       </div>
 
-      {/* PM Report Table */}
+      {/* PM Reports */}
       <div className="admin-table-wrapper">
         <h3 className="admin-subtitle">📄 PM Reports Management</h3>
         <table className="admin-table">
@@ -161,26 +181,79 @@ const AdminPanel = ({ userData }) => {
             {filteredReports.length ? (
               filteredReports.map((report) => (
                 <tr key={report.id}>
-                  <td>{report.site}</td>
-                  <td>{report.month}</td>
-                  <td>{report.type}</td>
-                  <td>{report.type === "Vendor" ? report.vendorName : report.equipmentName}</td>
-                  <td>
-                    <a href={report.fileUrl} target="_blank" rel="noopener noreferrer">
-                      View
-                    </a>
-                  </td>
-                  <td>
-                    {report.uploadedBy?.name}
-                    <br />
-                    <small>{report.uploadedBy?.email}</small>
-                  </td>
-                  <td>{report.timestamp?.toDate().toLocaleString()}</td>
-                  <td>
-                    <button className="delete-btn" onClick={() => handleDelete(report.id)}>
-                      Delete
-                    </button>
-                  </td>
+                  {editingId === report.id ? (
+                    <>
+                      <td>
+                        <select
+                          value={editData.site}
+                          onChange={(e) => setEditData({ ...editData, site: e.target.value })}
+                        >
+                          {siteList.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="month"
+                          value={editData.month}
+                          onChange={(e) => setEditData({ ...editData, month: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <select
+                          value={editData.type}
+                          onChange={(e) => setEditData({ ...editData, type: e.target.value })}
+                        >
+                          <option value="In-House">In-House</option>
+                          <option value="Vendor">Vendor</option>
+                        </select>
+                      </td>
+                      <td>
+                        {editData.type === "Vendor" ? (
+                          <input
+                            type="text"
+                            placeholder="Vendor Name"
+                            value={editData.vendorName}
+                            onChange={(e) => setEditData({ ...editData, vendorName: e.target.value })}
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="Equipment Name"
+                            value={editData.equipmentName}
+                            onChange={(e) => setEditData({ ...editData, equipmentName: e.target.value })}
+                          />
+                        )}
+                      </td>
+                      <td>—</td>
+                      <td>{report.uploadedBy?.name}<br /><small>{report.uploadedBy?.email}</small></td>
+                      <td>{report.timestamp?.toDate().toLocaleString()}</td>
+                      <td>
+                        <button onClick={() => handleEditSave(report.id)}>Save</button>
+                        <button onClick={handleEditCancel}>Cancel</button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td>{report.site}</td>
+                      <td>{report.month}</td>
+                      <td>{report.type}</td>
+                      <td>{report.type === "Vendor" ? report.vendorName : report.equipmentName}</td>
+                      <td>
+                        <a href={report.fileUrl} target="_blank" rel="noreferrer">View</a>
+                      </td>
+                      <td>
+                        {report.uploadedBy?.name}<br />
+                        <small>{report.uploadedBy?.email}</small>
+                      </td>
+                      <td>{report.timestamp?.toDate().toLocaleString()}</td>
+                      <td>
+                        <button className="edit-btn" onClick={() => handleEditClick(report)}>Edit</button>
+                        <button className="delete-btn" onClick={() => handleDelete(report.id)}>Delete</button>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))
             ) : (
@@ -192,7 +265,7 @@ const AdminPanel = ({ userData }) => {
         </table>
       </div>
 
-      {/* User Role Management */}
+      {/* User Management */}
       {["Admin", "Super Admin"].includes(userData.role) && (
         <div className="admin-table-wrapper mt-10">
           <h3 className="admin-subtitle">👥 User Role Management</h3>
@@ -210,7 +283,6 @@ const AdminPanel = ({ userData }) => {
               {users.map((user) => {
                 const { promote, demote } = getNextRoles(user.role);
                 const canModify = canChangeRole(user.role, user.id);
-
                 return (
                   <tr key={user.id}>
                     <td>{user.name}</td>
