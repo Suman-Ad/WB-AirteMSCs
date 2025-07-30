@@ -30,7 +30,7 @@ const Layout = ({ userData, children }) => {
             ☰
           </button>
           <div>
-            Welcome, {userData.name} ({userData.role})
+            WB Airtel - Vertiv - MSC PM Managment Tracker, {userData.name} ({userData.role})
           </div>
           <button onClick={handleLogout}>Logout</button>
         </div>

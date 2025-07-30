@@ -5,6 +5,7 @@ import UploadForm from "../components/UploadForm";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "../firebase"; // make sure this is your firestore instance
 import "../assets/Dashboard.css";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 
 const siteList = [
@@ -17,11 +18,27 @@ const Dashboard = ({ userData }) => {
   const navigate = useNavigate();
   const [uploadCount, setUploadCount] = useState(0);
   const [lastUploadTime, setLastUploadTime] = useState(null);
+  // Add new states
+  const [instructionText, setInstructionText] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
 
   const canAccessSite = (site) => {
     if (!userData) return false;
     return userData.role === "Super Admin" || userData.role === "Admin" || userData.site === site;
   };
+
+  useEffect(() => {
+    const fetchInstruction = async () => {
+      const docRef = doc(db, "config", "dashboard_instruction");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setInstructionText(docSnap.data().text || "");
+        setEditText(docSnap.data().text || "");
+      }
+    };
+    fetchInstruction();
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -69,6 +86,49 @@ const Dashboard = ({ userData }) => {
 
   return (
     <div className="dashboard-container">
+      <h3 className="dashboard-header">📢 Instruction</h3>
+      {isEditing ? (
+        <>
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            rows={4}
+            className="w-full border p-2 rounded mb-2"
+          />
+          <div className="flex gap-2">
+            <button
+              className="bg-blue-600 text-white px-3 py-1 rounded"
+              onClick={async () => {
+                const docRef = doc(db, "config", "dashboard_instruction");
+                await setDoc(docRef, { text: editText });
+                setInstructionText(editText);
+                setIsEditing(false);
+              }}
+            >
+              Save
+            </button>
+            <button
+              className="bg-gray-400 text-white px-3 py-1 rounded"
+              onClick={() => setIsEditing(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="mb-2">{instructionText || "No instructions available."}</p>
+          {["Admin", "Super Admin"].includes(userData.role) && (
+            <button
+              className="text-blue-600 underline"
+              onClick={() => setIsEditing(true)}
+            >
+              Edit Instruction
+            </button>
+          )}
+        </>
+      )}
+
       <h2 className="dashboard-header">Welcome, {userData?.name}</h2>
       <p className="dashboard-subinfo">
         Role: <strong>{userData?.role}</strong> | Site: <strong>{userData?.site || "All"}</strong>

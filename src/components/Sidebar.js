@@ -8,7 +8,7 @@ const Sidebar = ({ userData, collapsed }) => {
 
   return (
     <div>
-      <h1>{collapsed ? "📋" : "📋 MSC PM"}</h1>
+      <h1>{collapsed ? "📋" : "📋 MENU"}</h1>
       <nav>
         <Link to="/dashboard">🏠 <span className="label">Dashboard</span></Link>
 
