@@ -98,7 +98,7 @@ const UploadForm = ({ userData, site }) => {
 
   return (
     <div className="upload-form">
-      <label>Month:</label>
+      <label>Month: (Select From Calender)</label>
       <input
         type="month"
         value={month}
@@ -106,7 +106,7 @@ const UploadForm = ({ userData, site }) => {
         required
       />
 
-      <label>PM Type:</label>
+      <label>PM Type: (In-House/Vendor..) </label>
       <select
         value={type}
         onChange={(e) => setType(e.target.value)}
@@ -130,7 +130,7 @@ const UploadForm = ({ userData, site }) => {
 
       {type === "In-House" && (
         <>
-          <label>Equipment Name:</label>
+          <label>Equipment Name: (DG, UPS, SMPS, PAC, Panel etc..)</label>
           <input
             type="text"
             placeholder="Enter equipment name"

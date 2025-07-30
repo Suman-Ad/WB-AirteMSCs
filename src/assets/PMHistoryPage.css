@@ -40,3 +40,46 @@
   color: #777;
   padding: 1rem;
 }
+
+.zip-btn {
+  margin-left: 1rem;
+  padding: 4px 10px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.zip-btn:hover {
+  background-color: #2563eb;
+}
+
+.view-link {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.pm-site-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.zip-btn {
+  margin-left: 1rem;
+  padding: 4px 10px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.zip-btn:hover {
+  background-color: #2563eb;
+}
+
+.pm-history-filter {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}

@@ -1,21 +1,35 @@
-// src/pages/PMHistoryPage.js
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
-import "../assets/PMHistoryPage.css"; // optional for styling
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import "../assets/PMHistoryPage.css";
 
 const PMHistoryPage = ({ userData }) => {
   const [uploads, setUploads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({});
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [monthFilter, setMonthFilter] = useState("");
 
   useEffect(() => {
     const fetchUploads = async () => {
       setLoading(true);
       try {
         const uploadsRef = collection(db, "pm_reports");
-
         let q;
-        if (userData.role === "Admin" || userData.role === "Super Admin") {
+
+        if (["Admin", "Super Admin"].includes(userData.role)) {
           q = query(uploadsRef, orderBy("timestamp", "desc"));
         } else {
           q = query(
@@ -25,15 +39,15 @@ const PMHistoryPage = ({ userData }) => {
           );
         }
 
-        const querySnapshot = await getDocs(q);
-        const result = querySnapshot.docs.map((doc) => ({
+        const snapshot = await getDocs(q);
+        const result = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
         setUploads(result);
-      } catch (error) {
-        console.error("Error fetching uploads:", error);
+      } catch (err) {
+        console.error("Error fetching uploads:", err);
       } finally {
         setLoading(false);
       }
@@ -42,51 +56,223 @@ const PMHistoryPage = ({ userData }) => {
     fetchUploads();
   }, [userData]);
 
+  const filteredUploads = uploads.filter((upload) => {
+    const matchType = typeFilter === "All" || upload.type === typeFilter;
+    const matchMonth = !monthFilter || upload.month === monthFilter;
+    return matchType && matchMonth;
+  });
+
+  const groupedBySite = filteredUploads.reduce((acc, item) => {
+    acc[item.site] = acc[item.site] || [];
+    acc[item.site].push(item);
+    return acc;
+  }, {});
+
+  const handleDownloadZip = async (siteUploads, site) => {
+    const zip = new JSZip();
+
+    for (const upload of siteUploads) {
+      try {
+        const folder = zip.folder(upload.type); // "Vendor" or "In-House"
+        const response = await fetch(upload.fileUrl);
+        const blob = await response.blob();
+        const fileName = `${upload.month}_${upload.type}_${upload.vendorName || upload.equipmentName || "PM"}.pdf`;
+        folder.file(fileName, blob);
+      } catch (error) {
+        console.error(`Failed to fetch file: ${upload.fileUrl}`);
+      }
+    }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    saveAs(zipBlob, `PM_Reports_${site}.zip`);
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Delete this PM report?")) {
+      await deleteDoc(doc(db, "pm_reports", id));
+      setUploads((prev) => prev.filter((r) => r.id !== id));
+    }
+  };
+
+  const handleEditClick = (report) => {
+    setEditingId(report.id);
+    setEditData({
+      month: report.month,
+      type: report.type,
+      vendorName: report.vendorName || "",
+      equipmentName: report.equipmentName || "",
+    });
+  };
+
+  const handleEditSave = async (id) => {
+    const ref = doc(db, "pm_reports", id);
+    const updated = {
+      month: editData.month,
+      type: editData.type,
+      vendorName: editData.type === "Vendor" ? editData.vendorName : null,
+      equipmentName: editData.type === "In-House" ? editData.equipmentName : null,
+    };
+
+    await updateDoc(ref, updated);
+    setEditingId(null);
+    setEditData({});
+    const refreshed = uploads.map((r) =>
+      r.id === id ? { ...r, ...updated } : r
+    );
+    setUploads(refreshed);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditData({});
+  };
+
   return (
     <div className="pm-history-container">
       <h2 className="pm-history-title">📁 Uploaded PM History</h2>
 
+      {/* Filters */}
+      <div className="pm-history-filter">
+        <label>Type:</label>
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+          <option value="All">All</option>
+          <option value="In-House">In-House</option>
+          <option value="Vendor">Vendor</option>
+        </select>
+
+        <label style={{ marginLeft: "1rem" }}>Month:</label>
+        <input
+          type="month"
+          value={monthFilter}
+          onChange={(e) => setMonthFilter(e.target.value)}
+        />
+      </div>
+
       {loading ? (
         <p className="loading">Loading...</p>
-      ) : uploads.length === 0 ? (
+      ) : Object.keys(groupedBySite).length === 0 ? (
         <p className="no-data">No uploads found.</p>
       ) : (
-        <div className="pm-history-wrapper">
-          <table className="pm-history-table">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Type</th>
-                <th>Site</th>
-                <th>Vendor / Equipment</th>
-                <th>Uploaded By</th>
-                <th>Uploaded On</th>
-                <th>View</th>
-              </tr>
-            </thead>
-            <tbody>
-              {uploads.map((upload) => (
-                <tr key={upload.id}>
-                  <td>{upload.month}</td>
-                  <td>{upload.type}</td>
-                  <td>{upload.site}</td>
-                  <td>
-                    {upload.type === "Vendor"
-                      ? upload.vendorName || "—"
-                      : upload.equipmentName || "—"}
-                  </td>
-                  <td>{upload.uploadedBy?.name}</td>
-                  <td>{upload.timestamp?.toDate().toLocaleString()}</td>
-                  <td>
-                    <a href={upload.fileUrl} target="_blank" rel="noreferrer" className="view-link">
-                      View PDF
-                    </a>
-                  </td>
+        Object.keys(groupedBySite).map((site) => (
+          <div key={site} className="pm-site-group">
+            <h3 className="pm-site-title">
+              🏢 {site}
+              {["Admin", "Super Admin"].includes(userData.role) && (
+                <button
+                  className="zip-btn"
+                  onClick={() => handleDownloadZip(groupedBySite[site], site)}
+                >
+                  ⬇️ Download All as ZIP
+                </button>
+              )}
+            </h3>
+            <table className="pm-history-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Type</th>
+                  <th>Vendor / Equipment</th>
+                  <th>Uploaded By</th>
+                  <th>Uploaded On</th>
+                  <th>PDF</th>
+                  {["Admin", "Super Admin"].includes(userData.role) && <th>Actions</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {groupedBySite[site].map((upload) => (
+                  <tr key={upload.id}>
+                    {editingId === upload.id ? (
+                      <>
+                        <td>
+                          <input
+                            type="month"
+                            value={editData.month}
+                            onChange={(e) =>
+                              setEditData({ ...editData, month: e.target.value })
+                            }
+                          />
+                        </td>
+                        <td>
+                          <select
+                            value={editData.type}
+                            onChange={(e) =>
+                              setEditData({ ...editData, type: e.target.value })
+                            }
+                          >
+                            <option value="In-House">In-House</option>
+                            <option value="Vendor">Vendor</option>
+                          </select>
+                        </td>
+                        <td>
+                          {editData.type === "Vendor" ? (
+                            <input
+                              type="text"
+                              placeholder="Vendor Name"
+                              value={editData.vendorName}
+                              onChange={(e) =>
+                                setEditData({
+                                  ...editData,
+                                  vendorName: e.target.value,
+                                })
+                              }
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="Equipment Name"
+                              value={editData.equipmentName}
+                              onChange={(e) =>
+                                setEditData({
+                                  ...editData,
+                                  equipmentName: e.target.value,
+                                })
+                              }
+                            />
+                          )}
+                        </td>
+                        <td>{upload.uploadedBy?.name}</td>
+                        <td>{upload.timestamp?.toDate().toLocaleString()}</td>
+                        <td>—</td>
+                        <td>
+                          <button onClick={() => handleEditSave(upload.id)}>Save</button>
+                          <button onClick={handleCancelEdit}>Cancel</button>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td>{upload.month}</td>
+                        <td>{upload.type}</td>
+                        <td>
+                          {upload.type === "Vendor"
+                            ? upload.vendorName || "—"
+                            : upload.equipmentName || "—"}
+                        </td>
+                        <td>{upload.uploadedBy?.name}</td>
+                        <td>{upload.timestamp?.toDate().toLocaleString()}</td>
+                        <td>
+                          <a
+                            href={upload.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="view-link"
+                          >
+                            View PDF
+                          </a>
+                        </td>
+                        {["Admin", "Super Admin"].includes(userData.role) && (
+                          <td>
+                            <button onClick={() => handleEditClick(upload)}>Edit</button>
+                            <button onClick={() => handleDelete(upload.id)}>Delete</button>
+                          </td>
+                        )}
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))
       )}
     </div>
   );
