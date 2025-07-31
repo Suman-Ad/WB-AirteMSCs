@@ -293,6 +293,7 @@ const AdminPanel = ({ userData }) => {
                 <th>Email</th>
                 <th>Site</th>
                 <th>Role</th>
+                <th>Designation</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -308,6 +309,7 @@ const AdminPanel = ({ userData }) => {
                     <td>{user.email}</td>
                     <td>{user.site}</td>
                     <td>{user.role}</td>
+                    <td>{user.designation}</td>
                     <td>
                       {promote && canModify && (
                         <button

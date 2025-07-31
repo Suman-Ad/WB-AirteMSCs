@@ -1,4 +1,3 @@
-// src/pages/ProfilePage.js
 import React, { useState, useEffect } from "react";
 import { db, storage } from "../firebase";
 import {
@@ -23,6 +22,7 @@ const ProfilePage = ({ userData }) => {
   const [form, setForm] = useState({
     name: "",
     site: "",
+    designation: "",
     photoURL: ""
   });
   const [photo, setPhoto] = useState(null);
@@ -33,6 +33,7 @@ const ProfilePage = ({ userData }) => {
       setForm({
         name: userData.name || "",
         site: userData.site || "",
+        designation: userData.designation || "",
         photoURL: userData.photoURL || ""
       });
     }
@@ -60,22 +61,22 @@ const ProfilePage = ({ userData }) => {
     try {
       let photoURL = form.photoURL;
 
-      // Upload new profile photo if selected
       if (photo) {
         const photoRef = ref(storage, `profile_photos/${user.uid}.jpg`);
         await uploadBytes(photoRef, photo);
         photoURL = await getDownloadURL(photoRef);
       }
 
-      // Update Firestore
+      // Firestore update
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
         name: form.name,
         site: form.site,
+        designation: form.designation,
         photoURL
       });
 
-      // Update Firebase Auth profile
+      // Firebase Auth update
       await updateProfile(user, {
         displayName: form.name,
         photoURL
@@ -104,13 +105,13 @@ const ProfilePage = ({ userData }) => {
       <h2 className="profile-title">👤 Profile</h2>
 
       {/* Profile Image */}
-      {form.photoURL && (
+      <div className="profile-image-section">
         <img
-          src={form.photoURL}
+          src={form.photoURL || "/default-avatar.png"}
           alt="Profile"
           className="profile-avatar"
         />
-      )}
+      </div>
 
       {editMode && (
         <div className="profile-row">
@@ -158,6 +159,21 @@ const ProfilePage = ({ userData }) => {
           </select>
         ) : (
           <span>{form.site || "N/A"}</span>
+        )}
+      </div>
+
+      {/* Designation */}
+      <div className="profile-row">
+        <label>Designation:</label>
+        {editMode ? (
+          <input
+            type="text"
+            name="designation"
+            value={form.designation}
+            onChange={handleChange}
+          />
+        ) : (
+          <span>{form.designation || "N/A"}</span>
         )}
       </div>
 
