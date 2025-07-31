@@ -2,11 +2,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import UploadForm from "../components/UploadForm";
-import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
-import { db } from "../firebase"; // make sure this is your firestore instance
+import { collection, query, where, getDocs, orderBy, limit, doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "../firebase";
 import "../assets/Dashboard.css";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-
 
 const siteList = [
   "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
@@ -18,10 +16,12 @@ const Dashboard = ({ userData }) => {
   const navigate = useNavigate();
   const [uploadCount, setUploadCount] = useState(0);
   const [lastUploadTime, setLastUploadTime] = useState(null);
-  // Add new states
   const [instructionText, setInstructionText] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState("");
+  const [uploadSummary, setUploadSummary] = useState({});
+  const [summarySiteFilter, setSummarySiteFilter] = useState("");
+  const [summaryMonthFilter, setSummaryMonthFilter] = useState("");
 
   const canAccessSite = (site) => {
     if (!userData) return false;
@@ -45,7 +45,6 @@ const Dashboard = ({ userData }) => {
       try {
         const reportsRef = collection(db, "pm_reports");
 
-        // Count all uploads by this user
         const userUploadsQuery = query(
           reportsRef,
           where("uploadedBy.email", "==", userData.email)
@@ -53,7 +52,6 @@ const Dashboard = ({ userData }) => {
         const snapshot = await getDocs(userUploadsQuery);
         setUploadCount(snapshot.size);
 
-        // Get latest upload with timestamp
         const latestUploadQuery = query(
           reportsRef,
           where("uploadedBy.email", "==", userData.email),
@@ -66,11 +64,7 @@ const Dashboard = ({ userData }) => {
           const latestDoc = latestSnapshot.docs[0].data();
           if (latestDoc.timestamp?.toDate) {
             setLastUploadTime(latestDoc.timestamp.toDate().toLocaleString());
-          } else {
-            console.warn("Missing or invalid timestamp:", latestDoc);
           }
-        } else {
-          console.log("No uploads found for this user.");
         }
 
       } catch (err) {
@@ -83,6 +77,31 @@ const Dashboard = ({ userData }) => {
     }
   }, [userData]);
 
+  useEffect(() => {
+    const fetchUploadSummary = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "pm_reports"));
+        const data = snapshot.docs.map((doc) => doc.data());
+
+        const summary = {};
+        data.forEach((doc) => {
+          const { site, month, type } = doc;
+          if (!site || !month || !type) return;
+          summary[site] = summary[site] || {};
+          summary[site][month] = summary[site][month] || { "In-House": 0, "Vendor": 0 };
+          summary[site][month][type] += 1;
+        });
+
+        setUploadSummary(summary);
+      } catch (err) {
+        console.error("Failed to fetch upload summary:", err);
+      }
+    };
+
+    if (["Admin", "Super Admin"].includes(userData.role)) {
+      fetchUploadSummary();
+    }
+  }, [userData]);
 
   return (
     <div className="dashboard-container">
@@ -134,22 +153,80 @@ const Dashboard = ({ userData }) => {
         Role: <strong>{userData?.role}</strong> | Site: <strong>{userData?.site || "All"}</strong>
       </p>
 
-      {/* Quick Stats Panel */}
+      {/* Quick Stats */}
       <div className="dashboard-container">
         <h3 className="dashboard-header">📊 Quick Stats</h3>
         <p className="dashboard-subinfo">Total Uploads: <strong>{uploadCount}</strong></p>
         <p>Last Upload: <strong>{lastUploadTime || "N/A"}</strong></p>
       </div>
 
-      {/* Site Cards */}
+      {/* Upload Summary Table (Visible to Admins) */}
+      {["Admin", "Super Admin"].includes(userData.role) && (
+        <div className="dashboard-summary-table">
+          <h3 className="dashboard-header">📄 Upload Count Summary</h3>
+
+          {/* Filters */}
+          <div className="dashboard-filter-row">
+            <label>Site:</label>
+            <select
+              value={summarySiteFilter}
+              onChange={(e) => setSummarySiteFilter(e.target.value)}
+            >
+              <option value="">All Sites</option>
+              {siteList.map((site) => (
+                <option key={site} value={site}>
+                  {site}
+                </option>
+              ))}
+            </select>
+
+            <label style={{ marginLeft: "1rem" }}>Month:</label>
+            <input
+              type="month"
+              value={summaryMonthFilter}
+              onChange={(e) => setSummaryMonthFilter(e.target.value)}
+            />
+          </div>
+
+          {/* Table */}
+          <table className="summary-table">
+            <thead>
+              <tr>
+                <th>Site</th>
+                <th>Month</th>
+                <th>In-House</th>
+                <th>Vendor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(uploadSummary).map((site) => {
+                if (summarySiteFilter && site !== summarySiteFilter) return null;
+                return Object.keys(uploadSummary[site])
+                  .filter((month) =>
+                    summaryMonthFilter ? month === summaryMonthFilter : true
+                  )
+                  .sort()
+                  .map((month) => (
+                    <tr key={`${site}-${month}`}>
+                      <td>{site}</td>
+                      <td>{month}</td>
+                      <td>{uploadSummary[site][month]["In-House"] || 0}</td>
+                      <td>{uploadSummary[site][month]["Vendor"] || 0}</td>
+                    </tr>
+                  ));
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Site Upload Form Panels */}
       <div className="dashboard-container">
         {siteList.map((site) =>
           canAccessSite(site) ? (
             <div
               key={site}
-              className={`dashboard-container rounded shadow bg-white ${
-                userData.site === site ? "border-green-500" : ""
-              }`}
+              className="dashboard-container rounded shadow bg-white"
             >
               <h3 className="dashboard-header">{site}</h3>
               <button

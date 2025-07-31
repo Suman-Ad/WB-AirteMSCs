@@ -78,3 +78,33 @@
   margin-bottom: 1.5rem;
   border-radius: 6px;
 }
+
+.dashboard-summary-table {
+  margin: 2rem 0;
+  overflow-x: auto;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summary-table th,
+.summary-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+
+.summary-table th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+.dashboard-filter-row {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
