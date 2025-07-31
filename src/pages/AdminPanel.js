@@ -18,6 +18,8 @@ const AdminPanel = ({ userData }) => {
   const [filteredReports, setFilteredReports] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
+  const [userSiteFilter, setUserSiteFilter] = useState("");
+
 
   const siteList = [
     "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
@@ -68,6 +70,13 @@ const AdminPanel = ({ userData }) => {
     if (window.confirm("Delete this PM report?")) {
       await deleteDoc(doc(db, "pm_reports", id));
       fetchAllReports();
+    }
+  };
+
+  const handleDeleteUser = async (id) => {
+    if (window.confirm("⚠️ Confirm deleting this user account?")) {
+      await deleteDoc(doc(db, "users", id));
+      fetchAllUsers();
     }
   };
 
@@ -240,13 +249,8 @@ const AdminPanel = ({ userData }) => {
                       <td>{report.month}</td>
                       <td>{report.type}</td>
                       <td>{report.type === "Vendor" ? report.vendorName : report.equipmentName}</td>
-                      <td>
-                        <a href={report.fileUrl} target="_blank" rel="noreferrer">View</a>
-                      </td>
-                      <td>
-                        {report.uploadedBy?.name}<br />
-                        <small>{report.uploadedBy?.email}</small>
-                      </td>
+                      <td><a href={report.fileUrl} target="_blank" rel="noreferrer">View</a></td>
+                      <td>{report.uploadedBy?.name}<br /><small>{report.uploadedBy?.email}</small></td>
                       <td>{report.timestamp?.toDate().toLocaleString()}</td>
                       <td>
                         <button className="edit-btn" onClick={() => handleEditClick(report)}>Edit</button>
@@ -257,9 +261,7 @@ const AdminPanel = ({ userData }) => {
                 </tr>
               ))
             ) : (
-              <tr>
-                <td colSpan="8" className="no-records">No matching records found.</td>
-              </tr>
+              <tr><td colSpan="8" className="no-records">No matching records found.</td></tr>
             )}
           </tbody>
         </table>
@@ -269,6 +271,21 @@ const AdminPanel = ({ userData }) => {
       {["Admin", "Super Admin"].includes(userData.role) && (
         <div className="admin-table-wrapper mt-10">
           <h3 className="admin-subtitle">👥 User Role Management</h3>
+          {/* Site Filter for Users */}
+          <div className="mb-4">
+            <label>Filter by Site: </label>
+            <select
+              value={userSiteFilter}
+              onChange={(e) => setUserSiteFilter(e.target.value)}
+              className="border p-1 rounded ml-2"
+            >
+              <option value="">All Sites</option>
+              {siteList.map((site) => (
+                <option key={site} value={site}>{site}</option>
+              ))}
+            </select>
+          </div>
+
           <table className="admin-table">
             <thead>
               <tr>
@@ -280,7 +297,9 @@ const AdminPanel = ({ userData }) => {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => {
+              {users
+              .filter((user) => !userSiteFilter || user.site === userSiteFilter)
+              .map((user) => {
                 const { promote, demote } = getNextRoles(user.role);
                 const canModify = canChangeRole(user.role, user.id);
                 return (
@@ -307,6 +326,19 @@ const AdminPanel = ({ userData }) => {
                         </button>
                       )}
                       {!canModify && <span title="Not allowed">🔒</span>}
+                      {userData.role === "Super Admin" && user.id !== userData.uid && (
+                        <button
+                          className="btn-delete"
+                          onClick={async () => {
+                            if (window.confirm("Delete this user?")) {
+                              await deleteDoc(doc(db, "users", user.id));
+                              fetchAllUsers();
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

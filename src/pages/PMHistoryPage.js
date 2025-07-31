@@ -70,22 +70,39 @@ const PMHistoryPage = ({ userData }) => {
 
   const handleDownloadZip = async (siteUploads, site) => {
     const zip = new JSZip();
+    let fileAdded = false;
 
     for (const upload of siteUploads) {
       try {
-        const folder = zip.folder(upload.type); // "Vendor" or "In-House"
         const response = await fetch(upload.fileUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const blob = await response.blob();
-        const fileName = `${upload.month}_${upload.type}_${upload.vendorName || upload.equipmentName || "PM"}.pdf`;
-        folder.file(fileName, blob);
-      } catch (error) {
-        console.error(`Failed to fetch file: ${upload.fileUrl}`);
+
+        const folder = zip.folder(upload.type); // "Vendor" or "In-House"
+        const rawFileName = upload.fileUrl.split("/").pop().split("?")[0];
+        const cleanFileName = decodeURIComponent(rawFileName);
+
+        folder.file(cleanFileName, blob);
+        fileAdded = true;
+      } catch (err) {
+        console.error(`❌ Failed to fetch file: ${upload.fileUrl}`, err);
       }
     }
 
-    const zipBlob = await zip.generateAsync({ type: "blob" });
-    saveAs(zipBlob, `PM_Reports_${site}.zip`);
+    if (!fileAdded) {
+      alert("⚠️ No files could be downloaded. Please check if the URLs are accessible.");
+      return;
+    }
+
+    try {
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      saveAs(zipBlob, `PM_Reports_${site}_${Date.now()}.zip`);
+    } catch (err) {
+      console.error("❌ Failed to generate ZIP:", err);
+      alert("❌ Error generating ZIP file.");
+    }
   };
+
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete this PM report?")) {
@@ -116,6 +133,7 @@ const PMHistoryPage = ({ userData }) => {
     await updateDoc(ref, updated);
     setEditingId(null);
     setEditData({});
+
     const refreshed = uploads.map((r) =>
       r.id === id ? { ...r, ...updated } : r
     );
@@ -166,6 +184,7 @@ const PMHistoryPage = ({ userData }) => {
                 </button>
               )}
             </h3>
+
             <table className="pm-history-table">
               <thead>
                 <tr>

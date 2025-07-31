@@ -87,3 +87,19 @@
   border-radius: 4px;
   cursor: pointer;
 }
+
+.btn-delete {
+  background-color: #b805b8; /* Bootstrap danger red */
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  margin-left: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.btn-delete:hover {
+  background-color: #c9302c;
+}
