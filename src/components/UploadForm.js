@@ -184,7 +184,7 @@ const UploadForm = ({ userData, site }) => {
 
   return (
     <div className="upload-form">
-      <label>PM Type:</label>
+      <label>PM Type: (In-House/Vendor)</label>
       <select value={type} onChange={(e) => setType(e.target.value)}>
         <option value="In-House">In-House</option>
         <option value="Vendor">Vendor</option>
@@ -192,7 +192,7 @@ const UploadForm = ({ userData, site }) => {
 
       {type === "In-House" && (
         <>
-          <label>Month:</label>
+          <label>Month: (Select From Calender)</label>
           <input
             type="month"
             value={month}
@@ -203,14 +203,14 @@ const UploadForm = ({ userData, site }) => {
 
       {type === "Vendor" && (
         <>
-          <label>Quarter:</label>
+          <label>Quarter: (Select Quarter From List)</label>
           <select value={quarter} onChange={(e) => setQuarter(e.target.value)}>
             {Object.keys(quarterMonths).map((qtr) => (
               <option key={qtr} value={qtr}>{qtr}</option>
             ))}
           </select>
 
-          <label>Select Month in {quarter}:</label>
+          <label>Select Month in {quarter}: (Select From List)</label>
           <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
             <option value="">--Select Month--</option>
             {quarterMonths[quarter].map((m) => (
@@ -222,7 +222,7 @@ const UploadForm = ({ userData, site }) => {
 
       {type === "Vendor" ? (
         <>
-          <label>Vendor Name:</label>
+          <label>Vendor Name: (Select From List)</label>
           <select
             value={vendorName}
             onChange={(e) => setVendorName(e.target.value)}
@@ -235,7 +235,7 @@ const UploadForm = ({ userData, site }) => {
         </>
       ) : (
         <>
-          <label>Equipment Name:</label>
+          <label>Equipment Name: (Select From List)</label>
           <select
             value={equipmentName}
             onChange={(e) => setEquipmentName(e.target.value)}
@@ -254,7 +254,7 @@ const UploadForm = ({ userData, site }) => {
         </button>
       )}
 
-      <label>Choose PDF file:</label>
+      <label>Choose PDF file: (Only PDF File)</label>
       <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files[0])} />
 
       <button onClick={handleUpload} disabled={uploading} className="upload-btn">
