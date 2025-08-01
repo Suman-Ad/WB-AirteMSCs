@@ -19,10 +19,19 @@ import {
 } from "firebase/firestore";
 import "../assets/UploadForm.css";
 
+const quarterMonths = {
+  Q1: ["2025-04", "2025-05", "2025-06"],
+  Q2: ["2025-07", "2025-08", "2025-09"],
+  Q3: ["2025-10", "2025-11", "2025-12"],
+  Q4: ["2026-01", "2026-02", "2026-03"],
+};
+
 const UploadForm = ({ userData, site }) => {
   const [file, setFile] = useState(null);
-  const [month, setMonth] = useState("");
   const [type, setType] = useState("In-House");
+  const [month, setMonth] = useState("");
+  const [quarter, setQuarter] = useState("Q1");
+  const [selectedMonth, setSelectedMonth] = useState("");
   const [vendorName, setVendorName] = useState("");
   const [equipmentName, setEquipmentName] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -36,7 +45,11 @@ const UploadForm = ({ userData, site }) => {
   useEffect(() => {
     const fetchEquipmentList = async () => {
       try {
-        const docRef = doc(db, "config", type === "Vendor" ? "vendor_equipment" : "inhouse_equipment");
+        const docRef = doc(
+          db,
+          "config",
+          type === "Vendor" ? "vendor_equipment" : "inhouse_equipment"
+        );
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setEquipmentList(docSnap.data().list || []);
@@ -52,25 +65,30 @@ const UploadForm = ({ userData, site }) => {
 
   useEffect(() => {
     const fetchUploaded = async () => {
-      if (!month || !site) return;
+      const currentMonth = type === "Vendor" ? selectedMonth : month;
+      if (!currentMonth || !site) return;
       const reportsRef = collection(db, "pm_reports");
       const q = query(
         reportsRef,
         where("site", "==", site),
-        where("month", "==", month),
+        where("month", "==", currentMonth),
         where("type", "==", type)
       );
       const snap = await getDocs(q);
-      const names = snap.docs.map(doc => type === "Vendor" ? doc.data().vendorName : doc.data().equipmentName);
+      const names = snap.docs.map((doc) =>
+        type === "Vendor" ? doc.data().vendorName : doc.data().equipmentName
+      );
       setUploadedItems(names);
     };
     fetchUploaded();
-  }, [month, site, type]);
+  }, [month, site, type, selectedMonth]);
 
   const handleUpload = async () => {
     setMessage("");
 
-    if (!file || !month || !type) {
+    const finalMonth = type === "Vendor" ? selectedMonth : month;
+
+    if (!file || !finalMonth || !type) {
       setMessage("⚠️ Please fill in all required fields.");
       return;
     }
@@ -89,18 +107,22 @@ const UploadForm = ({ userData, site }) => {
     const q = query(
       reportsRef,
       where("site", "==", site),
-      where("month", "==", month),
+      where("month", "==", finalMonth),
       where("type", "==", type),
-      where(type === "Vendor" ? "vendorName" : "equipmentName", "==", type === "Vendor" ? vendorName : equipmentName)
+      where(
+        type === "Vendor" ? "vendorName" : "equipmentName",
+        "==",
+        type === "Vendor" ? vendorName : equipmentName
+      )
     );
     const snapshot = await getDocs(q);
     if (!snapshot.empty) {
-      setMessage("⚠️ This report already exists for selected month and equipment.");
+      setMessage("⚠️ This report already exists for selected period and equipment.");
       return;
     }
 
     const nameLabel = type === "Vendor" ? vendorName : equipmentName;
-    const path = `pm_files/${site}/${month}_${type}_${nameLabel}.pdf`;
+    const path = `pm_files/${site}/${finalMonth}_${type}_${nameLabel}.pdf`;
     const storageRef = ref(storage, path);
     const uploadTask = uploadBytesResumable(storageRef, file);
     setUploading(true);
@@ -119,7 +141,7 @@ const UploadForm = ({ userData, site }) => {
         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
         await addDoc(reportsRef, {
           site,
-          month,
+          month: finalMonth,
           type,
           status: "Done",
           vendorName: type === "Vendor" ? vendorName : null,
@@ -137,6 +159,8 @@ const UploadForm = ({ userData, site }) => {
         setUploading(false);
         setFile(null);
         setMonth("");
+        setQuarter("Q1");
+        setSelectedMonth("");
         setVendorName("");
         setEquipmentName("");
         setProgress(0);
@@ -148,26 +172,53 @@ const UploadForm = ({ userData, site }) => {
   const handleEditList = async () => {
     const list = prompt("Enter comma-separated list:", equipmentList.join(", "));
     if (!list) return;
-    const newList = list.split(",").map(e => e.trim()).filter(e => e);
-    const docRef = doc(db, "config", type === "Vendor" ? "vendor_equipment" : "inhouse_equipment");
+    const newList = list.split(",").map((e) => e.trim()).filter((e) => e);
+    const docRef = doc(
+      db,
+      "config",
+      type === "Vendor" ? "vendor_equipment" : "inhouse_equipment"
+    );
     await setDoc(docRef, { list: newList });
     setEquipmentList(newList);
   };
 
   return (
     <div className="upload-form">
-      <label>{type === "Vendor" ? "Quarter:" : "Month:"}</label>
-      <input
-        type="month"
-        value={month}
-        onChange={(e) => setMonth(e.target.value)}
-      />
-
       <label>PM Type:</label>
       <select value={type} onChange={(e) => setType(e.target.value)}>
         <option value="In-House">In-House</option>
         <option value="Vendor">Vendor</option>
       </select>
+
+      {type === "In-House" && (
+        <>
+          <label>Month:</label>
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+          />
+        </>
+      )}
+
+      {type === "Vendor" && (
+        <>
+          <label>Quarter:</label>
+          <select value={quarter} onChange={(e) => setQuarter(e.target.value)}>
+            {Object.keys(quarterMonths).map((qtr) => (
+              <option key={qtr} value={qtr}>{qtr}</option>
+            ))}
+          </select>
+
+          <label>Select Month in {quarter}:</label>
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+            <option value="">--Select Month--</option>
+            {quarterMonths[quarter].map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </>
+      )}
 
       {type === "Vendor" ? (
         <>
@@ -213,7 +264,7 @@ const UploadForm = ({ userData, site }) => {
       {uploading && <progress value={progress} max="100" />}
       {message && <p className="upload-message">{message}</p>}
 
-      {month && equipmentList.length > 0 && (
+      {(type === "In-House" ? month : selectedMonth) && equipmentList.length > 0 && (
         <div className="status-table">
           <h4>Status Summary ({type})</h4>
           <table>
