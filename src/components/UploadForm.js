@@ -83,6 +83,31 @@ const UploadForm = ({ userData, site }) => {
     fetchUploaded();
   }, [month, site, type, selectedMonth]);
 
+  // Add inside UploadForm.js
+  useEffect(() => {
+    const fetchEquipmentList = async () => {
+      try {
+        const globalKey = type === "Vendor" ? "vendor_equipment" : "inhouse_equipment";
+        const siteKey = `${globalKey}_${site}`;
+
+        const [globalSnap, siteSnap] = await Promise.all([
+          getDoc(doc(db, "config", globalKey)),
+          getDoc(doc(db, "config", siteKey)),
+        ]);
+
+        const globalList = globalSnap.exists() ? globalSnap.data().list || [] : [];
+        const siteList = siteSnap.exists() ? siteSnap.data().list || [] : [];
+
+        // Merge lists (site first to prioritize local override)
+        setEquipmentList([...siteList, ...globalList]);
+      } catch (err) {
+        console.error("Error loading equipment list:", err);
+      }
+    };
+
+    fetchEquipmentList();
+  }, [type, site]);
+
   const handleUpload = async () => {
     setMessage("");
 
@@ -170,16 +195,28 @@ const UploadForm = ({ userData, site }) => {
   };
 
   const handleEditList = async () => {
-    const list = prompt("Enter comma-separated list:", equipmentList.join(", "));
-    if (!list) return;
-    const newList = list.split(",").map((e) => e.trim()).filter((e) => e);
-    const docRef = doc(
-      db,
-      "config",
-      type === "Vendor" ? "vendor_equipment" : "inhouse_equipment"
-    );
-    await setDoc(docRef, { list: newList });
-    setEquipmentList(newList);
+    const globalKey = type === "Vendor" ? "vendor_equipment" : "inhouse_equipment";
+    const siteKey = `${globalKey}_${site}`;
+
+    const editChoice = window.prompt("Edit list for:\n1. Global (ALL sites)\n2. This Site Only", "1");
+    if (!["1", "2"].includes(editChoice)) return;
+
+    const docId = editChoice === "1" ? globalKey : siteKey;
+    const oldListSnap = await getDoc(doc(db, "config", docId));
+    const existingList = oldListSnap.exists() ? oldListSnap.data().list || [] : [];
+
+    const updatedRaw = window.prompt(`Edit comma-separated list:`, existingList.join(", "));
+    if (!updatedRaw) return;
+    const newList = updatedRaw.split(",").map((e) => e.trim()).filter(Boolean);
+
+    await setDoc(doc(db, "config", docId), { list: newList });
+
+    // Refresh equipment list after update
+    const globalSnap = await getDoc(doc(db, "config", globalKey));
+    const siteSnap = await getDoc(doc(db, "config", siteKey));
+    const globalList = globalSnap.exists() ? globalSnap.data().list || [] : [];
+    const siteList = siteSnap.exists() ? siteSnap.data().list || [] : [];
+    setEquipmentList([...siteList, ...globalList]);
   };
 
   return (
@@ -270,13 +307,15 @@ const UploadForm = ({ userData, site }) => {
           <table>
             <thead>
               <tr>
+                <th>Sl. No</th>
                 <th>{type === "Vendor" ? "Vendor" : "Equipment"}</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {equipmentList.map((item) => (
+              {equipmentList.map((item, idx) => (
                 <tr key={item}>
+                  <td>{idx + 1}</td>
                   <td>{item}</td>
                   <td style={{ color: uploadedItems.includes(item) ? "green" : "red" }}>
                     {uploadedItems.includes(item) ? "✅ Done" : "❌ Pending"}

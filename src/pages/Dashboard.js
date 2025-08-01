@@ -2,7 +2,17 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import UploadForm from "../components/UploadForm";
-import { collection, query, where, getDocs, orderBy, limit, doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  limit,
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import "../assets/Dashboard.css";
 
@@ -66,7 +76,6 @@ const Dashboard = ({ userData }) => {
             setLastUploadTime(latestDoc.timestamp.toDate().toLocaleString());
           }
         }
-
       } catch (err) {
         console.error("Error fetching upload stats:", err);
       }
@@ -80,16 +89,35 @@ const Dashboard = ({ userData }) => {
   useEffect(() => {
     const fetchUploadSummary = async () => {
       try {
-        const snapshot = await getDocs(collection(db, "pm_reports"));
-        const data = snapshot.docs.map((doc) => doc.data());
+        const reportsSnap = await getDocs(collection(db, "pm_reports"));
+        const data = reportsSnap.docs.map((doc) => doc.data());
+
+        const configSnap = await getDocs(collection(db, "config"));
+        const configMap = {};
+        configSnap.docs.forEach(doc => {
+          configMap[doc.id] = doc.data().list || [];
+        });
 
         const summary = {};
+
         data.forEach((doc) => {
           const { site, month, type } = doc;
           if (!site || !month || !type) return;
-          summary[site] = summary[site] || {};
-          summary[site][month] = summary[site][month] || { "In-House": 0, "Vendor": 0 };
-          summary[site][month][type] += 1;
+
+          if (!summary[site]) summary[site] = {};
+          if (!summary[site][month]) {
+            summary[site][month] = {
+              "In-House": { total: configMap["inhouse_equipment"]?.length || 0, done: 0 },
+              "Vendor": { total: configMap["vendor_equipment"]?.length || 0, done: 0 },
+            };
+          }
+
+          if (type === "In-House" && doc.equipmentName) {
+            summary[site][month]["In-House"].done++;
+          }
+          if (type === "Vendor" && doc.vendorName) {
+            summary[site][month]["Vendor"].done++;
+          }
         });
 
         setUploadSummary(summary);
@@ -160,7 +188,7 @@ const Dashboard = ({ userData }) => {
         <p>Last Upload: <strong>{lastUploadTime || "N/A"}</strong></p>
       </div>
 
-      {/* Upload Summary Table (Visible to Admins) */}
+      {/* Upload Count Summary Table */}
       {["Admin", "Super Admin"].includes(userData.role) && (
         <div className="dashboard-summary-table">
           <h3 className="dashboard-header">📄 Upload Count Summary</h3>
@@ -174,9 +202,7 @@ const Dashboard = ({ userData }) => {
             >
               <option value="">All Sites</option>
               {siteList.map((site) => (
-                <option key={site} value={site}>
-                  {site}
-                </option>
+                <option key={site} value={site}>{site}</option>
               ))}
             </select>
 
@@ -188,51 +214,55 @@ const Dashboard = ({ userData }) => {
             />
           </div>
 
-          {/* Table */}
           <table className="summary-table">
             <thead>
               <tr>
+                <th>Sl.No</th>
                 <th>Site</th>
                 <th>Month</th>
-                <th>In-House</th>
-                <th>Vendor</th>
+                <th>PM Type</th>
+                <th>Total Count</th>
+                <th>Done</th>
+                <th>Pending</th>
               </tr>
             </thead>
             <tbody>
-              {Object.keys(uploadSummary).map((site) => {
-                if (summarySiteFilter && site !== summarySiteFilter) return null;
+              {Object.keys(uploadSummary).flatMap((site, idx) => {
+                if (summarySiteFilter && site !== summarySiteFilter) return [];
                 return Object.keys(uploadSummary[site])
-                  .filter((month) =>
-                    summaryMonthFilter ? month === summaryMonthFilter : true
-                  )
-                  .sort()
-                  .map((month) => (
-                    <tr key={`${site}-${month}`}>
-                      <td>{site}</td>
-                      <td>{month}</td>
-                      <td>{uploadSummary[site][month]["In-House"] || 0}</td>
-                      <td>{uploadSummary[site][month]["Vendor"] || 0}</td>
-                    </tr>
-                  ));
+                  .filter((month) => !summaryMonthFilter || month === summaryMonthFilter)
+                  .flatMap((month) => ["In-House", "Vendor"].map((type) => {
+                    const item = uploadSummary[site][month][type];
+                    if (!item) return null;
+                    return (
+                      <tr key={`${site}-${month}-${type}`}>
+                        <td>{idx + 1}</td>
+                        <td>{site}</td>
+                        <td>{month}</td>
+                        <td>{type}</td>
+                        <td>{item.total}</td>
+                        <td style={{ color: item.done === item.total ? "green" : "orange" }}>
+                          {item.done}
+                        </td>
+                        <td style={{ color: item.total - item.done > 0 ? "red" : "green" }}>
+                          {item.total - item.done}
+                        </td>
+                      </tr>
+                    );
+                  }).filter(Boolean));
               })}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Site Upload Form Panels */}
+      {/* Site Upload Forms */}
       <div className="dashboard-container">
         {siteList.map((site) =>
           canAccessSite(site) ? (
-            <div
-              key={site}
-              className="dashboard-container rounded shadow bg-white"
-            >
+            <div key={site} className="dashboard-container rounded shadow bg-white">
               <h3 className="dashboard-header">{site}</h3>
-              <button
-                className="dashboard-subinfo"
-                onClick={() => navigate(`/site/${site}`)}
-              >
+              <button className="dashboard-subinfo" onClick={() => navigate(`/site/${site}`)}>
                 Go to Site
               </button>
               <UploadForm userData={userData} site={site} />
