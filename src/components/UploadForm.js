@@ -42,6 +42,11 @@ const UploadForm = ({ userData, site }) => {
 
   const isAdmin = ["Admin", "Super Admin"].includes(userData.role);
 
+  const finalMonth = type === "Vendor" ? selectedMonth : month;
+  const nameFilled = type === "Vendor" ? vendorName : equipmentName;
+  const allFieldsFilled = finalMonth && type && nameFilled;
+
+
   useEffect(() => {
     const fetchEquipmentList = async () => {
       try {
@@ -111,14 +116,14 @@ const UploadForm = ({ userData, site }) => {
   const handleUpload = async () => {
     setMessage("");
 
-    const finalMonth = type === "Vendor" ? selectedMonth : month;
+    // const finalMonth = type === "Vendor" ? selectedMonth : month;
+    // const nameFilled = type === "Vendor" ? vendorName : equipmentName;
+    // const allFieldsFilled = finalMonth && type && nameFilled;
 
-    if (!file || !finalMonth || !type ||
-        (type === "Vendor" && !vendorName) ||
-        (type === "In-House" && !equipmentName)) {
-      setMessage("⚠️ Please fill in all required fields.");
-      return;
-    }
+    // if (!file || !finalMonth || !type) {
+    //   setMessage("⚠️ Please fill in all required fields.");
+    //   return;
+    // }
 
     if (file.type !== "application/pdf") {
       setMessage("❌ Only PDF files are allowed.");
@@ -293,8 +298,13 @@ const UploadForm = ({ userData, site }) => {
         </button>
       )}
 
+      {!allFieldsFilled && (
+        <p style={{ color: "orange", fontSize: "0.9em" }}>
+          ⚠️ Please select {type === "Vendor" ? "month and vendor" : "month and equipment"} first.
+        </p>
+      )}
       <label>Choose PDF file: (Only PDF File)</label>
-      <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files[0])} />
+      <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files[0])} disabled={!allFieldsFilled} />
 
       <button onClick={handleUpload} disabled={uploading} className="upload-btn">
         {uploading ? `Uploading... ${progress}%` : "Upload PDF"}
