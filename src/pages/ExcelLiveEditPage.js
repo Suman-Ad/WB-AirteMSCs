@@ -85,7 +85,7 @@ const ExcelLiveEditPage = ({ userData }) => {
 
   useEffect(() => {
     window.alert(
-      "Dear All, It is Under Maintenance. Please Don't Put Any Data. \nThanks & Regards\n@Suman Adhikari"
+      "Dear My All Team Members, This Daily Details Data on Upgradation Stage. Please try to fill data for Fixing Issues . \nThanks & Regards\n@Suman Adhikari"
     );
   }, []);
 

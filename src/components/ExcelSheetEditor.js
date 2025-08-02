@@ -1,7 +1,8 @@
 // src/components/ExcelSheetEditor.js
 import React, { useState, useEffect } from "react";
 import "../assets/ExcelSheetEditor.css";
-const DEBOUNCE_DELAY = 1500; // 1.5 seconds
+
+const DEBOUNCE_DELAY = 1500;
 
 const sheetTemplates = {
   Final_Summary: [
@@ -33,22 +34,11 @@ const sheetTemplates = {
   ],
   Diesel_Back_Up: [
     {
-      Circle: "",
-      MSC_Location: "",
-      DG_fuel_tank_capacity: "",
-      Present_Diesel_Stock_in_DG_tank_Ltr: "",
-      MSC_Status_Grater_Less_2500_Lts: "",
-      External_Stock_capacity_Barrel_UG_Buffer_Ltr: "",
-      External_Stock_availiabl_at_MS_Ltr: "",
-      Tota_Stock_Capacity: "",
-      Total_Stock_available: "",
-      Status: "",
-      DG_CPH: "",
-      Fuel_back_up_Hrs: "",
-      Category: "",
-      Remark: "",
-      Including_Day_tank: "",
-      Excluding_Day_tank: "",
+      Circle: "", MSC_Location: "", DG_fuel_tank_capacity: "",
+      Present_Diesel_Stock_in_DG_tank_Ltr: "", MSC_Status_Grater_Less_2500_Lts: "",
+      External_Stock_capacity_Barrel_UG_Buffer_Ltr: "", External_Stock_availiabl_at_MS_Ltr: "",
+      Tota_Stock_Capacity: "", Total_Stock_available: "", Status: "", DG_CPH: "",
+      Fuel_back_up_Hrs: "", Category: "", Remark: "", Including_Day_tank: "", Excluding_Day_tank: "",
     },
   ],
   DG_EB_Backup: [
@@ -101,10 +91,9 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated }) => {
   const [data, setData] = useState([]);
   const [timeoutId, setTimeoutId] = useState(null);
 
+  // ✅ Use column order from templates
   const columns = sheetTemplates[sheetKey]
     ? Object.keys(sheetTemplates[sheetKey][0])
-    : data.length > 0
-    ? Object.keys(data[0])
     : [];
 
   useEffect(() => {
@@ -127,7 +116,7 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated }) => {
   };
 
   const handleAddRow = () => {
-    setData([...data, { ...data[0] }]);
+    setData([...data, { ...columns.reduce((acc, col) => ({ ...acc, [col]: "" }), {}) }]);
   };
 
   return (
@@ -139,8 +128,7 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated }) => {
       <table className="sheet-table">
         <thead>
           <tr>
-            {data.length > 0 &&
-              Object.keys(data[0]).map((col) => <th key={col}>{col}</th>)}
+            {columns.map((col) => <th key={col}>{col}</th>)}
           </tr>
         </thead>
         <tbody>
