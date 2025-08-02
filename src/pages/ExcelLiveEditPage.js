@@ -10,16 +10,22 @@ import {
 import "../assets/ExcelLiveEditPage.css"; // Assuming you have some styles
 
 const sheetKeys = {
-  "A_MR Tracking": "MR_Tracking",
-  "B_AC PM": "AC_PM",
-  "C_Electrical PM": "Electrical_PM",
-  "D_Power EB/DG": "Power_EB_DG",
-  "E_Cleanliness": "Cleanliness",
-  "F_Site Issue": "Site_Issue"
+  "A_Final Summary": "Final_Summary",
+  "B_Diesel Back Up": "Diesel_Back_Up",
+  "C_DG-EB Backup": "DG_EB_Backup",
+  "D_Infra Update": "Infra_Update",
+  "E_Fault Details": "Fault_Details",
+  "F_Planned Activity Details": "Planned_Activity_Details",
+  "F_Manpower Availability": "Manpower_Availability",
+  "F_Sheet1": "Sheet1",
+  "F_In House PM": "In_House_PM",
+  "F_Sheet2": "Sheet2",
+  "F_OEM PM": "OEM_PM",
+  "F_Operational Governance Call": "Operational_Governance_Call",
 };
 
 const ExcelLiveEditPage = ({ userData }) => {
-  const [selectedTab, setSelectedTab] = useState("A_MR Tracking");
+  const [selectedTab, setSelectedTab] = useState("A_Final Summary");
   const [sheetData, setSheetData] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -63,25 +69,28 @@ const ExcelLiveEditPage = ({ userData }) => {
   }, []);
 
   return (
-    <div style={{ padding: "1rem" }}>
+    <div className="excel-live-edit-container">
       <h2>📘 Excel Daily Entry: {userData.site}</h2>
-      <Tabs value={selectedTab} onChange={(e, val) => setSelectedTab(val)} variant="scrollable">
-        {Object.keys(sheetKeys).map((name) => (
-          <Tab key={name} label={name} value={name} />
-        ))}
-      </Tabs>
 
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <div style={{ marginTop: "1rem" }}>
-          <ExcelSheetEditor
-            sheetKey={sheetKeys[selectedTab]}
-            rows={sheetData[sheetKeys[selectedTab]] || []}
-            onSave={(rows) => handleSheetUpdate(sheetKeys[selectedTab], rows)}
-          />
-        </div>
-      )}
+      <div className="tab-scroll-container">
+        <Tabs value={selectedTab} onChange={(e, val) => setSelectedTab(val)} variant="scrollable">
+          {Object.keys(sheetKeys).map((name) => (
+            <Tab key={name} label={name} value={name} />
+          ))}
+        </Tabs>
+
+        {loading ? (
+          <p>Loading...</p>
+        ) : (
+          <div className="sheet-editor-scroll">
+            <ExcelSheetEditor
+              sheetKey={sheetKeys[selectedTab]}
+              rows={sheetData[sheetKeys[selectedTab]] || []}
+              onSave={(rows) => handleSheetUpdate(sheetKeys[selectedTab], rows)}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

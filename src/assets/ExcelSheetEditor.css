@@ -1,0 +1,14 @@
+.sheet-table {
+  width: 50%;
+  /* min-width: 80px; */
+  border-collapse: collapse;
+}
+
+.sheet-table th, .sheet-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+}
+
+.sheet-table input {
+  width: 100%;
+}
