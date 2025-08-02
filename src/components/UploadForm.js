@@ -113,7 +113,9 @@ const UploadForm = ({ userData, site }) => {
 
     const finalMonth = type === "Vendor" ? selectedMonth : month;
 
-    if (!file || !finalMonth || !type) {
+    if (!file || !finalMonth || !type ||
+        (type === "Vendor" && !vendorName) ||
+        (type === "In-House" && !equipmentName)) {
       setMessage("⚠️ Please fill in all required fields.");
       return;
     }

@@ -10,6 +10,8 @@ import Profile from "./pages/Profile"; // optional
 import PMHistoryPage from "./pages/PMHistoryPage";
 import Layout from "./components/Layout";
 import RoleProtectedRoute from "./components/RoleProtectedRoute";
+import ExcelDataManager from "./pages/ExcelDataManager";
+import ExcelLiveEditPage from "./pages/ExcelLiveEditPage";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -92,6 +94,15 @@ function App() {
               </Layout>
             </RoleProtectedRoute>
           }
+        />
+        <Route path="/excel-data-manager" element={<ExcelDataManager userData={userData} />} />
+        <Route path="/excel-live-edit" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["User", "Super User", "Admin", "Super Admin"]}>
+              <Layout userData={userData}>
+                <ExcelLiveEditPage userData={userData} />
+                </Layout>
+              </RoleProtectedRoute>
+            }
         />
 
         {/* Fallback */}

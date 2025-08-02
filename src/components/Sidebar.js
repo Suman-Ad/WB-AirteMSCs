@@ -11,6 +11,7 @@ const Sidebar = ({ userData, collapsed }) => {
       <h1>{collapsed ? "📋" : "📋 MENU"}</h1>
       <nav>
         <Link to="/dashboard">🏠 <span className="label">Dashboard</span></Link>
+        <Link to="/excel-live-edit">📊 <span className="label">Excel Data Manager</span></Link>
 
         {site && (
           <Link to={`/site/${site}`}>
