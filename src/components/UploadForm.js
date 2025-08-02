@@ -116,15 +116,6 @@ const UploadForm = ({ userData, site }) => {
   const handleUpload = async () => {
     setMessage("");
 
-    // const finalMonth = type === "Vendor" ? selectedMonth : month;
-    // const nameFilled = type === "Vendor" ? vendorName : equipmentName;
-    // const allFieldsFilled = finalMonth && type && nameFilled;
-
-    // if (!file || !finalMonth || !type) {
-    //   setMessage("⚠️ Please fill in all required fields.");
-    //   return;
-    // }
-
     if (file.type !== "application/pdf") {
       setMessage("❌ Only PDF files are allowed.");
       return;
@@ -306,7 +297,7 @@ const UploadForm = ({ userData, site }) => {
       <label>Choose PDF file: (Only PDF File)</label>
       <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files[0])} disabled={!allFieldsFilled} />
 
-      <button onClick={handleUpload} disabled={uploading} className="upload-btn">
+      <button onClick={handleUpload} disabled={!file} className="upload-btn" >
         {uploading ? `Uploading... ${progress}%` : "Upload PDF"}
       </button>
 
