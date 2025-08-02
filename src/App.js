@@ -12,6 +12,7 @@ import Layout from "./components/Layout";
 import RoleProtectedRoute from "./components/RoleProtectedRoute";
 import ExcelDataManager from "./pages/ExcelDataManager";
 import ExcelLiveEditPage from "./pages/ExcelLiveEditPage";
+import DailyDashboard from "./pages/DailyDashboard";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -104,6 +105,14 @@ function App() {
               </RoleProtectedRoute>
             }
         />
+        
+        <Route path="/daily-dashboard" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+            <Layout userData={userData}>
+              <DailyDashboard />
+              </Layout>
+        </RoleProtectedRoute>} />
+              
 
         {/* Fallback */}
         <Route path="/" element={<Navigate to="/dashboard" />} />

@@ -1,13 +1,10 @@
+// src/pages/ExcelLiveEditPage.js
 import React, { useEffect, useState } from "react";
 import { Tabs, Tab } from "@mui/material";
-import ExcelSheetEditor from "../components/ExcelSheetEditor";
+import { ExcelSheetEditor, sheetTemplates } from "../components/ExcelSheetEditor";
 import { db } from "../firebase";
-import {
-  doc,
-  getDoc,
-  setDoc,
-} from "firebase/firestore";
-import "../assets/ExcelLiveEditPage.css"; // Assuming you have some styles
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import "../assets/ExcelLiveEditPage.css";
 
 const sheetKeys = {
   "A_Final Summary": "Final_Summary",
@@ -28,52 +25,90 @@ const ExcelLiveEditPage = ({ userData }) => {
   const [selectedTab, setSelectedTab] = useState("A_Final Summary");
   const [sheetData, setSheetData] = useState({});
   const [loading, setLoading] = useState(true);
-
-  const today = new Date().toISOString().split("T")[0]; // "2025-08-01"
-  const docId = `${userData.site}_${today}`;
-
-  const fetchSheet = async () => {
-    setLoading(true);
-    const ref = doc(db, "excel_data", docId);
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      setSheetData(snap.data());
-    } else {
-      // Init empty rows
-      const defaultData = {};
-      Object.values(sheetKeys).forEach((key) => {
-        defaultData[key] = Array(5).fill({ slNo: "", parameter: "", status: "", remark: "" });
-      });
-      await setDoc(ref, {
-        site: userData.site,
-        date: today,
-        ...defaultData,
-      });
-      setSheetData({ site: userData.site, date: today, ...defaultData });
-    }
-    setLoading(false);
-  };
+  const today = new Date().toISOString().split("T")[0];
+  const [selectedDate, setSelectedDate] = useState(today);
+  const dateId = selectedDate;
+  const siteId = userData?.site;
 
   useEffect(() => {
+    const fetchSheet = async () => {
+      if (!siteId) {
+        console.error("Missing site ID in userData!");
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      const ref = doc(db, "excel_data_by_date", dateId, "sites", siteId);
+      const snap = await getDoc(ref);
+
+      if (snap.exists()) {
+        setSheetData(snap.data());
+      } else {
+        const defaultData = {};
+        Object.values(sheetKeys).forEach((key) => {
+          const template = sheetTemplates[key];
+          defaultData[key] = template ? template.map((row) => ({ ...row })) : [];
+        });
+
+        await setDoc(ref, {
+          site: siteId,
+          date: today,
+          ...defaultData,
+        });
+
+        setSheetData({ site: siteId, date: today, ...defaultData });
+      }
+
+      setLoading(false);
+    };
+
     fetchSheet();
-  }, []);
+  }, [siteId, dateId]);
 
   const handleSheetUpdate = async (key, rows) => {
-    const ref = doc(db, "excel_data", docId);
-    await setDoc(ref, { ...sheetData, [key]: rows });
-    setSheetData((prev) => ({ ...prev, [key]: rows }));
+    const ref = doc(db, "excel_data_by_date", dateId, "sites", siteId);
+    const timestampKey = `lastUpdated_${key}`;
+    const now = new Date().toISOString();
+    await setDoc(ref, {
+      ...sheetData,
+      [key]: rows,
+      [timestampKey]: now,
+    });
+    setSheetData((prev) => ({
+      ...prev,
+      [key]: rows,
+      [timestampKey]: now,
+    }));
   };
 
+
   useEffect(() => {
-    window.alert("Dear All, It is Under Maintenance Please Don't Put Any Data. Thanks & Regards @Suman Adhikari");
+    window.alert(
+      "Dear All, It is Under Maintenance. Please Don't Put Any Data. \nThanks & Regards\n@Suman Adhikari"
+    );
   }, []);
 
   return (
     <div className="excel-live-edit-container">
-      <h2>📘 Excel Daily Entry: {userData.site}</h2>
+      <h2>📘 Daily Details Dashboard Of WB Circle Location: {siteId || "Unknown Site"}</h2>
+
+      <div style={{ marginBottom: "1rem" }}>
+        <label>Select Date: </label>
+        <input
+          type="date"
+          value={selectedDate}
+          max={today}
+          onChange={(e) => setSelectedDate(e.target.value)}
+        />
+      </div>
 
       <div className="tab-scroll-container">
-        <Tabs value={selectedTab} onChange={(e, val) => setSelectedTab(val)} variant="scrollable">
+        <Tabs
+          value={selectedTab}
+          onChange={(e, val) => setSelectedTab(val)}
+          variant="scrollable"
+        >
           {Object.keys(sheetKeys).map((name) => (
             <Tab key={name} label={name} value={name} />
           ))}
@@ -86,6 +121,7 @@ const ExcelLiveEditPage = ({ userData }) => {
             <ExcelSheetEditor
               sheetKey={sheetKeys[selectedTab]}
               rows={sheetData[sheetKeys[selectedTab]] || []}
+              lastUpdated={sheetData[`lastUpdated_${sheetKeys[selectedTab]}`]}
               onSave={(rows) => handleSheetUpdate(sheetKeys[selectedTab], rows)}
             />
           </div>

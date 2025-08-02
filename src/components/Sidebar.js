@@ -11,6 +11,9 @@ const Sidebar = ({ userData, collapsed }) => {
       <h1>{collapsed ? "📋" : "📋 MENU"}</h1>
       <nav>
         <Link to="/dashboard">🏠 <span className="label">Dashboard</span></Link>
+        {(role === "Super User" || role === "Admin" || role === "Super Admin") && (
+          <Link to="/daily-dashboard">📅 <span className="label">Daily Dashboard</span></Link>
+          )}
         <Link to="/excel-live-edit">📊 <span className="label">Excel Data Manager</span></Link>
 
         {site && (
