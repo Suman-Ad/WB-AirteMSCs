@@ -152,22 +152,7 @@ const ProfilePage = ({ userData }) => {
       {/* Site */}
       <div className="profile-row">
         <label>Site:</label>
-        {editMode ? (
-          <select name="site" value={form.site} onChange={handleChange}>
-            <option value="">--Select Site--</option>
-            {[
-              "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
-              "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower",
-              "New Alipore", "SDF", "Siliguri"
-            ].map((site) => (
-              <option key={site} value={site}>
-                {site}
-              </option>
-            ))}
-          </select>
-        ) : (
           <span>{form.site || "N/A"}</span>
-        )}
       </div>
 
       {/* Designation */}
