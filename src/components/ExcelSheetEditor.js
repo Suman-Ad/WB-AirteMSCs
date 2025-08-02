@@ -42,13 +42,22 @@ const sheetTemplates = {
     },
   ],
   DG_EB_Backup: [
-    { SlNo: "", Circle: "", Site_Name: "", Total_Power_Failure_hrs: "", Total_DG_Run_hrs: "", remark: "" },
+    { SlNo: "", Circle: "", Site_Name: "", Total_Power_Failure_hrs: "", Total_DG_Run_hrs: "", Remark: "" },
   ],
   Infra_Update: [
     { SlNo: "", Circle: "", Site_Name: "", Site_ID: "", Infra_Uptime_Percentage: "" },
   ],
   Fault_Details: [
-    { slNo: "", faultType: "", resolution: "", remark: "" },
+    { 
+      SlNo: "0", Region: "East", Circle: "WB", Date: "NA", Complaint_Reg_by:"NA", Site_Name: "NA", 
+      Site_ID: "NA", Location:"NA", Equipment_Type:"NA", Equipment_Name:"NA", Equipment_Make:"NA", 
+      Equipment_Capacity:"NA", Equipment_Sl_No:"NA", Complaint_ID:"NA", Complaint_Open_Date:"NA", 
+      Complaint_Open_Time:"NA", Severity_Major_Minor:"NA", Service_Provider:"NA", Issue_Details:"NA", 
+      Reason_Category:"NA", Real_Reason_of_Incident:"NA", Status_Open_Close:"NA", Open_Complaint:"NA", 
+      Closure_Date:"NA", Closure_Time:"NA", Ageing_In_Hours:"NA", Outage_Duration_In_Min:"NA", 
+      Total_Month_Min: "NA", Uptime_Percentage: "NA", TAT_as_per_SOW: "NA", Time_taken_more_than_TAT:"NA", 
+      TAT_Status:"NA", Name_of_Service_Engineer:"NA", Action_Taken_for_clouser:"NA", Remarks: "NA"
+    },
   ],
   Planned_Activity_Details: [
     {
@@ -63,14 +72,14 @@ const sheetTemplates = {
       HC_Availability_as_per_LOI: "", Remark: ""
     },
   ],
-  Sheet1: [{ slNo: "", data1: "", data2: "", remark: "" }],
+  Sheet1: [{ SlNo: "", data1: "", data2: "", remark: "" }],
   In_House_PM: [
     {
       Circle: "", Site_Name: "", Equipment_Category: "", In_House_PM_Frequency: "",
       Month: "", In_House_Plan_Date: "", In_House_Done_Date: "", PM_Status: ""
     },
   ],
-  Sheet2: [{ slNo: "", key: "", value: "", remark: "" }],
+  Sheet2: [{ SlNo: "", key: "", value: "", remark: "" }],
   OEM_PM: [
     {
       Region: "", Circle: "", Site_Name: "", Equipment_Category: "", Equipment_Name_and_No: "",

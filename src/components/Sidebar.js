@@ -1,10 +1,18 @@
 // src/components/Sidebar.js
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { auth } from "../firebase";
 
 const Sidebar = ({ userData, collapsed }) => {
   const role = userData?.role;
   const site = userData?.site;
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+      await auth.signOut();
+      localStorage.removeItem("userData");
+      navigate("/login");
+    };
 
   return (
     <div>
@@ -29,6 +37,9 @@ const Sidebar = ({ userData, collapsed }) => {
         )}
 
         <Link to="/profile">👤 <span className="label">Profile</span></Link>
+        <button onClick={handleLogout} style={{ marginTop: "16rem", width: "100%", padding: "10px", backgroundColor: "#f44336", color: "#fff", border: "none", cursor: "pointer" }}>
+          Logout
+        </button>
       </nav>
     </div>
   );

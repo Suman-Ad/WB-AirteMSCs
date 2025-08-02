@@ -51,6 +51,10 @@ const ExcelLiveEditPage = ({ userData }) => {
           defaultData[key] = template ? template.map((row) => ({ ...row })) : [];
         });
 
+        await setDoc(doc(db, "excel_data_by_date", dateId), {
+          createdAt: new Date().toISOString(),
+        }, { merge: true });
+
         await setDoc(ref, {
           site: siteId,
           date: today,
@@ -81,7 +85,6 @@ const ExcelLiveEditPage = ({ userData }) => {
       [timestampKey]: now,
     }));
   };
-
 
   useEffect(() => {
     window.alert(

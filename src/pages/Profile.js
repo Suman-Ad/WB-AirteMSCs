@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { db, storage } from "../firebase";
+import { db, storage, auth } from "../firebase";
 import {
   doc,
   updateDoc,
@@ -15,6 +15,7 @@ import {
   uploadBytes,
   getDownloadURL
 } from "firebase/storage";
+import { useNavigate } from "react-router-dom";
 import "../assets/Profile.css";
 
 const ProfilePage = ({ userData }) => {
@@ -27,6 +28,13 @@ const ProfilePage = ({ userData }) => {
   });
   const [photo, setPhoto] = useState(null);
   const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+      await auth.signOut();
+      localStorage.removeItem("userData");
+      navigate("/login");
+    };
 
   useEffect(() => {
     if (userData) {
@@ -201,6 +209,9 @@ const ProfilePage = ({ userData }) => {
             </button>
             <button onClick={handleResetPassword} className="reset-btn">
               Change Password
+            </button>
+            <button onClick={handleLogout}>
+              Logout
             </button>
           </>
         )}
