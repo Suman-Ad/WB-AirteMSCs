@@ -66,51 +66,51 @@ const AdminPanel = ({ userData }) => {
     setFilteredReports(filtered);
   }, [siteFilter, monthFilter, typeFilter, searchUploader, reports]);
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Delete this PM report?")) {
-      await deleteDoc(doc(db, "pm_reports", id));
-      fetchAllReports();
-    }
-  };
+  // const handleDelete = async (id) => {
+  //   if (window.confirm("Delete this PM report?")) {
+  //     await deleteDoc(doc(db, "pm_reports", id));
+  //     fetchAllReports();
+  //   }
+  // };
 
-  const handleDeleteUser = async (id) => {
-    if (window.confirm("⚠️ Confirm deleting this user account?")) {
-      await deleteDoc(doc(db, "users", id));
-      fetchAllUsers();
-    }
-  };
+  // const handleDeleteUser = async (id) => {
+  //   if (window.confirm("⚠️ Confirm deleting this user account?")) {
+  //     await deleteDoc(doc(db, "users", id));
+  //     fetchAllUsers();
+  //   }
+  // };
 
-  const handleEditClick = (report) => {
-    setEditingId(report.id);
-    setEditData({
-      site: report.site,
-      month: report.month,
-      type: report.type,
-      vendorName: report.vendorName || "",
-      equipmentName: report.equipmentName || "",
-    });
-  };
+  // const handleEditClick = (report) => {
+  //   setEditingId(report.id);
+  //   setEditData({
+  //     site: report.site,
+  //     month: report.month,
+  //     type: report.type,
+  //     vendorName: report.vendorName || "",
+  //     equipmentName: report.equipmentName || "",
+  //   });
+  // };
 
-  const handleEditSave = async (id) => {
-    const ref = doc(db, "pm_reports", id);
-    const payload = {
-      site: editData.site,
-      month: editData.month,
-      type: editData.type,
-      vendorName: editData.type === "Vendor" ? editData.vendorName : null,
-      equipmentName: editData.type === "In-House" ? editData.equipmentName : null,
-    };
+  // const handleEditSave = async (id) => {
+  //   const ref = doc(db, "pm_reports", id);
+  //   const payload = {
+  //     site: editData.site,
+  //     month: editData.month,
+  //     type: editData.type,
+  //     vendorName: editData.type === "Vendor" ? editData.vendorName : null,
+  //     equipmentName: editData.type === "In-House" ? editData.equipmentName : null,
+  //   };
 
-    await updateDoc(ref, payload);
-    setEditingId(null);
-    setEditData({});
-    fetchAllReports();
-  };
+  //   await updateDoc(ref, payload);
+  //   setEditingId(null);
+  //   setEditData({});
+  //   fetchAllReports();
+  // };
 
-  const handleEditCancel = () => {
-    setEditingId(null);
-    setEditData({});
-  };
+  // const handleEditCancel = () => {
+  //   setEditingId(null);
+  //   setEditData({});
+  // };
 
   const handleRoleChange = async (userId, newRole) => {
     try {
@@ -143,10 +143,10 @@ const AdminPanel = ({ userData }) => {
 
   return (
     <div className="admin-panel">
-      <h2 className="admin-title">Admin Panel</h2>
+      <h2 className="admin-title">Admin User Control Panel</h2>
 
       {/* Filters */}
-      <div className="admin-filters">
+      {/* <div className="admin-filters">
         <select value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
           <option value="">All Sites</option>
           {siteList.map((site) => (
@@ -168,10 +168,10 @@ const AdminPanel = ({ userData }) => {
           value={searchUploader}
           onChange={(e) => setSearchUploader(e.target.value)}
         />
-      </div>
+      </div> */}
 
       {/* PM Reports */}
-      <div className="admin-table-wrapper">
+      {/* <div className="admin-table-wrapper">
         <h3 className="admin-subtitle">📄 PM Reports Management</h3>
         <table className="admin-table">
           <thead>
@@ -265,7 +265,7 @@ const AdminPanel = ({ userData }) => {
             )}
           </tbody>
         </table>
-      </div>
+      </div> */}
 
       {/* User Management */}
       {["Admin", "Super Admin"].includes(userData.role) && (

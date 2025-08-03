@@ -86,11 +86,11 @@ const ExcelLiveEditPage = ({ userData }) => {
     }));
   };
 
-  useEffect(() => {
-    window.alert(
-      "Dear My All Team Members, This Daily Details Data on Upgradation Stage. Please try to fill data for Fixing Issues . \nThanks & Regards\n@Suman Adhikari"
-    );
-  }, []);
+  // useEffect(() => {
+  //   window.alert(
+  //     "Dear My All Team Members, This Daily Details Data on Upgradation Stage. Please try to fill data for Fixing Issues . \nThanks & Regards\n@Suman Adhikari"
+  //   );
+  // }, []);
 
   const getSheetStatus = (rows) => {
     if (!Array.isArray(rows) || rows.length === 0) return { status: "Empty", color: "red", filled: 0, total: 0 };
@@ -155,6 +155,8 @@ const ExcelLiveEditPage = ({ userData }) => {
               rows={sheetData[sheetKeys[selectedTab]] || []}
               lastUpdated={sheetData[`lastUpdated_${sheetKeys[selectedTab]}`]}
               onSave={(rows) => handleSheetUpdate(sheetKeys[selectedTab], rows)}
+              userData={userData}
+              selectedDate={selectedDate}
             />
           </div>
         )}

@@ -96,7 +96,7 @@ const sheetTemplates = {
   ],
 };
 
-const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated }) => {
+const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selectedDate }) => {
   const [data, setData] = useState([]);
   const [timeoutId, setTimeoutId] = useState(null);
 
@@ -107,11 +107,37 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated }) => {
 
   useEffect(() => {
     if (rows.length === 0 && sheetTemplates[sheetKey]) {
-      setData(sheetTemplates[sheetKey].map((row) => ({ ...row })));
-    } else {
-      setData(rows);
-    }
-  }, [rows, sheetKey]);
+      const autoFilledData = sheetTemplates[sheetKey].map((row) => {
+      const newRow = { ...row };
+
+      // Auto-fill known fields from userData
+      Object.keys(newRow).forEach((key) => {
+        if (key.toLowerCase().includes("msc_location") && userData?.site) {
+          newRow[key] = userData.site;
+        } else if (key.toLowerCase().includes("circle") && userData?.circle || "WB") {
+          newRow[key] = userData.circle;
+        } else if (key.toLowerCase().includes("Site_Name") && userData?.site) {
+          newRow[key] = userData.site;
+        } else if (key.toLowerCase().includes("Date") && selectedDate) {
+          newRow[key] = selectedDate;
+        }
+      });
+
+      // ✅ Add computed fields (e.g., completion %)
+      if (sheetKey === "Final_Summary") {
+        const planned = parseFloat(newRow["In House PM Planned (Jul'25 Month)"] || 0);
+        const done = parseFloat(newRow["In House PM Completed (Jul'25 Month)"] || 0);
+        newRow["Inhouse PM Completion %"] = planned ? ((done / planned) * 100).toFixed(1) + "%" : "";
+      }
+
+      return newRow;
+    });
+
+    setData(autoFilledData);
+  } else {
+    setData(rows);
+  }
+}, [rows, sheetKey, userData, selectedDate]);
 
   const handleChange = (index, field, value) => {
     const updated = [...data];

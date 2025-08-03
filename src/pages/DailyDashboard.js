@@ -1,7 +1,7 @@
 // src/pages/DailyDashboard.js
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { sheetTemplates } from "../components/ExcelSheetEditor";
 import "../assets/DailyDashboard.css";
@@ -13,33 +13,49 @@ const allSites = [
 ];
 
 const sheetKeys = {
-  "A_Final Summary": "Final_Summary",
-  "B_Diesel Back Up": "Diesel_Back_Up",
-  "C_DG-EB Backup": "DG_EB_Backup",
-  "D_Infra Update": "Infra_Update",
-  "E_Fault Details": "Fault_Details",
-  "F_Planned Activity Details": "Planned_Activity_Details",
-  "F_Manpower Availability": "Manpower_Availability",
-  "F_Sheet1": "Sheet1",
-  "F_In House PM": "In_House_PM",
-  "F_Sheet2": "Sheet2",
-  "F_OEM PM": "OEM_PM",
-  "F_Operational Governance Call": "Operational_Governance_Call"
+  "Final Summary": "Final_Summary",
+  "Diesel Back Up": "Diesel_Back_Up",
+  "DG-EB Backup": "DG_EB_Backup",
+  "Infra Update": "Infra_Update",
+  "Fault Details": "Fault_Details",
+  "Planned Activity Details": "Planned_Activity_Details",
+  "Manpower Availability": "Manpower_Availability",
+  "Sheet1": "Sheet1",
+  "In House PM": "In_House_PM",
+  "Sheet2": "Sheet2",
+  "OEM PM": "OEM_PM",
+  "Operational Governance Call": "Operational_Governance_Call"
 };
 
 const DailyDashboard = ({ userData }) => {
+  const userName = userData?.name;
   const userRole = userData?.role;
   const userSite = userData?.site;
-
+  const today = new Date().toISOString().split("T")[0];
   const [dates, setDates] = useState([]);
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(today);
   const [siteData, setSiteData] = useState({});
   const [sortAsc, setSortAsc] = useState(true);
+  const [instructionText, setInstructionText] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+
+  // useEffect(() => {
+  //   if (userRole === "User") return;
+  //   window.alert("Dear My All Team Members, This Daily Details Data on Upgradation Stage. Please try to fill data for Fixing Issues . \nThanks & Regards\n@Suman Adhikari");
+  // }, [userRole]);
 
   useEffect(() => {
-    if (userRole === "User") return;
-    window.alert("Dear My All Team Members, This Daily Details Data on Upgradation Stage. Please try to fill data for Fixing Issues . \nThanks & Regards\n@Suman Adhikari");
-  }, [userRole]);
+      const fetchInstruction = async () => {
+        const docRef = doc(db, "config", "dashboard_instruction");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setInstructionText(docSnap.data().text || "");
+          setEditText(docSnap.data().text || "");
+        }
+      };
+      fetchInstruction();
+    }, []);
 
   useEffect(() => {
     const fetchDates = async () => {
@@ -136,11 +152,65 @@ const DailyDashboard = ({ userData }) => {
 
   return (
     <div style={{ padding: "1rem" }}>
+      <h2 className="dashboard-header">Welcome, {userName}</h2>
+      <p className="dashboard-subinfo">
+        Role: <strong>{userRole}</strong> | Site: <strong>{userSite || "All"}</strong>
+      </p>
+      <div className="instruction-tab">
+        <h3 className="dashboard-header">📘 Overview About App || @Suman Adhikari</h3>
+        {isEditing ? (
+          <>
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              rows={5}
+              className="dashboard-instruction-panel"
+            />
+            <div className="flex gap-2">
+              <button
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+                onClick={async () => {
+                  const docRef = doc(db, "config", "dashboard_instruction");
+                  await setDoc(docRef, { text: editText });
+                  setInstructionText(editText);
+                  setIsEditing(false);
+                }}
+              >
+                Save
+              </button>
+              <button
+                className="bg-gray-400 text-white px-3 py-1 rounded"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
+            {["Admin", "Super Admin"].includes(userRole) && (
+              <button
+                className="text-blue-600 underline"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit Instruction
+              </button>
+            )}
+          </>
+        )}
+      </div>
       <h2>📊 Daily Details Dashboard Overview - WB Circle Location</h2>
 
       <div style={{ marginBottom: "1rem" }}>
         <label>Select Date: </label>
-        <select onChange={(e) => setSelectedDate(e.target.value)} value={selectedDate}>
+        <select
+          onChange={(e) => setSelectedDate(e.target.value)}
+          value={selectedDate || today}
+        >
+          {!dates.includes(today) && (
+            <option value={today}>{today} (Today)</option>
+          )}
           <option value="">-- Select Date --</option>
           {dates.map((d) => (
             <option key={d} value={d}>{d}</option>

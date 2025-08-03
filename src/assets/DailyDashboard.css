@@ -66,3 +66,23 @@
   color: red;
   font-weight: bold;
 }
+
+.instruction-tab {
+  background: #f0f9ff;
+  border: 1px solid #bde0fe;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-instruction-panel {
+  width: 97%;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 1rem;
+  background: #fff;
+}

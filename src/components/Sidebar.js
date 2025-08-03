@@ -18,11 +18,11 @@ const Sidebar = ({ userData, collapsed }) => {
     <div>
       <h1>{collapsed ? "📋" : "📋 MENU"}</h1>
       <nav>
-        <Link to="/dashboard">🏠 <span className="label">Dashboard</span></Link>
         {(role === "Super User" || role === "Admin" || role === "Super Admin") && (
           <Link to="/daily-dashboard">📅 <span className="label">Daily Dashboard</span></Link>
           )}
-        <Link to="/excel-live-edit">📊 <span className="label">Excel Data Manager</span></Link>
+        <Link to="/excel-live-edit">📊 <span className="label">Daily Details Data Manager</span></Link>
+        <Link to="/pdf-dashboard">🏠 <span className="label">Upload PM Report</span></Link>
 
         {site && (
           <Link to={`/site/${site}`}>

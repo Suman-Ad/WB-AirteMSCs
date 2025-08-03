@@ -43,7 +43,7 @@ function App() {
 
         {/* Protected Layout Routes */}
         <Route
-          path="/dashboard"
+          path="/pdf-dashboard"
           element={
             <RoleProtectedRoute userData={userData} allowedRoles={["User", "Super User", "Admin", "Super Admin"]}>
               <Layout userData={userData}>
@@ -107,16 +107,16 @@ function App() {
         />
         
         <Route path="/daily-dashboard" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
-              <DailyDashboard />
+              <DailyDashboard userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
               
 
         {/* Fallback */}
-        <Route path="/" element={<Navigate to="/dashboard" />} />
-        <Route path="*" element={<Navigate to="/dashboard" />} />
+        <Route path="/" element={<Navigate to="/daily-dashboard" />} />
+        <Route path="*" element={<Navigate to="/daily-dashboard" />} />
       </Routes>
     </Router>
   );
