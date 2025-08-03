@@ -152,12 +152,20 @@ const DailyDashboard = ({ userData }) => {
 
   return (
     <div style={{ padding: "1rem" }}>
-      <h2 className="dashboard-header">Welcome, {userName}</h2>
+      <h2 className="dashboard-header">
+  👋    Welcome, <strong>{userName || "Team Member"}</strong>
+      </h2>
       <p className="dashboard-subinfo">
-        Role: <strong>{userRole}</strong> | Site: <strong>{userSite || "All"}</strong>
+        {userRole === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
+        {userRole === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
+        {userRole === "Super User" && <span>📍 <strong>Super User</strong></span>}
+        {userRole === "User" && <span>👤 <strong>User</strong></span>}
+        &nbsp; | &nbsp; 🏢 Site: <strong>{userSite || "All"}</strong>
       </p>
+
       <div className="instruction-tab">
-        <h3 className="dashboard-header">📘 Overview About App || @Suman Adhikari</h3>
+        <h2 className="dashboard-header">📌 Notice Board </h2>
+        <h3 className="dashboard-header">📘 App Overview </h3>
         {isEditing ? (
           <>
             <textarea
@@ -199,6 +207,7 @@ const DailyDashboard = ({ userData }) => {
             )}
           </>
         )}
+        <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
       </div>
       <h2>📊 Daily Details Dashboard Overview - WB Circle Location</h2>
 

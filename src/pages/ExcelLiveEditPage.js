@@ -107,6 +107,10 @@ const ExcelLiveEditPage = ({ userData }) => {
     return { status: "Complete", color: "green", filled, total };
   };
 
+  if (userData.role === "User") {
+    return <h3 style={{ padding: "2rem", color: "crimson" }}>🚫 You don't have access to this dashboard.</h3>;
+  }
+
   return (
     <div className="excel-live-edit-container">
       <h2>📘 Daily Details Dashboard Of WB Circle Location: {siteId || "Unknown Site"}</h2>

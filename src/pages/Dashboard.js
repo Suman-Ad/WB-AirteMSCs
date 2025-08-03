@@ -133,53 +133,63 @@ const Dashboard = ({ userData }) => {
 
   return (
     <div className="dashboard-container">
-      <h3 className="dashboard-header">📢 Instruction</h3>
-      {isEditing ? (
-        <>
-          <textarea
-            value={editText}
-            onChange={(e) => setEditText(e.target.value)}
-            rows={4}
-            className="dashboard-instruction-panel"
-          />
-          <div className="flex gap-2">
-            <button
-              className="bg-blue-600 text-white px-3 py-1 rounded"
-              onClick={async () => {
-                const docRef = doc(db, "config", "dashboard_instruction");
-                await setDoc(docRef, { text: editText });
-                setInstructionText(editText);
-                setIsEditing(false);
-              }}
-            >
-              Save
-            </button>
-            <button
-              className="bg-gray-400 text-white px-3 py-1 rounded"
-              onClick={() => setIsEditing(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
-          {["Admin", "Super Admin"].includes(userData.role) && (
-            <button
-              className="text-blue-600 underline"
-              onClick={() => setIsEditing(true)}
-            >
-              Edit Instruction
-            </button>
-          )}
-        </>
-      )}
-
-      <h2 className="dashboard-header">Welcome, {userData?.name}</h2>
+      <h2 className="dashboard-header">
+  👋    Welcome, <strong>{userData.name || "Team Member"}</strong>
+      </h2>
       <p className="dashboard-subinfo">
-        Role: <strong>{userData?.role}</strong> | Site: <strong>{userData?.site || "All"}</strong>
+        {userData.role === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
+        {userData.role === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
+        {userData.role === "Super User" && <span>📍 <strong>Super User</strong></span>}
+        {userData.role === "User" && <span>👤 <strong>User</strong></span>}
+        &nbsp; | &nbsp; 🏢 Site: <strong>{userData.site || "All"}</strong>
       </p>
+      
+      <div className="instruction-tab">
+        <h2 className="dashboard-header">📌 Notice Board </h2>
+        <h3 className="dashboard-header">📘 App Overview </h3>
+        {isEditing ? (
+          <>
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              rows={5}
+              className="dashboard-instruction-panel"
+            />
+            <div className="flex gap-2">
+              <button
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+                onClick={async () => {
+                  const docRef = doc(db, "config", "dashboard_instruction");
+                  await setDoc(docRef, { text: editText });
+                  setInstructionText(editText);
+                  setIsEditing(false);
+                }}
+              >
+                Save
+              </button>
+              <button
+                className="bg-gray-400 text-white px-3 py-1 rounded"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
+            {["Admin", "Super Admin"].includes(userData.role) && (
+              <button
+                className="text-blue-600 underline"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit Instruction
+              </button>
+            )}
+          </>
+        )}
+        <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
+      </div>
 
       {/* Quick Stats */}
       <div className="dashboard-container">

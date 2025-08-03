@@ -87,6 +87,7 @@ body {
 
 .sidebar a span.label {
   display: inline;
+  font-size: small;
 }
 
 .sidebar.collapsed a span.label {

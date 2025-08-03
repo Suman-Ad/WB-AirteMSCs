@@ -108,3 +108,100 @@
   gap: 1rem;
   flex-wrap: wrap;
 }
+
+/* Container for the full sheet block section */
+.sheet-blocks-wrapper {
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 1rem 0;
+  border-top: 2px solid #ccc;
+}
+
+/* Each sheet block card */
+.sheet-block-card {
+  display: inline-block;
+  vertical-align: top;
+  width: 700px;
+  margin-right: 20px;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+/* Table styling inside each sheet */
+.sheet-block-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sheet-block-card th,
+.sheet-block-card td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sheet-block-card th {
+  background-color: #f0f0f0;
+}
+
+.status-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+  background-color: #fff;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.status-table th,
+.status-table td {
+  border: 1px solid #ccc;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.status-table th {
+  background-color: #f7f7f7;
+  font-weight: bold;
+}
+
+.status-complete {
+  color: green;
+  font-weight: bold;
+}
+
+.status-pending {
+  color: red;
+  font-weight: bold;
+}
+
+.instruction-tab {
+  background: #f0f9ff;
+  border: 1px solid #bde0fe;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-instruction-panel {
+  width: 97%;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 1rem;
+  background: #fff;
+}
+
+.dashboard-subinfo span {
+  padding: 4px 8px;
+  background-color: #f1f5f9;
+  border-radius: 6px;
+  margin-right: 8px;
+  display: inline-block;
+}

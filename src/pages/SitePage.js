@@ -43,7 +43,7 @@ const SitePage = ({ userData }) => {
 
   const canDelete = (report) => {
     if (!userData) return false;
-    if (["Admin", "Super Admin"].includes(userData.role)) return true;
+    if (["Admin", "Super Admin", "Super User"].includes(userData.role)) return true;
     return userData.site === report.site && userData.uid === report.uploadedBy.uid;
   };
 
@@ -113,7 +113,7 @@ const SitePage = ({ userData }) => {
 
   return (
     <div className="sitepage-container">
-      <h2 className="sitepage-title">Site: {siteName}</h2>
+      <h2 className="sitepage-title"> 🏢Site Name : {siteName}</h2>
 
       <div className="sitepage-filters">
         <label>📅 Filter by Month:</label>
