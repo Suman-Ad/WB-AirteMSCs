@@ -27,17 +27,19 @@ const sheetKeys = {
   "F_Operational Governance Call": "Operational_Governance_Call"
 };
 
-const userRole = "Super Admin";
+const DailyDashboard = ({ userData }) => {
+  const userRole = userData?.role;
+  const userSite = userData?.site;
 
-const DailyDashboard = () => {
   const [dates, setDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [siteData, setSiteData] = useState({});
   const [sortAsc, setSortAsc] = useState(true);
 
   useEffect(() => {
+    if (userRole === "User") return;
     window.alert("Dear My All Team Members, This Daily Details Data on Upgradation Stage. Please try to fill data for Fixing Issues . \nThanks & Regards\n@Suman Adhikari");
-  }, []);
+  }, [userRole]);
 
   useEffect(() => {
     const fetchDates = async () => {
@@ -45,21 +47,25 @@ const DailyDashboard = () => {
       const dateList = snap.docs.map((doc) => doc.id);
       setDates(dateList);
     };
-    fetchDates();
-  }, []);
+    if (userRole !== "User") fetchDates();
+  }, [userRole]);
 
   useEffect(() => {
     const fetchSiteData = async () => {
-      if (!selectedDate) return;
+      if (!selectedDate || userRole === "User") return;
       const siteSnap = await getDocs(collection(db, "excel_data_by_date", selectedDate, "sites"));
       const allData = {};
       for (let docSnap of siteSnap.docs) {
         allData[docSnap.id] = docSnap.data();
       }
-      setSiteData(allData);
+      if (userRole === "Super User") {
+        setSiteData(userSite && allData[userSite] ? { [userSite]: allData[userSite] } : {});
+      } else {
+        setSiteData(allData);
+      }
     };
     fetchSiteData();
-  }, [selectedDate]);
+  }, [selectedDate, userRole, userSite]);
 
   const getSheetStatus = (rows) => {
     if (!Array.isArray(rows) || rows.length === 0) return { status: "Empty", color: "red", filled: 0, total: 0 };
@@ -116,9 +122,17 @@ const DailyDashboard = () => {
     setDoc(ref, updated[site]);
   };
 
+  // const sortedSites = Object.keys(siteData).sort((a, b) =>
+  //   sortAsc ? a.localeCompare(b) : b.localeCompare(a)
+  // );
+
   const sortedSites = [...allSites].sort((a, b) =>
     sortAsc ? a.localeCompare(b) : b.localeCompare(a)
   );
+
+  if (userRole === "User") {
+    return <h3 style={{ padding: "2rem", color: "crimson" }}>🚫 You don't have access to this dashboard.</h3>;
+  }
 
   return (
     <div style={{ padding: "1rem" }}>
@@ -141,7 +155,7 @@ const DailyDashboard = () => {
         <>
           <h3>✅ Completed Site Submission Status</h3>
           <div style={{ overflowX: "auto" }}>
-            <table className="status-table" style={{ minWidth: "800px", borderCollapse: "collapse", marginBottom: "2rem", position: "sticky", top: 0 }}>
+            <table className="status-table" style={{ minWidth: "800px", borderCollapse: "collapse", marginBottom: "2rem" }}>
               <thead>
                 <tr>
                   <th>Site</th>
@@ -198,7 +212,7 @@ const DailyDashboard = () => {
                     <div className="sheet-block-card" key={sheetKey}>
                       <h4>📄 Sheet: {sheetLabel} — <span style={{ color }}>{status}</span> ({filled}/{total})</h4>
                       <div style={{ overflowX: "auto" }}>
-                        <table >
+                        <table>
                           <thead>
                             <tr>
                               {columns.map((col) => <th key={col}>{col}</th>)}
@@ -229,8 +243,6 @@ const DailyDashboard = () => {
               </div>
             </div>
           ))}
-
-          {/* Additional content such as sheet render and download button remains here */}
 
           {Object.keys(siteData).length > 0 && (
             <button onClick={downloadExcel} style={{ marginTop: "2rem" }}>

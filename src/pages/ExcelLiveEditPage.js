@@ -7,18 +7,18 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import "../assets/ExcelLiveEditPage.css";
 
 const sheetKeys = {
-  "A_Final Summary": "Final_Summary",
-  "B_Diesel Back Up": "Diesel_Back_Up",
-  "C_DG-EB Backup": "DG_EB_Backup",
-  "D_Infra Update": "Infra_Update",
-  "E_Fault Details": "Fault_Details",
-  "F_Planned Activity Details": "Planned_Activity_Details",
-  "F_Manpower Availability": "Manpower_Availability",
-  "F_Sheet1": "Sheet1",
-  "F_In House PM": "In_House_PM",
-  "F_Sheet2": "Sheet2",
-  "F_OEM PM": "OEM_PM",
-  "F_Operational Governance Call": "Operational_Governance_Call",
+  "Final Summary": "Final_Summary",
+  "Diesel Back Up": "Diesel_Back_Up",
+  "DG-EB Backup": "DG_EB_Backup",
+  "Infra Update": "Infra_Update",
+  "Fault Details": "Fault_Details",
+  "Planned Activity Details": "Planned_Activity_Details",
+  "Manpower Availability": "Manpower_Availability",
+  "Sheet1": "Sheet1",
+  "In House PM": "In_House_PM",
+  "Sheet2": "Sheet2",
+  "OEM PM": "OEM_PM",
+  "Operational Governance Call": "Operational_Governance_Call",
 };
 
 const ExcelLiveEditPage = ({ userData }) => {
@@ -92,6 +92,21 @@ const ExcelLiveEditPage = ({ userData }) => {
     );
   }, []);
 
+  const getSheetStatus = (rows) => {
+    if (!Array.isArray(rows) || rows.length === 0) return { status: "Empty", color: "red", filled: 0, total: 0 };
+    const keys = Object.keys(rows[0]);
+    const total = rows.length * keys.length;
+    let filled = 0;
+    rows.forEach(row => {
+      keys.forEach(k => {
+        if (row[k] !== "" && row[k] !== null && row[k] !== undefined) filled++;
+      });
+    });
+    if (filled === 0) return { status: "Empty", color: "red", filled, total };
+    if (filled < total) return { status: "Partial", color: "orange", filled, total };
+    return { status: "Complete", color: "green", filled, total };
+  };
+
   return (
     <div className="excel-live-edit-container">
       <h2>📘 Daily Details Dashboard Of WB Circle Location: {siteId || "Unknown Site"}</h2>
@@ -112,9 +127,23 @@ const ExcelLiveEditPage = ({ userData }) => {
           onChange={(e, val) => setSelectedTab(val)}
           variant="scrollable"
         >
-          {Object.keys(sheetKeys).map((name) => (
-            <Tab key={name} label={name} value={name} />
-          ))}
+          {Object.entries(sheetKeys).map(([label, key]) => {
+            const rows = sheetData[key] || [];
+            const { status, color, filled, total } = getSheetStatus(rows);
+            const percentage = total ? Math.round((filled / total) * 100) : 0;
+            return (
+              <Tab
+                key={label}
+                label={
+                  <span className={`sheet-tab ${status.toLowerCase()}`}>
+                    {label} <br />
+                    <small style={{ color }}>{status} ({percentage}%)</small>
+                  </span>
+                }
+                value={label}
+              />
+            );
+          })}
         </Tabs>
 
         {loading ? (

@@ -40,3 +40,58 @@
   overflow-x: auto;
   padding-bottom: 1rem;
 }
+
+/* Sheet status text */
+.sheet-status {
+  font-weight: bold;
+}
+
+.sheet-status.complete {
+  color: green;
+}
+
+.sheet-status.partial {
+  color: orange;
+}
+
+.sheet-status.empty {
+  color: red;
+}
+
+/* Tab styles for each sheet (visible at top or on selection) */
+.sheet-tab {
+  padding: 8px 12px;
+  margin-right: 8px;
+  border-radius: 6px;
+  background-color: #e0e0e0;
+  display: inline-block;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sheet-tab:hover {
+  background-color: #d0d0d0;
+}
+
+.sheet-tab.complete {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.sheet-tab.partial {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.sheet-tab.empty {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Highlight active tab if needed */
+.sheet-tab.active {
+  border: 2px solid #007bff;
+  background-color: #dbe9ff;
+}

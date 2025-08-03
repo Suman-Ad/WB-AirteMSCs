@@ -129,8 +129,8 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated }) => {
   };
 
   return (
-    <div>
-      <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: "6px" }}>
+    <div className="sheet-editor-container">
+      <div className="sheet-scroll-block sheet-header">
         ⏱ Last Updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : "Never"}
       </div>
 
@@ -144,7 +144,7 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated }) => {
           {data.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {columns.map((col) => (
-                <td key={col}>
+                <td key={col} className="sheet-cell">
                   <input
                     type="text"
                     value={row[col] || ""}

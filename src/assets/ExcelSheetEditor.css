@@ -1,14 +1,112 @@
-.sheet-table {
-  width: 50%;
-  /* min-width: 80px; */
-  border-collapse: collapse;
+/* Container for all sheets */
+.sheet-editor-container {
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 1rem;
+  background: #f4f6f8;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  margin-right: 40px;
 }
 
-.sheet-table th, .sheet-table td {
-  border: 1px solid #ccc;
+/* Scrollable block per sheet */
+.sheet-scroll-block {
+  overflow-x: auto;
+  margin-bottom: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Table styling */
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.sheet-table th,
+.sheet-table td {
+  border: 1px solid #ddd;
   padding: 8px;
+  text-align: left;
+}
+
+.sheet-table th {
+  position: sticky;
+  top: 0;
+  background: #e9ecef;
+  z-index: 1;
 }
 
 .sheet-table input {
   width: 100%;
+  padding: 5px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+/* Sheet block header */
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+/* Sheet status text */
+.sheet-status {
+  font-weight: bold;
+}
+
+.sheet-status.complete {
+  color: green;
+}
+
+.sheet-status.partial {
+  color: orange;
+}
+
+.sheet-status.empty {
+  color: red;
+}
+
+/* Tab styles for each sheet (visible at top or on selection) */
+.sheet-tab {
+  padding: 8px 12px;
+  margin-right: 8px;
+  border-radius: 6px;
+  background-color: #e0e0e0;
+  display: inline-block;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sheet-tab:hover {
+  background-color: #d0d0d0;
+}
+
+.sheet-tab.complete {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.sheet-tab.partial {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.sheet-tab.empty {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Highlight active tab if needed */
+.sheet-tab.active {
+  border: 2px solid #007bff;
+  background-color: #dbe9ff;
 }
