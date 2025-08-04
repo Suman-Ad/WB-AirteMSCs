@@ -25,8 +25,13 @@ const Sidebar = ({ userData, collapsed }) => {
         {(role === "Super User" || role === "Admin" || role === "Super Admin") && (
           <Link to="/excel-live-edit">📊 <span className="label">Daily Details Data Manager</span></Link>
           )}
+
+        <Link to="/pdf-dashboard">📥 <span className="label">PM Dashboard</span></Link>
+        {(role === "Super User" || role === "Admin" || role === "Super Admin" || role === "User") && (
+          <Link to="/pm-calendar">📊 <span className="label">PM Calendar Management</span></Link>
+          )}
+
         
-        <Link to="/pdf-dashboard">📥 <span className="label">Upload {userData.site} PM FSR's</span></Link>
 
         {site && (
           <Link to={`/site/${site}`}>
@@ -43,7 +48,7 @@ const Sidebar = ({ userData, collapsed }) => {
         )}
 
         <Link to="/profile">👤 <span className="label">Profile</span></Link>
-        <button onClick={handleLogout} style={{ marginTop: "16rem", width: "100%", padding: "10px", backgroundColor: "#f44336", color: "#fff", border: "none", cursor: "pointer" }}>
+        <button onClick={handleLogout} style={{ marginTop: "10rem", width: "100%", padding: "10px", backgroundColor: "#f44336", color: "#fff", border: "none", cursor: "pointer" }}>
           Logout
         </button>
       </nav>

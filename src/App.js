@@ -13,6 +13,7 @@ import RoleProtectedRoute from "./components/RoleProtectedRoute";
 import ExcelDataManager from "./pages/ExcelDataManager";
 import ExcelLiveEditPage from "./pages/ExcelLiveEditPage";
 import DailyDashboard from "./pages/DailyDashboard";
+import PMCalendarManagement from "./pages/PMCalendarManagement";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -110,6 +111,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <DailyDashboard userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/pm-calendar" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <PMCalendarManagement userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
               

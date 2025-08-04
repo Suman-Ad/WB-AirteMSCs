@@ -14,6 +14,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import * as XLSX from "xlsx";
 import "../assets/Dashboard.css";
 
 const siteList = [
@@ -32,12 +33,19 @@ const Dashboard = ({ userData }) => {
   const [uploadSummary, setUploadSummary] = useState({});
   const [summarySiteFilter, setSummarySiteFilter] = useState("");
   const [summaryMonthFilter, setSummaryMonthFilter] = useState("");
+  const [pmCalendarSummary, setPmCalendarSummary] = useState({});
+  const [pmSummaryFilters, setPmSummaryFilters] = useState({
+    site: "",
+    month: "",
+    type: ""
+  });
 
   const canAccessSite = (site) => {
     if (!userData) return false;
     return userData.role === "Super Admin" || userData.role === "Admin" || userData.site === site;
   };
 
+  // Fetch dashboard instruction
   useEffect(() => {
     const fetchInstruction = async () => {
       const docRef = doc(db, "config", "dashboard_instruction");
@@ -50,6 +58,7 @@ const Dashboard = ({ userData }) => {
     fetchInstruction();
   }, []);
 
+  // Fetch user upload stats
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -86,6 +95,7 @@ const Dashboard = ({ userData }) => {
     }
   }, [userData]);
 
+  // Fetch upload summary (existing logic)
   useEffect(() => {
     const fetchUploadSummary = async () => {
       try {
@@ -131,10 +141,139 @@ const Dashboard = ({ userData }) => {
     }
   }, [userData]);
 
+  // NEW: Fetch and process PM Calendar data
+  useEffect(() => {
+    if (!["Admin", "Super Admin"].includes(userData.role)) return;
+
+    const fetchPmCalendarSummary = async () => {
+      try {
+        // 1. Fetch PM Calendar data
+        const calendarSnap = await getDocs(collection(db, "pm_calendar"));
+        const calendarData = {};
+        calendarSnap.forEach(doc => {
+          const [site, year] = doc.id.split("_");
+          calendarData[site] = doc.data();
+        });
+
+        // 2. Fetch PM Reports
+        const reportsSnap = await getDocs(collection(db, "pm_reports"));
+        const reportsData = reportsSnap.docs.map(doc => doc.data());
+
+        // 3. Process combined data
+        const summary = {};
+
+        // Process In-House PMs
+        Object.keys(calendarData).forEach(site => {
+          const calendar = calendarData[site];
+          
+          Object.keys(calendar.inhouse || {}).forEach(month => {
+            calendar.inhouse[month].forEach(item => {
+              const key = `${site}_${month}_In-House_${item.equipment}`;
+              if (!summary[key]) {
+                summary[key] = {
+                  circle: item.circle || "",
+                  site,
+                  equipment_category: item.equipment_category || "",
+                  equipment: item.equipment,
+                  frequency: item.frequency || "Monthly",
+                  month,
+                  type: "In-House",
+                  plan_date: item.plan_date || "",
+                  done_date: "",
+                  status: "Pending",
+                  pending: 1,
+                  done_percent: "0%"
+                };
+              }
+            });
+          });
+
+          // Process Vendor PMs
+          Object.keys(calendar.vendor || {}).forEach(qtr => {
+            calendar.vendor[qtr].forEach(item => {
+              const key = `${site}_${qtr}_Vendor_${item.equipment}`;
+              if (!summary[key]) {
+                summary[key] = {
+                  region: item.region || "",
+                  circle: item.circle || "",
+                  site,
+                  equipment_category: item.equipment_category || "",
+                  equipment: item.equipment,
+                  make: item.make || "",
+                  capacity: item.capacity || "",
+                  qty: item.qty || 1,
+                  amc_partner: item.amc_partner || "",
+                  frequency: item.frequency || "Quarterly",
+                  month: qtr,
+                  type: "Vendor",
+                  plan_date: item.plan_date || "",
+                  done_date: "",
+                  status: "Pending",
+                  pending: 1,
+                  done_percent: "0%"
+                };
+              }
+            });
+          });
+        });
+
+        // Match with uploads
+        reportsData.forEach(report => {
+          const key = report.type === "In-House" 
+            ? `${report.site}_${report.month}_In-House_${report.equipmentName}`
+            : `${report.site}_${report.quarter}_Vendor_${report.vendorName}`;
+          
+          if (summary[key]) {
+            summary[key].done_date = report.timestamp?.toDate()?.toISOString().split('T')[0];
+            summary[key].status = "Completed";
+            summary[key].pending = 0;
+            summary[key].done_percent = "100%";
+          }
+        });
+
+        setPmCalendarSummary(summary);
+      } catch (err) {
+        console.error("Failed to process PM calendar summary:", err);
+      }
+    };
+
+    fetchPmCalendarSummary();
+  }, [userData.role]);
+
+  // NEW: Export to Excel
+  const exportPmSummaryToExcel = (type) => {
+    const data = Object.values(pmCalendarSummary)
+      .filter(item => item.type === type)
+      .map(item => ({
+        ...item,
+        // Format for Excel export
+        "Planned Date": item.plan_date,
+        "Completed Date": item.done_date,
+        "Completion Status": item.status,
+        "Pending Count": item.pending,
+        "Completion %": item.done_percent
+      }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "PM Summary");
+    XLSX.writeFile(workbook, `PM_${type}_Summary_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  // Filter PM Calendar summary data
+  const filteredPmSummary = Object.values(pmCalendarSummary).filter(item => {
+    return (
+      (!pmSummaryFilters.site || item.site === pmSummaryFilters.site) &&
+      (!pmSummaryFilters.month || item.month.includes(pmSummaryFilters.month)) &&
+      (!pmSummaryFilters.type || item.type === pmSummaryFilters.type)
+    );
+  });
+
   return (
     <div className="dashboard-container">
+      {/* Existing Header and Quick Stats */}
       <h2 className="dashboard-header">
-  👋    Welcome, <strong>{userData.name || "Team Member"}</strong>
+        👋 Welcome, <strong>{userData.name || "Team Member"}</strong>
       </h2>
       <p className="dashboard-subinfo">
         {userData.role === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
@@ -144,7 +283,9 @@ const Dashboard = ({ userData }) => {
         &nbsp; | &nbsp; 🏢 Site: <strong>{userData.site || "All"}</strong>
       </p>
       
+      {/* Existing Notice Board */}
       <div className="instruction-tab">
+        {/* ... (keep existing notice board code) ... */}
         <h2 className="dashboard-header">📌 Notice Board </h2>
         <h3 className="dashboard-header">📘 App Overview </h3>
         {isEditing ? (
@@ -198,71 +339,138 @@ const Dashboard = ({ userData }) => {
         <p>Last Upload: <strong>{lastUploadTime || "N/A"}</strong></p>
       </div>
 
-      {/* Upload Count Summary Table */}
+      {/* NEW: PM Calendar Summary Section */}
       {["Admin", "Super Admin"].includes(userData.role) && (
-        <div className="dashboard-summary-table">
-          <h3 className="dashboard-header">📄 Upload Count Summary</h3>
-
+        <div className="dashboard-summary-section">
+          <h3 className="dashboard-header">📅 PM Calendar Status</h3>
+          
           {/* Filters */}
           <div className="dashboard-filter-row">
-            <label>Site:</label>
             <select
-              value={summarySiteFilter}
-              onChange={(e) => setSummarySiteFilter(e.target.value)}
+              value={pmSummaryFilters.site}
+              onChange={(e) => setPmSummaryFilters({...pmSummaryFilters, site: e.target.value})}
             >
               <option value="">All Sites</option>
-              {siteList.map((site) => (
+              {siteList.map(site => (
                 <option key={site} value={site}>{site}</option>
               ))}
             </select>
 
-            <label style={{ marginLeft: "1rem" }}>Month:</label>
             <input
               type="month"
-              value={summaryMonthFilter}
-              onChange={(e) => setSummaryMonthFilter(e.target.value)}
+              value={pmSummaryFilters.month}
+              onChange={(e) => setPmSummaryFilters({...pmSummaryFilters, month: e.target.value})}
+              placeholder="Filter by month"
             />
+
+            <select
+              value={pmSummaryFilters.type}
+              onChange={(e) => setPmSummaryFilters({...pmSummaryFilters, type: e.target.value})}
+            >
+              <option value="">All Types</option>
+              <option value="In-House">In-House</option>
+              <option value="Vendor">Vendor</option>
+            </select>
+
+            <button 
+              onClick={() => exportPmSummaryToExcel("In-House")}
+              className="export-btn"
+            >
+              Export In-House
+            </button>
+            <button 
+              onClick={() => exportPmSummaryToExcel("Vendor")}
+              className="export-btn"
+            >
+              Export Vendor
+            </button>
           </div>
 
-          <table className="summary-table">
-            <thead>
-              <tr>
-                <th>Sl.No</th>
-                <th>Site</th>
-                <th>Month</th>
-                <th>PM Type</th>
-                <th>Total Count</th>
-                <th>Done</th>
-                <th>Pending</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.keys(uploadSummary).flatMap((site, idx) => {
-                if (summarySiteFilter && site !== summarySiteFilter) return [];
-                return Object.keys(uploadSummary[site])
-                  .filter((month) => !summaryMonthFilter || month === summaryMonthFilter)
-                  .flatMap((month) => ["In-House", "Vendor"].map((type) => {
-                    const item = uploadSummary[site][month][type];
-                    if (!item) return null;
-                    return (
-                      <tr key={`${site}-${month}-${type}`}>
-                        <td>{idx + 1}</td>
-                        <td>{site}</td>
-                        <td>{month}</td>
-                        <td>{type}</td>
-                        <td>{item.total}</td>
-                        <td style={{ color: item.done === item.total ? "green" : "orange" }}>
-                          {item.done}
-                        </td>
-                        <td style={{ color: item.total - item.done > 0 ? "red" : "green" }}>
-                          {item.total - item.done}
-                        </td>
-                      </tr>
-                    );
-                  }).filter(Boolean));
-              })}
-            </tbody>
-          </table>
+          {/* In-House Summary Table */}
+          <div className="summary-table-container">
+            <h4>In-House PM Summary</h4>
+            <table className="summary-table">
+              <thead>
+                <tr>
+                  <th>Circle</th>
+                  <th>Site</th>
+                  <th>Category</th>
+                  <th>Equipment</th>
+                  <th>Month</th>
+                  <th>Plan Date</th>
+                  <th>Done Date</th>
+                  <th>Status</th>
+                  <th>Done %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPmSummary
+                  .filter(item => item.type === "In-House")
+                  .map((item, index) => (
+                    <tr key={`inhouse-${index}`}>
+                      <td>{item.circle}</td>
+                      <td>{item.site}</td>
+                      <td>{item.equipment_category}</td>
+                      <td>{item.equipment}</td>
+                      <td>{item.month}</td>
+                      <td>{item.plan_date || "Not set"}</td>
+                      <td>{item.done_date || "Pending"}</td>
+                      <td style={{ color: item.status === "Completed" ? "green" : "red" }}>
+                        {item.status}
+                      </td>
+                      <td>{item.done_percent}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Vendor Summary Table */}
+          <div className="summary-table-container">
+            <h4>Vendor PM Summary</h4>
+            <table className="summary-table">
+              <thead>
+                <tr>
+                  <th>Region</th>
+                  <th>Circle</th>
+                  <th>Site</th>
+                  <th>AMC Partner</th>
+                  <th>Equipment</th>
+                  <th>Quarter</th>
+                  <th>Plan Date</th>
+                  <th>Done Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPmSummary
+                  .filter(item => item.type === "Vendor")
+                  .map((item, index) => (
+                    <tr key={`vendor-${index}`}>
+                      <td>{item.region}</td>
+                      <td>{item.circle}</td>
+                      <td>{item.site}</td>
+                      <td>{item.amc_partner}</td>
+                      <td>{item.equipment}</td>
+                      <td>{item.month}</td>
+                      <td>{item.plan_date || "Not set"}</td>
+                      <td>{item.done_date || "Pending"}</td>
+                      <td style={{ color: item.status === "Completed" ? "green" : "red" }}>
+                        {item.status}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Existing Upload Count Summary Table */}
+      {["Admin", "Super Admin"].includes(userData.role) && (
+        <div className="dashboard-summary-table">
+          <h3 className="dashboard-header">📄 Upload Count Summary</h3>
+          {/* ... (keep existing upload summary table code) ... */}
         </div>
       )}
 

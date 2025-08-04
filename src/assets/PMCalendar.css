@@ -1,0 +1,215 @@
+/* src/assets/PMCalendar.css */
+
+.pm-calendar-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.pm-calendar-container h2 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #3498db;
+}
+
+.section-title {
+  color: #2980b9;
+  margin: 25px 0 15px;
+  padding-left: 10px;
+  border-left: 4px solid #3498db;
+}
+
+.pm-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 25px;
+  padding: 15px;
+  background-color: #ecf0f1;
+  border-radius: 6px;
+}
+
+.pm-controls select,
+.pm-controls input[type="text"],
+.pm-controls input[type="number"],
+.pm-controls input[type="date"] {
+  padding: 8px 12px;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 180px;
+}
+
+.pm-controls select:disabled {
+  background-color: #f2f2f2;
+  color: #95a5a6;
+}
+
+.pm-section {
+  background-color: white;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 25px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pm-section h4 {
+  color: #34495e;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.pm-add-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.pm-add-form input,
+.pm-add-form select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  flex-grow: 1;
+  min-width: 150px;
+}
+
+.pm-add-form button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.pm-add-form button:hover {
+  background-color: #2980b9;
+}
+
+.pm-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.pm-table th {
+  background-color: #3498db;
+  color: white;
+  padding: 10px;
+  text-align: left;
+}
+
+.pm-table td {
+  padding: 10px;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.pm-table tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.pm-table tr:hover {
+  background-color: #e8f4fc;
+}
+
+.pm-table input[type="date"] {
+  padding: 5px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.pm-table button {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pm-table button:hover {
+  background-color: #c0392b;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .pm-add-form {
+    flex-direction: column;
+  }
+  
+  .pm-add-form input,
+  .pm-add-form select {
+    width: 100%;
+  }
+  
+  .pm-table {
+    display: block;
+    overflow-x: auto;
+  }
+  
+  .pm-controls {
+    flex-direction: column;
+  }
+}
+
+/* Status indicators */
+.status-pending {
+  color: #e67e22;
+  font-weight: bold;
+}
+
+.status-completed {
+  color: #27ae60;
+  font-weight: bold;
+}
+
+.status-overdue {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+/* Filter controls */
+.filter-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.filter-controls select {
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #bdc3c7;
+}
+
+/* Export button */
+.export-btn {
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  margin-left: auto;
+}
+
+.export-btn:hover {
+  background-color: #27ae60;
+}

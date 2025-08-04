@@ -4,32 +4,42 @@ import { auth, db } from "../firebase";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
-  updateProfile
+  updateProfile,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import "../assets/Register.css";
-
 
 const Register = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    role: "User",
-    site: "Asansol"
+    designation: "",
+    site: "All",
   });
+
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const navigate = useNavigate();
 
   const sites = [
-    "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
+    "All", "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
     "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower",
     "New Alipore", "SDF", "Siliguri"
   ];
 
-  const roles = ["User", "Super User"]; // Only allow these for signup (Admin roles added manually)
+  const designations = [
+    "Vertiv ZM",
+    "Vertiv CIH",
+    "Vertiv Site Infra Engineer",
+    "Vertiv Supervisor",
+    "Vertiv Technician",
+  ];
+
+  const getRoleFromDesignation = (designation) => {
+    return designation === "Vertiv Technician" ? "User" : "Super User";
+  };
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,23 +50,35 @@ const Register = () => {
     setSuccessMsg("");
 
     try {
-      const { user } = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const role = getRoleFromDesignation(formData.designation);
+
+      const { user } = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
       await updateProfile(user, { displayName: formData.name });
 
-      // Send email verification
       await sendEmailVerification(user);
 
-      // Add user data to Firestore
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name: formData.name,
         email: formData.email,
-        role: formData.role,
-        site: formData.site
+        site: formData.site,
+        role,
+        designation: formData.designation,
       });
 
-      setSuccessMsg("Registered successfully. Please check your email to verify before logging in.");
-      setFormData({ name: "", email: "", password: "", role: "User", site: "Asansol" });
+      setSuccessMsg("Registered successfully. Please verify your email.");
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+        designation: "",
+        site: "",
+      });
       navigate("/login");
     } catch (err) {
       setError("Registration error: " + err.message);
@@ -80,6 +102,7 @@ const Register = () => {
           required
           className="w-full p-2 mb-2 border rounded"
         />
+
         <input
           type="email"
           name="email"
@@ -89,6 +112,7 @@ const Register = () => {
           required
           className="w-full p-2 mb-2 border rounded"
         />
+
         <input
           type="password"
           name="password"
@@ -99,15 +123,17 @@ const Register = () => {
           className="w-full p-2 mb-2 border rounded"
         />
 
-        <label className="block text-sm mb-1">Role</label>
+        <label className="block text-sm mb-1">Designation</label>
         <select
-          name="role"
-          value={formData.role}
+          name="designation"
+          value={formData.designation}
           onChange={handleChange}
+          required
           className="w-full p-2 mb-2 border rounded"
         >
-          {roles.map((role) => (
-            <option key={role} value={role}>{role}</option>
+          <option value="">-- Select Designation --</option>
+          {designations.map((desig) => (
+            <option key={desig} value={desig}>{desig}</option>
           ))}
         </select>
 
@@ -116,6 +142,7 @@ const Register = () => {
           name="site"
           value={formData.site}
           onChange={handleChange}
+          required
           className="w-full p-2 mb-4 border rounded"
         >
           {sites.map((site) => (
@@ -129,13 +156,15 @@ const Register = () => {
         >
           Register
         </button>
+
         <Link to={"/login"}>
           <button
             className="bg-blue-600 text-white p-2 w-full rounded mt-2"
+            type="button"
           >
             Already have an account? Login
           </button>
-          </Link>
+        </Link>
       </form>
     </div>
   );
