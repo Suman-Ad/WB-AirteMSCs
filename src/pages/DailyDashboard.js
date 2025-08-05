@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { sheetTemplates } from "../components/ExcelSheetEditor";
+import { Link } from "react-router-dom";
 import "../assets/DailyDashboard.css";
 
 const allSites = [
@@ -280,7 +281,10 @@ const DailyDashboard = ({ userData }) => {
 
           {Object.entries(siteData).map(([site, sheets]) => (
             <div key={site} style={{ marginTop: "2rem", borderTop: "2px solid #ccc", paddingTop: "1rem" }}>
-              <h3>📍 Site: {site}</h3>
+              {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin") && (
+                        <Link to="/excel-live-edit" className="pm-manage-btn">Edit <strong>"{site}"</strong> Daily Details Dashboard ✎ </Link>
+                        )}
+              <h3>📍 Site Name: {site} MSC</h3>
               <div className="sheet-blocks-wrapper sheet-block-card">
                 {Object.entries(sheetKeys).map(([sheetLabel, sheetKey]) => {
                   const rows = sheets[sheetKey];

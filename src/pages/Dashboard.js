@@ -1,6 +1,6 @@
 // src/pages/Dashboard.js
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import UploadForm from "../components/UploadForm";
 import {
   collection,
@@ -24,6 +24,7 @@ const siteList = [
 ];
 
 const Dashboard = ({ userData }) => {
+  const role = userData?.role;
   const navigate = useNavigate();
   const [uploadCount, setUploadCount] = useState(0);
   const [lastUploadTime, setLastUploadTime] = useState(null);
@@ -143,7 +144,7 @@ const Dashboard = ({ userData }) => {
 
   // NEW: Fetch and process PM Calendar data
   useEffect(() => {
-    if (!["Admin", "Super Admin"].includes(userData.role)) return;
+    if (!["Admin", "Super Admin", "Super User"].includes(userData.role)) return;
 
     const fetchPmCalendarSummary = async () => {
       try {
@@ -340,7 +341,7 @@ const Dashboard = ({ userData }) => {
       </div>
 
       {/* NEW: PM Calendar Summary Section */}
-      {["Admin", "Super Admin"].includes(userData.role) && (
+      {["Admin", "Super Admin", "Super User"].includes(userData.role) && (
         <div className="dashboard-summary-section">
           <h3 className="dashboard-header">📅 PM Calendar Status</h3>
           
@@ -372,6 +373,11 @@ const Dashboard = ({ userData }) => {
               <option value="Vendor">Vendor</option>
             </select>
 
+          {(role === "Super User" || role === "Admin" || role === "Super Admin") && (
+          <Link to="/pm-calendar" className="pm-manage-btn">
+            📅 Management PM Calendar
+          </Link>
+          )}
             <button 
               onClick={() => exportPmSummaryToExcel("In-House")}
               className="export-btn"

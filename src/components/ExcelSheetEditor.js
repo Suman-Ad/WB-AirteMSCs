@@ -157,7 +157,7 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
   return (
     <div className="sheet-editor-container">
       <div className="sheet-scroll-block sheet-header">
-        ⏱ Last Updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : "Never"}
+        💾 ⏱ Last Updated: {lastUpdated ? new Date(lastUpdated).toLocaleString() : "Never"}
       </div>
 
       <table className="sheet-table">

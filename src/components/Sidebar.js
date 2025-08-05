@@ -22,16 +22,7 @@ const Sidebar = ({ userData, collapsed }) => {
           <Link to="/daily-dashboard">📅 <span className="label">Daily Dashboard</span></Link>
           )}
 
-        {(role === "Super User" || role === "Admin" || role === "Super Admin") && (
-          <Link to="/excel-live-edit">📊 <span className="label">Daily Details Data Manager</span></Link>
-          )}
-
-        <Link to="/pdf-dashboard">📥 <span className="label">PM Dashboard</span></Link>
-        {(role === "Super User" || role === "Admin" || role === "Super Admin" || role === "User") && (
-          <Link to="/pm-calendar">📊 <span className="label">PM Calendar Management</span></Link>
-          )}
-
-        
+        <Link to="/pdf-dashboard">📊 <span className="label">PM Dashboard</span></Link>
 
         {site && (
           <Link to={`/site/${site}`}>

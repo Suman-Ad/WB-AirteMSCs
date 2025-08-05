@@ -15,6 +15,7 @@ import "../assets/AdminPanel.css";
 const AdminPanel = ({ userData }) => {
   const [users, setUsers] = useState([]);
   const [userSiteFilter, setUserSiteFilter] = useState("");
+  const [editingUserId, setEditingUserId] = useState(null);
 
   const siteList = [
     "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
@@ -55,9 +56,14 @@ const AdminPanel = ({ userData }) => {
   const canChangeRole = (targetUserRole, targetUserId) => {
     if (!userData) return false;
     const isSelf = targetUserId === userData.uid;
+    
     if (userData.role === "Super Admin") return true;
+    
     if (userData.role === "Admin") {
+      // Admins can't modify Super Admins or themselves
       if (isSelf || targetUserRole === "Super Admin") return false;
+      // Admins can't promote to Super Admin
+      if (targetUserRole === "Admin") return false; // Can't promote existing Admins further
       return true;
     }
     return false;
@@ -68,14 +74,32 @@ const AdminPanel = ({ userData }) => {
     const currentIndex = roles.indexOf(currentRole);
     const next = roles[currentIndex + 1];
     const prev = roles[currentIndex - 1];
+    
+    // If current user is Admin, prevent showing Super Admin as next role
+    if (userData.role === "Admin" && next === "Super Admin") {
+      return { promote: null, demote: prev };
+    }
+    
     return { promote: next, demote: prev };
+  };
+
+  const toggleEditMode = (userId) => {
+    if (editingUserId === userId) {
+      setEditingUserId(null);
+    } else {
+      setEditingUserId(userId);
+    }
+  };
+
+  const isEditable = (userId) => {
+    return userData.role === "Super Admin" && editingUserId === userId;
   };
 
   return (
     <div className="admin-panel">
       <h2 className="admin-title">Admin User Control Panel</h2>
       {userData.role === "Super Admin" && (
-        <p className="admin-subtitle">🔐 Full access granted. Click on fields to edit user info.</p>
+        <p className="admin-subtitle">🔐 Full access granted. Click edit button to modify user info.</p>
       )}
 
       {(["Admin", "Super Admin"].includes(userData.role)) && (
@@ -113,73 +137,97 @@ const AdminPanel = ({ userData }) => {
               .map((user) => {
                 const { promote, demote } = getNextRoles(user.role);
                 const canModify = canChangeRole(user.role, user.id);
+                const canPromote = canModify && promote && !(userData.role === "Admin" && promote === "Super Admin");
+                
                 return (
                   <tr key={user.id}>
-                    <td>
+                    <td data-label="Name">
                       {userData.role === "Super Admin" ? (
-                        <input
-                          className="editable-field"
-                          value={user.name || ""}
-                          onChange={(e) => handleUserFieldEdit(user.id, "name", e.target.value)}
-                        />
+                        isEditable(user.id) ? (
+                          <input
+                            className="editable-field"
+                            value={user.name || ""}
+                            onChange={(e) => handleUserFieldEdit(user.id, "name", e.target.value)}
+                          />
+                        ) : (
+                          user.name
+                        )
                       ) : user.name}
                     </td>
-                    <td>{user.email}</td>
-                    <td>
+                    <td data-label="Email">{user.email}</td>
+                    <td data-label="Site">
                       {userData.role === "Super Admin" ? (
-                        <select
-                          className="editable-field"
-                          value={user.site || ""}
-                          onChange={(e) => handleUserFieldEdit(user.id, "site", e.target.value)}
-                        >
-                          <option value="">Select</option>
-                          {siteList.map((site) => (
-                            <option key={site} value={site}>{site}</option>
-                          ))}
-                        </select>
+                        isEditable(user.id) ? (
+                          <select
+                            className="editable-field"
+                            value={user.site || ""}
+                            onChange={(e) => handleUserFieldEdit(user.id, "site", e.target.value)}
+                          >
+                            <option value="">Select</option>
+                            {siteList.map((site) => (
+                              <option key={site} value={site}>{site}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          user.site
+                        )
                       ) : user.site}
                     </td>
-                    <td>{user.role}</td>
-                    <td>
+                    <td data-label="Role">{user.role}</td>
+                    <td data-label="Designation">
                       {userData.role === "Super Admin" ? (
-                        <input
-                          className="editable-field"
-                          value={user.designation || ""}
-                          onChange={(e) => handleUserFieldEdit(user.id, "designation", e.target.value)}
-                        />
+                        isEditable(user.id) ? (
+                          <input
+                            className="editable-field"
+                            value={user.designation || ""}
+                            onChange={(e) => handleUserFieldEdit(user.id, "designation", e.target.value)}
+                          />
+                        ) : (
+                          user.designation
+                        )
                       ) : user.designation}
                     </td>
-                    <td>
-                      {promote && canModify && (
-                        <button
-                          className="btn-promote"
-                          onClick={() => handleRoleChange(user.id, promote)}
-                        >
-                          Promote to {promote}
-                        </button>
-                      )}
-                      {demote && canModify && (
-                        <button
-                          className="btn-demote"
-                          onClick={() => handleRoleChange(user.id, demote)}
-                        >
-                          Demote to {demote}
-                        </button>
-                      )}
-                      {!canModify && <span title="Not allowed">🔒</span>}
-                      {userData.role === "Super Admin" && user.id !== userData.uid && (
-                        <button
-                          className="btn-delete"
-                          onClick={async () => {
-                            if (window.confirm("Delete this user?")) {
-                              await deleteDoc(doc(db, "users", user.id));
-                              fetchAllUsers();
-                            }
-                          }}
-                        >
-                          Delete
-                        </button>
-                      )}
+                    <td data-label="Actions">
+                      <div className="action-buttons">
+                        {userData.role === "Super Admin" && (
+                          <button
+                            className={`btn-edit ${editingUserId === user.id ? 'btn-cancel' : ''}`}
+                            onClick={() => toggleEditMode(user.id)}
+                          >
+                            {editingUserId === user.id ? 'Cancel' : 'Edit'}
+                          </button>
+                        )}
+                        {canPromote && (
+                          <button
+                            className="btn-promote"
+                            onClick={() => handleRoleChange(user.id, promote)}
+                          >
+                            Promote to {promote}
+                          </button>
+                        )}
+                        {demote && canModify && (
+                          <button
+                            className="btn-demote"
+                            onClick={() => handleRoleChange(user.id, demote)}
+                          >
+                            Demote to {demote}
+                          </button>
+                        )}
+                        {!canModify && <span title="Not allowed">🔒</span>}
+                        {userData.role === "Super Admin" && user.id !== userData.uid && (
+                          <button
+                            className="btn-delete"
+                            onClick={async () => {
+                              if (window.confirm("Delete this user?")) {
+                                await deleteDoc(doc(db, "users", user.id));
+                                fetchAllUsers();
+                              }
+                            }}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

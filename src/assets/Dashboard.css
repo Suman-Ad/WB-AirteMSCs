@@ -205,3 +205,80 @@
   margin-right: 8px;
   display: inline-block;
 }
+
+/* Link button style - to be added to your PMCalendar.css */
+.pm-manage-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  background-color: #3498db;
+  color: white !important; /* Force white text regardless of link state */
+  text-decoration: none !important; /* Remove underline */
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin: 4px 2px;
+}
+
+/* Hover state */
+.pm-manage-btn:hover {
+  background-color: #35b929;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+/* Active/focus state */
+.pm-manage-btn:active,
+.pm-manage-btn:focus {
+  background-color: #e9e6e3;
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  outline: none;
+}
+
+/* Disabled state */
+.pm-manage-btn:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Size variations */
+.pm-manage-btn.small {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.pm-manage-btn.large {
+  padding: 10px 20px;
+  font-size: 16px;
+}
+
+/* Color variations */
+.pm-manage-btn.secondary {
+  background-color: #2ecc71;
+}
+
+.pm-manage-btn.secondary:hover {
+  background-color: #27ae60;
+}
+
+.pm-manage-btn.warning {
+  background-color: #e67e22;
+}
+
+.pm-manage-btn.warning:hover {
+  background-color: #d35400;
+}
+
+.pm-manage-btn.danger {
+  background-color: #e74c3c;
+}
+
+.pm-manage-btn.danger:hover {
+  background-color: #c0392b;
+}
