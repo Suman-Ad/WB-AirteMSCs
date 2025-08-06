@@ -16,6 +16,13 @@ const AdminPanel = ({ userData }) => {
   const [users, setUsers] = useState([]);
   const [userSiteFilter, setUserSiteFilter] = useState("");
   const [editingUserId, setEditingUserId] = useState(null);
+  const [roleCounts, setRoleCounts] = useState({
+    "Super Admin": 0,
+    "Admin": 0,
+    "Super User": 0,
+    "User": 0,
+    "Total": 0
+  });
 
   const siteList = [
     "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
@@ -27,6 +34,27 @@ const AdminPanel = ({ userData }) => {
     const snapshot = await getDocs(collection(db, "users"));
     const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     setUsers(data);
+    updateRoleCounts(data);
+  };
+
+  const updateRoleCounts = (users) => {
+    const counts = {
+      "Super Admin": 0,
+      "Admin": 0,
+      "Super User": 0,
+      "User": 0,
+      "Total": users.length
+    };
+
+    users.forEach(user => {
+      if (counts.hasOwnProperty(user.role)) {
+        counts[user.role]++;
+      } else {
+        counts["User"]++;
+      }
+    });
+
+    setRoleCounts(counts);
   };
 
   useEffect(() => {
@@ -60,10 +88,8 @@ const AdminPanel = ({ userData }) => {
     if (userData.role === "Super Admin") return true;
     
     if (userData.role === "Admin") {
-      // Admins can't modify Super Admins or themselves
       if (isSelf || targetUserRole === "Super Admin") return false;
-      // Admins can't promote to Super Admin
-      if (targetUserRole === "Admin") return false; // Can't promote existing Admins further
+      if (targetUserRole === "Admin") return false;
       return true;
     }
     return false;
@@ -75,7 +101,6 @@ const AdminPanel = ({ userData }) => {
     const next = roles[currentIndex + 1];
     const prev = roles[currentIndex - 1];
     
-    // If current user is Admin, prevent showing Super Admin as next role
     if (userData.role === "Admin" && next === "Super Admin") {
       return { promote: null, demote: prev };
     }
@@ -97,6 +122,17 @@ const AdminPanel = ({ userData }) => {
 
   return (
     <div className="admin-panel">
+      <h2 className="dashboard-header">
+        👋 Welcome, <strong>{userData.name || "Team Member"}</strong>
+      </h2>
+      <p className="dashboard-subinfo">
+        {userData.role === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
+        {userData.role === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
+        {userData.role === "Super User" && <span>📍 <strong>Super User</strong></span>}
+        {userData.role === "User" && <span>👤 <strong>User</strong></span>}
+        &nbsp; | &nbsp; 🏢 Site: <strong>{userData.site || "All"}</strong>
+      </p>
+      
       <h2 className="admin-title">Admin User Control Panel</h2>
       {userData.role === "Super Admin" && (
         <p className="admin-subtitle">🔐 Full access granted. Click edit button to modify user info.</p>
@@ -105,6 +141,30 @@ const AdminPanel = ({ userData }) => {
       {(["Admin", "Super Admin"].includes(userData.role)) && (
         <div className="admin-table-wrapper mt-10">
           <h3 className="admin-subtitle">👥 User Role Management</h3>
+
+          {/* User Count Statistics */}
+          <div className="user-stats-container">
+            <div className="user-stat-card total">
+              <span className="stat-number">{roleCounts.Total}</span>
+              <span className="stat-label">Total Users</span>
+            </div>
+            <div className="user-stat-card super-admin">
+              <span className="stat-number">{roleCounts["Super Admin"]}</span>
+              <span className="stat-label">Super Admins</span>
+            </div>
+            <div className="user-stat-card admin">
+              <span className="stat-number">{roleCounts["Admin"]}</span>
+              <span className="stat-label">Admins</span>
+            </div>
+            <div className="user-stat-card super-user">
+              <span className="stat-number">{roleCounts["Super User"]}</span>
+              <span className="stat-label">Super Users</span>
+            </div>
+            <div className="user-stat-card user">
+              <span className="stat-number">{roleCounts["User"]}</span>
+              <span className="stat-label">Users</span>
+            </div>
+          </div>
 
           <div className="mb-4">
             <label>Filter by Site: </label>

@@ -97,7 +97,7 @@ const PMCalendarManagement = ({ userData }) => {
     plan_date: ""
   });
 
-  const isAdmin = ["Admin", "Super Admin"].includes(userData.role);
+  const isAdmin = ["Admin", "Super Admin", "Super User"].includes(userData.role);
   const canEdit = isAdmin || (userData.role === "Super User" && userData.site === selectedSite);
 
   // Update filtered sites when region/circle changes

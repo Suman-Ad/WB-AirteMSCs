@@ -223,3 +223,79 @@ select {
     margin: 2px 0;
   }
 }
+
+/* Add to AdminPanel.css */
+
+.user-stats-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 25px;
+  justify-content: center;
+}
+
+.user-stat-card {
+  background: white;
+  border-radius: 8px;
+  padding: 15px 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  text-align: center;
+  min-width: 120px;
+  flex: 1;
+  transition: transform 0.2s;
+}
+
+.user-stat-card:hover {
+  transform: translateY(-3px);
+}
+
+.user-stat-card .stat-number {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.user-stat-card .stat-label {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Color coding for each role */
+.user-stat-card.total {
+  border-top: 4px solid #9b59b6;
+}
+.user-stat-card.super-admin {
+  border-top: 4px solid #e74c3c;
+}
+.user-stat-card.admin {
+  border-top: 4px solid #3498db;
+}
+.user-stat-card.super-user {
+  border-top: 4px solid #2ecc71;
+}
+.user-stat-card.user {
+  border-top: 4px solid #f39c12;
+}
+
+@media (max-width: 768px) {
+  .user-stats-container {
+    gap: 10px;
+  }
+  
+  .user-stat-card {
+    min-width: calc(50% - 20px);
+    padding: 12px 15px;
+  }
+  
+  .user-stat-card .stat-number {
+    font-size: 1.5rem;
+  }
+  
+  .user-stat-card .stat-label {
+    font-size: 0.8rem;
+  }
+}

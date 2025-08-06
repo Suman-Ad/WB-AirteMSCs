@@ -229,6 +229,10 @@ const DailyDashboard = ({ userData }) => {
         <button onClick={() => setSortAsc(!sortAsc)} style={{ marginLeft: "1rem" }}>
           Sort: {sortAsc ? "A-Z" : "Z-A"}
         </button>
+
+        {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin") && (
+                        <Link to="/excel-live-edit" className="pm-manage-btn">Edit <strong>"{userData.site}"</strong> Daily Details Dashboard ✎ </Link>
+                        )}
       </div>
 
       {selectedDate && (
@@ -281,9 +285,7 @@ const DailyDashboard = ({ userData }) => {
 
           {Object.entries(siteData).map(([site, sheets]) => (
             <div key={site} style={{ marginTop: "2rem", borderTop: "2px solid #ccc", paddingTop: "1rem" }}>
-              {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin") && (
-                        <Link to="/excel-live-edit" className="pm-manage-btn">Edit <strong>"{site}"</strong> Daily Details Dashboard ✎ </Link>
-                        )}
+              
               <h3>📍 Site Name: {site} MSC</h3>
               <div className="sheet-blocks-wrapper sheet-block-card">
                 {Object.entries(sheetKeys).map(([sheetLabel, sheetKey]) => {

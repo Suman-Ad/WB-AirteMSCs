@@ -24,11 +24,16 @@ const Sidebar = ({ userData, collapsed }) => {
 
         <Link to="/pdf-dashboard">📊 <span className="label">PM Dashboard</span></Link>
 
+        {(role === "Admin" || role === "Super Admin") && (
+          <Link to="/incident-dashboard">📊 <span className="label">Incident Dashboard</span></Link>
+          )}
+
         {site && (
           <Link to={`/site/${site}`}>
             📁 <span className="label">{userData.site} PM FSR's</span>
           </Link>
         )}
+        
         
         {(role === "Admin" || role === "Super Admin") && (
           <Link to="/history">🗂️ <span className="label">PM History</span></Link>

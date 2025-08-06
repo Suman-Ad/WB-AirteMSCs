@@ -10,24 +10,48 @@ import { doc, setDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import "../assets/Register.css";
 
+const regions = {
+  East: ["BR & JH", "NESA", "OR", "WB"],
+  West: ["GUJ", "MPCG", "ROM"],
+  North: ["DEL", "HR", "PJ", "RJ", "UP", "UK"],
+  South: ["AP", "KA", "KL", "TN", "TS"]
+};
+
+const siteList = {
+  "East": {
+    "BR & JH": ["Patna", "Jharkhand"],
+    "WB": ["Andaman", "Asansol", "Berhampore", "DLF", "Globsyn", "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower", "New Alipore", "SDF", "Siliguri"],
+  },
+  "West": {
+    "GUJ": ["Ahmedabad"],
+    "MPCG": ["Indore"]
+  },
+  "North": {
+    "DEL": ["DLF", "Mira Tower"],
+    "HR": ["GLOBSYN"]
+  },
+  "South": {
+    "KA": ["Infinity-I", "Infinity-II"],
+    "TS": ["Siliguri"]
+  }
+};
+
 const Register = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     designation: "",
-    site: "All",
+    region: "",
+    circle: "",
+    site: ""
   });
 
+  const [availableCircles, setAvailableCircles] = useState([]);
+  const [availableSites, setAvailableSites] = useState([]);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const navigate = useNavigate();
-
-  const sites = [
-    "All", "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
-    "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower",
-    "New Alipore", "SDF", "Siliguri"
-  ];
 
   const designations = [
     "Vertiv ZM",
@@ -41,8 +65,31 @@ const Register = () => {
     return designation === "Vertiv Technician" ? "User" : "Super User";
   };
 
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Update dependent fields when region or circle changes
+    if (name === "region") {
+      setAvailableCircles(regions[value] || []);
+      setFormData(prev => ({
+        ...prev,
+        circle: "",
+        site: ""
+      }));
+      setAvailableSites([]);
+    } else if (name === "circle") {
+      const sitesForCircle = siteList[formData.region]?.[value] || [];
+      setAvailableSites(sitesForCircle);
+      setFormData(prev => ({
+        ...prev,
+        site: sitesForCircle.length > 0 ? sitesForCircle[0] : ""
+      }));
+    }
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -59,16 +106,18 @@ const Register = () => {
       );
 
       await updateProfile(user, { displayName: formData.name });
-
       await sendEmailVerification(user);
 
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name: formData.name,
         email: formData.email,
+        region: formData.region,
+        circle: formData.circle,
         site: formData.site,
         role,
         designation: formData.designation,
+        createdAt: new Date().toISOString()
       });
 
       setSuccessMsg("Registered successfully. Please verify your email.");
@@ -77,9 +126,11 @@ const Register = () => {
         email: "",
         password: "",
         designation: "",
-        site: "",
+        region: "",
+        circle: "",
+        site: ""
       });
-      navigate("/login");
+      setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
       setError("Registration error: " + err.message);
     }
@@ -137,15 +188,46 @@ const Register = () => {
           ))}
         </select>
 
+        <label className="block text-sm mb-1">Region</label>
+        <select
+          name="region"
+          value={formData.region}
+          onChange={handleChange}
+          required
+          className="w-full p-2 mb-2 border rounded"
+        >
+          <option value="">-- Select Region --</option>
+          {Object.keys(regions).map(region => (
+            <option key={region} value={region}>{region}</option>
+          ))}
+        </select>
+
+        <label className="block text-sm mb-1">Circle</label>
+        <select
+          name="circle"
+          value={formData.circle}
+          onChange={handleChange}
+          required
+          disabled={!formData.region}
+          className="w-full p-2 mb-2 border rounded"
+        >
+          <option value="">-- Select Circle --</option>
+          {availableCircles.map(circle => (
+            <option key={circle} value={circle}>{circle}</option>
+          ))}
+        </select>
+
         <label className="block text-sm mb-1">Site</label>
         <select
           name="site"
           value={formData.site}
           onChange={handleChange}
           required
+          disabled={!formData.circle}
           className="w-full p-2 mb-4 border rounded"
         >
-          {sites.map((site) => (
+          <option value="">-- Select Site --</option>
+          {availableSites.map(site => (
             <option key={site} value={site}>{site}</option>
           ))}
         </select>
