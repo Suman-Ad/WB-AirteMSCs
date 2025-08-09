@@ -21,7 +21,7 @@ const Layout = ({ userData, children }) => {
             ☰
           </button>
           <div style={{ flex: 1, textAlign: "center" }}>
-            <sgtrong><h1>WB Airtel - Vertiv - MSC PM Managment Tracker</h1></sgtrong>
+            <h1>WB Airtel - Vertiv - MSC PM Managment Tracker</h1>
           </div>
         </div>
 

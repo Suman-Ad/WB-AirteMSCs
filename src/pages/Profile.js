@@ -24,7 +24,9 @@ const ProfilePage = ({ userData }) => {
     name: "",
     site: "",
     designation: "",
-    photoURL: ""
+    photoURL: "",
+    region: "",
+    circle: ""
   });
   const [photo, setPhoto] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -42,7 +44,9 @@ const ProfilePage = ({ userData }) => {
         name: userData.name || "",
         site: userData.site || "",
         designation: userData.designation || "",
-        photoURL: userData.photoURL || ""
+        photoURL: userData.photoURL || "",
+        region: userData.region || "",
+        circle : userData.circle || "",
       });
     }
   }, [userData]);
@@ -81,6 +85,8 @@ const ProfilePage = ({ userData }) => {
         name: form.name,
         site: form.site,
         designation: form.designation,
+        region: form.region,
+        circle: form.circle,
         photoURL
       });
 
@@ -174,6 +180,18 @@ const ProfilePage = ({ userData }) => {
       <div className="profile-row">
         <label>Role:</label>
         <span>{userData?.role}</span>
+      </div>
+
+      {/* Circle */}
+      <div className="profile-row">
+        <label>Circle:</label>
+        <span>{userData?.circle}</span>
+      </div>
+
+      {/* Region */}
+      <div className="profile-row">
+        <label>Region:</label>
+        <span>{userData?.region}</span>
       </div>
 
       {/* Actions */}

@@ -1,12 +1,17 @@
 // src/components/ExcelSheetEditor.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "../assets/ExcelSheetEditor.css";
+import { Parser } from 'hot-formula-parser';
+import structuredClone from '@ungap/structured-clone';
+import { formulasConfig } from "../config/formulasConfig";
 
 const DEBOUNCE_DELAY = 1500;
+const numericKeyPattern = /(ltr|capacity|dg|cph|hrs|qty|total|stock|rating|kva|tr|count|uptime|amount|number|SlNo)/i;
 
-const sheetTemplates = {
+
+export const sheetTemplates = {
   Final_Summary: [
-    { Edge_Data_Centres_Count: "Category Checks", WB: "12" },
+    { Edge_Data_Centres_Count: "Category Checks", WB: "" },
     { Edge_Data_Centres_Count: "Sites Less Than 12 Hrs Diesel Back Up", WB: "" },
     { Edge_Data_Centres_Count: "Sites More Than 12 Hrs Diesel Back Up", WB: "" },
     { Edge_Data_Centres_Count: "MSC more than 2500 Litres excluding Day Tanks", WB: "" },
@@ -18,7 +23,7 @@ const sheetTemplates = {
     { Edge_Data_Centres_Count: "Minor Fault Details (If any)", WB: "" },
     { Edge_Data_Centres_Count: "Major Fault Details (If any)", WB: "" },
     { Edge_Data_Centres_Count: "Planned Activity Details", WB: "" },
-    { Edge_Data_Centres_Count: "Category Checks", WB: "12" },
+    { Edge_Data_Centres_Count: "Category Checks", WB: "" },
     { Edge_Data_Centres_Count: "O&M Manpower Availability as Per LOI", WB: "" },
     { Edge_Data_Centres_Count: "In House PM Planned (Jul'25 Month)", WB: "" },
     { Edge_Data_Centres_Count: "In House PM Completed (Jul'25 Month)", WB: "" },
@@ -34,9 +39,9 @@ const sheetTemplates = {
   ],
   Diesel_Back_Up: [
     {
-      Circle: "", MSC_Location: "", DG_fuel_tank_capacity: "",
+      Circle: "", Site_Name: "", DG_fuel_tank_capacity: "",
       Present_Diesel_Stock_in_DG_tank_Ltr: "", MSC_Status_Grater_Less_2500_Lts: "",
-      External_Stock_capacity_Barrel_UG_Buffer_Ltr: "", External_Stock_availiabl_at_MS_Ltr: "",
+      External_Stock_capacity_Barrel_UG_Buffer_Ltr: "", External_Stock_availiabl_at_MSC_Ltr: "",
       Tota_Stock_Capacity: "", Total_Stock_available: "", Status: "", DG_CPH: "",
       Fuel_back_up_Hrs: "", Category: "", Remark: "", Including_Day_tank: "", Excluding_Day_tank: "",
     },
@@ -49,14 +54,14 @@ const sheetTemplates = {
   ],
   Fault_Details: [
     { 
-      SlNo: "0", Region: "East", Circle: "WB", Date: "NA", Complaint_Reg_by:"NA", Site_Name: "NA", 
-      Site_ID: "NA", Location:"NA", Equipment_Type:"NA", Equipment_Name:"NA", Equipment_Make:"NA", 
-      Equipment_Capacity:"NA", Equipment_Sl_No:"NA", Complaint_ID:"NA", Complaint_Open_Date:"NA", 
-      Complaint_Open_Time:"NA", Severity_Major_Minor:"NA", Service_Provider:"NA", Issue_Details:"NA", 
-      Reason_Category:"NA", Real_Reason_of_Incident:"NA", Status_Open_Close:"NA", Open_Complaint:"NA", 
-      Closure_Date:"NA", Closure_Time:"NA", Ageing_In_Hours:"NA", Outage_Duration_In_Min:"NA", 
-      Total_Month_Min: "NA", Uptime_Percentage: "NA", TAT_as_per_SOW: "NA", Time_taken_more_than_TAT:"NA", 
-      TAT_Status:"NA", Name_of_Service_Engineer:"NA", Action_Taken_for_clouser:"NA", Remarks: "NA"
+      SlNo: "", Region: "", Circle: "", Date: "", Complaint_Reg_by:"", Site_Name: "", 
+      Site_ID: "", Location:"", Equipment_Type:"", Equipment_Name:"", Equipment_Make:"", 
+      Equipment_Capacity:"", Equipment_Sl_No:"", Complaint_ID:"", Complaint_Open_Date:"", 
+      Complaint_Open_Time:"", Severity_Major_Minor:"", Service_Provider:"", Issue_Details:"", 
+      Reason_Category:"", Real_Reason_of_Incident:"", Status_Open_Close:"", Open_Complaint:"", 
+      Closure_Date:"", Closure_Time:"", Ageing_In_Hours:"", Outage_Duration_In_Min:"", 
+      Total_Month_Min: "", Uptime_Percentage: "", TAT_as_per_SOW: "", Time_taken_more_than_TAT:"", 
+      TAT_Status:"", Name_of_Service_Engineer:"", Action_Taken_for_clouser:"", Remarks: ""
     },
   ],
   Planned_Activity_Details: [
@@ -96,63 +101,298 @@ const sheetTemplates = {
   ],
 };
 
-const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selectedDate }) => {
-  const [data, setData] = useState([]);
-  const [timeoutId, setTimeoutId] = useState(null);
+const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selectedDate, allSheetsData = {} }) => {
+  // rawData holds the original values (including "=..." formulas)
+  const [rawData, setRawData] = useState([]);
+  const [saveTimeout, setSaveTimeout] = useState(null);
 
-  // ✅ Use column order from templates
-  const columns = sheetTemplates[sheetKey]
-    ? Object.keys(sheetTemplates[sheetKey][0])
-    : [];
+  const templateRows = sheetTemplates[sheetKey] || [];
+  const columns = templateRows.length ? Object.keys(templateRows[0]) : [];
 
-  useEffect(() => {
-    if (rows.length === 0 && sheetTemplates[sheetKey]) {
-      const autoFilledData = sheetTemplates[sheetKey].map((row) => {
-      const newRow = { ...row };
+  // Utility: default numeric blanks to 0 so parser sees numbers
+  const sanitizeRowDefaults = (row, template = {}) => {
+    const r = { ...row };
+    columns.forEach((key) => {
+      const val = r[key];
+      if (typeof val === "string" && val.trim().startsWith("=")) return; // keep formulas
+      if ((val === "" || val === null || val === undefined)) {
+        // prefer template default number if present
+        if (typeof template[key] === "number") r[key] = template[key];
+        else if (numericKeyPattern.test(key)) r[key] = 0;
+        else r[key] = "";
+      }
+    });
+    return r;
+  };
 
-      // Auto-fill known fields from userData
-      Object.keys(newRow).forEach((key) => {
-        if (key.toLowerCase().includes("msc_location") && userData?.site) {
-          newRow[key] = userData.site;
-        } else if (key.toLowerCase().includes("circle") && userData?.circle || "WB") {
-          newRow[key] = userData.circle;
-        } else if (key.toLowerCase().includes("Site_Name") && userData?.site) {
-          newRow[key] = userData.site;
-        } else if (key.toLowerCase().includes("Date") && selectedDate) {
-          newRow[key] = selectedDate;
+  // ---------- REPLACE evaluateFormulas with this ----------
+  const evaluateFormulas = (rowsToEval = [], allSheets = {}) => {
+    // We'll evaluate row-by-row, using a fresh Parser per row, but pre-populating
+    // the parser with sheet-wide aggregates for cross-sheet formulas.
+    const evaluateRow = (row, allSheetsData) => {
+      const parser = new Parser();
+
+      // Helper: compute aggregates and set variables on parser for ALL sheets
+      const populateAllSheetVariables = (all) => {
+        Object.entries(all || {}).forEach(([sheetName, sheetRows]) => {
+          if (!Array.isArray(sheetRows) || sheetRows.length === 0) return;
+
+          // collect columns from first row (assumes consistent schema)
+          const columns = Object.keys(sheetRows[0]);
+          columns.forEach((col) => {
+            // raw values array (keep strings for categorical)
+            const rawArr = sheetRows
+              .map(r => (r ? r[col] : undefined))
+              .filter(v => v !== undefined && v !== null);
+
+            // numeric array (parsed)
+            const numArr = rawArr
+              .map(v => {
+                if (typeof v === "string" && v.trim().startsWith("=")) return NaN; // formulas => skip
+                const n = parseFloat(v);
+                return isNaN(n) ? NaN : n;
+              })
+              .filter(x => !isNaN(x));
+
+            const sum = numArr.reduce((a, b) => a + b, 0);
+            const count = numArr.length;
+            const avg = count ? sum / count : 0;
+            const min = count ? Math.min(...numArr) : 0;
+            const max = count ? Math.max(...numArr) : 0;
+
+            // Primary variables available to formulas:
+            // sheet.col => by default we expose the SUM (so SUM(...) usage still works)
+            parser.setVariable(`${sheetName}.${col}`, sum);
+            parser.setVariable(`${sheetName}.${col}_SUM`, sum);
+            parser.setVariable(`${sheetName}.${col}_AVG`, avg);
+            parser.setVariable(`${sheetName}.${col}_COUNT`, count);
+            parser.setVariable(`${sheetName}.${col}_MIN`, min);
+            parser.setVariable(`${sheetName}.${col}_MAX`, max);
+
+            // Expose arrays too:
+            parser.setVariable(`${sheetName}.${col}_ARRAY`, numArr);
+            parser.setVariable(`${sheetName}.${col}_ARRAY_RAW`, rawArr);
+
+            // Also expose underscore variants to be flexible: Sheet_Col
+            parser.setVariable(`${sheetName}_${col}`, sum);
+            parser.setVariable(`${sheetName}_${col}_ARRAY`, numArr);
+            parser.setVariable(`${sheetName}_${col}_ARRAY_RAW`, rawArr);
+          });
+        });
+      };
+
+      // Custom helper functions for formulas
+      const registerHelpers = () => {
+        // SUMARRAY(array) -> sum of numeric items
+        parser.setFunction("SUMARRAY", (...args) => {
+          const arr = Array.isArray(args[0]) ? args[0] : [args[0]];
+          return arr.reduce((acc, v) => {
+            const n = parseFloat(v);
+            return acc + (isNaN(n) ? 0 : n);
+          }, 0);
+        });
+
+        // AVGARRAY(array)
+        parser.setFunction("AVGARRAY", (...args) => {
+          const arr = Array.isArray(args[0]) ? args[0] : [args[0]];
+          const nums = arr.map(v => parseFloat(v)).filter(n => !isNaN(n));
+          if (nums.length === 0) return 0;
+          return nums.reduce((a,b)=>a+b,0)/nums.length;
+        });
+
+        // COUNTARRAY(array) -> count numeric values
+        parser.setFunction("COUNTARRAY", (...args) => {
+          const arr = Array.isArray(args[0]) ? args[0] : [args[0]];
+          return arr.map(v => parseFloat(v)).filter(n => !isNaN(n)).length;
+        });
+
+        // COUNTIF(array, comparatorString, threshold)
+        parser.setFunction("COUNTIF", (...args) => {
+          // args: [array, comparator, threshold]
+          const arr = Array.isArray(args[0]) ? args[0] : [args[0]];
+          const comp = args[1];
+          const threshold = args[2];
+          if (!comp) return 0;
+          const compStr = String(comp).trim();
+          // comparator can be ">", "<", ">=", "<=", "=", "!="
+          const compare = (val) => {
+            // if threshold is numeric-like compare numerically, else compare as strings
+            const numT = parseFloat(threshold);
+            const numVal = parseFloat(val);
+            const bothNum = !isNaN(numT) && !isNaN(numVal);
+            switch (compStr) {
+              case ">": return bothNum ? (numVal > numT) : (String(val) > String(threshold));
+              case "<": return bothNum ? (numVal < numT) : (String(val) < String(threshold));
+              case ">=": return bothNum ? (numVal >= numT) : (String(val) >= String(threshold));
+              case "<=": return bothNum ? (numVal <= numT) : (String(val) <= String(threshold));
+              case "!=": return bothNum ? (numVal != numT) : (String(val) != String(threshold));
+              case "=":
+              default: return bothNum ? (numVal == numT) : (String(val) == String(threshold));
+            }
+          };
+          return arr.reduce((acc, v) => acc + (compare(v) ? 1 : 0), 0);
+        });
+
+        // helper to quickly sum arrays too (keeps familiar name)
+        parser.setFunction("SUMARRAY_VALUES", (...args) => {
+          const arr = Array.isArray(args[0]) ? args[0] : [args[0]];
+          return arr.reduce((acc, v) => {
+            const n = parseFloat(v);
+            return acc + (isNaN(n) ? 0 : n);
+          }, 0);
+        });
+      };
+
+      // populate parser with sheet-wide variables + helpers
+      populateAllSheetVariables(allSheetsData);
+      registerHelpers();
+
+      // Now set variables for THIS row's non-formula keys (so formulas that refer to column names without prefix work inside same sheet)
+      Object.entries(row || {}).forEach(([k, v]) => {
+        if (typeof v === "string" && v.trim().startsWith("=")) return;
+        const n = parseFloat(v);
+        if (!isNaN(n)) parser.setVariable(k, n);
+        else parser.setVariable(k, v);
+      });
+
+      // Evaluate formulas in this row (iteratively, so formula fields depending on other formula fields can resolve)
+      const evaluated = { ...row };
+      const formulaKeys = Object.keys(row || {}).filter(k => typeof row[k] === "string" && row[k].trim().startsWith("="));
+      const maxIter = Math.max(3, formulaKeys.length);
+      for (let iter = 0; iter < maxIter; iter++) {
+        let changed = false;
+        for (const k of formulaKeys) {
+          const rawFormula = row[k].trim().substring(1);
+          const res = parser.parse(rawFormula);
+          if (!res.error) {
+            if (evaluated[k] !== res.result) {
+              evaluated[k] = res.result;
+              // make result available as variable for other formulas in this row
+              parser.setVariable(k, res.result);
+              changed = true;
+            }
+          } else {
+            evaluated[k] = "#ERROR";
+          }
+        }
+        if (!changed) break;
+      }
+
+      // coerce non-formula fields to numbers when possible
+      Object.entries(row || {}).forEach(([k, v]) => {
+        if (!(typeof v === "string" && v.trim().startsWith("="))) {
+          const n = parseFloat(v);
+          evaluated[k] = !isNaN(n) ? n : (v ?? "");
         }
       });
 
-      // ✅ Add computed fields (e.g., completion %)
-      if (sheetKey === "Final_Summary") {
-        const planned = parseFloat(newRow["In House PM Planned (Jul'25 Month)"] || 0);
-        const done = parseFloat(newRow["In House PM Completed (Jul'25 Month)"] || 0);
-        newRow["Inhouse PM Completion %"] = planned ? ((done / planned) * 100).toFixed(1) + "%" : "";
-      }
+      return evaluated;
+    }; // end evaluateRow
 
-      return newRow;
-    });
+    // run over all rows
+    return (rowsToEval || []).map(r => evaluateRow(r, allSheets));
+  };
+  // ---------- end evaluateFormulas ----------
 
-    setData(autoFilledData);
-  } else {
-    setData(rows);
-  }
-}, [rows, sheetKey, userData, selectedDate]);
 
-  const handleChange = (index, field, value) => {
-    const updated = [...data];
-    updated[index][field] = value;
-    setData(updated);
+  // initialize rawData from incoming rows or from template
+  useEffect(() => {
+    if (sheetKey === "Final_Summary") {
+      const fsFormulas = formulasConfig.Final_Summary;
+      rows = rows.map((row, idx) => {
+        const formulaRow = fsFormulas[idx];
+        if (formulaRow && formulaRow.WB && formulaRow.WB.startsWith("=")) {
+          return { ...row, WB: formulaRow.WB };
+        }
+        return row;
+      });
+    }
 
-    // Debounced auto-save
-    if (timeoutId) clearTimeout(timeoutId);
-    const id = setTimeout(() => onSave(updated), DEBOUNCE_DELAY);
-    setTimeoutId(id);
+    
+    let init = [];
+    const isBlank = !rows || rows.length === 0 || rows.every(r => Object.values(r).every(v => v === "" || v === null || v === undefined));
+    
+    if (isBlank && templateRows.length) {
+      init = structuredClone(templateRows).map((tpl) => {
+        const filled = { ...tpl };
+        // auto-fill from userData/selectedDate
+        Object.keys(filled).forEach((k) => {
+          const low = k.toLowerCase();
+          if (low.includes("circle") && userData?.circle) filled[k] = userData.circle;
+          if ((low.includes("site_name") || low.includes("msc_location")) && userData?.site) filled[k] = userData.site;
+          if (low.includes("region") && userData?.region) filled[k] = userData.region;
+          if (low.includes("site_id") && userData?.siteId) filled[k] = userData.siteId ?? filled[k];
+          if (low.includes("date") && selectedDate) filled[k] = selectedDate;
+        });
+
+        // ensure formulas from config are present
+        const cfg = formulasConfig[sheetKey] || {};
+        Object.entries(cfg).forEach(([field, formula]) => {
+          if (!filled[field] || typeof filled[field] !== "string" || !filled[field].trim().startsWith("=")) {
+            filled[field] = formula;
+          }
+        });
+
+        return sanitizeRowDefaults(filled, tpl);
+      });
+    } else {
+      init = (rows || []).map(r => sanitizeRowDefaults(r, templateRows[0] || {}));
+      // Ensure formulas from config are present if missing in DB rows
+      const cfg = formulasConfig[sheetKey] || {};
+      init = init.map(r => {
+        const copy = { ...r };
+        Object.entries(cfg).forEach(([field, formula]) => {
+          if (!copy[field] || typeof copy[field] !== "string" || !copy[field].trim().startsWith("=")) {
+            copy[field] = formula;
+          }
+        });
+        return copy;
+      });
+    }
+
+    setRawData(init);
+  }, [rows, sheetKey, userData, selectedDate]); // re-init on these changes
+
+  // Debounced save of rawData (saves formulas + inputs)
+  const scheduleSave = (updatedRaw) => {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    const id = setTimeout(() => {
+      if (onSave) onSave(updatedRaw);
+    }, DEBOUNCE_DELAY);
+    setSaveTimeout(id);
+  };
+
+  // detect formula cell by looking at rawData cell OR formulasConfig
+  const isFormulaCell = (rowIndex, colKey) => {
+    const raw = rawData[rowIndex]?.[colKey];
+    if (typeof raw === "string" && raw.trim().startsWith("=")) return true;
+    if (formulasConfig[sheetKey] && typeof formulasConfig[sheetKey][colKey] === "string") return true;
+    return false;
+  };
+
+  const handleChange = (rowIndex, field, value) => {
+    // if formula defined centrally, do not allow direct edits to that column
+    if (isFormulaCell(rowIndex, field)) return;
+    const updated = [...rawData];
+    updated[rowIndex] = { ...updated[rowIndex], [field]: value };
+    setRawData(updated);
+    scheduleSave(updated);
   };
 
   const handleAddRow = () => {
-    setData([...data, { ...columns.reduce((acc, col) => ({ ...acc, [col]: "" }), {}) }]);
+    const baseTemplate = templateRows.length ? structuredClone(templateRows[0]) : {};
+    // include formulas from config by default for new rows
+    const cfg = formulasConfig[sheetKey] || {};
+    const newRow = (columns.length ? columns.reduce((acc, k) => ({ ...acc, [k]: baseTemplate[k] ?? (cfg[k] ?? "") }), {}) : baseTemplate);
+    const sanitized = sanitizeRowDefaults(newRow, baseTemplate);
+    const updated = [...rawData, sanitized];
+    setRawData(updated);
+    scheduleSave(updated);
   };
+
+  // evaluated view for rendering
+  const evaluatedData = useMemo(() => evaluateFormulas(rawData, allSheetsData), [rawData, sheetKey, allSheetsData]);
+
 
   return (
     <div className="sheet-editor-container">
@@ -163,18 +403,20 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
       <table className="sheet-table">
         <thead>
           <tr>
-            {columns.map((col) => <th key={col}>{col}</th>)}
+            {columns.map(col => <th key={col}>{col}</th>)}
           </tr>
         </thead>
         <tbody>
-          {data.map((row, rowIndex) => (
-            <tr key={rowIndex}>
-              {columns.map((col) => (
+          {evaluatedData.map((row, rIdx) => (
+            <tr key={rIdx}>
+              {columns.map(col => (
                 <td key={col} className="sheet-cell">
                   <input
                     type="text"
-                    value={row[col] || ""}
-                    onChange={(e) => handleChange(rowIndex, col, e.target.value)}
+                    value={row[col] ?? ""}
+                    onChange={(e) => handleChange(rIdx, col, e.target.value)}
+                    disabled={isFormulaCell(rIdx, col)}
+                    className={isFormulaCell(rIdx, col) ? "formula-cell" : ""}
                   />
                 </td>
               ))}
@@ -188,4 +430,4 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
   );
 };
 
-export { sheetTemplates, ExcelSheetEditor };
+export default ExcelSheetEditor;

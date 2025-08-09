@@ -42,6 +42,8 @@ const Login = ({ setUserData }) => {
           email: data.email,
           designation: data.designation,
           photoURL: data.photoURL || "",
+          circle: data.circle || "",
+          region: data.region || "",
         };
         console.log("User data:", userData);
         localStorage.setItem("userData", JSON.stringify(userData));

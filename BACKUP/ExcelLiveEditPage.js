@@ -1,7 +1,7 @@
 // src/pages/ExcelLiveEditPage.js
 import React, { useEffect, useState } from "react";
 import { Tabs, Tab } from "@mui/material";
-import ExcelSheetEditor, { sheetTemplates } from "../components/ExcelSheetEditor";
+import { ExcelSheetEditor, sheetTemplates } from "../components/ExcelSheetEditor";
 import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import "../assets/ExcelLiveEditPage.css";
@@ -45,24 +45,21 @@ const ExcelLiveEditPage = ({ userData }) => {
       if (snap.exists()) {
         setSheetData(snap.data());
       } else {
-        // build default data from templates
         const defaultData = {};
         Object.values(sheetKeys).forEach((key) => {
           const template = sheetTemplates[key];
-          defaultData[key] = template ? template.map(row => ({ ...row })) : [];
+          defaultData[key] = template ? template.map((row) => ({ ...row })) : [];
         });
 
-        // ensure parent date doc exists
         await setDoc(doc(db, "excel_data_by_date", dateId), {
           createdAt: new Date().toISOString(),
         }, { merge: true });
 
-        // set site doc with default data
         await setDoc(ref, {
           site: siteId,
           date: today,
           ...defaultData,
-        }, { merge: true });
+        });
 
         setSheetData({ site: siteId, date: today, ...defaultData });
       }
@@ -74,21 +71,26 @@ const ExcelLiveEditPage = ({ userData }) => {
   }, [siteId, dateId]);
 
   const handleSheetUpdate = async (key, rows) => {
-    if (!siteId) return;
     const ref = doc(db, "excel_data_by_date", dateId, "sites", siteId);
     const timestampKey = `lastUpdated_${key}`;
     const now = new Date().toISOString();
-
-    // Save the raw rows (with formulas preserved). Use merge to only update the site doc fields.
     await setDoc(ref, {
+      ...sheetData,
       [key]: rows,
       [timestampKey]: now,
-      site: siteId,
-    }, { merge: true });
-
-    // update local state
-    setSheetData(prev => ({ ...prev, [key]: rows, [timestampKey]: now }));
+    });
+    setSheetData((prev) => ({
+      ...prev,
+      [key]: rows,
+      [timestampKey]: now,
+    }));
   };
+
+  // useEffect(() => {
+  //   window.alert(
+  //     "Dear My All Team Members, This Daily Details Data on Upgradation Stage. Please try to fill data for Fixing Issues . \nThanks & Regards\n@Suman Adhikari"
+  //   );
+  // }, []);
 
   const getSheetStatus = (rows) => {
     if (!Array.isArray(rows) || rows.length === 0) return { status: "Empty", color: "red", filled: 0, total: 0 };
@@ -159,7 +161,6 @@ const ExcelLiveEditPage = ({ userData }) => {
               onSave={(rows) => handleSheetUpdate(sheetKeys[selectedTab], rows)}
               userData={userData}
               selectedDate={selectedDate}
-              allSheetsData={sheetData}
             />
           </div>
         )}
