@@ -16,7 +16,7 @@ import DailyDashboard from "./pages/DailyDashboard";
 import PMCalendarManagement from "./pages/PMCalendarManagement";
 import IncidentDashboard from "./pages/IncidentDashboard";
 import IncidentManagement from "./pages/IncidentManagement";
-
+import DHRDashboard from "./pages/DHRDashboard";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -137,11 +137,18 @@ function App() {
               <IncidentManagement userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
+
+        <Route path="/dhr-dashboard" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <DHRDashboard userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
               
 
         {/* Fallback */}
-        <Route path="/" element={<Navigate to="/daily-dashboard" />} />
-        <Route path="*" element={<Navigate to="/daily-dashboard" />} />
+        <Route path="/" element={<Navigate to="/dhr-dashboard" />} />
+        <Route path="*" element={<Navigate to="/dhr-dashboard" />} />
       </Routes>
     </Router>
   );
