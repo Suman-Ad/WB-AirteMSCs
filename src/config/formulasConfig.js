@@ -9,6 +9,7 @@ export const formulasConfig = {
     Excluding_Day_tank: "=IF(External_Stock_capacity_Barrel_UG_Buffer_Ltr>2500, \">2500\", \"<2500\")",
     Including_Day_tank: "=IF(Tota_Stock_Capacity>2500, \">2500\", \"<2500\")",
     MSC_Status_Grater_Less_2500_Lts: "=IF(Tota_Stock_Capacity>2500, \">2500\", \"<2500\")",
+    Status: "=IF(Fuel_back_up_Hrs>12, \"Ok\", \"Not Ok\")",
   },
   Infra_Update: {
     Infra_Uptime_Percentage: "=((238*60*60)-(((1*0*60)+0)*0))/(238*60*60)*100"
@@ -17,8 +18,8 @@ export const formulasConfig = {
     { Edge_Data_Centres_Count: "Category Checks", WB: "12" },
 
     // Diesel backup calculations
-    { Edge_Data_Centres_Count: "Sites Less Than 12 Hrs Diesel Back Up", WB: "=COUNTIF(Diesel_Back_Up.Fuel_back_up_Hrs_ARRAY, \"<\", 12)" },
-    { Edge_Data_Centres_Count: "Sites More Than 12 Hrs Diesel Back Up", WB: "=COUNTIF(Diesel_Back_Up.Fuel_back_up_Hrs_ARRAY, \">\", 12)" },
+    { Edge_Data_Centres_Count: "Sites Less Than 12 Hrs Diesel Back Up", WB: "=IF(Diesel_Back_Up.Fuel_back_up_Hrs>12, \"0\", \"1\")" },
+    { Edge_Data_Centres_Count: "Sites More Than 12 Hrs Diesel Back Up", WB: "=IF(Diesel_Back_Up.Fuel_back_up_Hrs>12, \"1\", \"0\")" },
     { Edge_Data_Centres_Count: "MSC more than 2500 Litres excluding Day Tanks", WB: "=COUNTIF(Diesel_Back_Up.Excluding_Day_tank_ARRAY_RAW, \"=\", \">2500\")" },
     { Edge_Data_Centres_Count: "MSC more than 2500 Litres Including Day Tanks", WB: "=COUNTIF(Diesel_Back_Up.Including_Day_tank_ARRAY_RAW, \"=\", \">2500\")" },
 
