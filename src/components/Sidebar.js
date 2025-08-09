@@ -29,7 +29,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
 
       {/* Navigation Links */}
       <nav>
-        <Link to="/dhr-dashboard">📊 <span className="label">DHR Dashboard</span></Link>
+        <Link to="/dhr-dashboard">   <span className="label">DHR Dashboard</span></Link>
 
         {(role === "Super User" || role === "Admin" || role === "Super Admin") && (
           <Link to="/daily-dashboard">📅 <span className="label">Daily Dashboard</span></Link>
