@@ -9,19 +9,14 @@ const Layout = ({ userData, children }) => {
   return (
     <div className="layout">
       {/* Sidebar */}
-      <div className={`sidebar ${collapsed ? "collapsed" : "expanded"}`}>
-        <Sidebar userData={userData} collapsed={collapsed} />
-      </div>
+      <Sidebar userData={userData} collapsed={collapsed} setCollapsed={setCollapsed} />
 
       {/* Main Area */}
       <div className="main">
         {/* Navbar */}
         <div className="navbar">
-          <button className="toggle-btn" onClick={() => setCollapsed(!collapsed)}>
-            ☰
-          </button>
           <div style={{ flex: 1, textAlign: "center" }}>
-            <h1>WB Airtel - Vertiv - MSC PM Managment Tracker</h1>
+            <h1>WB Airtel - Vertiv - MSC Data Management System</h1>
           </div>
         </div>
 

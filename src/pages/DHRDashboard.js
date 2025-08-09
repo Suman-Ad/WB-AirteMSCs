@@ -1,252 +1,253 @@
-import React, { useEffect, useState } from "react";
-import "./../assets/DHRDashboard.css";
+// src/pages/DHRDashboard.js
+import React, { useState, useEffect } from "react";
+import { db } from "../firebase";
+import { collection, getDocs, query, orderBy, doc, setDoc, getDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx";
+import "../assets/DHRDashboard.css";
 
-const formatToDisplay = (isoDate) => {
-  if (!isoDate) return "";
-  // isoDate is "YYYY-MM-DD"
-  const [y, m, d] = isoDate.split("-");
-  if (!y || !m || !d) return isoDate;
-  return `${d}.${m}.${y}`;
-};
+export default function DHRDashboard({ userData }) {
+  const userName = userData?.name;
+  const userRole = userData?.role;
+  const userSite = userData?.site;
 
-const todayISO = () => {
-  const t = new Date();
-  const yyyy = t.getFullYear();
-  const mm = String(t.getMonth() + 1).padStart(2, "0");
-  const dd = String(t.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [instructionText, setInstructionText] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
 
-const DHRDashboard = ({ userData = {} }) => {
-  // auto-fill values
-  const [form, setForm] = useState({
-    dateISO: todayISO(),
-    region: userData.region || userData.Region || "",
-    circle: userData.circle || userData.Circle || "",
-    siteName: userData.site || userData.siteName || userData.Site || "",
-    dieselAvailable: "",
-    dgRun: "00:00",
-    ebRun: "24:00",
-    ebStatus: "Ok",
-    dgStatus: "Ok",
-    smpsStatus: "",
-    upsStatus: "",
-    pacStatus: "",
-    crvStatus: "No",
-    majorActivity: "No",
-    inhousePM: "",
-    faultDetails: "No",
+  // Filters
+  const [filterDate, setFilterDate] = useState("");
+  const [filterSite, setFilterSite] = useState("");
+
+  const [selectedTxt, setSelectedTxt] = useState("");
+  const [showModal, setShowModal] = useState(false);
+
+  const navigate = useNavigate();
+  
+
+  useEffect(() => {
+    const fetchInstruction = async () => {
+      const docRef = doc(db, "config", "dashboard_instruction");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setInstructionText(docSnap.data().text || "");
+        setEditText(docSnap.data().text || "");
+      }
+    };
+    fetchInstruction();
+  }, []);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const q = query(collection(db, "dhr_reports"), orderBy("date", "desc"));
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map((doc) => doc.data());
+        setReports(data);
+      } catch (error) {
+        console.error("Error fetching DHR reports:", error);
+      }
+      setLoading(false);
+    };
+
+    fetchReports();
+  }, []);
+
+  const filteredReports = reports.filter((r) => {
+    return (
+      (filterDate ? r.date === filterDate : true) &&
+      (filterSite ? r.siteName?.toLowerCase().includes(filterSite.toLowerCase()) : true)
+    );
   });
 
-  // if userData changes later, update the auto-filled fields (but keep any manual edits)
-  useEffect(() => {
-    setForm(prev => ({
-      ...prev,
-      region: userData.region || userData.Region || prev.region,
-      circle: userData.circle || userData.Circle || prev.circle,
-      siteName: userData.site || userData.siteName || userData.Site || prev.siteName,
-    }));
-  }, [userData]);
-
-  const handleChange = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
-
-  const generateTXT = () => {
-    const lines = [
-      `Date- ${formatToDisplay(form.dateISO)}`,
-      `Region- ${form.region || "N/A"}`,
-      `Circle- ${form.circle || "N/A"}`,
-      `Site Name- ${form.siteName || "N/A"} MSC`,
-      `Diesel Available(Ltr's)-: ${form.dieselAvailable || "N/A"} ltr's`,
-      `DG run hrs yesterday-: ${form.dgRun || "00:00"} hrs`,
-      `EB run hrs yesterday-: ${form.ebRun || "24:00"} hrs`,
-      `EB Status- ${form.ebStatus || "N/A"}`,
-      `DG Status- ${form.dgStatus || "N/A"}`,
-      `SMPS Status- ${form.smpsStatus || "N/A"}`,
-      `UPS Status- ${form.upsStatus || "N/A"}`,
-      `PAC Status- ${form.pacStatus || "N/A"}`,
-      `CRV Status- ${form.crvStatus || "No"}`,
-      `Major Activity Planned for the day- ${form.majorActivity || "No"}`,
-      `inhouse PM- ${form.inhousePM || "N/A"}`,
-      `Fault details if any- ${form.faultDetails || "NO"}`,
-    ];
-    return lines.join("\n");
-  };
-
-  const handleCopy = async () => {
-    const txt = generateTXT();
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(txt);
-      alert("DHR text copied to clipboard.");
-    } else {
-      alert("Clipboard not available in this browser.");
-    }
-  };
-
-  const handleDownload = () => {
-    const txt = generateTXT();
-    const blob = new Blob([txt], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const fileName = `DHR_${form.siteName || "site"}_${form.dateISO || todayISO()}.txt`;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleClear = () => {
-    setForm(prev => ({
-      ...prev,
-      dieselAvailable: "",
-      dgRun: "00:00",
-      ebRun: "24:00",
-      ebStatus: "Ok",
-      dgStatus: "Ok",
-      smpsStatus: "",
-      upsStatus: "",
-      pacStatus: "",
-      crvStatus: "No",
-      majorActivity: "No",
-      inhousePM: "",
-      faultDetails: "No",
-    }));
-  };
-
-  return (
-    <div className="dhr-page">
-      <h2>Small DHR — Daily Health Report</h2>
-
-      <div className="dhr-grid">
-        <label>
-          Date
-          <input
-            type="date"
-            value={form.dateISO}
-            onChange={(e) => handleChange("dateISO", e.target.value)}
-          />
-        </label>
-
-        <label>
-          Region
-          <input
-            type="text"
-            value={form.region}
-            onChange={(e) => handleChange("region", e.target.value)}
-            placeholder="Region"
-          />
-        </label>
-
-        <label>
-          Circle
-          <input
-            type="text"
-            value={form.circle}
-            onChange={(e) => handleChange("circle", e.target.value)}
-            placeholder="Circle"
-          />
-        </label>
-
-        <label>
-          Site Name
-          <input
-            type="text"
-            value={form.siteName}
-            onChange={(e) => handleChange("siteName", e.target.value)}
-            placeholder="Site Name"
-          />
-        </label>
-
-        <label>
-          Diesel Available (Ltrs)
-          <input
-            type="text"
-            value={form.dieselAvailable}
-            onChange={(e) => handleChange("dieselAvailable", e.target.value)}
-            placeholder="e.g. 1687.0"
-          />
-        </label>
-
-        <label>
-          DG run hrs yesterday
-          <input
-            type="text"
-            value={form.dgRun}
-            onChange={(e) => handleChange("dgRun", e.target.value)}
-            placeholder="HH:MM"
-          />
-        </label>
-
-        <label>
-          EB run hrs yesterday
-          <input
-            type="text"
-            value={form.ebRun}
-            onChange={(e) => handleChange("ebRun", e.target.value)}
-            placeholder="HH:MM"
-          />
-        </label>
-
-        <label>
-          EB Status
-          <input type="text" value={form.ebStatus} onChange={(e) => handleChange("ebStatus", e.target.value)} />
-        </label>
-
-        <label>
-          DG Status
-          <input type="text" value={form.dgStatus} onChange={(e) => handleChange("dgStatus", e.target.value)} />
-        </label>
-
-        <label>
-          SMPS Status
-          <input type="text" value={form.smpsStatus} onChange={(e) => handleChange("smpsStatus", e.target.value)} placeholder="e.g. 6/6" />
-        </label>
-
-        <label>
-          UPS Status
-          <input type="text" value={form.upsStatus} onChange={(e) => handleChange("upsStatus", e.target.value)} placeholder="e.g. 2/2"/>
-        </label>
-
-        <label>
-          PAC Status
-          <input type="text" value={form.pacStatus} onChange={(e) => handleChange("pacStatus", e.target.value)} placeholder="e.g. 22/22" />
-        </label>
-
-        <label>
-          CRV Status
-          <input type="text" value={form.crvStatus} onChange={(e) => handleChange("crvStatus", e.target.value)} />
-        </label>
-
-        <label>
-          Major Activity Planned
-          <input type="text" value={form.majorActivity} onChange={(e) => handleChange("majorActivity", e.target.value)} />
-        </label>
-
-        <label>
-          Inhouse PM
-          <input type="text" value={form.inhousePM} onChange={(e) => handleChange("inhousePM", e.target.value)} placeholder="e.g. earth pits" />
-        </label>
-
-        <label className="full">
-          Fault details if any
-          <textarea value={form.faultDetails} onChange={(e) => handleChange("faultDetails", e.target.value)} rows={3} />
-        </label>
-      </div>
-
-      <div className="dhr-actions">
-        <button onClick={() => alert(generateTXT())}>Preview (alert)</button>
-        <button onClick={handleCopy}>Copy TXT</button>
-        <button onClick={handleDownload}>Download TXT</button>
-        <button onClick={handleClear}>Clear</button>
-      </div>
-
-      <div className="dhr-preview">
-        <h3>Generated TXT</h3>
-        <pre>{generateTXT()}</pre>
-      </div>
-    </div>
-  );
+  // Convert report to TXT format
+  const generateTXT = (r) => {
+  return `Date- ${r.date}
+Region-${r.region}
+Circle-${r.circle}
+Site Name- ${r.siteName}
+Diesel Available(Ltr's)-: ${r.dieselAvailable} ltr's
+DG run hrs yesterday-: ${r.dgRunHrs}
+EB run hrs yesterday-: ${r.ebRunHrs}
+EB Status-${r.ebStatus}
+DG Status-${r.dgStatus}
+SMPS Status-${r.smpsStatus}
+UPS Status-${r.upsStatus}
+PAC Status-${r.pacStatus}
+CRV Status-${r.crvStatus}
+Major Activity Planned for the -${r.majorActivity}
+Inhouse PM-${r.inhousePM}
+Fault details if any:- ${r.faultDetails}`;
 };
 
-export default DHRDashboard;
+
+  // Share to WhatsApp
+  const shareWhatsApp = (txt) => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, "_blank");
+  };
+
+  // Share to Telegram
+  const shareTelegram = (txt) => {
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(txt)}`, "_blank");
+  };
+
+  // Download all as Excel
+  const downloadExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(filteredReports);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DHR Data");
+    XLSX.writeFile(wb, `DHR_Data_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  // Download all as TXT
+  const downloadTXT = () => {
+    const txt = filteredReports.map(generateTXT).join("\n\n----------------\n\n");
+    const blob = new Blob([txt], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `DHR_Data_${new Date().toISOString().slice(0, 10)}.txt`;
+    link.click();
+  };
+
+  if (loading) {
+    return <p className="loading">Loading DHR data...</p>;
+  }
+
+  return (
+    <div className="dhr-dashboard-container">
+      <h2 className="dashboard-header">
+        👋 Welcome, <strong>{userName || "Team Member"}</strong>
+      </h2>
+      <p className="dashboard-subinfo">
+        {userRole === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
+        {userRole === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
+        {userRole === "Super User" && <span>📍 <strong>Super User</strong></span>}
+        {userRole === "User" && <span>👤 <strong>User</strong></span>}
+        &nbsp; | 🏢 Site: <strong>{userSite || "All"}</strong>
+      </p>
+
+      {/* Notice Board */}
+      <div className="instruction-tab">
+        <h2 className="dashboard-header">📌 Notice Board </h2>
+        <h3 className="dashboard-header">📘 App Overview </h3>
+        {isEditing ? (
+          <>
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              rows={5}
+              className="dashboard-instruction-panel"
+            />
+            <div className="flex gap-2">
+              <button
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+                onClick={async () => {
+                  const docRef = doc(db, "config", "dashboard_instruction");
+                  await setDoc(docRef, { text: editText });
+                  setInstructionText(editText);
+                  setIsEditing(false);
+                }}
+              >
+                Save
+              </button>
+              <button
+                className="bg-gray-400 text-white px-3 py-1 rounded"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
+            {["Admin", "Super Admin"].includes(userRole) && (
+              <button className="text-blue-600 underline" onClick={() => setIsEditing(true)}>
+                Edit Instruction
+              </button>
+            )}
+          </>
+        )}
+        <h6 style={{ marginLeft: "90%" }}>Thanks & Regards @Suman Adhikari</h6>
+      </div>
+
+      {/* Filters */}
+      <div className="dhr-filters">
+        <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
+        <input type="text" placeholder="Search by site" value={filterSite} onChange={(e) => setFilterSite(e.target.value)} />
+        <button className="create-dhr-btn" onClick={() => navigate("/create-dhr")}>➕ Create DHR</button>
+        <button className="download-btn" onClick={downloadExcel}>⬇️ Download Excel</button>
+        <button className="download-btn" onClick={downloadTXT}>⬇️ Download TXT</button>
+      </div>
+
+      {/* Data Table */}
+      {filteredReports.length === 0 ? (
+        <p>No DHR records found.</p>
+      ) : (
+        <table className="dhr-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Region</th>
+              <th>Circle</th>
+              <th>Site Name</th>
+              <th>Diesel Available</th>
+              <th>DG Run Hrs</th>
+              <th>EB Run Hrs</th>
+              <th>EB Status</th>
+              <th>DG Status</th>
+              <th>SMPS</th>
+              <th>UPS</th>
+              <th>PAC</th>
+              <th>CRV</th>
+              <th>Major Activity</th>
+              <th>Inhouse PM</th>
+              <th>Fault Details</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredReports.map((r, i) => (
+              <tr key={i}>
+                <td>{r.date}</td>
+                <td>{r.region}</td>
+                <td>{r.circle}</td>
+                <td>{r.siteName}</td>
+                <td>{r.dieselAvailable}</td>
+                <td>{r.dgRunHrs}</td>
+                <td>{r.ebRunHrs}</td>
+                <td>{r.ebStatus}</td>
+                <td>{r.dgStatus}</td>
+                <td>{r.smpsStatus}</td>
+                <td>{r.upsStatus}</td>
+                <td>{r.pacStatus}</td>
+                <td>{r.crvStatus}</td>
+                <td>{r.majorActivity}</td>
+                <td>{r.inhousePM}</td>
+                <td>{r.faultDetails}</td>
+                <td>
+                   <button className="view-btn" onClick={() => {
+                    setSelectedTxt(generateTXT(r));
+                    setShowModal(true);
+                  }}>👁 View</button>
+                  <button className="share-btn" onClick={() => shareWhatsApp(generateTXT(r))}>📱 WhatsApp</button>
+                  <button className="share-btn" onClick={() => shareTelegram(generateTXT(r))}>💬 Telegram</button>
+                  {showModal && (
+                    <div className="modal-overlay">
+                      <div className="modal-content">
+                        <pre>{selectedTxt}</pre>
+                        <button onClick={() => setShowModal(false)} className="close-btn">Close</button>
+                      </div>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}

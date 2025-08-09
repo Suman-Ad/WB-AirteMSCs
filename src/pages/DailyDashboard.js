@@ -160,6 +160,21 @@ const DailyDashboard = ({ userData }) => {
     run();
   }, [selectedDate, userRole, userSite]);
 
+  const getSheetStatus = (rows) => {
+    if (!Array.isArray(rows) || rows.length === 0) return { status: "Empty", color: "red", filled: 0, total: 0 };
+    const keys = Object.keys(rows[0]);
+    const total = rows.length * keys.length;
+    let filled = 0;
+    rows.forEach(row => {
+      keys.forEach(k => {
+        if (row[k] !== "" && row[k] !== null && row[k] !== undefined) filled++;
+      });
+    });
+    if (filled === 0) return { status: "Empty", color: "red", filled, total };
+    if (filled < total) return { status: "Partial", color: "orange", filled, total };
+    return { status: "Complete", color: "green", filled, total };
+  };
+
   const downloadExcel = () => {
     const wb = XLSX.utils.book_new();
 
@@ -357,17 +372,18 @@ const DailyDashboard = ({ userData }) => {
         const sheets = siteData[site] || {};
         return (
           <div key={site} style={{ marginTop: 20, borderTop: "1px solid #ccc", paddingTop: 12 }}>
-            <h3>📍 Site: {site}</h3>
+            <h3>📍 Site: {site} MSC</h3>
 
             <div className="sheet-blocks-wrapper sheet-block-card">
               {Object.entries(sheetKeys).map(([sheetLabel, sheetKey]) => {
                 const rows = sheets[sheetKey] || [];
+                const { status, color, filled, total } = getSheetStatus(rows || []);
                 const evaluated = evaluateFormulasForRows(rows, sheetKey);
                 const template = sheetTemplates[sheetKey];
                 const cols = template ? Object.keys(template[0]) : (rows.length ? Object.keys(rows[0]) : []);
                 return (
                   <div key={sheetKey} className="sheet-block-card">
-                    <h4>{sheetLabel}</h4>
+                    <h4>Sheet: {sheetLabel} — <span style={{ color }}>{status}</span> ({filled}/{total})</h4>
                     <div style={{ overflowX: "auto" }}>
                       <table>
                         <thead>

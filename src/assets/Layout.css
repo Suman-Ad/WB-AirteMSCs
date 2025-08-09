@@ -1,104 +1,235 @@
-/* layout.css */
-
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
+/* ===== GENERAL RESET & BASE STYLES ===== */
+:root {
+  --sidebar-bg: #1f2937;        /* Dark Gray */
+  --sidebar-hover: #374151;     /* Hover BG */
+  --sidebar-text: #e5e7eb;
+  --sidebar-text-muted: #9ca3af;
+  --navbar-bg: #ffffff;         /* White */
+  --navbar-border: #e5e7eb;
+  --content-bg: #f9fafb;        /* Light Gray */
+  --primary-color: #3b82f6;     /* Blue-500 */
+  --danger-color: #ef4444;      /* Red-500 */
+  --transition-speed: 0.3s;
 }
 
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--content-bg);
+  color: #1f2937;
+  line-height: 1.6;
+}
+
+/* ===== LAYOUT STRUCTURE ===== */
 .layout {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
   overflow: hidden;
 }
 
+/* ===== SIDEBAR (ENHANCED) ===== */
 .sidebar {
-  width: 240px;
-  background-color: #1f2937; /* dark gray */
-  color: white;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.sidebar h1 {
-  font-size: 20px;
-  margin-bottom: 30px;
-}
-
-.sidebar a {
-  display: block;
-  color: #ccc;
-  text-decoration: none;
-  padding: 10px 0;
-  border-bottom: 1px solid #333;
-}
-
-.sidebar a:hover {
-  color: white;
-  background-color: #374151; /* hover bg */
-}
-
-.main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
   height: 100vh;
-}
-
-.navbar {
-  height: 60px;
-  background-color: #f3f4f6; /* light gray */
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 20px;
-  border-bottom: 1px solid #ccc;
-}
-
-.navbar button {
-  background-color: #ef4444;
-  border: none;
-  color: white;
-  padding: 6px 12px;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-.content {
-  flex: 1;
-  padding: 20px;
-  background-color: #f9fafb;
   overflow-y: auto;
-}
-
-/* Add to src/assets/layout.css */
-
-/* Responsive layout tweaks */
-.sidebar.collapsed {
-  width: 0px;
-  padding: 0;
-  overflow-x: hidden;
-  transition: width 0.3s ease;
+  transition: all var(--transition-speed) ease;
+  position: relative;
+  z-index: 1000;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar.expanded {
-  width: 240px;
-  transition: width 0.3s ease;
+  width: 250px;
+  padding: 20px 15px;
+}
+
+.sidebar.collapsed {
+  width: 70px;
+  padding: 20px 8px;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+  padding-bottom: 15px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.toggle-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  width: 100%;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-speed);
+}
+
+.toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Navigation Links */
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sidebar a {
+  display: flex;
+  align-items: center;
+  color: var(--sidebar-text-muted);
+  text-decoration: none;
+  padding: 12px 10px;
+  border-radius: 6px;
+  transition: all var(--transition-speed);
+}
+
+.sidebar a:hover, 
+.sidebar a.active {
+  background: var(--sidebar-hover);
+  color: white;
 }
 
 .sidebar a span.label {
-  display: inline;
-  font-size: small;
+  margin-left: 12px;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .sidebar.collapsed a span.label {
   display: none;
 }
 
-/* Toggle button style */
-.navbar .toggle-btn {
-  font-size: 24px;
-  cursor: pointer;
-  background: none;
+/* Logout Button */
+.sidebar button[onClick] {
+  margin-top: auto;
+  background: var(--danger-color);
+  color: white;
   border: none;
-  color: #333;
+  border-radius: 6px;
+  padding: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background var(--transition-speed);
+}
+
+.sidebar button[onClick]:hover {
+  background: #dc2626;
+}
+
+/* ===== MAIN CONTENT AREA ===== */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Navbar */
+.navbar {
+  height: 70px;
+  background: var(--navbar-bg);
+  display: flex;
+  align-items: center;
+  padding: 0 25px;
+  border-bottom: 1px solid var(--navbar-border);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.navbar h1 {
+  font-size: 1.3rem;
+  color: #111827;
+  font-weight: 600;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* Content Area */
+.content {
+  flex: 1;
+  padding: 25px;
+  overflow-y: auto;
+  background: var(--content-bg);
+}
+
+/* ===== MOBILE RESPONSIVENESS ===== */
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    transform: translateX(-100%);
+    z-index: 1000;
+  }
+
+  .sidebar.expanded {
+    transform: translateX(0);
+    width: 260px;
+  }
+
+  .sidebar.collapsed {
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .main {
+    margin-left: 0;
+    padding-top: 70px; /* Offset for navbar */
+  }
+
+  .navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 900;
+  }
+
+  .navbar h1 {
+    font-size: 1.1rem;
+    padding: 0 20px;
+  }
+
+  /* Mobile Menu Toggle (Add this button to your Navbar in Layout.js) */
+  .mobile-menu-toggle {
+    display: block;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #4b5563;
+    cursor: pointer;
+    margin-right: 15px;
+  }
+}
+
+/* ===== ANIMATIONS & MICRO-INTERACTIONS ===== */
+.sidebar a {
+  transform-origin: left center;
+}
+
+.sidebar.expanded a {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
 }

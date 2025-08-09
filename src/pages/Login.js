@@ -48,7 +48,7 @@ const Login = ({ setUserData }) => {
         console.log("User data:", userData);
         localStorage.setItem("userData", JSON.stringify(userData));
         setUserData(userData); // <-- very important for App.js routing
-        navigate("/daily-dashboard");
+        navigate("/dhr-dashboard");
       } else {
         setError("User data not found in Firestore.");
       }
