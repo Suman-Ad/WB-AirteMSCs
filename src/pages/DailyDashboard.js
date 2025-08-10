@@ -256,7 +256,9 @@ const DailyDashboard = ({ userData }) => {
         {userRole === "User" && <span>👤 <strong>User</strong></span>}
         &nbsp; | &nbsp; 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
       </p>
-
+      <h1>
+        <strong>📅 Daily Dashboard</strong>
+      </h1> 
       <div className="instruction-tab">
         <h2 className="dashboard-header">📌 Notice Board </h2>
         <h3 className="dashboard-header">📘 App Overview </h3>

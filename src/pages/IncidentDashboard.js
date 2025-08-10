@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, setDoc, doc, getDoc } from 'firebase/firestore';
 import '../assets/IncidentDashboard.css';
 import { Link } from 'react-router-dom';
 
 const IncidentDashboard = ({ userData }) => {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [instructionText, setInstructionText] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
   const [filters, setFilters] = useState({
     site: userData?.site || '',
     status: '',
@@ -14,6 +17,19 @@ const IncidentDashboard = ({ userData }) => {
     endDate: '',
     equipment: ''
   });
+
+  // Fetch dashboard instruction
+  useEffect(() => {
+    const fetchInstruction = async () => {
+      const docRef = doc(db, "config", "dashboard_instruction");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setInstructionText(docSnap.data().text || "");
+        setEditText(docSnap.data().text || "");
+      }
+    };
+    fetchInstruction();
+  }, []);
 
   const fetchIncidents = async () => {
     setLoading(true);
@@ -59,7 +75,67 @@ const IncidentDashboard = ({ userData }) => {
 
   return (
     <div className="incident-dashboard">
-      <h2>Incident Dashboard - {userData?.site}</h2>
+      <h2 className="dashboard-header">
+        👋 Welcome, <strong>{userData.name || "Team Member"}</strong>
+      </h2>
+      <p className="dashboard-subinfo">
+        {userData.role === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
+        {userData.role === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
+        {userData.role === "Super User" && <span>📍 <strong>Super User</strong></span>}
+        {userData.role === "User" && <span>👤 <strong>User</strong></span>}
+        &nbsp; | &nbsp; 🏢 Site: <strong>{userData.site || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
+      </p>
+      <h1>
+        <strong>🚨 Incident Dashboard</strong>
+      </h1>
+      {/* Existing Notice Board */}
+      <div className="instruction-tab">
+        {/* ... (keep existing notice board code) ... */}
+        <h2 className="dashboard-header">📌 Notice Board </h2>
+        <h3 className="dashboard-header">📘 App Overview </h3>
+        {isEditing ? (
+          <>
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              rows={5}
+              className="dashboard-instruction-panel"
+            />
+            <div className="flex gap-2">
+              <button
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+                onClick={async () => {
+                  const docRef = doc(db, "config", "dashboard_instruction");
+                  await setDoc(docRef, { text: editText });
+                  setInstructionText(editText);
+                  setIsEditing(false);
+                }}
+              >
+                Save
+              </button>
+              <button
+                className="bg-gray-400 text-white px-3 py-1 rounded"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
+            {["Admin", "Super Admin"].includes(userData.role) && (
+              <button
+                className="text-blue-600 underline"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit Instruction
+              </button>
+            )}
+          </>
+        )}
+        <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
+      </div>
       
       <div className="filters">
         <select

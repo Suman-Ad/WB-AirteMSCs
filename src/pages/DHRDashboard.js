@@ -15,6 +15,19 @@ import * as XLSX from "xlsx";
 import { format } from "date-fns";
 import "../assets/DHRStyle.css";
 
+// Import Recharts components
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
+
 export default function DHRDashboard({ userData }) {
   const userName = userData?.name;
   const userRole = userData?.role;
@@ -48,7 +61,6 @@ export default function DHRDashboard({ userData }) {
     const dhrRef = collection(db, "dhr_reports");
     const q = query(dhrRef, orderBy("isoDate", "desc"));
 
-    // Real-time subscription
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -82,6 +94,54 @@ export default function DHRDashboard({ userData }) {
         : true)
     );
   });
+
+  // --- Summary Stats Calculations ---
+
+  // Sum dieselAvailable (convert to number safely)
+  const totalDieselAvailable = filteredReports.reduce((acc, r) => {
+    const val = parseFloat(r.dieselAvailable);
+    return acc + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  // Total EB fail count (assuming ebStatus === 'Fail' or similar)
+  const totalEbFail = filteredReports.reduce((acc, r) => {
+    return acc + (r.ebStatus?.toLowerCase() === "fail" ? 1 : 0);
+  }, 0);
+
+  // Total DG run hours sum
+  const totalDgRunHrs = filteredReports.reduce((acc, r) => {
+    const val = parseFloat(r.dgRunHrs);
+    return acc + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  // Total EB run hours sum
+  const totalEbRunHrs = filteredReports.reduce((acc, r) => {
+    const val = parseFloat(r.ebRunHrs);
+    return acc + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  // Prepare chart data grouped by siteName (sum dieselAvailable & dgRunHrs)
+  // Could limit to top N or all sites
+  const siteDataMap = {};
+  filteredReports.forEach((r) => {
+    if (!r.siteName) return;
+    if (!siteDataMap[r.siteName]) {
+      siteDataMap[r.siteName] = {
+        siteName: r.siteName,
+        dieselAvailable: 0,
+        dgRunHrs: 0,
+        ebRunHrs: 0,
+      };
+    }
+    const dieselVal = parseFloat(r.dieselAvailable);
+    const dgVal = parseFloat(r.dgRunHrs);
+    const ebVal = parseFloat(r.ebRunHrs);
+    siteDataMap[r.siteName].dieselAvailable += isNaN(dieselVal) ? 0 : dieselVal;
+    siteDataMap[r.siteName].dgRunHrs += isNaN(dgVal) ? 0 : dgVal;
+    siteDataMap[r.siteName].ebRunHrs += isNaN(ebVal) ? 0 : ebVal;
+  });
+
+  const chartData = Object.values(siteDataMap);
 
   const generateTXT = (r) => {
     return `Date: ${r.date}
@@ -136,7 +196,7 @@ Fault details if any: ${r.faultDetails}
       <h2 className="dashboard-header">
         👋 Welcome, <strong>{userName || "Team Member"}</strong>
       </h2>
-      
+
       <p className="dashboard-subinfo">
         {userRole === "Super Admin" && (
           <span>
@@ -158,11 +218,49 @@ Fault details if any: ${r.faultDetails}
             👤 <strong>User</strong>
           </span>
         )}
-        &nbsp; | 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
+        &nbsp; | 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID:{" "}
+        <strong>{userData.siteId || "All"}</strong>
       </p>
       <h1>
-         <strong>⚡ DHR Dashboard</strong>
+        <strong>⚡ DHR Dashboard</strong>
       </h1>
+
+      {/* Summary Stats Panel */}
+      <div className="summary-stats">
+        <div className="stat-card">
+          <h3>Total Diesel Available (Ltrs)</h3>
+          <p>{totalDieselAvailable.toFixed(2)}</p>
+        </div>
+        <div className="stat-card">
+          <h3>Total DG Run Hours</h3>
+          <p>{totalDgRunHrs.toFixed(2)}</p>
+        </div>
+        <div className="stat-card">
+          <h3>Total EB Run Hours</h3>
+          <p>{totalEbRunHrs.toFixed(2)}</p>
+        </div>
+        <div className="stat-card">
+          <h3>Total EB Fail Count</h3>
+          <p>{totalEbFail}</p>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className="chart-container">
+        <h3>Diesel Available & DG / EB Run Hours by Site</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart data={chartData} margin={{ top: 20, right: 40, left: 20, bottom: 20 }}>
+            <CartesianGrid stroke="#f5f5f5" />
+            <XAxis dataKey="siteName" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="dieselAvailable" barSize={40} fill="#413ea0" name="Diesel Available (L)" />
+            <Line type="monotone" dataKey="dgRunHrs" stroke="#ff7300" name="DG Run Hrs" />
+            <Line type="monotone" dataKey="ebRunHrs" stroke="#387908" name="EB Run Hrs" />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
 
       {/* Notice Board */}
       <div className="instruction-tab">

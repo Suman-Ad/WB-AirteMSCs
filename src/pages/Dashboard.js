@@ -283,7 +283,9 @@ const Dashboard = ({ userData }) => {
         {userData.role === "User" && <span>👤 <strong>User</strong></span>}
         &nbsp; | &nbsp; 🏢 Site: <strong>{userData.site || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
       </p>
-      
+      <h1>
+        <strong>🛠️ PM Dashboard</strong>
+      </h1>
       {/* Existing Notice Board */}
       <div className="instruction-tab">
         {/* ... (keep existing notice board code) ... */}
