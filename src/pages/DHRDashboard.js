@@ -110,13 +110,13 @@ export default function DHRDashboard({ userData }) {
 
   // Total DG run hours sum
   const totalDgRunHrs = filteredReports.reduce((acc, r) => {
-    const val = parseFloat(r.dgRunHrs);
+    const val = parseFloat(r.dgRunHrsYesterday);
     return acc + (isNaN(val) ? 0 : val);
   }, 0);
 
   // Total EB run hours sum
   const totalEbRunHrs = filteredReports.reduce((acc, r) => {
-    const val = parseFloat(r.ebRunHrs);
+    const val = parseFloat(r.ebRunHrsYesterday);
     return acc + (isNaN(val) ? 0 : val);
   }, 0);
 
@@ -129,13 +129,13 @@ export default function DHRDashboard({ userData }) {
       siteDataMap[r.siteName] = {
         siteName: r.siteName,
         dieselAvailable: 0,
-        dgRunHrs: 0,
-        ebRunHrs: 0,
+        dgRunHrsYesterday: 0,
+        ebRunHrsYesterday: 0,
       };
     }
     const dieselVal = parseFloat(r.dieselAvailable);
-    const dgVal = parseFloat(r.dgRunHrs);
-    const ebVal = parseFloat(r.ebRunHrs);
+    const dgVal = parseFloat(r.dgRunHrsYesterday);
+    const ebVal = parseFloat(r.ebRunHrsYesterday);
     siteDataMap[r.siteName].dieselAvailable += isNaN(dieselVal) ? 0 : dieselVal;
     siteDataMap[r.siteName].dgRunHrs += isNaN(dgVal) ? 0 : dgVal;
     siteDataMap[r.siteName].ebRunHrs += isNaN(ebVal) ? 0 : ebVal;
@@ -149,8 +149,8 @@ Region: ${r.region}
 Circle: ${r.circle}
 Site Name: ${r.siteName}
 Diesel Available (Ltr's): ${r.dieselAvailable}
-DG run hrs yesterday: ${r.dgRunHrs}
-EB run hrs yesterday: ${r.ebRunHrs}
+DG run hrs yesterday: ${r.dgRunHrsYesterday}
+EB run hrs yesterday: ${r.ebRunHrsYesterday}
 EB Status: ${r.ebStatus}
 DG Status: ${r.dgStatus}
 SMPS Status: ${r.smpsStatus}
@@ -372,8 +372,8 @@ Fault details if any: ${r.faultDetails}
                 <td>{r.circle}</td>
                 <td>{r.siteName}</td>
                 <td>{r.dieselAvailable}</td>
-                <td>{r.dgRunHrs}</td>
-                <td>{r.ebRunHrs}</td>
+                <td>{r.dgRunHrsYesterday}</td>
+                <td>{r.ebRunHrsYesterday}</td>
                 <td>{r.ebStatus}</td>
                 <td>{r.dgStatus}</td>
                 <td>{r.smpsStatus}</td>

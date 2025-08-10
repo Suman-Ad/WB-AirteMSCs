@@ -126,14 +126,14 @@ function App() {
         </RoleProtectedRoute>} />
 
         <Route path="/incident-dashboard" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <IncidentDashboard userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
 
         <Route path="/incident-management" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <IncidentManagement userData={userData} />
               </Layout>

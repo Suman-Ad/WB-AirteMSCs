@@ -37,7 +37,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
 
         <Link to="/pdf-dashboard">🛠️ <span className="label">PM Dashboard</span></Link>
 
-        {(role === "Admin" || role === "Super Admin") && (
+        {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
           <Link to="/incident-dashboard">🚨 <span className="label">Incident Dashboard</span></Link>
         )}
 

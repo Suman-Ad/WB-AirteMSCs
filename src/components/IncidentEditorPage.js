@@ -7,7 +7,13 @@ const IncidentEditorPage = ({ formData, onFormChange, onSubmit }) => {
     'iBMS', 'Panel', 'Transformer', 'PLC', 'Battery', 'Other'
   ];
 
-  const renderInput = (name, value, type = 'text', options = []) => {
+  const renderInput = (name, value, type = 'text', options = [], disabled = false) => {
+    const commonProps = {
+      value,
+      onChange: (e) => onFormChange(name, e.target.value),
+      className: "form-input",
+      disabled
+    };
     switch (type) {
       case 'textarea':
         return (
@@ -92,10 +98,10 @@ const IncidentEditorPage = ({ formData, onFormChange, onSubmit }) => {
 
   return (
     <div className="incident-editor">
-      <h2>Incident Report Form</h2>
+      <h2>New Incident Report Form</h2>
       <div className="form-container">
         {fields.map((field) => (
-          <div key={field.name} className="form-group">
+          <div key={field.name} className={`form-group ${field.disabled ? 'read-only-field' : ''}`}>
             <label>{field.label}</label>
             {renderInput(
               field.name, 
