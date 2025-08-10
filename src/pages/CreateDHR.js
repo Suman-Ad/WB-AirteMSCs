@@ -403,7 +403,7 @@ export default function CreateDHR({ userData }) {
 
       {/* History Section */}
       <div className="dhr-history-section">
-        <h3>Your Site DHR History</h3>
+        <h3>{ userData?.site } DHR History</h3>
         {history.length === 0 && <p>No DHR records found for your site.</p>}
 
         <ul className="dhr-history-list">

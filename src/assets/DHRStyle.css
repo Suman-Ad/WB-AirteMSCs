@@ -429,3 +429,8 @@ button:disabled {
   text-align: center;
   color: #333;
 }
+
+.missing { background-color: #fff0f0; }      /* light red */
+.overdue { background-color: #ffe6e6; }      /* red-ish */
+.near-expiry { background-color: #fff9e6; }  /* yellow-ish */
+.action-buttons button { margin-right: 6px; }

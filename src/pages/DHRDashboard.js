@@ -38,7 +38,8 @@ export default function DHRDashboard({ userData }) {
   const [instructionText, setInstructionText] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState("");
-  const [filterDate, setFilterDate] = useState("");
+  const today = new Date().toISOString().split("T")[0];
+  const [filterDate, setFilterDate] = useState(today);
   const [filterSite, setFilterSite] = useState("");
   const [selectedTxt, setSelectedTxt] = useState("");
   const [showModal, setShowModal] = useState(false);

@@ -71,10 +71,10 @@ const IncidentManagement = ({ userData }) => {
     return true;
   };
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false);
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    setIsSubmitting(true);
+    // setIsSubmitting(true);
     try {
       const incidentDate = new Date(formData.dateOfIncident);
       const year = incidentDate.getFullYear();
@@ -137,7 +137,7 @@ const IncidentManagement = ({ userData }) => {
       ttDocketNo: ''
     });
     } finally {
-    setIsSubmitting(false);
+    // setIsSubmitting(false);
   }
   };
 
