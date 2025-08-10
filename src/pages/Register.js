@@ -11,7 +11,7 @@ import { useNavigate, Link } from "react-router-dom";
 import "../assets/Register.css";
 
 const regions = {
-  East: ["BR & JH", "NESA", "OR", "WB"],
+  East: ["BH & JH", "NESA", "OR", "WB"],
   West: ["GUJ", "MPCG", "ROM"],
   North: ["DEL", "HR", "PJ", "RJ", "UP", "UK"],
   South: ["AP", "KA", "KL", "TN", "TS"]
@@ -19,12 +19,16 @@ const regions = {
 
 const siteList = {
   "East": {
-    "BR & JH": ["Patna", "Jharkhand"],
+    "BH & JH": ["Patliputra", "Bhaglpur", "Muzaffarpur New", "Muzaffarpur Old", "Ranchi", "Ranchi telenor", "Marwari Awas"],
     "WB": ["Andaman", "Asansol", "Berhampore", "DLF", "Globsyn", "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower", "New Alipore", "SDF", "Siliguri"],
+    "NESA":["Aizwal", "Guwahati", "Jorabat New", "Jorhat", "Shillong"],
+    "OR": ["Cuttack", "Sambalpur"],
+
   },
   "West": {
-    "GUJ": ["Ahmedabad"],
-    "MPCG": ["Indore"]
+    "GUJ": ["Astron Park", "Bharti House", "Changodar", "Rajkot Madhapar-New", "Rajkot Mavdi Old", "Surat", "Surat Telenor"],
+    "MPCG": ["Bhopal Center 1st floor", "Bhopal Center 4th floor", "Gobindpura", "Gwalior", "Indore Geeta Bhawan", "Jabalpur", "Pardesipura", "Raipur"],
+    "ROM": ["Nagpur", "Vega Center", "E-Space", "Kolhapur", "Nagpur New", "Nagpur BTSOL"],
   },
   "North": {
     "DEL": ["DLF", "Mira Tower"],
@@ -36,6 +40,57 @@ const siteList = {
   }
 };
 
+// Add this mapping near the top of the file (below siteList)
+const siteIdMap = {
+  "Astron Park": "N24027A",
+  "Bharti House": "N24028A",
+  "Changodar": "N24024A",
+  "Rajkot Madhapar-New": "N24025A",
+  "Rajkot Mavdi Old": "N24026A",
+  "Surat": "N24023A",
+  "Surat Telenor": "Tel-Surat",
+  "Cuttack": "N21062A",
+  "Sambalpur": "N21061A",
+  "Aizwal": "N15122A",
+  "Guwahati": "N18060A",
+  "Jorabat New": "N18059A",
+  "Jorhat": "N17121A",
+  "Shillong": "NET006263",
+  "Patliputra": "N10009A",
+  "Bhaglpur": "N10011A",
+  "Muzaffarpur New": "N10010A",
+  "Muzaffarpur Old": "N10012A",
+  "Ranchi": "N20029A",
+  "Ranchi telenor": "Tel-Ranchi",
+  "Marwari Awas": "N10013A",
+  "Bhopal Center 1st floor": "N23044A",
+  "Bhopal Center 4th floor": "N23045B",
+  "Gobindpura": "N23048A",
+  "Gwalior": "N23046A",
+  "Indore Geeta Bhawan": "N23042A",
+  "Jabalpur": "N23043A",
+  "Pardesipura": "N23047A",
+  "Raipur": "N22014A",
+  "Nagpur": "N27066A",
+  "Vega Center": "N27064A",
+  "E-Space": "N27065A",
+  "Kolhapur": "N27067A",
+  "Nagpur New": "N27068A",
+  "Nagpur BTSOL": "N27069A",
+  "Andaman": "N35113A",
+  "Asansol": "N19106A",
+  "Berhampore": "N19104A",
+  "Globsyn": "N19114A",
+  "Mira Tower": "N19108A",
+  "New Alipore": "N19107A",
+  "DLF": "N19112A",
+  "Infinity-I": "N19111A",
+  "Infinity-II": "Infinity2.0",
+  "Kharagpur": "N19103A",
+  "SDF": "N19109A",
+  "Siliguri": "N19105A",
+};
+
 const Register = () => {
   const [formData, setFormData] = useState({
     name: "",
@@ -44,7 +99,8 @@ const Register = () => {
     designation: "",
     region: "",
     circle: "",
-    site: ""
+    site: "",
+    siteId: "",   // <-- new field
   });
 
   const [availableCircles, setAvailableCircles] = useState([]);
@@ -86,7 +142,14 @@ const Register = () => {
       setAvailableSites(sitesForCircle);
       setFormData(prev => ({
         ...prev,
-        site: sitesForCircle.length > 0 ? sitesForCircle[0] : ""
+        site: sitesForCircle.length > 0 ? sitesForCircle[0] : "",
+        siteId: sitesForCircle.length > 0 ? siteIdMap[sitesForCircle[0]] || "" : "",
+      }));
+    } else if (name === "site") {
+      // When site changes, set siteId accordingly
+      setFormData((prev) => ({
+        ...prev,
+        siteId: siteIdMap[value] || "",
       }));
     }
   };
@@ -115,6 +178,7 @@ const Register = () => {
         region: formData.region,
         circle: formData.circle,
         site: formData.site,
+        siteId: formData.siteId,
         role,
         designation: formData.designation,
         createdAt: new Date().toISOString()

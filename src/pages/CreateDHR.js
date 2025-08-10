@@ -283,8 +283,8 @@ export default function CreateDHR({ userData }) {
 
   return (
     <div className="create-dhr-container">
-      <h2>Create / Edit Daily DHR</h2>
-      {message && <p className="message">{message}</p>}
+      <h2>Create / Edit {userData.site} Daily DHR </h2>
+      {message && <p className="message">No DHR found {message}</p>}
 
       {/* Form Inputs in fixed order */}
       {fieldOrder.map((key) => (

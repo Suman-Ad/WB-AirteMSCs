@@ -281,7 +281,7 @@ const Dashboard = ({ userData }) => {
         {userData.role === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
         {userData.role === "Super User" && <span>📍 <strong>Super User</strong></span>}
         {userData.role === "User" && <span>👤 <strong>User</strong></span>}
-        &nbsp; | &nbsp; 🏢 Site: <strong>{userData.site || "All"}</strong>
+        &nbsp; | &nbsp; 🏢 Site: <strong>{userData.site || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
       </p>
       
       {/* Existing Notice Board */}

@@ -36,14 +36,15 @@ const Login = ({ setUserData }) => {
         const data = userDoc.data();
         const userData = {
           uid: user.uid,
+          circle: data.circle,
+          region: data.region,
+          siteId: data.siteId,
           name: data.name,
           role: data.role,
           site: data.site,
           email: data.email,
           designation: data.designation,
           photoURL: data.photoURL || "",
-          circle: data.circle || "",
-          region: data.region || "",
         };
         console.log("User data:", userData);
         localStorage.setItem("userData", JSON.stringify(userData));

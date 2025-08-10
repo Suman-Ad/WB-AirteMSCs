@@ -136,6 +136,7 @@ Fault details if any: ${r.faultDetails}
       <h2 className="dashboard-header">
         👋 Welcome, <strong>{userName || "Team Member"}</strong>
       </h2>
+      
       <p className="dashboard-subinfo">
         {userRole === "Super Admin" && (
           <span>
@@ -157,8 +158,11 @@ Fault details if any: ${r.faultDetails}
             👤 <strong>User</strong>
           </span>
         )}
-        &nbsp; | 🏢 Site: <strong>{userSite || "All"}</strong>
+        &nbsp; | 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
       </p>
+      <h1>
+         <strong>⚡ DHR Dashboard</strong>
+      </h1>
 
       {/* Notice Board */}
       <div className="instruction-tab">
@@ -224,7 +228,7 @@ Fault details if any: ${r.faultDetails}
           onChange={(e) => setFilterSite(e.target.value)}
         />
         <button className="create-dhr-btn" onClick={() => navigate("/create-dhr")}>
-          ➕ Create DHR
+          ➕ Create / Edit DHR
         </button>
         <button className="download-btn" onClick={downloadExcel}>
           ⬇️ Download Excel

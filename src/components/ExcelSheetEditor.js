@@ -6,7 +6,7 @@ import structuredClone from '@ungap/structured-clone';
 import { formulasConfig } from "../config/formulasConfig";
 
 const DEBOUNCE_DELAY = 1500;
-const numericKeyPattern = /(ltr|capacity|dg|cph|hrs|qty|total|stock|rating|kva|tr|count|uptime|amount|number|SlNo)/i;
+const numericKeyPattern = /(ltr|capacity|dg|cph|hrs|qty|total|stock|rating|kva|tr|count|uptime|amount|number|SlNo|remarks)/i;
 
 
 export const sheetTemplates = {
@@ -134,6 +134,7 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
 
       // Helper: compute aggregates and set variables on parser for ALL sheets
       const populateAllSheetVariables = (all) => {
+        console.log("Populating variables for sheets:", Object.keys(all || {}));
         Object.entries(all || {}).forEach(([sheetName, sheetRows]) => {
           if (!Array.isArray(sheetRows) || sheetRows.length === 0) return;
 
@@ -314,6 +315,8 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
     
     if (isBlank && templateRows.length) {
       init = structuredClone(templateRows).map((tpl) => {
+        console.log("Initializing row formulas for sheet", sheetKey, init);
+
         const filled = { ...tpl };
         // auto-fill from userData/selectedDate
         Object.keys(filled).forEach((k) => {
@@ -321,7 +324,7 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
           if (low.includes("circle") && userData?.circle) filled[k] = userData.circle;
           if ((low.includes("site_name") || low.includes("msc_location")) && userData?.site) filled[k] = userData.site;
           if (low.includes("region") && userData?.region) filled[k] = userData.region;
-          if (low.includes("site_id") && userData?.siteId) filled[k] = userData.siteId ?? filled[k];
+          if (low.includes("site_id") && userData?.siteId) filled[k] = userData.siteId;
           if (low.includes("date") && selectedDate) filled[k] = selectedDate;
         });
 

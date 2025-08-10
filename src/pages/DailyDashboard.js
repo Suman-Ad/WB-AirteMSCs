@@ -254,7 +254,7 @@ const DailyDashboard = ({ userData }) => {
         {userRole === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
         {userRole === "Super User" && <span>📍 <strong>Super User</strong></span>}
         {userRole === "User" && <span>👤 <strong>User</strong></span>}
-        &nbsp; | &nbsp; 🏢 Site: <strong>{userSite || "All"}</strong>
+        &nbsp; | &nbsp; 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
       </p>
 
       <div className="instruction-tab">

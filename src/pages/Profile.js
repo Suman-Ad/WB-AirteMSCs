@@ -26,7 +26,8 @@ const ProfilePage = ({ userData }) => {
     designation: "",
     photoURL: "",
     region: "",
-    circle: ""
+    circle: "",
+    siteId: "",
   });
   const [photo, setPhoto] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -47,6 +48,7 @@ const ProfilePage = ({ userData }) => {
         photoURL: userData.photoURL || "",
         region: userData.region || "",
         circle : userData.circle || "",
+        siteId : userData.siteId || "",
       });
     }
   }, [userData]);
@@ -87,6 +89,7 @@ const ProfilePage = ({ userData }) => {
         designation: form.designation,
         region: form.region,
         circle: form.circle,
+        siteId: form.siteId,
         photoURL
       });
 
@@ -149,18 +152,6 @@ const ProfilePage = ({ userData }) => {
         )}
       </div>
 
-      {/* Email */}
-      <div className="profile-row">
-        <label>Email:</label>
-        <span>{userData?.email}</span>
-      </div>
-
-      {/* Site */}
-      <div className="profile-row">
-        <label>Site:</label>
-          <span>{form.site || "N/A"}</span>
-      </div>
-
       {/* Designation */}
       <div className="profile-row">
         <label>Designation:</label>
@@ -176,10 +167,22 @@ const ProfilePage = ({ userData }) => {
         )}
       </div>
 
-      {/* Role */}
+      {/* Email */}
       <div className="profile-row">
-        <label>Role:</label>
-        <span>{userData?.role}</span>
+        <label>Email:</label>
+        <span>{userData?.email}</span>
+      </div>
+
+      {/* Site */}
+      <div className="profile-row">
+        <label>Site:</label>
+          <span>{form.site || "N/A"}</span>
+      </div>
+
+      {/* Site ID */}
+      <div className="profile-row">
+        <label>Site ID:</label>
+          <span>{form.siteId || "N/A"}</span>
       </div>
 
       {/* Circle */}
@@ -192,6 +195,12 @@ const ProfilePage = ({ userData }) => {
       <div className="profile-row">
         <label>Region:</label>
         <span>{userData?.region}</span>
+      </div>
+
+      {/* Role */}
+      <div className="profile-row">
+        <label>Role:</label>
+        <span>{userData?.role}</span>
       </div>
 
       {/* Actions */}
