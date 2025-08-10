@@ -12,6 +12,7 @@ import {
   onSnapshot,
   getDocs,
   limit,
+  getDoc,
 } from "firebase/firestore";
 import { format } from "date-fns";
 import "../assets/DHRStyle.css";
@@ -65,6 +66,21 @@ export default function CreateDHR({ userData }) {
   const [message, setMessage] = useState("");
   const [history, setHistory] = useState([]);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [instructionText, setInstructionText] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+
+  useEffect(() => {
+    const fetchInstruction = async () => {
+      const docRef = doc(db, "config", "create_dhr_instruction");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setInstructionText(docSnap.data().text || "");
+        setEditText(docSnap.data().text || "");
+      }
+    };
+    fetchInstruction();
+  }, []);
 
   useEffect(() => {
     if (!emptyForm.circle || !emptyForm.siteName) return;
@@ -283,6 +299,57 @@ export default function CreateDHR({ userData }) {
 
   return (
     <div className="create-dhr-container">
+      
+      {/* Notice Board */}
+      <div className="instruction-tab">
+        <h2 className="dashboard-header">📌 Notice Board </h2>
+        {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
+        {isEditing ? (
+          <>
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              rows={5}
+              className="dashboard-instruction-panel"
+            />
+            <div className="flex gap-2">
+              <button
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+                onClick={async () => {
+                  const docRef = doc(db, "config", "create_dhr_instruction");
+                  await setDoc(docRef, { text: editText });
+                  setInstructionText(editText);
+                  setIsEditing(false);
+                }}
+              >
+                Save
+              </button>
+              <button
+                className="bg-gray-400 text-white px-3 py-1 rounded"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="dashboard-instruction-panel">
+              {instructionText || "No instructions available."}
+            </p>
+            {["Admin", "Super Admin"].includes(userData?.role) && (
+              <button
+                className="text-blue-600 underline"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit Instruction
+              </button>
+            )}
+          </>
+        )}
+        <h6 style={{ marginLeft: "90%" }}>Thanks & Regards @Suman Adhikari</h6>
+      </div>
+
       <h2>Create / Edit {userData.site} Daily DHR </h2>
       {message && <p className="message">No DHR found {message}</p>}
 

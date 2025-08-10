@@ -21,7 +21,7 @@ const IncidentDashboard = ({ userData }) => {
   // Fetch dashboard instruction
   useEffect(() => {
     const fetchInstruction = async () => {
-      const docRef = doc(db, "config", "dashboard_instruction");
+      const docRef = doc(db, "config", "incident_dashboard_instruction");
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setInstructionText(docSnap.data().text || "");
@@ -92,7 +92,7 @@ const IncidentDashboard = ({ userData }) => {
       <div className="instruction-tab">
         {/* ... (keep existing notice board code) ... */}
         <h2 className="dashboard-header">📌 Notice Board </h2>
-        <h3 className="dashboard-header">📘 App Overview </h3>
+        {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>
             <textarea
@@ -105,7 +105,7 @@ const IncidentDashboard = ({ userData }) => {
               <button
                 className="bg-blue-600 text-white px-3 py-1 rounded"
                 onClick={async () => {
-                  const docRef = doc(db, "config", "dashboard_instruction");
+                  const docRef = doc(db, "config", "incident_dashboard_instruction");
                   await setDoc(docRef, { text: editText });
                   setInstructionText(editText);
                   setIsEditing(false);

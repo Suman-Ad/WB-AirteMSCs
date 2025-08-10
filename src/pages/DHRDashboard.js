@@ -47,7 +47,7 @@ export default function DHRDashboard({ userData }) {
 
   useEffect(() => {
     const fetchInstruction = async () => {
-      const docRef = doc(db, "config", "dashboard_instruction");
+      const docRef = doc(db, "config", "dhr_dashboard_instruction");
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setInstructionText(docSnap.data().text || "");
@@ -265,7 +265,7 @@ Fault details if any: ${r.faultDetails}
       {/* Notice Board */}
       <div className="instruction-tab">
         <h2 className="dashboard-header">📌 Notice Board </h2>
-        <h3 className="dashboard-header">📘 App Overview </h3>
+        {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>
             <textarea
@@ -278,7 +278,7 @@ Fault details if any: ${r.faultDetails}
               <button
                 className="bg-blue-600 text-white px-3 py-1 rounded"
                 onClick={async () => {
-                  const docRef = doc(db, "config", "dashboard_instruction");
+                  const docRef = doc(db, "config", "dhr_dashboard_instruction");
                   await setDoc(docRef, { text: editText });
                   setInstructionText(editText);
                   setIsEditing(false);

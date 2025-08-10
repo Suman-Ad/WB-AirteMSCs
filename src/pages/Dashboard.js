@@ -290,7 +290,7 @@ const Dashboard = ({ userData }) => {
       <div className="instruction-tab">
         {/* ... (keep existing notice board code) ... */}
         <h2 className="dashboard-header">📌 Notice Board </h2>
-        <h3 className="dashboard-header">📘 App Overview </h3>
+        {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>
             <textarea
