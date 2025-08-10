@@ -181,7 +181,7 @@ const IncidentDashboard = ({ userData }) => {
 
         <button onClick={fetchIncidents}>Apply Filters</button>
 
-        {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin") && (
+        {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin" || userData.role === "User") && (
           <Link to="/incident-management" className="pm-manage-btn">Add <strong>"{userData.site || "All"}"</strong> Incidents ✎ </Link>
         )}
       </div>

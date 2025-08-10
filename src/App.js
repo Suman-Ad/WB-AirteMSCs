@@ -18,6 +18,8 @@ import IncidentDashboard from "./pages/IncidentDashboard";
 import IncidentManagement from "./pages/IncidentManagement";
 import DHRDashboard from "./pages/DHRDashboard";
 import CreateDHR from "./pages/CreateDHR";
+import ComplianceDashboard from "./pages/ComplianceDashboard";
+import ManageCompliance from "./pages/ManageCompliance";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -150,6 +152,20 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <CreateDHR userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/compliance-dashboard" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <ComplianceDashboard userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/manage-compliance" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+            <Layout userData={userData}>
+              <ManageCompliance userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
               
