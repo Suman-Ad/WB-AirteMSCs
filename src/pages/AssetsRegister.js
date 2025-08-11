@@ -46,6 +46,8 @@ export default function AssetsRegister({ userData }) {
   const userSite = userData?.site;
   const userRegion = userData?.region;
   const userCircle = userData?.circle;
+  const [progress, setProgress] = useState(0);
+
 
   const [columns, setColumns] = useState(DEFAULT_COLUMNS);
   const [rows, setRows] = useState([]); // assets_register docs
@@ -196,31 +198,34 @@ export default function AssetsRegister({ userData }) {
         await saveColumnsToFirestore(columns);
 
         // now create/update documents in assets_register
-        const promises = json.map(async (row) => {
-          // row is an object with file header names as keys
-          // take UniqueID as doc id if present
-          const uniqueIdVal = row["Unique ID"] || row["UniqueID"] || row["Unique ID (Don't edit)"] || row["Unique ID (Don't edit)"] || row["Unique ID (Don't edit)"]; // try variants
+        let completed = 0;
+        const total = json.length;
+
+        for (const row of json) {
+          const uniqueIdVal = row["Unique ID"] || row["UniqueID"] || row["Unique ID (Don't edit)"] || row["UniqueID(Don't edit)"];
           const docId = uniqueIdVal ? String(uniqueIdVal).trim() : Date.now().toString() + Math.floor(Math.random() * 1000);
           const payload = {};
-          // fill columns according to mapping
+
           Object.keys(row).forEach(fh => {
             const k = mapping[fh];
             if (!k) return;
             payload[k] = row[fh];
           });
-          // make sure site/region/circle fields exist (try to fall back)
           if (!payload["SiteName"] && (row["Site Name"] || row["SiteName"])) payload["SiteName"] = row["Site Name"] || row["SiteName"];
           if (!payload["Region"] && row["Region"]) payload["Region"] = row["Region"];
           if (!payload["Circle"] && row["Circle"]) payload["Circle"] = row["Circle"];
           payload._importedAt = serverTimestamp();
-          // save doc
-          await setDoc(doc(db, "assets_register", docId), payload);
-        });
 
-        await Promise.all(promises);
+          await setDoc(doc(db, "assets_register", docId), payload);
+
+          completed++;
+          setProgress(Math.round((completed / total) * 100));
+        }
+
         alert("Import complete.");
         setFileToImport(null);
         setLoading(false);
+        setProgress(0);
       };
 
       // decide binary vs arrayBuffer per file type
@@ -304,9 +309,13 @@ export default function AssetsRegister({ userData }) {
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <label>Import Excel / CSV (Admin / Super Admin recommended)</label>
-        <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChange} />
-        <button className="btn-success" onClick={importFileToFirestore} disabled={!fileToImport}>Import</button>
+        {isAdmin && (
+            <>
+                <label>Import Excel / CSV (Admin / Super Admin recommended)</label>
+                <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChange} />
+                <button className="btn-success" onClick={importFileToFirestore} disabled={!fileToImport}>Import</button>
+            </>
+        )}
       </div>
 
       {/* quick add row (Admin / Super User for their site) */}
@@ -316,12 +325,12 @@ export default function AssetsRegister({ userData }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 8 }}>
             {columns.map(c => {
               // Admin must fill region/circle/site appropriately for Admin; Super User form will auto-fill Site from userSite
-              if (!isAdmin && userRole === "Super User" && (c.key === "SiteName" || c.key === "Site")) {
+              if (!isAdmin && userRole === "Super User" && (c.key === "SiteName" || c.key === "Site" || c.key === "Circle" || c.key === "Region")) {
                 // show site as fixed
                 return (
                   <div key={c.key}>
                     <label>{c.label}</label>
-                    <input value={newRowForm[c.key] || userSite} onChange={(e) => setNewRowForm({...newRowForm, [c.key]: e.target.value})} />
+                    <input value={newRowForm[c.key] || userSite || userCircle || userRegion} onChange={(e) => setNewRowForm({...newRowForm, [c.key]: e.target.value})} />
                   </div>
                 );
               }
@@ -340,7 +349,20 @@ export default function AssetsRegister({ userData }) {
       )}
 
       <div style={{ overflowX: "auto" }}>
-        {loading ? <p>Loading...</p> : (
+        {loading ? (
+            <div>
+                <p>Loading... {progress}%</p>
+                <div style={{ background: "#eee", height: "8px", width: "100%", borderRadius: "4px" }}>
+                <div style={{
+                    background: "#4caf50",
+                    width: `${progress}%`,
+                    height: "8px",
+                    borderRadius: "4px",
+                    transition: "width 0.3s"
+                }}></div>
+                </div>
+            </div>
+        ) : (
           <table className="dhr-table" style={{ width: "100%", minWidth: 900 }}>
             <thead>
               <tr>

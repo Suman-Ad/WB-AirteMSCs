@@ -21,6 +21,8 @@ import CreateDHR from "./pages/CreateDHR";
 import ComplianceDashboard from "./pages/ComplianceDashboard";
 import ManageCompliance from "./pages/ManageCompliance";
 import AssetsRegister from "./pages/AssetsRegister";
+import AssetsDashboard from "./pages/AssetsDashboard";
+
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -174,6 +176,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
             <Layout userData={userData}>
               <AssetsRegister userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/assets-dashboard" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <AssetsDashboard userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
               

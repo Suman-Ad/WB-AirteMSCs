@@ -104,6 +104,7 @@ const DailyDashboard = ({ userData }) => {
   const userName = userData?.name;
   const userRole = userData?.role;
   const userSite = userData?.site;
+  const userDesignation = userData?.designation;
   const today = new Date().toISOString().split("T")[0];
   const [dates, setDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState(today);
@@ -254,7 +255,7 @@ const DailyDashboard = ({ userData }) => {
         {userRole === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
         {userRole === "Super User" && <span>📍 <strong>Super User</strong></span>}
         {userRole === "User" && <span>👤 <strong>User</strong></span>}
-        &nbsp; | &nbsp; 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
+        &nbsp; | &nbsp; 🎖️ Designation: <strong>{userDesignation || "All"}</strong> | &nbsp; 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
       </p>
       <h1>
         <strong>📅 Daily Dashboard</strong>

@@ -32,6 +32,7 @@ export default function DHRDashboard({ userData }) {
   const userName = userData?.name;
   const userRole = userData?.role;
   const userSite = userData?.site;
+  const userDesignation = userData?.designation;
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -219,7 +220,7 @@ Fault details if any: ${r.faultDetails}
             👤 <strong>User</strong>
           </span>
         )}
-        &nbsp; | 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID:{" "}
+        &nbsp; | &nbsp; 🎖️ Designation: <strong>{userDesignation || "All"}</strong> | 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID:{" "}
         <strong>{userData.siteId || "All"}</strong>
       </p>
       <h1>

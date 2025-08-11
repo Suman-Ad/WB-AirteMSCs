@@ -130,7 +130,7 @@ const AdminPanel = ({ userData }) => {
         {userData.role === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
         {userData.role === "Super User" && <span>📍 <strong>Super User</strong></span>}
         {userData.role === "User" && <span>👤 <strong>User</strong></span>}
-        &nbsp; | &nbsp; 🏢 Site: <strong>{userData.site || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
+        &nbsp; | &nbsp; 🎖️ Designation: <strong>{userData.designation || "All"}</strong> | &nbsp; 🏢 Site: <strong>{userData.site || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
       </p>
       
       <h2 className="admin-title">Admin User Control Panel</h2>

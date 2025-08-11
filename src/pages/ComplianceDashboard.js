@@ -22,6 +22,7 @@ export default function ComplianceDashboard({ userData }) {
 
   const userRole = userData?.role;
   const userSite = userData?.site;
+  const userDesignation = userData?.designation;
 
   useEffect(() => {
     const fetchInstruction = async () => {
@@ -179,7 +180,7 @@ export default function ComplianceDashboard({ userData }) {
         {userRole === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
         {userRole === "Super User" && <span>📍 <strong>Super User</strong></span>}
         {userRole === "User" && <span>👤 <strong>User</strong></span>}
-        &nbsp; | &nbsp; 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
+        &nbsp; | &nbsp; 🎖️ Designation: <strong>{userDesignation || "All"}</strong> | &nbsp; 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
       </p>
       <h1>
         <strong>⚖️ Compliance Dashboard</strong>
