@@ -20,6 +20,7 @@ import DHRDashboard from "./pages/DHRDashboard";
 import CreateDHR from "./pages/CreateDHR";
 import ComplianceDashboard from "./pages/ComplianceDashboard";
 import ManageCompliance from "./pages/ManageCompliance";
+import AssetsRegister from "./pages/AssetsRegister";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -166,6 +167,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
             <Layout userData={userData}>
               <ManageCompliance userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/assets-register" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+            <Layout userData={userData}>
+              <AssetsRegister userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
               

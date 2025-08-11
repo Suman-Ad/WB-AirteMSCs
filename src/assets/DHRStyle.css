@@ -196,10 +196,13 @@ button:disabled {
 /* Tables */
 .dhr-table {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
   margin-top: var(--space-md);
   font-size: 0.85rem;
   box-shadow: var(--shadow-sm);
+  overflow-x: auto;
+  display: block;
 }
 
 .dhr-table th {

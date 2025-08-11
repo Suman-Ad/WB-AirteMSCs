@@ -138,8 +138,8 @@ export default function DHRDashboard({ userData }) {
     const dgVal = parseFloat(r.dgRunHrsYesterday);
     const ebVal = parseFloat(r.ebRunHrsYesterday);
     siteDataMap[r.siteName].dieselAvailable += isNaN(dieselVal) ? 0 : dieselVal;
-    siteDataMap[r.siteName].dgRunHrs += isNaN(dgVal) ? 0 : dgVal;
-    siteDataMap[r.siteName].ebRunHrs += isNaN(ebVal) ? 0 : ebVal;
+    siteDataMap[r.siteName].dgRunHrsYesterday += isNaN(dgVal) ? 0 : dgVal;
+    siteDataMap[r.siteName].ebRunHrsYesterday += isNaN(ebVal) ? 0 : ebVal;
   });
 
   const chartData = Object.values(siteDataMap);
@@ -257,8 +257,8 @@ Fault details if any: ${r.faultDetails}
             <Tooltip />
             <Legend />
             <Bar dataKey="dieselAvailable" barSize={40} fill="#413ea0" name="Diesel Available (L)" />
-            <Line type="monotone" dataKey="dgRunHrs" stroke="#ff7300" name="DG Run Hrs" />
-            <Line type="monotone" dataKey="ebRunHrs" stroke="#387908" name="EB Run Hrs" />
+            <Line type="monotone" dataKey="dgRunHrs" stroke="#ff7300" name="DG Run Hrs Yesterday" />
+            <Line type="monotone" dataKey="ebRunHrs" stroke="#387908" name="EB Run Hrs Yesterday" />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -349,8 +349,8 @@ Fault details if any: ${r.faultDetails}
               <th>Circle</th>
               <th>Site Name</th>
               <th>Diesel Available</th>
-              <th>DG Run Hrs</th>
-              <th>EB Run Hrs</th>
+              <th>DG Run Hrs Yesterday</th>
+              <th>EB Run Hrs Yesterday</th>
               <th>EB Status</th>
               <th>DG Status</th>
               <th>SMPS</th>
