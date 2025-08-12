@@ -258,8 +258,8 @@ Fault details if any: ${r.faultDetails}
             <Tooltip />
             <Legend />
             <Bar dataKey="dieselAvailable" barSize={40} fill="#413ea0" name="Diesel Available (L)" />
-            <Line type="monotone" dataKey="dgRunHrs" stroke="#ff7300" name="DG Run Hrs Yesterday" />
-            <Line type="monotone" dataKey="ebRunHrs" stroke="#387908" name="EB Run Hrs Yesterday" />
+            <Line type="monotone" dataKey="dgRunHrsYesterday" stroke="#ff7300" name="DG Run Hrs Yesterday" />
+            <Line type="monotone" dataKey="ebRunHrsYesterday" stroke="#387908" name="EB Run Hrs Yesterday" />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -327,8 +327,8 @@ Fault details if any: ${r.faultDetails}
           value={filterSite}
           onChange={(e) => setFilterSite(e.target.value)}
         />
-        <button className="create-dhr-btn" onClick={() => navigate("/create-dhr")}>
-          ➕ Create / Edit DHR
+        <button className="btn-secondary pm-manage-btn" onClick={() => navigate("/create-dhr")}>
+          ➕ Create / Edit {userData?.site} DHR
         </button>
         <button className="download-btn" onClick={downloadExcel}>
           ⬇️ Download Excel
@@ -406,14 +406,14 @@ Fault details if any: ${r.faultDetails}
                     onClick={() => shareWhatsApp(generateTXT(r))}
                     title="Share WhatsApp"
                   >
-                    📱
+                    ➤What'sApp
                   </button>
                   <button
                     className="share-btn"
                     onClick={() => shareTelegram(generateTXT(r))}
                     title="Share Telegram"
                   >
-                    💬
+                    ➤Telegram
                   </button>
                   {showModal && (
                     <div className="modal-overlay">

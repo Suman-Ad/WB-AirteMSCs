@@ -233,8 +233,8 @@ export default function ComplianceDashboard({ userData }) {
       </div>
 
       {(userRole === "Admin" || userRole === "Super Admin" || userRole === "Super User") && (
-        <Link to="/manage-compliance" className="create-dhr-btn" style={{ marginBottom: 12 }}>
-          ⚖️ Manage Compliance
+        <Link to="/manage-compliance" className="btn-danger pm-manage-btn" style={{ marginBottom: 12 }}>
+          ⚖️ Manage {userData?.site} Compliance
         </Link>
       )}
 
@@ -273,8 +273,8 @@ export default function ComplianceDashboard({ userData }) {
             <th>Circle</th>
             <th>Site</th>
             <th>Type</th>
-            <th>Expiry</th>
-            <th>Renewal</th>
+            <th>Issue Date</th>
+            <th>Expiry Date</th>
             <th>Status</th>
             {(userRole === "Admin" || userRole === "Super Admin" || userRole === "Super User") && <th>Actions</th>}
           </tr>
