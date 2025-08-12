@@ -93,8 +93,8 @@ export const sheetTemplates = {
     {
       Region: "", Circle: "", Site_Name: "", Equipment_Category: "", Equipment_Name_and_No: "",
       Equipment_Make: "", Unit_of_measure_kva_TR_etc: "", Rating_Capacity: "", Qty: "",
-      In_House_PM_Frequency: "", AMC_partner_Name: "", Month: "",
-      OEM_Plan_Date: "", OEM_Done_Date: "", PM_Status: ""
+      OEM_PM_Frequency: "", AMC_Partner_Name: "", Month: "",
+      OEM_PM_Plan_Date: "", OEM_PM_Done_Date: "", PM_Status: "", Remarks: "", Floor_Name: "", Room_Name: ""
     },
   ],
   Operational_Governance_Call: [
@@ -228,6 +228,14 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
 
   const templateRows = sheetTemplates[sheetKey] || [];
   const columns = templateRows.length ? Object.keys(templateRows[0]) : [];
+  const [lastBulkUpload, setLastBulkUpload] = useState(null);
+
+  const canUploadThisMonth = () => {
+    if (!lastBulkUpload) return true;
+    const last = new Date(lastBulkUpload);
+    const now = new Date(selectedDate);
+    return last.getFullYear() !== now.getFullYear() || last.getMonth() !== now.getMonth();
+  };
 
   // Utility: default numeric blanks to 0 so parser sees numbers
   const sanitizeRowDefaults = (row, template = {}) => {
@@ -520,31 +528,49 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
     scheduleSave(updated);
   };
 
+  const handleDeleteRow = (rowIndex) => {
+    const updated = rawData.filter((_, idx) => idx !== rowIndex);
+    setRawData(updated);
+    scheduleSave(updated);
+  };
+
+
   const handleFileUpload = (e) => {
+    if (!canUploadThisMonth()) {
+      alert("Bulk upload already done for this month. Try again next month.");
+      e.target.value = ""; // reset file input
+      return;
+    }
+
     const file = e.target.files[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       const data = new Uint8Array(evt.target.result);
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[sheetKey];
-      if (!sheet) return alert(`No sheet named ${sheetKey} in uploaded file`);
+      if (!sheet) {
+        alert(`No sheet named ${sheetKey} found in uploaded file`);
+        return;
+      }
 
       const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-      // filter if user is Super User
-      let filteredData = jsonData;
-      if (userData?.role === "Super User") {
-        filteredData = jsonData.filter(r => r.Site_Name === userData.site);
-      }
+      // Merge into rawData
+      const merged = [...rawData, ...jsonData].map(r =>
+        sanitizeRowDefaults(r, templateRows[0] || {})
+      );
 
-      // merge into rawData
-      const merged = [...rawData, ...filteredData].map(r => sanitizeRowDefaults(r, templateRows[0] || {}));
       setRawData(merged);
       scheduleSave(merged);
+
+      // Mark upload date
+      setLastBulkUpload(new Date().toISOString());
     };
     reader.readAsArrayBuffer(file);
   };
+
 
 
   // evaluated view for rendering
@@ -561,6 +587,7 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
         <thead>
           <tr>
             {columns.map(col => <th key={col}>{col}</th>)}
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -577,16 +604,34 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
                   />
                 </td>
               ))}
+              <td>
+                <button
+                  onClick={() => handleDeleteRow(rIdx)}
+                  style={{ color: "white", background: "red", border: "none", padding: "4px 8px", cursor: "pointer" }}
+                >
+                  🗑 Delete
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
+
       </table>
 
       <button onClick={handleAddRow}>➕ Add Row</button>
       {(sheetKey === "In_House_PM" || sheetKey === "OEM_PM") &&
         (userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User") && (
           <div className="upload-block">
-            <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} />
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleFileUpload}
+            />
+            {lastBulkUpload && (
+              <small>
+                Last bulk upload: {new Date(lastBulkUpload).toLocaleDateString()}
+              </small>
+            )}
           </div>
         )}
     </div>
