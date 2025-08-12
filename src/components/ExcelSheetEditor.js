@@ -4,9 +4,13 @@ import "../assets/ExcelSheetEditor.css";
 import { Parser } from 'hot-formula-parser';
 import structuredClone from '@ungap/structured-clone';
 import { formulasConfig } from "../config/formulasConfig";
+import * as XLSX from "xlsx";
+
 
 const DEBOUNCE_DELAY = 1500;
-const numericKeyPattern = /(ltr|capacity|dg|cph|hrs|qty|total|stock|rating|kva|tr|count|uptime|amount|number|SlNo|remarks)/i;
+// const numericKeyPattern = /(ltr|capacity|dg|cph|hrs|qty|total|stock|rating|kva|tr|count|uptime|amount|number|SlNo|remarks)/i;
+const numericKeyPattern = /(qty|rating|kva|tr|count|uptime|amount|number|SlNo|remarks)/i;
+
 
 
 export const sheetTemplates = {
@@ -81,7 +85,7 @@ export const sheetTemplates = {
   In_House_PM: [
     {
       Circle: "", Site_Name: "", Equipment_Category: "", In_House_PM_Frequency: "",
-      Month: "", In_House_Plan_Date: "", In_House_Done_Date: "", PM_Status: ""
+      Month: "", In_House_Plan_Date: "", In_House_Done_Date: "", PM_Status: "", Remarks: ""
     },
   ],
   Sheet2: [{ SlNo: "", key: "", value: "", remark: "" }],
@@ -99,6 +103,122 @@ export const sheetTemplates = {
       Governance_Meeting_Status_Done: "", Remark_Agenda: ""
     },
   ],
+};
+
+const siteWiseDefaults = {
+  Diesel_Back_Up: {
+    DG_fuel_tank_capacity: {
+      "Andaman": 1060.00,
+      "Asansol": 1980.00,
+      "Berhampore": 1980.00,
+      "Globsyn": 1400.00,
+      "Mira Tower": 1980.00,
+      "New Alipore": 990.00,
+      "DLF": 1980.00,
+      "Infinity-I": 1890.00,
+      "Infinity-II": 1980.00,
+      "Kharagpur": 1980.00,
+      "SDF": 1980.00,
+      "Siliguri": 2970.00
+
+    },
+    
+    External_Stock_capacity_Barrel_UG_Buffer_Ltr: {
+      "Andaman": 850.00,
+      "Asansol": 200.00,
+      "Berhampore": 400.00,
+      "Globsyn": 0.00,
+      "Mira Tower": 0.00,
+      "New Alipore": 0.00,
+      "DLF": 0.00,
+      "Infinity-I": 0.00,
+      "Infinity-II": 0.00,
+      "Kharagpur": 2000.00,
+      "SDF": 0.00,
+      "Siliguri": 1990.00
+
+    },
+
+    DG_CPH: {
+      "Andaman": 28.00,
+      "Asansol": 96.00,
+      "Berhampore": 95.00,
+      "Globsyn": 80.00,
+      "Mira Tower": 48.00,
+      "New Alipore": 42.00,
+      "DLF": 140.00,
+      "Infinity-I": 111.60,
+      "Infinity-II": 147.00,
+      "Kharagpur": 261.00,
+      "SDF": 45.00,
+      "Siliguri": 165.00
+      
+    }
+    
+  },
+
+  Manpower_Availability: {
+      SEng_Circle_SPOC: {
+        "Andaman": 0.00,
+        "Asansol": 0.00,
+        "Berhampore": 1.00,
+        "Globsyn": 0.00,
+        "Mira Tower": 0.00,
+        "New Alipore": 0.00,
+        "DLF": 0.00,
+        "Infinity-I": 1.00,
+        "Infinity-II": 0.00,
+        "Kharagpur": 0.00,
+        "SDF": 0.00,
+        "Siliguri": 0.00
+      },
+
+      Engg: {
+        "Andaman": 1.00,
+        "Asansol": 1.00,
+        "Berhampore": 1.00,
+        "Globsyn": 1.00,
+        "Mira Tower": 0.00,
+        "New Alipore": 1.00,
+        "DLF": 1.00,
+        "Infinity-I": 1.00,
+        "Infinity-II": 1.00,
+        "Kharagpur": 1.00,
+        "SDF": 1.00,
+        "Siliguri": 1.00
+
+      }, 
+      
+      Supervisor: {
+        "Andaman": 1.00,
+        "Asansol": 1.00,
+        "Berhampore": 0.00,
+        "Globsyn": 1.00,
+        "Mira Tower": 0.00,
+        "New Alipore": 1.00,
+        "DLF": 1.00,
+        "Infinity-I": 1.00,
+        "Infinity-II": 1.00,
+        "Kharagpur": 1.00,
+        "SDF": 1.00,
+        "Siliguri": 1.00
+
+      }, 
+      Technician: {
+        "Andaman": 5.00,
+        "Asansol": 7.00,
+        "Berhampore": 7.00,
+        "Globsyn": 7.00,
+        "Mira Tower": 7.00,
+        "New Alipore": 7.00,
+        "DLF": 10.00,
+        "Infinity-I": 9.00,
+        "Infinity-II": 7.00,
+        "Kharagpur": 7.00,
+        "SDF": 7.00,
+        "Siliguri": 7.00
+      },
+    },
 };
 
 const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selectedDate, allSheetsData = {} }) => {
@@ -326,6 +446,13 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
           if (low.includes("region") && userData?.region) filled[k] = userData.region;
           if (low.includes("site_id") && userData?.siteId) filled[k] = userData.siteId;
           if (low.includes("date") && selectedDate) filled[k] = selectedDate;
+          // site-wise column default
+          if (siteWiseDefaults[sheetKey] && siteWiseDefaults[sheetKey][k] && userData?.site) {
+            const siteDefaultMap = siteWiseDefaults[sheetKey][k];
+            if (siteDefaultMap[userData.site] !== undefined) {
+              filled[k] = siteDefaultMap[userData.site];
+            }
+          }
         });
 
         // ensure formulas from config are present
@@ -393,6 +520,33 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
     scheduleSave(updated);
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[sheetKey];
+      if (!sheet) return alert(`No sheet named ${sheetKey} in uploaded file`);
+
+      const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+      // filter if user is Super User
+      let filteredData = jsonData;
+      if (userData?.role === "Super User") {
+        filteredData = jsonData.filter(r => r.Site_Name === userData.site);
+      }
+
+      // merge into rawData
+      const merged = [...rawData, ...filteredData].map(r => sanitizeRowDefaults(r, templateRows[0] || {}));
+      setRawData(merged);
+      scheduleSave(merged);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+
   // evaluated view for rendering
   const evaluatedData = useMemo(() => evaluateFormulas(rawData, allSheetsData), [rawData, sheetKey, allSheetsData]);
 
@@ -429,6 +583,12 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
       </table>
 
       <button onClick={handleAddRow}>➕ Add Row</button>
+      {(sheetKey === "In_House_PM" || sheetKey === "OEM_PM") &&
+        (userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User") && (
+          <div className="upload-block">
+            <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} />
+          </div>
+        )}
     </div>
   );
 };

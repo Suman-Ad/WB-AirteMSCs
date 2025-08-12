@@ -77,8 +77,8 @@ export default function AssetsDashboard({ userData }) {
 
         // FIRST PASS: compute total asset count for progress accuracy
         let totalAssets = 0;
-        for (const circleDoc of circlesSnap.docs) {
-          const circleName = circleDoc.id;
+        for (const circleDoc of circlesSnap.docs.map(d => d.id).sort().reverse()) {
+          const circleName = circleDoc.d;
           const sitesSnap = await getDocs(collection(db, "assets_register", circleName));
           for (const siteDoc of sitesSnap.docs) {
             const equipSnap = await getDocs(collection(db, "assets_register", circleName, siteDoc.id));

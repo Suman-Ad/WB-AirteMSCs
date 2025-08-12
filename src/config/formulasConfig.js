@@ -14,6 +14,13 @@ export const formulasConfig = {
   Infra_Update: {
     Infra_Uptime_Percentage: "=((238*60*60)-(((1*0*60)+0)*0))/(238*60*60)*100"
   },
+
+  Manpower_Availability :{
+    Total_Manpower: "=SEng_Circle_SPOC + Engg	+ Supervisor + Technician",
+    HC_Availability_as_per_LOI: "=IF(Total_Manpower<7, \"Not Ok\", \"Ok\")"
+
+  },
+
   Final_Summary: [
     { Edge_Data_Centres_Count: "Category Checks", WB: "12" },
 

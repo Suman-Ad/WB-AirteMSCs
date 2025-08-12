@@ -182,13 +182,43 @@ const DailyDashboard = ({ userData }) => {
     // example: add a Final Summary sheet (static)
     const finalSummaryData = [
       ["Edge Data Centres Count", "WB"],
-      ["", 12],
-      // ...example; you may want to programmatically build from templates
+      ["Total Site Count", {f: "=COUNTA('Diesel Back Up'!C2:C13)"}],
+      ["Category Checks", ""],
+      ["Sites Less Than 12 Hrs Diesel Back Up", { f: "=COUNTIF('Diesel Back Up'!M:M, \"<12\")" }],
+      ["Sites More Than 12 Hrs Diesel Back Up", { f: "=COUNTIF('Diesel Back Up'!M:M, \">12\")" }],
+      ["MSC more than 2500 Litres excluding Day Tanks", { f: "=COUNTIF('Diesel Back Up'!G:G, \">2500\")" }],
+      ["MSC more than 2500 Litres Including Day Tanks", { f: "=COUNTIF('Diesel Back Up'!I:I, \">2500\")" }],
+      ["DG Running Hrs.", {f: "=SUM('DG-EB Backup'!F2:F21)"}],
+      ["EB Availability Hrs.", {f: "=(B2*24)-SUM('DG-EB Backup'!E2:E21)"}],
+      ["Infra Uptime", {f: "=AVERAGE('Infra Update'!F2:F22)"}],
+      ["Infra Uptime with Redundancy", "100%"],
+      ["Minor Fault Details (If any)", "N"],
+      ["Major Fault Details (If any)", "N"],
+      ["Planned Activity Details", "Y"],
+
+      [],
+      ["Edge Data Centres Count", "WB"],
+      ["Total Site Count", {f: "=B2"}],
+      ["Category Checks", ""],
+      ["O&M Manpower Availability as Per LOI", "Ok"],
+      ["In House PM Planned (Jul'25 Month)", 114],
+      ["In House PM Completed (Jul'25 Month)", 8],
+      ["Inhouse PM Completion %", { f: "=(B21/B20)*100" }],
+      ["OEM PM Planned (Jul'25 Month)", 46],
+      ["OEM PM Completed (Jul'25 Month)", 0],
+      ["OEM PM Completion %", { f: "=(B24/B23)*100" }],
+      ["Incidents / Accidents Reported", 0],
+      ["EOL Replacement Planned", 0],
+      ["EOL Replacement Completed", 0],
+      ["Operational Governance Call Planned", 0],
+      ["Operational Governance Call Executed", 0],
     ];
+    
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(finalSummaryData), "Final Summary");
 
     // compile sheets site-wise using evaluated values
     Object.entries(sheetKeys).forEach(([sheetLabel, sheetKey]) => {
+      if (sheetLabel === "Final Summary") return; // ✅ Skip duplicate Final Summary
       const allRows = [];
       Object.entries(siteData).forEach(([site, data]) => {
         const rows = data[sheetKey] || [];
@@ -364,11 +394,11 @@ const DailyDashboard = ({ userData }) => {
           {dates.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
 
-        <button onClick={() => setSortAsc(!sortAsc)} style={{ marginLeft: 8 }}>
+        <button onClick={() => setSortAsc(!sortAsc)} className="btn-info">
           Sort: {sortAsc ? "A-Z" : "Z-A"}
         </button>
 
-        <button onClick={downloadExcel} style={{ marginLeft: 8 }}>📥 Download Compiled Excel</button>
+        <button onClick={downloadExcel} className="btn-success pm-manage-btn">📥 Download Compiled Excel</button>
       </div>
 
       {sortedSites.map(site => {
