@@ -311,16 +311,20 @@ export default function DailyActivityManage({ userData }) {
             nodeName: eq,
             activityDetails: `${entry.pmType || "PM"} scheduled (${entry.frequency || entry.pmType || "scheduled"})`,
             activityType: entry.activityType || "Major",
-            siteCategory: entry.siteCategory || "",
-            approvalRequire: "",
+            siteCategory: entry.siteCategory || "Super Critical",
+            approvalRequire: "CIH",
             cih: "NA",
             centralInfra: "NA",
             ranOpsHead: "NA",
             coreOpsHead: "NA",
             fiberOpsHead: "NA",
-            crqNo: "",
-            activityStartTime: entry.startTime || "",
-            activityEndTime: entry.endTime || "",
+            crqNo: "CRQ00000",
+            activityStartTime: entry.activityStartTime && entry.activityStartTime.trim() !== "" 
+              ? entry.activityStartTime 
+              : "10:00 AM", // ✅ Default Start Time
+            activityEndTime: entry.activityEndTime && entry.activityEndTime.trim() !== "" 
+              ? entry.activityEndTime 
+              : "06:00 PM", // ✅ Default End Time
             createdFromPmId: entry.id || null,
             pmEntry: entry,
           });
@@ -551,7 +555,15 @@ export default function DailyActivityManage({ userData }) {
                 <th>Sl.No</th>
                 <th>Node Name</th>
                 <th>Activity Details</th>
-                <th>Type</th>
+                <th>Activity Type</th>
+                <th>Site Category</th>
+                <th>Approval Required</th>
+                <th>CIH</th>
+                <th>Central Infra</th>
+                <th>RAN Ops Head</th>
+                <th>Core Ops Head</th>
+                <th>Fiber Ops Head</th>
+                <th>PE/CRQ/REQ</th>
                 <th>Start</th>
                 <th>End</th>
                 <th>Actions</th>
@@ -559,7 +571,7 @@ export default function DailyActivityManage({ userData }) {
             </thead>
             <tbody>
               {(dailyRows || []).length === 0 ? (
-                <tr><td colSpan="7" className="daily-activity-empty">No rows for this date</td></tr>
+                <tr><td colSpan="14" className="daily-activity-empty">No rows for this date</td></tr>
               ) : (dailyRows || []).map((r, idx) => (
                 <tr key={idx}>
                   <td>{idx+1}</td>
@@ -569,18 +581,67 @@ export default function DailyActivityManage({ userData }) {
                   <td>
                     <input className="daily-activity-input" value={r.activityDetails || ""} onChange={(e)=>updateDailyRow(idx, "activityDetails", e.target.value)} />
                   </td>
+                  {/* Activity Type dropdown */}
                   <td>
-                    <input className="daily-activity-input" value={r.activityType || ""} onChange={(e)=>updateDailyRow(idx, "activityType", e.target.value)} />
+                    <select className="daily-activity-select" value={r.activityType || "Major"} onChange={(e)=>updateDailyRow(idx, "activityType", e.target.value)}>
+                      <option value="Major">Major</option>
+                      <option value="Minor">Minor</option>
+                    </select>
                   </td>
+                  {/* Site Category dropdown */}
+                  <td>
+                    <select className="daily-activity-select" value={r.siteCategory || "Super Critical"} onChange={(e)=>updateDailyRow(idx, "siteCategory", e.target.value)}>
+                      <option value="Super Critical">Super Critical</option>
+                      <option value="Critical">Critical</option>
+                      <option value="Major">Major</option>
+                    </select>
+                  </td>
+                  {/* Approval Required dropdown */}
+                  <td>
+                    <select className="daily-activity-select" value={r.approvalRequire || "CIH"} onChange={(e)=>updateDailyRow(idx, "approvalRequire", e.target.value)}>
+                      <option value="CIH">CIH</option>
+                      <option value="Central Infra">Central Infra</option>
+                      <option value="RAN Ops Head">RAN Ops Head</option>
+                      <option value="Core Ops Head">Core Ops Head</option>
+                      <option value="Fiber Ops Head">Fiber Ops Head</option>
+                    </select>
+                  </td>
+                  {/* Individual approvals */}
+                  {["cih","centralInfra","ranOpsHead","coreOpsHead","fiberOpsHead"].map(col => (
+                    <td key={col}>
+                      <select className="daily-activity-select" value={r[col] || "NA"} onChange={(e)=>updateDailyRow(idx, col, e.target.value)}>
+                        <option value="NA">NA</option>
+                        <option value="Y">Y</option>
+                        <option value="N">N</option>
+                      </select>
+                    </td>
+                  ))}
+                  {/* CRQ No input with suggestions */}
+                  <td>
+                    <input
+                      className="daily-activity-input"
+                      list={`crq-options-${idx}`}
+                      value={r.crqNo || ""}
+                      placeholder="Enter CRQ No"
+                      onChange={(e) => updateDailyRow(idx, "crqNo", e.target.value)}
+                    />
+                    <datalist id={`crq-options-${idx}`}>
+                      <option value="CRQ00000" />
+                      <option value="PE" />
+                      <option value="REQ" />
+                    </datalist>
+                  </td>
+                  {/* Start/End time */}
                   <td><input className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e)=>updateDailyRow(idx, "activityStartTime", e.target.value)} /></td>
                   <td><input className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e)=>updateDailyRow(idx, "activityEndTime", e.target.value)} /></td>
+                  {/* Delete */}
                   <td>
                     <button className="daily-activity-btn daily-activity-btn-danger" onClick={()=>deleteDailyRow(idx)}>Delete</button>
                   </td>
                 </tr>
-              ))
-              }  
+              ))}
             </tbody>
+
           </table>
         )}
       </div>
