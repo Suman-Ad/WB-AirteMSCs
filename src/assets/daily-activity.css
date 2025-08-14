@@ -1,0 +1,247 @@
+/* styles/daily-activity.css */
+
+/* Base Styles */
+.daily-activity-container {
+  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  color: #333;
+  line-height: 1.5;
+}
+
+/* Header Styles */
+.daily-activity-header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+}
+
+.daily-activity-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.daily-activity-subtitle {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+/* Toolbar Styles */
+.daily-activity-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.daily-activity-date-picker {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Button Styles */
+.daily-activity-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.daily-activity-btn-primary {
+  background-color: #2563eb;
+  color: white;
+}
+
+.daily-activity-btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+.daily-activity-btn-secondary {
+  background-color: white;
+  border-color: #ddd;
+  color: #333;
+}
+
+.daily-activity-btn-secondary:hover {
+  background-color: #f5f5f5;
+}
+
+.daily-activity-btn-danger {
+  background-color: #dc2626;
+  color: white;
+}
+
+.daily-activity-btn-danger:hover {
+  background-color: #b91c1c;
+}
+
+.daily-activity-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Table Styles */
+.daily-activity-table-container {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+}
+
+.daily-activity-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.daily-activity-table th {
+  background-color: #2563eb;
+  color: white;
+  text-align: left;
+  padding: 0.75rem;
+  font-weight: 500;
+}
+
+.daily-activity-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.daily-activity-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.daily-activity-table tr:hover {
+  background-color: #f0f7ff;
+}
+
+/* Input Styles */
+.daily-activity-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.daily-activity-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.daily-activity-select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background-color: white;
+}
+
+/* Column Tags */
+.daily-activity-column-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.daily-activity-column-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: #f0f0f0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+}
+
+.daily-activity-column-tag button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.125rem;
+  color: #666;
+}
+
+.daily-activity-column-tag button:hover {
+  color: #333;
+}
+
+/* Equipment Tags */
+.daily-activity-equipment-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.daily-activity-equipment-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: #f0f0f0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .daily-activity-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .daily-activity-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .daily-activity-btn {
+    width: 100%;
+  }
+
+  .daily-activity-table th,
+  .daily-activity-table td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .daily-activity-input,
+  .daily-activity-select {
+    padding: 0.25rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Loading State */
+.daily-activity-loading {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+}
+
+/* Empty State */
+.daily-activity-empty {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+}
+
+/* Action Links */
+.daily-activity-action-link {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.daily-activity-action-link:hover {
+  color: #1d4ed8;
+}

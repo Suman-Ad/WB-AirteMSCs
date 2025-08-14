@@ -18,7 +18,7 @@ import * as XLSX from "xlsx";
 import "../assets/Dashboard.css";
 
 const siteList = [
-  "Andaman", "Asansol", "Berhampore", "DLF", "GLOBSYN",
+  "Andaman", "Asansol", "Berhampore", "DLF", "Globsyn",
   "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower",
   "New Alipore", "SDF", "Siliguri"
 ];

@@ -22,6 +22,10 @@ import ComplianceDashboard from "./pages/ComplianceDashboard";
 import ManageCompliance from "./pages/ManageCompliance";
 import AssetsRegister from "./pages/AssetsRegister";
 import AssetsDashboard from "./pages/AssetsDashboard";
+import DailyActivityDashboard from "./pages/DailyActivityDashboard";
+import DailyActivityManage from "./pages/DailyActivityManage"
+import PMRegister from "./pages/PMRegister";
+
 
 
 function App() {
@@ -183,6 +187,27 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <AssetsDashboard userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/daily-activity-dashboard" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <DailyActivityDashboard userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/daily-activity-management" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <DailyActivityManage userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/pm-register" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+            <Layout userData={userData}>
+              <PMRegister userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
               

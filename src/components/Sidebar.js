@@ -35,6 +35,10 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
           <Link to="/daily-dashboard">📅 <span className="label">Daily Dashboard</span></Link>
         )}
 
+        {(role === "Super User" || role === "Admin" || role === "Super Admin" || role === "User") && (
+          <Link to="/daily-activity-dashboard">🚧 <span className="label">Daily Activity Dashboard</span></Link>
+        )}
+
         <Link to="/pdf-dashboard">🛠️ <span className="label">PM Dashboard</span></Link>
 
         {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
@@ -61,10 +65,10 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
         )}
 
         {(role === "Admin" || role === "Super Admin") && (
-          <Link to="/admin">🛡️ <span className="label">Admin Panel</span></Link>
+          <Link to="/admin">🔑 <span className="label">Admin Panel</span></Link>
         )}
 
-        <Link to="/profile">👤 <span className="label">Profile</span></Link>
+        <Link to="/profile">👷 <span className="label">Profile</span></Link>
 
         <button
           onClick={handleLogout}
