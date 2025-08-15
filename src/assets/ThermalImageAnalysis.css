@@ -1,0 +1,130 @@
+.thermal-analysis-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  color: #333;
+}
+
+.thermal-analysis-container h2 {
+  color: #2c3e50;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.thermal-dropzone {
+  border: 2px dashed #7f8c8d;
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+  margin-bottom: 20px;
+}
+
+.thermal-dropzone:hover {
+  border-color: #3498db;
+  background-color: #e8f4fc;
+}
+
+.thermal-dropzone p {
+  margin: 0 0 5px;
+  font-size: 16px;
+  color: #34495e;
+}
+
+.thermal-dropzone small {
+  color: #7f8c8d;
+  font-size: 12px;
+}
+
+.thermal-results {
+  display: flex;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.thermal-image-section {
+  flex: 1;
+}
+
+.thermal-preview {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.thermal-data-section {
+  flex: 1;
+}
+
+.thermal-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #3498db;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.thermal-chart {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  height: 300px;
+}
+
+.thermal-actions {
+  text-align: right;
+}
+
+.export-btn {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.export-btn:hover {
+  background-color: #2980b9;
+}
+
+@media (max-width: 768px) {
+  .thermal-results {
+    flex-direction: column;
+  }
+  
+  .thermal-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

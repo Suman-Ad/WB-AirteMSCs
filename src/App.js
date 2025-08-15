@@ -25,6 +25,7 @@ import AssetsDashboard from "./pages/AssetsDashboard";
 import DailyActivityDashboard from "./pages/DailyActivityDashboard";
 import DailyActivityManage from "./pages/DailyActivityManage"
 import PMRegister from "./pages/PMRegister";
+import ThermalImageAnalysis from "./pages/ThermalImageAnalysis";
 
 
 
@@ -208,6 +209,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
             <Layout userData={userData}>
               <PMRegister userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/thermal-analysis" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+            <Layout userData={userData}>
+              <ThermalImageAnalysis userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
               
