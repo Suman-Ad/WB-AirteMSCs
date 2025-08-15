@@ -26,6 +26,7 @@ import DailyActivityDashboard from "./pages/DailyActivityDashboard";
 import DailyActivityManage from "./pages/DailyActivityManage"
 import PMRegister from "./pages/PMRegister";
 import ThermalImageAnalysis from "./pages/ThermalImageAnalysis";
+import ThermalReportGenerator from "./pages/ThermalReportGenerator"
 
 
 
@@ -218,7 +219,15 @@ function App() {
               <ThermalImageAnalysis userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
-              
+
+        <Route path="/thermal-analysis-report" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+            <Layout userData={userData}>
+              <ThermalReportGenerator userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />   
+
+        
 
         {/* Fallback */}
         <Route path="/" element={<Navigate to="/dhr-dashboard" />} />

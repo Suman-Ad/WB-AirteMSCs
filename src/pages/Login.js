@@ -5,6 +5,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import "../assets/Login.css";
+import Vertiv from "../assets/vertiv.png";
 
 
 const Login = ({ setUserData }) => {
@@ -60,11 +61,40 @@ const Login = ({ setUserData }) => {
   };
 
   return (
-    <div className="auth-container">
-      <form onSubmit={handleLogin} className="auth-form">
-        <strong><h2>WB Airtel MSC's - Vertiv</h2></strong>
+    <div className="auth-container"
+      style={{
+        background: `url(${require("../assets/loginbg0.png")}) no-repeat center center fixed`,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover', /* or 'contain' */
+        zIndex: -1,
+      }}>
+      
+      <form onSubmit={handleLogin} className="auth-form" style={{
+          background: "rgba(255, 255, 255, 0.1)",
+          backdropFilter: "blur(8px)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+          borderRadius: "10px",
+          padding: "2rem",
+          maxWidth: "400px",
+        }}>
+        <h2 className="title">
+          <img 
+            src={Vertiv} 
+            alt="Vertiv Logo" 
+            className="logo"
+            style={{
+              height: '2.5em',
+              verticalAlign: 'middle',
+              margin: '0 0.2em'
+            }}
+          />
+        </h2>
 
-        <h2 className="text-2xl font-bold mb-4">Login</h2>
+        <h2 style={{color: "white"}}>Employee Login</h2>
         {error && <p className="auth-error">{error}</p>}
 
         <input
@@ -92,11 +122,12 @@ const Login = ({ setUserData }) => {
         >
           Login
         </button>
+        {/* <p>**Click on Register Button For Create A New Account**</p> */}
         <Link to={"/register"}>
         <button
           className="bg-blue-600 text-white p-2 w-full rounded"
         >
-          Register
+          Create New Account
         </button>
         </Link>
       </form>

@@ -9,6 +9,7 @@ import {
 import { doc, setDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import "../assets/Register.css";
+import Vertiv from "../assets/vertiv.png";
 
 const regions = {
   East: ["BH & JH", "NESA", "OR", "WB"],
@@ -202,9 +203,28 @@ const Register = () => {
 
   return (
     <div className="auth-container">
-      <form onSubmit={handleRegister} className="auth-form">
-        <strong><h2>WB Airtel MSC's - Vertiv</h2></strong>
-        <h2>Register</h2>
+      <form onSubmit={handleRegister} className="auth-form" style={{
+          background: "rgba(255, 255, 255, 0.1)",
+          backdropFilter: "blur(8px)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+          borderRadius: "10px",
+          padding: "2rem",
+          maxWidth: "400px",
+        }}>
+        
+        <h2>
+          <img 
+            src={Vertiv} 
+            alt="Vertiv Logo" 
+            className="logo"
+            style={{
+              height: '2.5em',
+              verticalAlign: 'middle',
+              margin: '0 0.2em'
+            }}
+          />
+        </h2>
+        <h2 style={{color: "white"}}>Employee Register</h2>
         {error && <p className="auth-error">{error}</p>}
         {successMsg && <p className="auth-success">{successMsg}</p>}
 

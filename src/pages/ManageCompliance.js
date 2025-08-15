@@ -353,18 +353,6 @@ export default function ManageCompliance({ userData }) {
 
   return (
     <div className="dhr-dashboard-container">
-      <h2 className="dashboard-header">Manage Compliance</h2>
-      <h2 className="dashboard-header">
-        👋 Welcome, <strong>{userData?.name || "Team Member"}</strong>
-      </h2>
-      <p className="dashboard-subinfo">
-        {userRole === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
-        {userRole === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
-        {userRole === "Super User" && <span>📍 <strong>Super User</strong></span>}
-        {userRole === "User" && <span>👤 <strong>User</strong></span>}
-        &nbsp; | &nbsp; 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
-      </p>
-
       <h1><strong>⚖️ Manage Compliance Documents</strong></h1>
 
       <div className="instruction-tab">

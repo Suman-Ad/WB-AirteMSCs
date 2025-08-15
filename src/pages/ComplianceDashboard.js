@@ -171,17 +171,6 @@ export default function ComplianceDashboard({ userData }) {
 
   return (
     <div className="dhr-dashboard-container">
-      <h2 className="dashboard-header">Compliance Dashboard</h2>
-      <h2 className="dashboard-header">
-  👋    Welcome, <strong>{userData?.name || "Team Member"}</strong>
-      </h2>
-      <p className="dashboard-subinfo">
-        {userRole === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
-        {userRole === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
-        {userRole === "Super User" && <span>📍 <strong>Super User</strong></span>}
-        {userRole === "User" && <span>👤 <strong>User</strong></span>}
-        &nbsp; | &nbsp; 🎖️ Designation: <strong>{userDesignation || "All"}</strong> | &nbsp; 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
-      </p>
       <h1>
         <strong>⚖️ Compliance Dashboard</strong>
       </h1> 

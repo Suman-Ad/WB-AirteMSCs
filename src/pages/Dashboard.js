@@ -271,18 +271,7 @@ const Dashboard = ({ userData }) => {
   });
 
   return (
-    <div className="dashboard-container">
-      {/* Existing Header and Quick Stats */}
-      <h2 className="dashboard-header">
-        👋 Welcome, <strong>{userData.name || "Team Member"}</strong>
-      </h2>
-      <p className="dashboard-subinfo">
-        {userData.role === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
-        {userData.role === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
-        {userData.role === "Super User" && <span>📍 <strong>Super User</strong></span>}
-        {userData.role === "User" && <span>👤 <strong>User</strong></span>}
-        &nbsp; | &nbsp; 🎖️ Designation: <strong>{userData.designation || "All"}</strong> | &nbsp; 🏢 Site: <strong>{userData.site || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
-      </p>
+    <div className="dhr-dashboard-container">
       <h1>
         <strong>🛠️ PM Dashboard</strong>
       </h1>

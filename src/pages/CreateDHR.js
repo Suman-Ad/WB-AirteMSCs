@@ -298,7 +298,7 @@ export default function CreateDHR({ userData }) {
   };
 
   return (
-    <div className="create-dhr-container">
+    <div className="dhr-dashboard-container">
       
       {/* Notice Board */}
       <div className="instruction-tab">

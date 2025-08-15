@@ -110,7 +110,7 @@ const ExcelLiveEditPage = ({ userData }) => {
   }
 
   return (
-    <div className="excel-live-edit-container">
+    <div className="dhr-dashboard-container">
       <h2>📘 Daily Details Dashboard Of WB Circle Location: {siteId || "Unknown Site"}</h2>
 
       <div style={{ marginBottom: "1rem" }}>

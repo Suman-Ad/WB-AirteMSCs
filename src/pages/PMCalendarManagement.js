@@ -189,7 +189,7 @@ const PMCalendarManagement = ({ userData }) => {
   };
 
   return (
-    <div className="pm-calendar-container">
+    <div className="dhr-dashboard-container">
       <h2>🗓 PM Calendar – {selectedSite || "Select Site"}</h2>
 
       {/* Year and Site Selection */}

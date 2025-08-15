@@ -276,66 +276,11 @@ const DailyDashboard = ({ userData }) => {
 
   // Render
   return (
-    <div style={{ padding: "1rem" }}>
-      <h2 className="dashboard-header">
-  👋    Welcome, <strong>{userName || "Team Member"}</strong>
-      </h2>
-      <p className="dashboard-subinfo">
-        {userRole === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
-        {userRole === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
-        {userRole === "Super User" && <span>📍 <strong>Super User</strong></span>}
-        {userRole === "User" && <span>👤 <strong>User</strong></span>}
-        &nbsp; | &nbsp; 🎖️ Designation: <strong>{userDesignation || "All"}</strong> | &nbsp; 🏢 Site: <strong>{userSite || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
-      </p>
+    <div className="dhr-dashboard-container">
       <h1>
         <strong>📅 Daily Dashboard</strong>
       </h1> 
-      <div className="instruction-tab">
-        <h2 className="dashboard-header">📌 Notice Board </h2>
-        {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
-        {isEditing ? (
-          <>
-            <textarea
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              rows={5}
-              className="dashboard-instruction-panel"
-            />
-            <div className="flex gap-2">
-              <button
-                className="bg-blue-600 text-white px-3 py-1 rounded"
-                onClick={async () => {
-                  const docRef = doc(db, "config", "daily_details_dashboard_instruction");
-                  await setDoc(docRef, { text: editText });
-                  setInstructionText(editText);
-                  setIsEditing(false);
-                }}
-              >
-                Save
-              </button>
-              <button
-                className="bg-gray-400 text-white px-3 py-1 rounded"
-                onClick={() => setIsEditing(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
-            {["Admin", "Super Admin"].includes(userRole) && (
-              <button
-                className="text-blue-600 underline"
-                onClick={() => setIsEditing(true)}
-              >
-                Edit Instruction
-              </button>
-            )}
-          </>
-        )}
-        <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
-      </div>
+      
       <h3>✅ Completed Site Submission Status</h3>
       <div style={{ overflowX: "auto" }}>
         <table className="status-table" style={{ minWidth: "800px", borderCollapse: "collapse", marginBottom: "2rem" }}>
@@ -381,7 +326,53 @@ const DailyDashboard = ({ userData }) => {
           </tbody>
         </table>
       </div>
-            
+
+      <div className="instruction-tab">
+        <h2 className="dashboard-header">📌 Notice Board </h2>
+        {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
+        {isEditing ? (
+          <>
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              rows={5}
+              className="dashboard-instruction-panel"
+            />
+            <div className="flex gap-2">
+              <button
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+                onClick={async () => {
+                  const docRef = doc(db, "config", "daily_details_dashboard_instruction");
+                  await setDoc(docRef, { text: editText });
+                  setInstructionText(editText);
+                  setIsEditing(false);
+                }}
+              >
+                Save
+              </button>
+              <button
+                className="bg-gray-400 text-white px-3 py-1 rounded"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
+            {["Admin", "Super Admin"].includes(userRole) && (
+              <button
+                className="text-blue-600 underline"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit Instruction
+              </button>
+            )}
+          </>
+        )}
+        <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
+      </div>      
       <h2>📘 Daily Details Dashboard - WB Circle</h2>
         {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin") && (
                                 <Link to="/excel-live-edit" className="pm-manage-btn">Edit <strong>"{userData.site}"</strong> Daily Details Dashboard ✎ </Link>

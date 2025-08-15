@@ -140,7 +140,7 @@ body {
 
 /* Navbar */
 .navbar {
-  height: 70px;
+  height: 150px;
   background: var(--navbar-bg);
   display: flex;
   align-items: center;
@@ -232,4 +232,50 @@ body {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateX(-10px); }
   to { opacity: 1; transform: translateX(0); }
+}
+
+/* For the header */
+.main-header {
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.logo {
+  vertical-align: middle;
+}
+
+/* Back button styles */
+.back-button {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  padding: 8px 16px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.back-button:hover {
+  background-color: #e0e0e0;
+}
+
+.header-top {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.title {
+  margin: 0;
 }

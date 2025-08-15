@@ -112,7 +112,7 @@ const SitePage = ({ userData }) => {
   };
 
   return (
-    <div className="sitepage-container">
+    <div className="dhr-dashboard-container">
       <h2 className="sitepage-title"> 🏢Site Name : {siteName}</h2>
 
       <div className="sitepage-filters">

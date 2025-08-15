@@ -434,23 +434,53 @@ export default function DailyActivityDashboard({ userData }) {
     });
 
   return (
-    <div className="daily-activity-container">
+    <div className="dhr-dashboard-container">
       <div className="daily-activity-header">
-        <h2 className="dashboard-header">
-    👋    Welcome, <strong>{userData?.name || "Team Member"}</strong>
-        </h2>
-        <p className="dashboard-subinfo">
-          {userData?.role === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
-          {userData?.role === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
-          {userData?.role === "Super User" && <span>📍 <strong>Super User</strong></span>}
-          {userData?.role === "User" && <span>👤 <strong>User</strong></span>}
-          &nbsp; | &nbsp; 🎖️ Designation: <strong>{userData?.designation || "All"}</strong> | &nbsp; 🏢 Site: <strong>{userData?.site || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
-        </p>
         <h1>
           <strong>🏗️ Daily Activity Dashboard</strong>
         </h1>
 
-        <div className="instruction-tab">
+        
+        <div className="daily-activity-subtitle">
+          {isAdmin ? "Admin view: all sites" : "User view: your site only"}
+        </div>
+        {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.role === "User") && (
+          <Link to="/daily-activity-management"><span className="btn-danger pm-manage-btn">🚧🛠️ Manage Daily {userData?.site} Activity</span></Link>
+        )}
+      </div>
+
+      {/* Toolbar */}
+      <div className="daily-activity-toolbar">
+        <button
+          onClick={() => setFiltersOpen(true)}
+          className="daily-activity-btn daily-activity-btn-secondary"
+        >
+          Filters
+        </button>
+
+        <button
+          onClick={exportExcel}
+          className="daily-activity-btn daily-activity-btn-primary"
+        >
+          Export to Excel
+        </button>
+      </div>
+
+      {/* Charts */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 320 }}>
+          <canvas ref={approvalCanvasRef} />
+        </div>
+        <div style={{ flex: 1, minWidth: 320 }}>
+          <canvas ref={dailyTrendCanvasRef} />
+        </div>
+        <div style={{ width: 360, minWidth: 280 }}>
+          <canvas ref={crqCanvasRef} />
+        </div>
+      </div>
+
+      
+      <div className="instruction-tab">
           <h2 className="dashboard-header">📌 Notice Board </h2>
           {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
           {isEditing ? (
@@ -495,43 +525,6 @@ export default function DailyActivityDashboard({ userData }) {
             </>
           )}
           <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
-        </div>
-        <div className="daily-activity-subtitle">
-          {isAdmin ? "Admin view: all sites" : "User view: your site only"}
-        </div>
-        {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.role === "User") && (
-          <Link to="/daily-activity-management"><span className="btn-danger pm-manage-btn">🚧🛠️ Manage Daily {userData?.site} Activity</span></Link>
-        )}
-      </div>
-
-      {/* Toolbar */}
-      <div className="daily-activity-toolbar">
-        <button
-          onClick={() => setFiltersOpen(true)}
-          className="daily-activity-btn daily-activity-btn-secondary"
-        >
-          Filters
-        </button>
-
-        <button
-          onClick={exportExcel}
-          className="daily-activity-btn daily-activity-btn-primary"
-        >
-          Export to Excel
-        </button>
-      </div>
-
-      {/* Charts */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: 320 }}>
-          <canvas ref={approvalCanvasRef} />
-        </div>
-        <div style={{ flex: 1, minWidth: 320 }}>
-          <canvas ref={dailyTrendCanvasRef} />
-        </div>
-        <div style={{ width: 360, minWidth: 280 }}>
-          <canvas ref={crqCanvasRef} />
-        </div>
       </div>
 
       {/* Table */}

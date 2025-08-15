@@ -121,18 +121,7 @@ const AdminPanel = ({ userData }) => {
   };
 
   return (
-    <div className="admin-panel">
-      <h2 className="dashboard-header">
-        👋 Welcome, <strong>{userData.name || "Team Member"}</strong>
-      </h2>
-      <p className="dashboard-subinfo">
-        {userData.role === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
-        {userData.role === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
-        {userData.role === "Super User" && <span>📍 <strong>Super User</strong></span>}
-        {userData.role === "User" && <span>👤 <strong>User</strong></span>}
-        &nbsp; | &nbsp; 🎖️ Designation: <strong>{userData.designation || "All"}</strong> | &nbsp; 🏢 Site: <strong>{userData.site || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
-      </p>
-      
+    <div className="admin-panel">      
       <h2 className="admin-title">Admin User Control Panel</h2>
       {userData.role === "Super Admin" && (
         <p className="admin-subtitle">🔐 Full access granted. Click edit button to modify user info.</p>
