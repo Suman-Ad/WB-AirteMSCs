@@ -48,7 +48,7 @@ input {
   margin-bottom: 12px;
 }
 
-button {
+.auth-button {
   background: rgba(21, 184, 56, 0.9) !important; /* Semi-transparent button */
   border: none !important;
 }

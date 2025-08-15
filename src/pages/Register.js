@@ -318,14 +318,14 @@ const Register = () => {
 
         <button
           type="submit"
-          className="bg-blue-600 text-white p-2 w-full rounded"
+          className="auth-button"
         >
           Register
         </button>
 
         <Link to={"/login"}>
           <button
-            className="bg-blue-600 text-white p-2 w-full rounded mt-2"
+            className="auth-button"
             type="button"
           >
             Already have an account? Login

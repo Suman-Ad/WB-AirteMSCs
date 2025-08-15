@@ -118,14 +118,14 @@ const Login = ({ setUserData }) => {
 
         <button
           type="submit"
-          className="bg-blue-600 text-white p-2 w-full rounded"
+          className="auth-button"
         >
           Login
         </button>
         {/* <p>**Click on Register Button For Create A New Account**</p> */}
         <Link to={"/register"}>
         <button
-          className="bg-blue-600 text-white p-2 w-full rounded"
+          className="auth-button"
         >
           Create New Account
         </button>
