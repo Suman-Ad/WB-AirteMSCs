@@ -469,6 +469,21 @@ export default function AssetsRegister({ userData }) {
     }
   };
 
+  const [instructionText, setInstructionText] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(""); 
+  useEffect(() => {
+    const fetchInstruction = async () => {
+      const docRef = doc(db, "config", "assets_register_instruction");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setInstructionText(docSnap.data().text || "");
+        setEditText(docSnap.data().text || "");
+      }
+    };
+    fetchInstruction();
+  }, []);
+
   // ---------- small helpers ----------
   // function preparePayload(row) {
   //   // build payload using current columns, but accept raw fields too
@@ -501,6 +516,53 @@ export default function AssetsRegister({ userData }) {
           🏷️💼 Assets Management
         </strong>
       </h1>
+
+      <div className="instruction-tab">
+          <h2 className="dashboard-header">📌 Notice Board </h2>
+          {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
+          {isEditing ? (
+            <>
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                rows={5}
+                className="dashboard-instruction-panel"
+              />
+              <div className="flex gap-2">
+                <button
+                  className="bg-blue-600 text-white px-3 py-1 rounded"
+                  onClick={async () => {
+                    const docRef = doc(db, "config", "assets_register_instruction");
+                    await setDoc(docRef, { text: editText });
+                    setInstructionText(editText);
+                    setIsEditing(false);
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  className="bg-gray-400 text-white px-3 py-1 rounded"
+                  onClick={() => setIsEditing(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
+              {["Admin", "Super Admin"].includes(userData?.role) && (
+                <button
+                  className="text-blue-600 underline"
+                  onClick={() => setIsEditing(true)}
+                >
+                  Edit Instruction
+                </button>
+              )}
+            </>
+          )}
+          <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
+      </div>
 
       {/* Loading progress */}
       <div style={{ marginBottom: 12 }}>

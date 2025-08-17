@@ -9,7 +9,7 @@ import * as XLSX from "xlsx";
 
 const DEBOUNCE_DELAY = 1500;
 // const numericKeyPattern = /(ltr|capacity|dg|cph|hrs|qty|total|stock|rating|kva|tr|count|uptime|amount|number|SlNo|remarks)/i;
-const numericKeyPattern = /(qty|rating|kva|tr|count|uptime|amount|number|SlNo|remarks)/i;
+const numericKeyPattern = /(qty|rating|kva|tr|count|uptime|amount|number|SlNo|remarks|Total|CPH)/i;
 
 
 
@@ -509,10 +509,23 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
   };
 
   const handleChange = (rowIndex, field, value) => {
-    // if formula defined centrally, do not allow direct edits to that column
+    // Prevent edits on formula cells
     if (isFormulaCell(rowIndex, field)) return;
+
+    let finalValue = value;
+
+    // If field matches numericKeyPattern, allow floats
+    if (numericKeyPattern.test(field)) {
+      if (value === "" || value === null) {
+        finalValue = "";
+      } else {
+        const parsed = parseFloat(value);
+        finalValue = isNaN(parsed) ? value : parsed;
+      }
+    }
+
     const updated = [...rawData];
-    updated[rowIndex] = { ...updated[rowIndex], [field]: value };
+    updated[rowIndex] = { ...updated[rowIndex], [field]: finalValue };
     setRawData(updated);
     scheduleSave(updated);
   };
@@ -555,7 +568,7 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
         return;
       }
 
-      const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+      const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
 
       // Merge into rawData
       const merged = [...rawData, ...jsonData].map(r =>
@@ -596,7 +609,8 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
               {columns.map(col => (
                 <td key={col} className="sheet-cell">
                   <input
-                    type="text"
+                    type={numericKeyPattern.test(col) ? "number" : "text"}
+                    step={numericKeyPattern.test(col) ? "any" : undefined}
                     value={row[col] ?? ""}
                     onChange={(e) => handleChange(rIdx, col, e.target.value)}
                     disabled={isFormulaCell(rIdx, col)}

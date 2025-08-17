@@ -234,7 +234,7 @@ const DailyDashboard = ({ userData }) => {
         });
       });
       if (allRows.length) {
-        const ws = XLSX.utils.json_to_sheet(allRows);
+        const ws = XLSX.utils.json_to_sheet(allRows, {raw: false});
         XLSX.utils.book_append_sheet(wb, ws, sheetLabel);
       }
     });

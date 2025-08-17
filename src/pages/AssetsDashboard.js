@@ -1,7 +1,7 @@
 // src/pages/AssetsDashboard.js
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -104,6 +104,21 @@ export default function AssetsDashboard({userData}) {
     ],
   };
 
+  const [instructionText, setInstructionText] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(""); 
+  useEffect(() => {
+    const fetchInstruction = async () => {
+      const docRef = doc(db, "config", "assets_dashboard_instruction");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setInstructionText(docSnap.data().text || "");
+        setEditText(docSnap.data().text || "");
+      }
+    };
+    fetchInstruction();
+  }, []);
+
   return (
     <div className="dhr-dashboard-container">
       <h1>
@@ -111,6 +126,52 @@ export default function AssetsDashboard({userData}) {
           💼 Assets Dashboard
         </strong>
       </h1>
+      <div className="instruction-tab">
+          <h2 className="dashboard-header">📌 Notice Board </h2>
+          {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
+          {isEditing ? (
+            <>
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                rows={5}
+                className="dashboard-instruction-panel"
+              />
+              <div className="flex gap-2">
+                <button
+                  className="bg-blue-600 text-white px-3 py-1 rounded"
+                  onClick={async () => {
+                    const docRef = doc(db, "config", "assets_dashboard_instructionn");
+                    await setDoc(docRef, { text: editText });
+                    setInstructionText(editText);
+                    setIsEditing(false);
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  className="bg-gray-400 text-white px-3 py-1 rounded"
+                  onClick={() => setIsEditing(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
+              {["Admin", "Super Admin"].includes(userData?.role) && (
+                <button
+                  className="text-blue-600 underline"
+                  onClick={() => setIsEditing(true)}
+                >
+                  Edit Instruction
+                </button>
+              )}
+            </>
+          )}
+          <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
+      </div>
       <p>
         <em>
           *Only WB Circle Assets Data Available - You Can Filter Your Site*
