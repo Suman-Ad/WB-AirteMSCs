@@ -13,8 +13,8 @@ import { collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, serv
 */
 
 const DEFAULT_COLUMNS = [
-  { key: "UniqueID", label: "Unique ID (Don't edit)" },
-  { key: "DedicatedNo", label: "Dedicated No (Don't edit)" },
+  { key: "UniqueID", label: "Unique ID" },
+  { key: "DedicatedNo", label: "Dedicated No" },
   { key: "Region", label: "Region" },
   { key: "Circle", label: "Circle" },
   { key: "SiteName", label: "Site Name" },
@@ -24,11 +24,11 @@ const DEFAULT_COLUMNS = [
   { key: "EquipmentMake", label: "Equipment Make" },
   { key: "EquipmentModel", label: "Equipment Model" },
   { key: "EquipmentSerialNumber", label: "Equipment Serial Number" },
-  { key: "UnitOfMeasure", label: "Unit of measure (kva/TR etc.)" },
-  { key: "RatingCapacity", label: "Rating/Capacity" },
+  { key: "UnitOfMeasure", label: "Unit of measure" },
+  { key: "RatingCapacity", label: "Rating Capacity" },
   { key: "Qty", label: "Qty" },
-  { key: "ManufacturingDate", label: "Equipment Manufacturing date (DD-MM-YY)" },
-  { key: "InstallationDate", label: "Equipment Installation date (DD-MM-YY)" },
+  { key: "ManufacturingDate", label: "Equipment Manufacturing date" },
+  { key: "InstallationDate", label: "Equipment Installation date" },
 ];
 
 export default function AssetsRegister({ userData }) {
@@ -47,6 +47,8 @@ export default function AssetsRegister({ userData }) {
   // import states
   const [fileToImport, setFileToImport] = useState(null);
   const [importProgress, setImportProgress] = useState({ percent: 0, total: 0, loaded: 0 });
+  const [isPaused, setIsPaused] = useState(false);
+  const [isStopped, setIsStopped] = useState(false);
 
   // column mgmt UI
   const [addingColumn, setAddingColumn] = useState(false);
@@ -267,6 +269,8 @@ export default function AssetsRegister({ userData }) {
   const importFileToFirestore = async () => {
     if (!fileToImport) return alert("Select an Excel/CSV file first");
     setImportProgress({ percent: 0, total: 0, loaded: 0 });
+    setIsPaused(false);
+    setIsStopped(false);
 
     const reader = new FileReader();
     reader.onload = async (evt) => {
@@ -275,22 +279,23 @@ export default function AssetsRegister({ userData }) {
         const isCsv = fileToImport.name.toLowerCase().endsWith(".csv");
         const wb = XLSX.read(raw, { type: isCsv ? "string" : "binary" });
         const sheet = wb.Sheets[wb.SheetNames[0]];
-        let json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        let json = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
 
-        // Normalize file headers -> map to column keys.
+        // Normalize file headers -> map to column keys
         const fileHeaders = json.length ? Object.keys(json[0]) : [];
-        // Build mapping from file header -> column key
-        const mapping = {}; // fileHeader -> columnKey
-        const currentCols = [...columns]; // local copy to allow adding new columns
-        const labelMap = {}; // normalized label -> key
-        currentCols.forEach((c) => (labelMap[normalizeHeaderKey(c.label)] = c.key));
+        const mapping = {};
+        const currentCols = [...columns];
+        const labelMap = {};
+        currentCols.forEach((c) => {
+          labelMap[normalizeHeaderKey(c.label)] = c.key;
+          labelMap[normalizeHeaderKey(c.key)] = c.key; // accept key as well
+        });
 
         for (const fh of fileHeaders) {
           const normalized = normalizeHeaderKey(fh);
           if (labelMap[normalized]) {
             mapping[fh] = labelMap[normalized];
           } else {
-            // create new column automatically and persist (admins only)
             const newKeyBase = fh.replace(/\s+/g, "_").replace(/[^\w_]/g, "");
             let newKey = newKeyBase || `col_${Date.now()}`;
             let j = 1;
@@ -302,46 +307,68 @@ export default function AssetsRegister({ userData }) {
           }
         }
 
-        // If we added new columns, persist them
         if (currentCols.length !== columns.length) {
           await saveColumnsToFirestore(currentCols);
         }
 
-        // Convert rows to payloads using mapping
         const total = json.length;
         let loaded = 0;
         let success = 0;
         let skipped = 0;
 
         for (const row of json) {
-          // create normalized object with column keys
-          const rec = {};
-          for (const fh of Object.keys(row)) {
-            const mappedKey = mapping[fh];
-            if (mappedKey) rec[mappedKey] = row[fh];
-            else rec[fh] = row[fh];
+          if (isStopped) {
+            alert(`Import stopped. Imported ${success} rows so far.`);
+            break;
           }
 
-          // Validate & prepare payload
+          while (isPaused) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            if (isStopped) break;
+          }
+
+          const rec = {};
+          for (const fh of Object.keys(row)) {
+            let val = row[fh];
+
+            // Check if it's a number that could be an Excel date serial
+            if (typeof val === "number" && val > 30000 && val < 60000) {
+              // Convert to JS Date using XLSX.SSF
+              const dateObj = XLSX.SSF.parse_date_code(val);
+              if (dateObj) {
+                const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                val = `${String(dateObj.d).padStart(2, "0")}-${months[dateObj.m - 1]}-${String(dateObj.y).slice(-2)}`;
+              }
+            }
+
+            const mappedKey = mapping[fh];
+            if (mappedKey) rec[mappedKey] = val;
+            else rec[fh] = val;
+          }
+
+
           const payload = preparePayload(rec);
           loaded++;
           setImportProgress({ total, loaded, percent: Math.round((loaded / total) * 100) });
 
           if (!payload) {
             skipped++;
-            console.warn("Skipped invalid row (missing circle/site/equipDoc):", rec);
             continue;
           }
 
-          // write nested & flat
           await upsertNested(payload);
           await upsertFlat(payload);
           success++;
         }
 
-        alert(`Import finished. Success: ${success}, Skipped: ${skipped}`);
+        if (!isStopped) {
+          alert(`Import finished. Success: ${success}, Skipped: ${skipped}`);
+        }
+
         setFileToImport(null);
         setImportProgress({ percent: 0, total: 0, loaded: 0 });
+        setIsPaused(false);
+        setIsStopped(false);
       } catch (err) {
         console.error("Import error:", err);
         alert("Import failed: " + (err?.message || err));
@@ -352,6 +379,7 @@ export default function AssetsRegister({ userData }) {
     if (fileToImport.name.toLowerCase().endsWith(".csv")) reader.readAsText(fileToImport);
     else reader.readAsBinaryString(fileToImport);
   };
+
 
   // ---------- add manual row ----------
   const addNewRow = async () => {
@@ -468,7 +496,11 @@ export default function AssetsRegister({ userData }) {
   // ---------- rendering ----------
   return (
     <div className="dhr-dashboard-container" style={{ padding: 16 }}>
-      <h2 className="dashboard-header">Assets Register</h2>
+      <h1>
+        <strong>
+          🏷️💼 Assets Management
+        </strong>
+      </h1>
 
       {/* Loading progress */}
       <div style={{ marginBottom: 12 }}>
@@ -485,7 +517,7 @@ export default function AssetsRegister({ userData }) {
           </div>
         ) : (
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <strong>Loaded</strong>
+            <strong>📦 Loaded :</strong>
             <span>{rows.length} item{rows.length === 1 ? "" : "s"}</span>
           </div>
         )}
@@ -523,12 +555,20 @@ export default function AssetsRegister({ userData }) {
           <button className="btn-success" onClick={importFileToFirestore} disabled={!fileToImport}>Import</button>
           {importProgress.total > 0 && (
             <div style={{ marginTop: 8 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <span>Importing {importProgress.loaded}/{importProgress.total}</span>
                 <strong>{importProgress.percent}%</strong>
               </div>
-              <div style={{ background: "#eee", height: 8, width: "100%", borderRadius: 4 }}>
+              <div style={{ background: "#eee", height: 8, width: "100%", borderRadius: 4, marginBottom: 8 }}>
                 <div style={{ background: "#1976d2", width: `${importProgress.percent}%`, height: 8, borderRadius: 4 }} />
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {!isPaused ? (
+                  <button className="btn-warning" onClick={() => setIsPaused(true)}>Pause</button>
+                ) : (
+                  <button className="btn-primary" onClick={() => setIsPaused(false)}>Resume</button>
+                )}
+                <button className="btn-danger" onClick={() => setIsStopped(true)}>Stop</button>
               </div>
             </div>
           )}
@@ -538,7 +578,7 @@ export default function AssetsRegister({ userData }) {
       {/* Quick add */}
       {(isAdmin || userRole === "Super User") && (
         <div style={{ marginBottom: 16 }}>
-          <h4>Add New Asset</h4>
+          <h4><strong>➕💼 Add New Asset</strong></h4>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 8 }}>
             {columns.map((c) => (
               <div key={c.key}>
@@ -547,12 +587,14 @@ export default function AssetsRegister({ userData }) {
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 8 }}><button className="btn-success" onClick={addNewRow}>Add</button></div>
+          <div style={{ marginTop: 8 }}>➕<button className="btn-success" onClick={addNewRow}>Add</button></div>
         </div>
       )}
 
       {/* Table */}
-      <div style={{ overflowX: "auto" }}>
+      {isAdmin && (
+        <div style={{ overflowX: "auto" }}>
+        <h4><strong>💼 Asset Data</strong></h4>
         {!loading && (
           <table className="dhr-table" style={{ width: "100%", minWidth: 900 }}>
             <thead>
@@ -594,6 +636,7 @@ export default function AssetsRegister({ userData }) {
           </table>
         )}
       </div>
+      )}
     </div>
   );
 }

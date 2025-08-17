@@ -106,7 +106,16 @@ export default function AssetsDashboard({userData}) {
 
   return (
     <div className="dhr-dashboard-container">
-      <h2>Assets Dashboard</h2>
+      <h1>
+        <strong>
+          💼 Assets Dashboard
+        </strong>
+      </h1>
+      <p>
+        <em>
+          *Only WB Circle Assets Data Available - You Can Filter Your Site*
+        </em>
+      </p>
 
       {loading && <p>Loading assets...</p>}
 
@@ -188,7 +197,7 @@ export default function AssetsDashboard({userData}) {
       <table
         border="1"
         cellPadding="6"
-        style={{ width: "100%", borderCollapse: "collapse" }}
+        className="dhr-table"
       >
         <thead>
           <tr>
