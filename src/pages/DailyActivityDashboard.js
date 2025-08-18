@@ -445,7 +445,7 @@ export default function DailyActivityDashboard({ userData }) {
           {isAdmin ? "Admin view: all sites" : "User view: your site only"}
         </div>
         {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.role === "User") && (
-          <Link to="/daily-activity-management"><span className="btn-danger pm-manage-btn">🚧🛠️ Manage Daily {userData?.site} Activity</span></Link>
+          <Link to="/daily-activity-management"><span className="pm-manage-btn">🚧🛠️ Manage Daily {userData?.site} Activity</span></Link>
         )}
       </div>
 

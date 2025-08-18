@@ -415,7 +415,7 @@ export default function DailyActivityManage({ userData }) {
       </div>
 
       {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.role === "User") && (
-                      <Link to="/pm-register"><span className="btn-danger pm-manage-btn">📋 Manage PM Register</span></Link>
+                      <Link to="/pm-register"><span className="pm-manage-btn">📜Manage PM Register</span></Link>
                     )}
 
       {/* selection row */}

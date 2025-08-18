@@ -8,6 +8,20 @@ import { sheetTemplates } from "../components/ExcelSheetEditor";
 import { formulasConfig } from "../config/formulasConfig";
 import { Link } from "react-router-dom";
 import "../assets/DailyDashboard.css";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+
 
 // sheetKeys same as before
 const sheetKeys = {
@@ -112,7 +126,9 @@ const DailyDashboard = ({ userData }) => {
   const [sortAsc, setSortAsc] = useState(true);
   const [instructionText, setInstructionText] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState("");  
+  const [editText, setEditText] = useState("");
+  const [summaryMetrics, setSummaryMetrics] = useState(null);
+
   // const userName = userData?.name;
   // const userRole = userData?.role;
   // const userSite = userData?.site;
@@ -242,6 +258,123 @@ const DailyDashboard = ({ userData }) => {
     XLSX.writeFile(wb, `WB_Daily_Details_${selectedDate}.xlsx`);
   };
 
+  useEffect(() => {
+    if (!siteData || Object.keys(siteData).length === 0) {
+      setSummaryMetrics(null);
+      return;
+    }
+
+    let totalSites = Object.keys(siteData).length;
+    let less12 = 0;
+    let more12 = 0;
+    let dgHours = 0;
+    let infraUptimeSum = 0;
+    let infraCount = 0;
+    let inhousePlanned = 0;
+    let inhouseDone = 0;
+    let oemPlanned = 0;
+    let oemDone = 0;
+
+    Object.values(siteData).forEach(data => {
+      // Diesel backup checks
+      const dieselRows = data["Diesel_Back_Up"] || [];
+      dieselRows.forEach(row => {
+        const hrs = parseFloat(row["Backup Hours"]) || 0;
+        if (hrs < 12) less12++;
+        if (hrs > 12) more12++;
+      });
+
+      // DG-EB backup
+      const dgRows = data["DG_EB_Backup"] || [];
+      dgRows.forEach(row => {
+        // Use correct column name; adjust if needed
+        const dg = parseFloat(row["DG Running Hrs"]) || 0;
+        dgHours += dg;
+      });
+
+      // Infra update
+      const infraRows = data["Infra_Update"] || [];
+      infraRows.forEach(row => {
+        if (row["Infra Uptime"]) {
+          infraUptimeSum += parseFloat(row["Infra Uptime"]) || 0;
+          infraCount++;
+        }
+      });
+
+      // In-house PM
+      const inhouseRows = data["In_House_PM"] || [];
+      inhousePlanned += inhouseRows.length;
+      inhouseRows.forEach(r => { if (r.Status === "Done") inhouseDone++; });
+
+      // OEM PM
+      const oemRows = data["OEM_PM"] || [];
+      oemPlanned += oemRows.length;
+      oemRows.forEach(r => { if (r.Status === "Done") oemDone++; });
+    });
+
+    // Now calculate EB hours AFTER loop
+    const ebHours = (totalSites * 24) - dgHours;
+    const avgInfraUptime = infraCount > 0 ? (infraUptimeSum / infraCount) : 0;
+
+    setSummaryMetrics({
+      totalSites,
+      less12,
+      more12,
+      dgHours,
+      ebHours,
+      infraUptime: avgInfraUptime,
+      inhousePlanned,
+      inhouseDone,
+      oemPlanned,
+      oemDone
+    });
+
+  }, [siteData]);
+
+  const summaryChartData = useMemo(() => {
+    if (!summaryMetrics) return null;
+
+    return {
+      labels: [
+        "Total Sites",
+        "<12 Hrs Backup",
+        ">12 Hrs Backup",
+        "DG Hours",
+        "EB Hours",
+        "Infra Uptime %",
+        "In-House PM %",
+        "OEM PM %"
+      ],
+      datasets: [
+        {
+          label: "Summary Metrics",
+          data: [
+            summaryMetrics.totalSites,
+            summaryMetrics.less12,
+            summaryMetrics.more12,
+            summaryMetrics.dgHours,
+            summaryMetrics.ebHours,
+            summaryMetrics.infraUptime,
+            summaryMetrics.inhousePlanned ? (summaryMetrics.inhouseDone / summaryMetrics.inhousePlanned) * 100 : 0,
+            summaryMetrics.oemPlanned ? (summaryMetrics.oemDone / summaryMetrics.oemPlanned) * 100 : 0
+          ],
+          backgroundColor: [
+            "#4caf50",
+            "#ff9800",
+            "#f44336",
+            "#3f51b5",
+            "#2196f3",
+            "#9c27b0",
+            "#00bcd4",
+            "#8bc34a"
+          ]
+        }
+      ]
+    };
+  }, [summaryMetrics]);
+
+
+
   const handleEdit = async (site, sheetName, rowIndex, colKey, newValue) => {
     // only Admin/Super Admin can edit via this dashboard
     if (!["Admin", "Super Admin"].includes(userRole)) return;
@@ -279,7 +412,19 @@ const DailyDashboard = ({ userData }) => {
     <div className="dhr-dashboard-container">
       <h1>
         <strong>📅 Daily Dashboard</strong>
-      </h1> 
+      </h1>
+      {summaryChartData && (
+        <div style={{ marginBottom: "2rem" }}>
+          <h3>📊 Summary Overview</h3>
+          <div style={{ maxWidth: "800px", margin: "auto" }}>
+            <Bar data={summaryChartData} options={{
+              responsive: true,
+              plugins: { legend: { position: "top" }, title: { display: true, text: "WB Daily Summary" } }
+            }} />
+          </div>
+        </div>
+      )}
+
       
       <h3>✅ Completed Site Submission Status</h3>
       <div style={{ overflowX: "auto" }}>
@@ -398,7 +543,7 @@ const DailyDashboard = ({ userData }) => {
           <div key={site} style={{ marginTop: 20, borderTop: "1px solid #ccc", paddingTop: 12 }}>
             <h3>📍 Site: {site} MSC</h3>
 
-            <div className="sheet-blocks-wrapper sheet-block-card">
+            <div className="sheet-blocks-wrapper sheet-block-card status-table">
               {Object.entries(sheetKeys).map(([sheetLabel, sheetKey]) => {
                 const rows = sheets[sheetKey] || [];
                 const { status, color, filled, total } = getSheetStatus(rows || []);

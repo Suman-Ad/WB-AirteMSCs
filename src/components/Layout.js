@@ -22,7 +22,6 @@ const Layout = ({ userData, children }) => {
           <div style={{ flex: 1, textAlign: "center" }}>
             <header className="main-header">
               <div className="header-top">
-                
                 <h1 className="title">
                   <img 
                     src={Vertiv} 
@@ -38,27 +37,27 @@ const Layout = ({ userData, children }) => {
                 </h1>
               </div>
               <h2 className="dashboard-subinfo">
-                👋 Welcome, <strong>{userData?.name || "Team Member"}</strong>
+                {userData?.role === "Super Admin" && <span>👑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super Admin*</div></span>}
+                {userData?.role === "Admin" && <span>🔑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Admin*</div></span>}
+                {userData?.role === "Super User" && <span>🦸 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super User*</div></span>}
+                {userData?.role === "User" && <span>👤 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*User*</div></span>}
               </h2>
               <p className="dashboard-subinfo">
-                {userData?.role === "Super Admin" && <span>🔒 <strong>Super Admin</strong></span>}
-                {userData?.role === "Admin" && <span>🛠️ <strong>Admin</strong></span>}
-                {userData?.role === "Super User" && <span>📍 <strong>Super User</strong></span>}
-                {userData?.role === "User" && <span>👤 <strong>User</strong></span>}
-                &nbsp; | &nbsp; 🎖️ Designation: <strong>{userData?.designation || "All"}</strong> | &nbsp; 🏢 Site: <strong>{userData?.site || "All"}</strong> | &nbsp; 🛡️ Site ID: <strong>{userData.siteId || "All"}</strong>
+                <strong>🎖️{userData?.designation || "All"}</strong>|&nbsp;<strong>🏢{userData?.site || "All"}</strong>|&nbsp;<strong>🆔{userData.siteId || "All"}</strong>
               </p>
             </header>
           </div>
         </div>
         {/* Page Content */}  
-        <div className="content">
+        <div>
           <button 
             onClick={() => navigate(-1)} 
-            className="content"
+            className="contentback"
           >
             <FaArrowLeft /> Back
           </button>
-          {children}</div>
+          {children}
+        </div>
       </div>
     </div>
   );
