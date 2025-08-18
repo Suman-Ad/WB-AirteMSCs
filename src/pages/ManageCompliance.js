@@ -196,7 +196,7 @@ export default function ManageCompliance({ userData }) {
   // ---------------- Upload new record (Super User) ----------------
   const handleUploadRecord = async () => {
     // validation: template, dates, file
-    if (!newRecord.templateId || !newRecord.issueDate || !newRecord.expiryDate || !newRecord.file) {
+    if (!newRecord.templateId || !newRecord.issueDate || !newRecord.file) {
       return alert("Please select template, issue date, expiry date and file.");
     }
 
@@ -521,7 +521,7 @@ export default function ManageCompliance({ userData }) {
                   newUploading ||
                   !newRecord.templateId ||
                   !newRecord.issueDate ||
-                  !newRecord.expiryDate ||
+                  // !newRecord.expiryDate ||
                   !newRecord.file
                 }
               >

@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
-import { format } from "date-fns";
+import { format, parseJSON } from "date-fns";
 import "../assets/DHRStyle.css";
 
 // Import Recharts components
@@ -201,9 +201,9 @@ export default function DHRDashboard({ userData }) {
     return acc + (isNaN(val) ? 0 : val);
   }, 0);
 
-  // Total EB fail count (assuming ebStatus === 'Fail' or similar)
-  const totalEbFail = filteredReports.reduce((acc, r) => {
-    return acc + (r.ebStatus?.toLowerCase() === "fail" ? 1 : 0);
+  // Total Fault count (assuming faultDetails !=== 'No' or similar)
+  const totalFault = filteredReports.reduce((acc, r) => {
+    return acc + (r.faultDetails?.toLowerCase() === "Fault" ? 1 : 0);
   }, 0);
 
   // Total DG run hours sum
@@ -229,14 +229,17 @@ export default function DHRDashboard({ userData }) {
         dieselAvailable: 0,
         dgRunHrsYesterday: 0,
         ebRunHrsYesterday: 0,
+        faultDetails: "",
       };
     }
     const dieselVal = parseFloat(r.dieselAvailable);
     const dgVal = parseFloat(r.dgRunHrsYesterday);
     const ebVal = parseFloat(r.ebRunHrsYesterday);
+    const fault = r.faultDetails;
     siteDataMap[r.siteName].dieselAvailable += isNaN(dieselVal) ? 0 : dieselVal;
     siteDataMap[r.siteName].dgRunHrsYesterday += isNaN(dgVal) ? 0 : dgVal;
     siteDataMap[r.siteName].ebRunHrsYesterday += isNaN(ebVal) ? 0 : ebVal;
+    siteDataMap[r.siteName].faultDetails += isNaN(fault) ? r.faultDetails : fault;
   });
 
   const chartData = Object.values(siteDataMap);
@@ -370,29 +373,30 @@ Fault details if any: ${r.faultDetails}
   return (
     <div className="dhr-dashboard-container">
       <h1>
-        <strong>⚡ DHR Dashboard</strong>
+        <strong>⚡WB DHR Dashboard</strong>
       </h1>
 
       {/* Summary Stats Panel */}
+      <div style={{ color: "#6b7280", fontSize: 15 }}>📌 Date: {filterDate}</div>
       <div className="summary-stats">
         <div className="stat-card">
           <h3>Total Diesel Available (Ltrs)</h3>
           <p>{totalDieselAvailable.toFixed(2)}</p>
         </div>
         <div className="stat-card">
-          <h3>Total DG Run Hours</h3>
+          <h3>Total Yesterday DG Run Hours</h3>
           <p>{totalDgRunHrs.toFixed(2)}</p>
         </div>
         <div className="stat-card">
-          <h3>Total EB Run Hours</h3>
+          <h3>Total Yesterday EB Run Hours</h3>
           <p>{totalEbRunHrs.toFixed(2)}</p>
         </div>
         <div className="stat-card">
-          <h3>Total EB Fail Count</h3>
-          <p>{totalEbFail}</p>
+          <h3>Total Fault Count</h3>
+          <p>{totalFault}</p>
         </div>
       </div>
-
+      <div style={{ color: "#6b7280", fontSize: 12 }}>"<strong>Click</strong>'' The 👇 Button || You can calculate DG <strong>load %, SEGR, CPH</strong> as per <strong>"Cummins Disign CHP"</strong> by giving only Three Inputs <strong>(Select DG Capacity - Generate kW - DG Run Hrs)</strong> </div>
       <button 
         className="sidepanel-manage-btn" 
         onClick={() => setShowFuelModal(true)}
@@ -473,7 +477,35 @@ Fault details if any: ${r.faultDetails}
           </div>
         </div>
       )}
-      
+
+      {/* Filters */}
+      <div className="dhr-filters">
+        <div style={{ color: "#6b7280", fontSize: 12 }}>Filter By Date</div>
+        <input
+          type="date"
+          value={filterDate}
+          onChange={(e) => setFilterDate(e.target.value)}
+        />
+        <div style={{ color: "#6b7280", fontSize: 12 }}>Filter By Site</div>
+        <input
+          type="text"
+          placeholder="Search by site"
+          value={filterSite}
+          onChange={(e) => setFilterSite(e.target.value)}
+        />
+        <button className="btn-secondary pm-manage-btn" onClick={() => navigate("/create-dhr")}>
+          ➕ Create / Edit {userData?.site} DHR
+        </button>
+        <span className="separator">|</span>
+        <button className="download-btn" onClick={downloadExcel}>
+          ⬇️ Download Excel
+        </button>
+        <span className="separator">|</span>
+        <button className="download-btn" onClick={downloadTXT}>
+          ⬇️ Download TXT
+        </button>
+      </div>
+
 
       {/* Chart */}
       <div className="chart-container">
@@ -486,8 +518,9 @@ Fault details if any: ${r.faultDetails}
             <Tooltip />
             <Legend />
             <Bar dataKey="dieselAvailable" barSize={40} fill="#413ea0" name="Diesel Available (L)" />
-            <Line type="monotone" dataKey="dgRunHrsYesterday" stroke="#ff7300" name="DG Run Hrs Yesterday" />
-            <Line type="monotone" dataKey="ebRunHrsYesterday" stroke="#387908" name="EB Run Hrs Yesterday" />
+            <Line type="monotone" dataKey="dgRunHrsYesterday" stroke="#ff7300" name="DG Run Yesterday (Hrs)" />
+            <Line type="monotone" dataKey="ebRunHrsYesterday" stroke="#387908" name="EB Run Yesterday (Hrs)" />
+            <Line type="monotone" dataKey="faultDetails" stroke="#f1592aff" name="Fault Details" />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -540,32 +573,6 @@ Fault details if any: ${r.faultDetails}
           </>
         )}
         <h6 style={{ marginLeft: "90%" }}>Thanks & Regards @Suman Adhikari</h6>
-      </div>
-
-      {/* Filters */}
-      <div className="dhr-filters">
-        <input
-          type="date"
-          value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Search by site"
-          value={filterSite}
-          onChange={(e) => setFilterSite(e.target.value)}
-        />
-        <button className="btn-secondary pm-manage-btn" onClick={() => navigate("/create-dhr")}>
-          ➕ Create / Edit {userData?.site} DHR
-        </button>
-        <span className="separator">|</span>
-        <button className="download-btn" onClick={downloadExcel}>
-          ⬇️ Download Excel
-        </button>
-        <span className="separator">|</span>
-        <button className="download-btn" onClick={downloadTXT}>
-          ⬇️ Download TXT
-        </button>
       </div>
 
       {/* Data Table */}

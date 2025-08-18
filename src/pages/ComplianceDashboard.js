@@ -279,9 +279,12 @@ export default function ComplianceDashboard({ userData }) {
               if (daysLeft <= 0) {
                 statusText = "Overdue";
                 rowClass = "overdue";
-              } else if (daysLeft <= 7) {
+              } else if (daysLeft <= 30) {
                 statusText = `${daysLeft} days left`;
                 rowClass = "near-expiry";
+              } else if (daysLeft == null) {
+                statusText = `Available`;
+                rowClass = "";
               } else {
                 statusText = `${daysLeft} days left`;
                 rowClass = "";
