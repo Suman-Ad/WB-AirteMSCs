@@ -27,7 +27,7 @@ export const sheetTemplates = {
     { Edge_Data_Centres_Count: "Minor Fault Details (If any)", WB: "" },
     { Edge_Data_Centres_Count: "Major Fault Details (If any)", WB: "" },
     { Edge_Data_Centres_Count: "Planned Activity Details", WB: "" },
-    { Edge_Data_Centres_Count: "Category Checks", WB: "" },
+    { Edge_Data_Centres_Count: "Category Checks", WB: "" }, 
     { Edge_Data_Centres_Count: "O&M Manpower Availability as Per LOI", WB: "" },
     { Edge_Data_Centres_Count: "In House PM Planned (Jul'25 Month)", WB: "" },
     { Edge_Data_Centres_Count: "In House PM Completed (Jul'25 Month)", WB: "" },
