@@ -275,8 +275,8 @@ export default function CreateDHR({ userData }) {
     Site Name: ${record.siteName}
 
     Diesel Available: ${record.dieselAvailable}
-    DG Run Hrs Yesterday: ${record.dgRunHrs}
-    EB Run Hrs Yesterday: ${record.ebRunHrs}
+    DG Run Hrs Yesterday: ${record.dgRunHrsYesterday}
+    EB Run Hrs Yesterday: ${record.ebRunHrsYesterday}
     EB Status: ${record.ebStatus}
     DG Status: ${record.dgStatus}
     SMPS Status: ${record.smpsStatus}

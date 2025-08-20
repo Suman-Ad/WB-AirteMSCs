@@ -28,6 +28,7 @@ const ProfilePage = ({ userData }) => {
     region: "",
     circle: "",
     siteId: "",
+    empId : "",
   });
   const [photo, setPhoto] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -49,6 +50,7 @@ const ProfilePage = ({ userData }) => {
         region: userData.region || "",
         circle : userData.circle || "",
         siteId : userData.siteId || "",
+        empId : userData.empId || "",
       });
     }
   }, [userData]);
@@ -90,6 +92,7 @@ const ProfilePage = ({ userData }) => {
         region: form.region,
         circle: form.circle,
         siteId: form.siteId,
+        empId: form.empId,
         photoURL
       });
 
@@ -139,7 +142,7 @@ const ProfilePage = ({ userData }) => {
 
       {/* Name */}
       <div className="profile-row">
-        <label>Name:</label>
+        <label>🪪 Name:</label>
         {editMode ? (
           <input
             type="text"
@@ -167,21 +170,36 @@ const ProfilePage = ({ userData }) => {
         )}
       </div>
 
+      {/* Employee ID */}
+      <div className="profile-row">
+        <label>📇 EMP. ID:</label>
+        {editMode ? (
+          <input
+            type="text"
+            name="empId"
+            value={form.empId}
+            onChange={handleChange}
+          />
+        ) : (
+          <span>{form.empId}</span>
+        )}
+      </div>
+
       {/* Email */}
       <div className="profile-row">
-        <label>Email:</label>
-        <span>{userData?.email}</span>
+        <label>📧 Email:</label>
+        <span>{userData?.email || "Missing email"}</span>
       </div>
 
       {/* Site */}
       <div className="profile-row">
-        <label>Site:</label>
+        <label>🏢 Site:</label>
           <span>{form.site || "N/A"}</span>
       </div>
 
       {/* Site ID */}
       <div className="profile-row">
-        <label>Site ID:</label>
+        <label>🆔 Site ID:</label>
           <span>{form.siteId || "N/A"}</span>
       </div>
 
@@ -217,13 +235,13 @@ const ProfilePage = ({ userData }) => {
         ) : (
           <>
             <button onClick={() => setEditMode(true)} className="edit-btn">
-              Edit Profile
+             ✏️ Edit Profile
             </button>
             <button onClick={handleResetPassword} className="reset-btn">
-              Change Password
+             🔐 Change Password
             </button>
-            <button onClick={handleLogout}>
-              Logout
+            <button onClick={handleLogout} className="logout-manage-btn">
+              ⏻ Logout
             </button>
           </>
         )}

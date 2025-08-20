@@ -95,6 +95,7 @@ const siteIdMap = {
 const Register = () => {
   const [formData, setFormData] = useState({
     name: "",
+    empId: "",  // <-- new field
     email: "",
     password: "",
     designation: "",
@@ -175,6 +176,7 @@ const Register = () => {
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name: formData.name,
+        empId: formData.empId,
         email: formData.email,
         region: formData.region,
         circle: formData.circle,
@@ -188,6 +190,7 @@ const Register = () => {
       setSuccessMsg("Registered successfully. Please verify your email.");
       setFormData({
         name: "",
+        empId: "",
         email: "",
         password: "",
         designation: "",
@@ -233,6 +236,16 @@ const Register = () => {
           name="name"
           placeholder="Full Name"
           value={formData.name}
+          onChange={handleChange}
+          required
+          className="w-full p-2 mb-2 border rounded"
+        />
+
+        <input
+          type="text"
+          name="empId"
+          placeholder="Employee ID"
+          value={formData.empId}
           onChange={handleChange}
           required
           className="w-full p-2 mb-2 border rounded"
