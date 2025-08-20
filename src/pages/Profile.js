@@ -154,7 +154,7 @@ const ProfilePage = ({ userData }) => {
 
       {/* Designation */}
       <div className="profile-row">
-        <label>Designation:</label>
+        <label> 🎖️ Designation:</label>
         {editMode ? (
           <input
             type="text"

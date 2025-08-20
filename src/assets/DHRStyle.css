@@ -88,18 +88,20 @@ body {
   background: var(--bg-white);
   border-radius: 8px;
   box-shadow: var(--shadow-sm);
-  height: 480px;
+  /* height: 675px;
+  overflow-y: auto; */
+}
+
+.dhr-dashboard-container-d {
+  max-width: 1275px;
+  margin: 0 auto;
+  padding: var(--space-lg);
+  background: var(--bg-white);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  height: 675px;
   overflow-y: auto;
 }
-
-@media (max-width: 768px) {
-  .create-dhr-container,
-  .dhr-dashboard-container {
-    padding: var(--space-md);
-    border-radius: 0;
-  }
-}
-
 /* Headers */
 h2, h3, h4 {
   color: var(--text-dark);
@@ -379,7 +381,10 @@ button:disabled {
 @media (max-width: 480px) {
   .create-dhr-container,
   .dhr-dashboard-container {
-    padding: var(--space-sm);
+    padding: var(--space-md);
+    border-radius: 0;
+    /* height: auto; */
+    overflow-y: auto;
   }
   
   button {

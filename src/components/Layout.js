@@ -28,7 +28,7 @@ const Layout = ({ userData, children }) => {
                     alt="Vertiv Logo" 
                     className="logo"
                     style={{
-                      height: '2.5em',
+                      height: '4em',
                       verticalAlign: 'middle',
                       margin: '0 0.2em'
                     }}
@@ -36,15 +36,10 @@ const Layout = ({ userData, children }) => {
                   WB - Airtel - MSC Data Management System
                 </h1>
               </div>
-              <h2 className="dashboard-subinfo">
-                {userData?.role === "Super Admin" && <span>👑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super Admin*</div></span>}
-                {userData?.role === "Admin" && <span>🔑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Admin*</div></span>}
-                {userData?.role === "Super User" && <span>🦸 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super User*</div></span>}
-                {userData?.role === "User" && <span>👤 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*User*</div></span>}
-              </h2>
               <p className="dashboard-subinfo">
-                <strong>🎖️{userData?.designation || "All"}</strong>|&nbsp;<strong>🏢{userData?.site || "All"}</strong>|&nbsp;<strong>🆔{userData.siteId || "All"}</strong>
+                <strong>🏢{userData?.site || "All"}</strong>|&nbsp;<strong>🆔{userData.siteId || "All"}</strong>
               </p>
+
             </header>
           </div>
         </div>

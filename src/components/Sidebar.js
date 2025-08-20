@@ -14,17 +14,41 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
     navigate("/login");
   };
 
+  const goProfile = async () => {
+    navigate("/profile");
+  };
+
   return (
     <div className={`sidebar ${collapsed ? "collapsed" : "expanded"}`}>
       {/* Sidebar Header with Collapse Toggle */}
       <div className="sidebar-header">
         <button
-          className="mobile-menu-toggle"
+        className="toggle-btn"
           onClick={() => setCollapsed(!collapsed)}
           title={collapsed ? "Expand Menu" : "Collapse Menu"}
+          style={{width: "100%"}}
         >
-          {collapsed ? "☰" : "📋 MENU"}
+          {collapsed ? "☰" : "📋 MENU" }
         </button>
+        {collapsed ? "" :  
+          <button onClick={goProfile} className="profile-manage-btn">
+            {userData?.role === "Super Admin" && <span>👑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super Admin*</div></span>}
+            {userData?.role === "Admin" && <span>🔑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Admin*</div></span>}
+            {userData?.role === "Super User" && <span>🦸 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super User*</div></span>}
+            {userData?.role === "User" && <span>👤 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*User*</div></span>}
+          </button>  
+        }  
+        <span>
+          {collapsed ? "" :
+            <button
+              onClick={handleLogout}
+              className="logout-manage-btn"
+              
+            >
+              ⏻
+            </button>
+          } 
+        </span>
       </div>
 
       {/* Navigation Links */}
@@ -71,22 +95,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
           <Link to="/admin" className="sidepanel-manage-btn" title={collapsed ? "Admin Panel":""}>🔑 <span className="label">Admin Panel</span></Link>
         )}
 
-        <Link to="/profile" className="sidepanel-manage-btn" title={collapsed ? "Profile":""}>👷 <span className="label">Profile</span></Link>
-
-        <button
-          onClick={handleLogout}
-          style={{
-            marginTop: "10rem",
-            width: "100%",
-            padding: "10px",
-            backgroundColor: "#f44336",
-            color: "#fff",
-            border: "none",
-            cursor: "pointer"
-          }}
-        >
-          Logout
-        </button>
+        {/* <Link to="/profile" className="sidepanel-manage-btn" title={collapsed ? "Profile":""}>👷 <span className="label">Profile</span></Link> */}
       </nav>
     </div>
   );

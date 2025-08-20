@@ -36,7 +36,7 @@ body {
 .sidebar {
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
-  height: 100vh;
+  height: inherit;
   overflow-y: auto;
   transition: all var(--transition-speed) ease;
   position: relative;
@@ -140,7 +140,7 @@ body {
 
 /* Navbar */  
 .navbar {
-  height: 150px;
+  height: 120px;
   background: var(--navbar-bg);
   display: flex;
   align-items: center;
@@ -186,7 +186,7 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    height: 100vh;
+    height: inherit;
     transform: translateX(-100%);
     z-index: 1000;
   }

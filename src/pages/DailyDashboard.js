@@ -522,7 +522,7 @@ const DailyDashboard = ({ userData }) => {
         {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin") && (
                                 <Link to="/excel-live-edit" className="pm-manage-btn">Edit <strong>"{userData.site}"</strong> Daily Details Dashboard ✎ </Link>
                                 )}
-      <div style={{ marginBottom: "1rem" }}>
+      <div style={{ marginBottom: "1rem"}}>
         <label>Select Date: </label>
         <select value={selectedDate} onChange={e => setSelectedDate(e.target.value)}>
           {!dates.includes(today) && <option value={today}>{today} (Today)</option>}
@@ -540,7 +540,7 @@ const DailyDashboard = ({ userData }) => {
       {sortedSites.map(site => {
         const sheets = siteData[site] || {};
         return (
-          <div key={site} style={{ marginTop: 20, borderTop: "1px solid #ccc", paddingTop: 12 }}>
+          <div key={site} style={{ marginTop: 20, borderTop: "1px solid #ccc", paddingTop: 12, overflowY: "auto", height: "1170px" }}>
             <h3>📍 Site: {site} MSC</h3>
 
             <div className="sheet-blocks-wrapper sheet-block-card status-table">

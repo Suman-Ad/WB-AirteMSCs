@@ -259,6 +259,9 @@ export default function AssetsDashboard({userData}) {
         border="1"
         cellPadding="6"
         className="dhr-table"
+        style={
+          {overflowY: "auto", height:"1300px"}
+        }
       >
         <thead>
           <tr>

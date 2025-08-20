@@ -655,7 +655,7 @@ export default function AssetsRegister({ userData }) {
 
       {/* Table */}
       {isAdmin && (
-        <div style={{ overflowX: "auto" }}>
+        <div style={{ overflowX: "auto" , overflowY: "auto", height:"700px"}}>
         <h4><strong>💼 Asset Data</strong></h4>
         {!loading && (
           <table className="dhr-table" style={{ width: "100%", minWidth: 900 }}>
