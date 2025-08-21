@@ -1,5 +1,5 @@
 .profile-container {
-  max-width: 600px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 2rem;
   background: #ffffff;
@@ -31,15 +31,34 @@
 }
 
 .profile-row {
-  margin-bottom: 1.2rem;
-  display: flex;
-  flex-direction: column;
+    margin-bottom: 0;
+    padding: 15px;
+    border-radius: 12px;
+    background: #f9f9f9;
+    transition: all 0.3s ease;
+    border-left: 4px solid #4ca1af;
+}
+
+.profile-row:hover {
+    background: #f0f7ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+.profile-row.highlight {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border-left: 4px solid #2196f3;
 }
 
 .profile-row label {
-  font-weight: 600;
-  margin-bottom: 0.4rem;
-  color: #444;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .profile-row input,
@@ -51,9 +70,11 @@
 }
 
 .profile-row span {
-  padding: 0.4rem 0;
-  font-size: 1rem;
-  color: #222;
+    padding: 8px 0;
+    font-size: 16px;
+    color: #34495e;
+    display: block;
+    font-weight: 500;
 }
 
 .profile-actions {

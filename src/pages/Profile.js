@@ -151,7 +151,7 @@ const ProfilePage = ({ userData }) => {
             onChange={handleChange}
           />
         ) : (
-          <span>{form.name}</span>
+          <span className="profile-row span">{form.name}</span>
         )}
       </div>
 
@@ -166,7 +166,7 @@ const ProfilePage = ({ userData }) => {
             onChange={handleChange}
           />
         ) : (
-          <span>{form.designation || "N/A"}</span>
+          <span className="profile-row span">{form.designation || "N/A"}</span>
         )}
       </div>
 
@@ -181,7 +181,7 @@ const ProfilePage = ({ userData }) => {
             onChange={handleChange}
           />
         ) : (
-          <span>{form.empId}</span>
+          <span className="profile-row span">{form.empId}</span>
         )}
       </div>
 
@@ -205,19 +205,19 @@ const ProfilePage = ({ userData }) => {
 
       {/* Circle */}
       <div className="profile-row">
-        <label>Circle:</label>
+        <label>⭕ Circle:</label>
         <span>{userData?.circle}</span>
       </div>
 
       {/* Region */}
       <div className="profile-row">
-        <label>Region:</label>
+        <label>🗺️ Region:</label>
         <span>{userData?.region}</span>
       </div>
 
       {/* Role */}
       <div className="profile-row">
-        <label>Role:</label>
+        <label>🎭 Role:</label>
         <span>{userData?.role}</span>
       </div>
 

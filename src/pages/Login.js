@@ -40,6 +40,7 @@ const Login = ({ setUserData }) => {
           circle: data.circle,
           region: data.region,
           siteId: data.siteId,
+          empId: data.empId,
           name: data.name,
           role: data.role,
           site: data.site,

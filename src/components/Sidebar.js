@@ -31,7 +31,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
           {collapsed ? "☰" : "📋 MENU" }
         </button>
         {collapsed ? "" :  
-          <button onClick={goProfile} className="profile-manage-btn">
+          <button onClick={goProfile} className="profile-manage-btn" title="Profile">
             {userData?.role === "Super Admin" && <span>👑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super Admin*</div></span>}
             {userData?.role === "Admin" && <span>🔑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Admin*</div></span>}
             {userData?.role === "Super User" && <span>🦸 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super User*</div></span>}
@@ -43,7 +43,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
             <button
               onClick={handleLogout}
               className="logout-manage-btn"
-              
+              title="Logout"
             >
               ⏻
             </button>
