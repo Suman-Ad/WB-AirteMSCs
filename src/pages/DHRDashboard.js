@@ -372,13 +372,13 @@ Fault details if any: ${r.faultDetails}
 
   return (
     <div className="dhr-dashboard-container">
-      <h1>
+      <h1 className="dashboard-header">
         <strong>⚡WB DHR Dashboard</strong>
       </h1>
 
       {/* Summary Stats Panel */}
       <div style={{ color: "#6b7280", fontSize: 15 }}>📌 Date: {filterDate}</div>
-      <div className="summary-stats">
+      <div className="summary-stats chart-container">
         <div className="stat-card">
           <h3>Total Diesel Available (Ltrs)</h3>
           <p>{totalDieselAvailable.toFixed(2)}</p>
@@ -396,9 +396,9 @@ Fault details if any: ${r.faultDetails}
           <p>{totalFault}</p>
         </div>
       </div>
-      <div style={{ color: "#6b7280", fontSize: 12 }}>"<strong>Click</strong>'' The 👇 Button || You can calculate DG <strong>load %, SEGR, CPH</strong> as per <strong>"Cummins Disign CHP"</strong> by giving only Three Inputs <strong>(Select DG Capacity - Generate kW - DG Run Hrs)</strong> </div>
+      <div style={{ color: "#6b7280", fontSize: 12 }}>"<strong>Click</strong>'' The Below 👇<strong>"CPH/SEGR Manager"</strong> Button <strong>||</strong> You can calculate DG <strong>load %, SEGR, CPH</strong> as per <strong>"Cummins Disign CHP"</strong> by giving only Three Inputs <strong>(Select DG Capacity - Generate kW - DG Run Hrs)</strong> </div>
       <button 
-        className="sidepanel-manage-btn" 
+        className="segr-manage-btn" 
         onClick={() => setShowFuelModal(true)}
       >
         💥 CPH/SEGR Manager
@@ -531,7 +531,7 @@ Fault details if any: ${r.faultDetails}
 
       {/* Notice Board */}
       <div className="instruction-tab">
-        <h2 className="dashboard-header">📌 Notice Board </h2>
+        <h2 className="noticeboard-header">📌 Notice Board </h2>
         {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>

@@ -122,7 +122,7 @@ const ProfilePage = ({ userData }) => {
 
   return (
     <div className="profile-container">
-      <h2 className="profile-title">👤 Profile</h2>
+      <h2 className="dashboard-header">👤 Profile</h2>
 
       {/* Profile Image */}
       <div className="profile-image-section">
@@ -241,7 +241,7 @@ const ProfilePage = ({ userData }) => {
              🔐 Change Password
             </button>
             <button onClick={handleLogout} className="logout-manage-btn">
-              ⏻ Logout
+              📴 Logout
             </button>
           </>
         )}

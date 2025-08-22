@@ -299,10 +299,11 @@ export default function CreateDHR({ userData }) {
 
   return (
     <div className="dhr-dashboard-container">
+      <h2 className="dashboard-header">Create / Edit {userData.site} Daily DHR </h2>
       
       {/* Notice Board */}
       <div className="instruction-tab">
-        <h2 className="dashboard-header">📌 Notice Board </h2>
+        <h2 className="noticeboard-header">📌 Notice Board </h2>
         {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>
@@ -350,7 +351,6 @@ export default function CreateDHR({ userData }) {
         <h6 style={{ marginLeft: "90%" }}>Thanks & Regards @Suman Adhikari</h6>
       </div>
 
-      <h2>Create / Edit {userData.site} Daily DHR </h2>
       {message && <p className="message">No DHR found {message}</p>}
 
       {/* Form Inputs in fixed order */}

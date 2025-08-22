@@ -121,7 +121,7 @@ export default function AssetsDashboard({userData}) {
 
   return (
     <div className="dhr-dashboard-container">
-      <h1>
+      <h1 className="dashboard-header">
         <strong>
           💼 Assets Dashboard
         </strong>

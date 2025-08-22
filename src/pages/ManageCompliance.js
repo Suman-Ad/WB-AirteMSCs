@@ -353,10 +353,10 @@ export default function ManageCompliance({ userData }) {
 
   return (
     <div className="dhr-dashboard-container">
-      <h1><strong>⚖️ Manage Compliance Documents</strong></h1>
+      <h1 className="dashboard-header"><strong>⚖️ Manage Compliance Documents</strong></h1>
 
       <div className="instruction-tab">
-        <h2 className="dashboard-header">📌 Notice Board </h2>
+        <h2 className="noticeboard-header">📌 Notice Board </h2>
         {isEditing ? (
           <>
             <textarea

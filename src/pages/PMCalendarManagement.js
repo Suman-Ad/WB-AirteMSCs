@@ -206,10 +206,10 @@ const PMCalendarManagement = ({ userData }) => {
 
   return (
     <div className="dhr-dashboard-container">
-      <h1 className="dashboard-title"><strong>#️⃣ PM Calendar Management</strong></h1>
+      <h1 className="dashboard-header"><strong>#️⃣ PM Calendar Management</strong></h1>
       {/* Notice Board */}
       <div className="instruction-tab">
-        <h2 className="dashboard-header">📌 Notice Board </h2>
+        <h2 className="noticeboard-header">📌 Notice Board </h2>
         {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>

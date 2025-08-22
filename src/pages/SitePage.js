@@ -113,7 +113,7 @@ const SitePage = ({ userData }) => {
 
   return (
     <div className="dhr-dashboard-container">
-      <h2 className="sitepage-title"> 🏢Site Name : {siteName}</h2>
+      <h2 className="dashboard-header"> 🏢Site Name : {siteName}</h2>
 
       <div className="sitepage-filters">
         <label>📅 Filter by Month:</label>

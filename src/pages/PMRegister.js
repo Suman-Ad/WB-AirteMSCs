@@ -396,7 +396,7 @@ export default function PMRegister({ userData }) {
   return (
     <div className="dhr-dashboard-container">
       <div className="daily-activity-header">
-        <h1>
+        <h1 className="dashboard-header">
           <strong>📜 PM Register Sheet (Yearly Templates)</strong>
         </h1>
         <div className="daily-activity-subtitle">

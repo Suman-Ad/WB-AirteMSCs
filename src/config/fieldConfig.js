@@ -15,12 +15,12 @@ const ebSanctionLoadInKVA = {
 };
 
 const dgInstalledCapacityInKVA = {
-  "Andaman": "500",
-  "Asansol": "1010",
-  "Berhampore": "750",
-  "Kharagpur": "2250",
-  "Mira Tower": "500",
-  "Globsyn": "600"
+  "Andaman": "3x500",
+  "Asansol": "2x1010",
+  "Berhampore": "2x750",
+  "Kharagpur": "2x2250",
+  "Mira Tower": "2x500",
+  "Globsyn": "2x600"
 };
 
 const dieselTankCapacityInLiter = {

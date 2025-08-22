@@ -408,7 +408,7 @@ export default function DailyActivityManage({ userData }) {
   return (
     <div className="dhr-dashboard-container">
       <div className="daily-activity-header">
-        <h1>
+        <h1 className="dashboard-header">
           <strong>🚧🛠️ Daily Activity Manage (PM Register integration)</strong>
         </h1> 
         <div className="daily-activity-subtitle">Admins / assigned users maintain PM registers. Site users add scheduled PM to daily sheet.</div>

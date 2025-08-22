@@ -30,7 +30,7 @@ const Layout = ({ userData, children }) => {
                     style={{
                       height: '4em',
                       verticalAlign: 'middle',
-                      margin: '0 0.2em'
+                      margin: '0 0.2em',
                     }}
                   />
                   WB - Airtel - MSC Data Management System

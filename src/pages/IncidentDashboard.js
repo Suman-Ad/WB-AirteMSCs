@@ -75,13 +75,13 @@ const IncidentDashboard = ({ userData }) => {
 
   return (
     <div className="dhr-dashboard-container">
-      <h1>
+      <h1 className="dashboard-header">
         <strong>🚨 Incident Dashboard</strong>
       </h1>
       {/* Existing Notice Board */}
       <div className="instruction-tab">
         {/* ... (keep existing notice board code) ... */}
-        <h2 className="dashboard-header">📌 Notice Board </h2>
+        <h2 className="noticboard-header">📌 Notice Board </h2>
         {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>

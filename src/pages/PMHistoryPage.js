@@ -147,7 +147,7 @@ const PMHistoryPage = ({ userData }) => {
 
   return (
     <div className="dhr-dashboard-container">
-      <h2 className="pm-history-title">📁 Uploaded PM History</h2>
+      <h2 className="dashboard-header">📁 Uploaded PM History</h2>
 
       {/* Filters */}
       <div className="pm-history-filter">

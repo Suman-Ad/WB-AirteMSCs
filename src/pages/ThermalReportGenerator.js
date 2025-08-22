@@ -288,7 +288,7 @@ export default function ThermalReportGenerator({ userData }) {
 
   return (
     <div className="dhr-dashboard-container">
-      <h1>
+      <h1 className="dashboard-header">
         <strong>🔬🌡️ IR Thermography Analysis & Generate Report</strong>
       </h1>
       <div style={styles.card}>

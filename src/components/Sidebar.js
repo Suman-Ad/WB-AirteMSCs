@@ -45,7 +45,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
               className="logout-manage-btn"
               title="Logout"
             >
-              ⏻
+              📴
             </button>
           } 
         </span>
@@ -75,7 +75,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
           <Link to="/assets-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Assets Dashboard":""}>💼 <span className="label">Assets Dashboard</span></Link>
         )}
 
-        {(role === "Super User" || role === "Admin" || role === "Super Admin" || role === "User") && (
+        {(role === "Super User" || role === "Admin" || role === "Super Admin") && (
           <Link to="/thermal-analysis-report" className="sidepanel-manage-btn" title={collapsed ? "IR Thermal Analysis & Report Generate":""}>🌡️ <span className="label">IR Thermography</span></Link>
         )}
 

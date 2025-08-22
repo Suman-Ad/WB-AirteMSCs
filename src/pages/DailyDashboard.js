@@ -410,8 +410,8 @@ const DailyDashboard = ({ userData }) => {
   // Render
   return (
     <div className="dhr-dashboard-container">
-      <h1>
-        <strong>📅 Daily Dashboard</strong>
+      <h1 className="dashboard-header">
+        <strong>📅 Daily Details Dashboard</strong>
       </h1>
       {summaryChartData && (
         <div style={{ marginBottom: "2rem" }}>
@@ -473,7 +473,7 @@ const DailyDashboard = ({ userData }) => {
       </div>
 
       <div className="instruction-tab">
-        <h2 className="dashboard-header">📌 Notice Board </h2>
+        <h2 className="noticeboard-header">📌 Notice Board </h2>
         {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>
@@ -518,7 +518,7 @@ const DailyDashboard = ({ userData }) => {
         )}
         <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
       </div>      
-      <h2>📘 Daily Details Dashboard - WB Circle</h2>
+      <h2 className="dashboard-header">📘 Daily Details Dashboard - WB Circle</h2>
         {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin") && (
                                 <Link to="/excel-live-edit" className="pm-manage-btn">Edit <strong>"{userData.site}"</strong> Daily Details Dashboard ✎ </Link>
                                 )}

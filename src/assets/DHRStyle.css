@@ -428,7 +428,7 @@ button:disabled {
 
 .chart-container {
   margin: 20px 0 40px;
-  background: #fff;
+  background: linear-gradient(135deg, #dbdbda 0%, #4cafa7 100%);
   padding: 15px 20px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);

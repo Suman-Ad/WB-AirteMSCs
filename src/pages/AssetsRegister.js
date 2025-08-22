@@ -511,14 +511,14 @@ export default function AssetsRegister({ userData }) {
   // ---------- rendering ----------
   return (
     <div className="dhr-dashboard-container" style={{ padding: 16 }}>
-      <h1>
+      <h1 className="dashboard-header">
         <strong>
           🏷️💼 Assets Management
         </strong>
       </h1>
 
       <div className="instruction-tab">
-          <h2 className="dashboard-header">📌 Notice Board </h2>
+          <h2 className="noticeboard-header">📌 Notice Board </h2>
           {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
           {isEditing ? (
             <>

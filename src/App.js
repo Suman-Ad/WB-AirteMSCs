@@ -229,7 +229,7 @@ function App() {
         </RoleProtectedRoute>} />
 
         <Route path="/create-big-dhr" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <CreateBigDHR userData={userData} />
               </Layout>

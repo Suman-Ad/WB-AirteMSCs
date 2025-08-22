@@ -122,7 +122,7 @@ const AdminPanel = ({ userData }) => {
 
   return (
     <div className="admin-panel">      
-      <h2 className="admin-title">Admin User Control Panel</h2>
+      <h2 className="dashboard-header">🧑‍💻👁️ Admin User Control Panel</h2>
       {userData.role === "Super Admin" && (
         <p className="admin-subtitle">🔐 Full access granted. Click edit button to modify user info.</p>
       )}
@@ -168,8 +168,10 @@ const AdminPanel = ({ userData }) => {
               ))}
             </select>
           </div>
-
-          <table className="admin-table" style={{ overflowX: "auto", width: "100%" }}>
+          
+          {/* User Table */}
+          <div className="daily-activity-table-container">
+          <table className="admin-table">
             <thead>
               <tr>
                 <th>Name</th>
@@ -289,6 +291,7 @@ const AdminPanel = ({ userData }) => {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { db } from "../firebase"; // Ensure correct path
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import fieldConfig from "../config/fieldConfig"; // Make sure this exports correctly
+import "../assets/CreateBigDHR.css"; // Ensure you have the correct CSS file
 
 const CreateBigDHR = ({ userData }) => {
   const [formData, setFormData] = useState({});
@@ -104,7 +105,7 @@ const CreateBigDHR = ({ userData }) => {
 
   return (
     <div className="dhr-dashboard-container">
-      <h2 className="text-2xl font-bold mb-4"><strong>☣️ Create Big DHR</strong></h2>
+      <h2 className="dashboard-header"><strong>☣️ Create Big DHR</strong></h2>
       {/* Notice Board */}
       <div className="instruction-tab">
         <h2 className="dashboard-header">📌 Notice Board </h2>
