@@ -108,8 +108,8 @@ const IncidentManagement = ({ userData }) => {
 
       // Simple and effective form reset
       setFormData({
-      region: '',
-      circle: '',
+      region: userData?.region ||'',
+      circle: userData?.circle ||'',
       siteName: userData?.site || '',
       ompPartner: '',
       dateOfIncident: '',

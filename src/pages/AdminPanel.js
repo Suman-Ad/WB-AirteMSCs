@@ -169,14 +169,17 @@ const AdminPanel = ({ userData }) => {
             </select>
           </div>
 
-          <table className="admin-table">
+          <table className="admin-table" style={{ overflowX: "auto", width: "100%" }}>
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Email</th>
-                <th>Site</th>
-                <th>Role</th>
                 <th>Designation</th>
+                <th>EMP ID</th>
+                <th>Email ID</th>
+                <th>Site ID</th>
+                <th>Site Name</th>
+                <th>Role</th>
+                
                 <th>Actions</th>
               </tr>
             </thead>
@@ -203,7 +206,22 @@ const AdminPanel = ({ userData }) => {
                         )
                       ) : user.name}
                     </td>
+                    <td data-label="Designation">
+                      {userData.role === "Super Admin" ? (
+                        isEditable(user.id) ? (
+                          <input
+                            className="editable-field"
+                            value={user.designation || ""}
+                            onChange={(e) => handleUserFieldEdit(user.id, "designation", e.target.value)}
+                          />
+                        ) : (
+                          user.designation
+                        )
+                      ) : user.designation}
+                    </td>
+                    <td data-label="EMP ID">{user.empId}</td>
                     <td data-label="Email">{user.email}</td>
+                    <td data-label="Site ID">{user.siteId}</td>
                     <td data-label="Site">
                       {userData.role === "Super Admin" ? (
                         isEditable(user.id) ? (
@@ -223,19 +241,7 @@ const AdminPanel = ({ userData }) => {
                       ) : user.site}
                     </td>
                     <td data-label="Role">{user.role}</td>
-                    <td data-label="Designation">
-                      {userData.role === "Super Admin" ? (
-                        isEditable(user.id) ? (
-                          <input
-                            className="editable-field"
-                            value={user.designation || ""}
-                            onChange={(e) => handleUserFieldEdit(user.id, "designation", e.target.value)}
-                          />
-                        ) : (
-                          user.designation
-                        )
-                      ) : user.designation}
-                    </td>
+                    
                     <td data-label="Actions">
                       <div className="action-buttons">
                         {userData.role === "Super Admin" && (

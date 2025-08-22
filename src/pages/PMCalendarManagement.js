@@ -97,6 +97,22 @@ const PMCalendarManagement = ({ userData }) => {
     plan_date: ""
   });
 
+  const [instructionText, setInstructionText] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+
+  useEffect(() => {
+    const fetchInstruction = async () => {
+      const docRef = doc(db, "config", "pm_calender_instruction");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setInstructionText(docSnap.data().text || "");
+        setEditText(docSnap.data().text || "");
+      }
+    };
+    fetchInstruction();
+  }, []);
+
   const isAdmin = ["Admin", "Super Admin", "Super User"].includes(userData.role);
   const canEdit = isAdmin || (userData.role === "Super User" && userData.site === selectedSite);
 
@@ -190,7 +206,57 @@ const PMCalendarManagement = ({ userData }) => {
 
   return (
     <div className="dhr-dashboard-container">
-      <h2>🗓 PM Calendar – {selectedSite || "Select Site"}</h2>
+      <h1 className="dashboard-title"><strong>#️⃣ PM Calendar Management</strong></h1>
+      {/* Notice Board */}
+      <div className="instruction-tab">
+        <h2 className="dashboard-header">📌 Notice Board </h2>
+        {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
+        {isEditing ? (
+          <>
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              rows={5}
+              className="dashboard-instruction-panel"
+            />
+            <div className="flex gap-2">
+              <button
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+                onClick={async () => {
+                  const docRef = doc(db, "config", "pm_calender_instruction");
+                  await setDoc(docRef, { text: editText });
+                  setInstructionText(editText);
+                  setIsEditing(false);
+                }}
+              >
+                Save
+              </button>
+              <button
+                className="bg-gray-400 text-white px-3 py-1 rounded"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="dashboard-instruction-panel">
+              {instructionText || "No instructions available."}
+            </p>
+            {["Admin", "Super Admin"].includes(userData?.role) && (
+              <button
+                className="text-blue-600 underline"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit Instruction
+              </button>
+            )}
+          </>
+        )}
+        <h6 style={{ marginLeft: "90%" }}>Thanks & Regards @Suman Adhikari</h6>
+      </div>
+      <h2><strong>🗓 PM Calendar – {selectedSite || "Select Site"}</strong></h2>
 
       {/* Year and Site Selection */}
       <div className="pm-controls">
@@ -242,6 +308,7 @@ const PMCalendarManagement = ({ userData }) => {
 
       {/* In-House PM Section */}
       <h3 className="section-title">In-House PM Schedule</h3>
+      <div style={{ overflowY: 'auto', maxHeight: '400px' }}>
       {months.map((month) => (
         <div key={month} className="pm-section">
           <h4>{month}</h4>
@@ -371,9 +438,11 @@ const PMCalendarManagement = ({ userData }) => {
           </table>
         </div>
       ))}
+      </div>
 
       {/* Vendor PM Section */}
       <h3 className="section-title">Vendor PM Schedule</h3>
+      <div style={{ overflowY: 'auto', maxHeight: '400px' }}>
       {Object.entries(quarters).map(([qtr, months]) => (
         <div key={qtr} className="pm-section">
           <h4>{qtr} ({months.join(", ")})</h4>
@@ -512,6 +581,7 @@ const PMCalendarManagement = ({ userData }) => {
           </table>
         </div>
       ))}
+      </div>
     </div>
   );
 };

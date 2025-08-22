@@ -472,7 +472,7 @@ const Dashboard = ({ userData }) => {
       )}
 
       {/* Site Upload Forms */}
-      <div className="dashboard-container">
+      <div className="dashboard-container" style={{ overflowY: "auto", maxHeight: "90vh" }}>
         {siteList.map((site) =>
           canAccessSite(site) ? (
             <div key={site} className="dashboard-container rounded shadow bg-white">

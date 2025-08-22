@@ -16,7 +16,7 @@ const IncidentDashboard = ({ userData }) => {
     startDate: '',
     endDate: '',
     equipment: ''
-  });
+    });
 
   // Fetch dashboard instruction
   useEffect(() => {

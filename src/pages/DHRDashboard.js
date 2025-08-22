@@ -494,7 +494,11 @@ Fault details if any: ${r.faultDetails}
           onChange={(e) => setFilterSite(e.target.value)}
         />
         <button className="btn-secondary pm-manage-btn" onClick={() => navigate("/create-dhr")}>
-          ➕ Create / Edit {userData?.site} DHR
+          ➕ Create / Edit {userData?.site} DHR(S)
+        </button>
+        <span className="separator">|</span>
+        <button className="pm-manage-btn" onClick={() => navigate("/create-big-dhr")}>
+          ➕ Create / Edit {userData?.site} DHR(B)
         </button>
         <span className="separator">|</span>
         <button className="download-btn" onClick={downloadExcel}>

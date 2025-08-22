@@ -27,6 +27,7 @@ import DailyActivityManage from "./pages/DailyActivityManage"
 import PMRegister from "./pages/PMRegister";
 import ThermalImageAnalysis from "./pages/ThermalImageAnalysis";
 import ThermalReportGenerator from "./pages/ThermalReportGenerator"
+import CreateBigDHR from "./pages/CreateBigDHR";
 
 
 
@@ -225,9 +226,14 @@ function App() {
             <Layout userData={userData}>
               <ThermalReportGenerator userData={userData} />
               </Layout>
-        </RoleProtectedRoute>} />   
+        </RoleProtectedRoute>} />
 
-        
+        <Route path="/create-big-dhr" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+            <Layout userData={userData}>
+              <CreateBigDHR userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
 
         {/* Fallback */}
         <Route path="/" element={<Navigate to="/dhr-dashboard" />} />

@@ -3,8 +3,9 @@ import '../assets/IncidentEditor.css';
 
 const IncidentEditorPage = ({ formData, onFormChange, onSubmit }) => {
   const equipmentCategories = [
-    'PAC', 'DG', 'SMPS', 'UPS', 'WLD', 'VESDA', 
-    'iBMS', 'Panel', 'Transformer', 'PLC', 'Battery', 'Other'
+    "ACS","Air Conditioner","BMS","CCTV","Comfort AC","Diesel Generator","Earth Pit",
+    "Exhust Fan","FAS","FSS","HT Panel","Inverter","LT Panel","PAS","PFE","SMPS",
+    "SMPS BB","Solar System","UPS","UPS BB","DCDB/ACDB","Transformer"
   ];
 
   const renderInput = (name, value, type = 'text', options = [], disabled = false) => {
@@ -70,7 +71,7 @@ const IncidentEditorPage = ({ formData, onFormChange, onSubmit }) => {
     { label: 'Region', name: 'region', type: 'text' },
     { label: 'Circle', name: 'circle', type: 'text' },
     { label: 'Site Name', name: 'siteName', type: 'text' },
-    { label: 'O&M Partner', name: 'ompPartner', type: 'text' },
+    { label: 'O&M Partner', name: 'ompPartner', type: 'select', options: ['Vertiv PAC', 'Vertiv UPS', 'Vertiv SMPS', 'Delta SMPS', 'Honeywell', 'Solus', 'Cummins', 'Kirlosker', 'Amararaja', 'HBL', 'ADN Fire', 'Hitachi'] },
     { label: 'Date of Incident', name: 'dateOfIncident', type: 'date' },
     { label: 'Time of Incident', name: 'timeOfIncident', type: 'time' },
     { label: 'SA/NSA', name: 'saNsa', type: 'select', options: ['SA', 'NSA'] },
