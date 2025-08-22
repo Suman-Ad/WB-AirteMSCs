@@ -278,7 +278,7 @@ const ThermalImageAnalysis = ({ userData }) => {
 
   return (
     <div className="dhr-dashboard-container">
-      <h1 className="dashboard-header">Thermal Image Analysis</h1>
+      <h1 className="dashboard-header">🌡️ Thermal Image Analysis</h1>
 
       <div {...getThermalRootProps({ style: styles.dropzone })}>
         <input {...getThermalInputProps()} />

@@ -121,7 +121,7 @@ const ProfilePage = ({ userData }) => {
   };
 
   return (
-    <div className="profile-container">
+    <div className="profile-container child-container">
       <h2 className="dashboard-header">👤 Profile</h2>
 
       {/* Profile Image */}
@@ -130,6 +130,7 @@ const ProfilePage = ({ userData }) => {
           src={form.photoURL || "/default-avatar.png"}
           alt="Profile"
           className="profile-avatar"
+          style={{ width: "300px", height: "300px", borderRadius: "50%" }}
         />
       </div>
 

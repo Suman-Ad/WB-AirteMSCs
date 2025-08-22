@@ -123,7 +123,7 @@ const ExcelLiveEditPage = ({ userData }) => {
         />
       </div>
 
-      <div className="tab-scroll-container">
+      <div className="tab-scroll-container child-container">
         <Tabs
           value={selectedTab}
           onChange={(e, val) => setSelectedTab(val)}
@@ -151,7 +151,7 @@ const ExcelLiveEditPage = ({ userData }) => {
         {loading ? (
           <p>Loading...</p>
         ) : (
-          <div className="sheet-editor-scroll">
+          <div className="sheet-editor-scroll chart-container">
             <ExcelSheetEditor
               sheetKey={sheetKeys[selectedTab]}
               rows={sheetData[sheetKeys[selectedTab]] || []}

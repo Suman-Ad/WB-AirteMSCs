@@ -378,7 +378,7 @@ Fault details if any: ${r.faultDetails}
 
       {/* Summary Stats Panel */}
       <div style={{ color: "#6b7280", fontSize: 15 }}>📌 Date: {filterDate}</div>
-      <div className="summary-stats chart-container">
+      <div className="summary-stats child-container">
         <div className="stat-card">
           <h3>Total Diesel Available (Ltrs)</h3>
           <p>{totalDieselAvailable.toFixed(2)}</p>

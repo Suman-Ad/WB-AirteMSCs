@@ -414,9 +414,9 @@ const DailyDashboard = ({ userData }) => {
         <strong>📅 Daily Details Dashboard</strong>
       </h1>
       {summaryChartData && (
-        <div style={{ marginBottom: "2rem" }}>
+        <div style={{ marginBottom: "2rem" }} className="summary-chart-container">
           <h3>📊 Summary Overview</h3>
-          <div style={{ maxWidth: "800px", margin: "auto" }}>
+          <div style={{ maxWidth: "800px", margin: "auto" }} className="chart-wrapper chart-container">
             <Bar data={summaryChartData} options={{
               responsive: true,
               plugins: { legend: { position: "top" }, title: { display: true, text: "WB Daily Summary" } }
@@ -427,8 +427,8 @@ const DailyDashboard = ({ userData }) => {
 
       
       <h3>✅ Completed Site Submission Status</h3>
-      <div style={{ overflowX: "auto" }}>
-        <table className="status-table" style={{ minWidth: "800px", borderCollapse: "collapse", marginBottom: "2rem" }}>
+      <div style={{ overflowX: "auto" }} className="status-table-container">
+        <table className="status-table child-container" style={{ minWidth: "800px", borderCollapse: "collapse", marginBottom: "2rem" }}>
           <thead>
             <tr>
               <th>Site</th>
@@ -518,7 +518,7 @@ const DailyDashboard = ({ userData }) => {
         )}
         <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
       </div>      
-      <h2 className="dashboard-header">📘 Daily Details Dashboard - WB Circle</h2>
+      <h2>📘 Daily Details Dashboard - WB Circle</h2>
         {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin") && (
                                 <Link to="/excel-live-edit" className="pm-manage-btn">Edit <strong>"{userData.site}"</strong> Daily Details Dashboard ✎ </Link>
                                 )}
@@ -540,10 +540,10 @@ const DailyDashboard = ({ userData }) => {
       {sortedSites.map(site => {
         const sheets = siteData[site] || {};
         return (
-          <div key={site} style={{ marginTop: 20, borderTop: "1px solid #ccc", paddingTop: 12, overflowY: "auto", height: "1170px" }}>
+          <div key={site} style={{ marginTop: 20, borderTop: "1px solid #ccc", paddingTop: 12 }} className="child-container">
             <h3>📍 Site: {site} MSC</h3>
 
-            <div className="sheet-blocks-wrapper sheet-block-card status-table">
+            <div className="sheet-blocks-wrapper sheet-block-card status-table" style={{ overflowY: "auto", height: "1170px" }}>
               {Object.entries(sheetKeys).map(([sheetLabel, sheetKey]) => {
                 const rows = sheets[sheetKey] || [];
                 const { status, color, filled, total } = getSheetStatus(rows || []);

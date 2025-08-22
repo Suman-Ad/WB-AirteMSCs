@@ -25,7 +25,7 @@ const THRESHOLDS = { normalMax: 5.0, attentionMax: 10.0, criticalMax: 20.0 };
 
 const styles = {
   page: { maxWidth: 1000, margin: "0 auto", padding: 20 },
-  card: { background: "#fff", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.08)", padding: 16, marginBottom: 16 },
+  card: { background: "#77bbc79d", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.08)", padding: 16, marginBottom: 16 },
   h1: { fontSize: 24, margin: "0 0 8px", color: "#1f2937" },
   h2: { fontSize: 18, margin: "0 0 8px", color: "#111827" },
   row: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },

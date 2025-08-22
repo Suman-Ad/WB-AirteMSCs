@@ -81,7 +81,7 @@ const IncidentDashboard = ({ userData }) => {
       {/* Existing Notice Board */}
       <div className="instruction-tab">
         {/* ... (keep existing notice board code) ... */}
-        <h2 className="noticboard-header">📌 Notice Board </h2>
+        <h2 className="noticeboard-header">📌 Notice Board </h2>
         {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>

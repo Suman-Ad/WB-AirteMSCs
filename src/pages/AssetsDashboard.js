@@ -127,7 +127,7 @@ export default function AssetsDashboard({userData}) {
         </strong>
       </h1>
       <div className="instruction-tab">
-          <h2 className="dashboard-header">📌 Notice Board </h2>
+          <h2 className="noticeboard-header">📌 Notice Board </h2>
           {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
           {isEditing ? (
             <>
@@ -226,7 +226,7 @@ export default function AssetsDashboard({userData}) {
       </div>
 
       {/* ✅ Summary */}
-      <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
+      <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }} className="child-container">
         <div>
           <h3>Total Assets</h3>
           <p>{filteredAssets.length}</p>
@@ -242,7 +242,7 @@ export default function AssetsDashboard({userData}) {
       </div>
 
       {/* ✅ Chart */}
-      <div style={{ width: "600px", marginBottom: "20px" }}>
+      <div style={{ width: "600px", marginBottom: "20px" }} className="chart-container">
         <Bar data={chartData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
       </div>
 

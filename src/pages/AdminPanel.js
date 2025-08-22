@@ -128,7 +128,7 @@ const AdminPanel = ({ userData }) => {
       )}
 
       {(["Admin", "Super Admin"].includes(userData.role)) && (
-        <div className="admin-table-wrapper mt-10">
+        <div className="admin-table-wrapper mt-10 child-container">
           <h3 className="admin-subtitle">👥 User Role Management</h3>
 
           {/* User Count Statistics */}

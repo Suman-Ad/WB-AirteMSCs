@@ -200,6 +200,7 @@ const IncidentManagement = ({ userData }) => {
         formData={formData}
         onFormChange={handleFormChange}
         onSubmit={handleSubmit}
+        userData={userData}
       />
 
       {/* <button disabled={isSubmitting}>

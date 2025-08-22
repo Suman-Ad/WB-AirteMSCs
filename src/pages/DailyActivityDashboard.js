@@ -467,7 +467,7 @@ export default function DailyActivityDashboard({ userData }) {
       </div>
 
       {/* Charts */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }} className="chart-container">
         <div style={{ flex: 1, minWidth: 320 }}>
           <canvas ref={approvalCanvasRef} />
         </div>
