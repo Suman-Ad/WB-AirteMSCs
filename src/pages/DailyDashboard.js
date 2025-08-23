@@ -1,7 +1,7 @@
 // src/pages/DailyDashboard.js
 import React, { useEffect, useState, useMemo } from "react";
 import { db } from "../firebase";
-import { collection, getDocs, doc, setDoc,getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc,getDoc, } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { Parser } from "hot-formula-parser";
 import { sheetTemplates } from "../components/ExcelSheetEditor";
@@ -20,7 +20,6 @@ import {
 } from "chart.js";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
 
 
 // sheetKeys same as before
@@ -129,16 +128,6 @@ const DailyDashboard = ({ userData }) => {
   const [editText, setEditText] = useState("");
   const [summaryMetrics, setSummaryMetrics] = useState(null);
 
-  // const userName = userData?.name;
-  // const userRole = userData?.role;
-  // const userSite = userData?.site;
-  // const today = new Date().toISOString().split("T")[0];
-
-  // const [dates, setDates] = useState([]);
-  // const [selectedDate, setSelectedDate] = useState(today);
-  // const [siteData, setSiteData] = useState({});
-  // const [sortAsc, setSortAsc] = useState(true);
-
   useEffect(() => {
         const fetchInstruction = async () => {
           const docRef = doc(db, "config", "daily_details_dashboard_instruction");
@@ -194,6 +183,11 @@ const DailyDashboard = ({ userData }) => {
 
   const downloadExcel = () => {
     const wb = XLSX.utils.book_new();
+    // Get current month in format Aug'25
+    const now = new Date();
+    const monthYear = now.toLocaleString("en-US", {
+      month: "short"
+    }) + "'" + now.getFullYear().toString().slice(-2);
 
     // example: add a Final Summary sheet (static)
     const finalSummaryData = [
@@ -212,16 +206,16 @@ const DailyDashboard = ({ userData }) => {
       ["Major Fault Details (If any)", "N"],
       ["Planned Activity Details", "Y"],
 
-      [],
+      [`Month ${monthYear}`],
       ["Edge Data Centres Count", "WB"],
       ["Total Site Count", {f: "=B2"}],
       ["Category Checks", ""],
       ["O&M Manpower Availability as Per LOI", "Ok"],
-      ["In House PM Planned (Aug'25 Month)", {f: "=COUNTA('In House PM'!A2:A10000)"}],
-      ["In House PM Completed (Aug'25 Month)", {f: "=COUNTIF('In House PM'!I:I, \"Done\")"}],
+      [`In House PM Planned (${monthYear} Month)`, {f: "=COUNTA('In House PM'!A2:A10000)"}],
+      [`In House PM Completed (${monthYear} Month)`, {f: "=COUNTIF('In House PM'!I:I, \"Done\")"}],
       ["Inhouse PM Completion %", { f: "=(B21/B20)*100" }],
-      ["OEM PM Planned (Jul'25 Month)", {f: "=COUNTA('OEM PM'!A2:A10000)"}],
-      ["OEM PM Completed (Jul'25 Month)", {f: "=COUNTIF('OEM PM'!P:P, \"Done\")"}],
+      [`OEM PM Planned (${monthYear} Month)`, {f: "=COUNTA('OEM PM'!A2:A10000)"}],
+      [`OEM PM Completed (${monthYear} Month)`, {f: "=COUNTIF('OEM PM'!P:P, \"Done\")"}],
       ["OEM PM Completion %", { f: "=(B24/B23)*100" }],
       ["Incidents / Accidents Reported", 0],
       ["EOL Replacement Planned", 0],
@@ -413,7 +407,7 @@ const DailyDashboard = ({ userData }) => {
       <h1 className="dashboard-header">
         <strong>📅 Daily Details Dashboard</strong>
       </h1>
-      {summaryChartData && (
+      {/* {summaryChartData && (
         <div style={{ marginBottom: "2rem" }} className="summary-chart-container">
           <h3>📊 Summary Overview</h3>
           <div style={{ maxWidth: "800px", margin: "auto" }} className="chart-wrapper chart-container">
@@ -423,7 +417,7 @@ const DailyDashboard = ({ userData }) => {
             }} />
           </div>
         </div>
-      )}
+      )} */}
 
       
       <h3>✅ Completed Site Submission Status</h3>
@@ -474,7 +468,6 @@ const DailyDashboard = ({ userData }) => {
 
       <div className="instruction-tab">
         <h2 className="noticeboard-header">📌 Notice Board </h2>
-        {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>
             <textarea
