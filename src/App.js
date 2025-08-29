@@ -28,6 +28,7 @@ import PMRegister from "./pages/PMRegister";
 import ThermalImageAnalysis from "./pages/ThermalImageAnalysis";
 import ThermalReportGenerator from "./pages/ThermalReportGenerator"
 import CreateBigDHR from "./pages/CreateBigDHR";
+import AsansolOperationSimulator from "./pages/AsansolOperationSimulator";
 
 
 
@@ -232,6 +233,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <CreateBigDHR userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/operation" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <AsansolOperationSimulator userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
 

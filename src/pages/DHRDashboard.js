@@ -477,6 +477,9 @@ Fault details if any: ${r.faultDetails}
           </div>
         </div>
       )}
+      <button className="segr-manage-btn" onClick={() => navigate("/operation")}>
+          📟 LT Panel Auto/Manual Operation {userData?.site}
+        </button>
 
       {/* Filters */}
       <div className="dhr-filters">
