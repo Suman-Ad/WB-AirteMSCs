@@ -36,6 +36,8 @@ const AsansolOperationSimulator = () => {
   const [busCoupler2StatusDisplay, setBusCoupler2StatusDisplay] = useState({light: '', text: 'OPEN'});
   const [lt1Status, setLt1Status] = useState({light: 'on', text: 'LIVE (EB-1)'});
   const [lt2Status, setLt2Status] = useState({light: 'on', text: 'LIVE (EB-2)'});
+  const [isDGRunning, setIsDGRunning] = useState(false);
+
   
   // Timer refs
   const dgMeterIntervalRef = useRef(null);
@@ -146,15 +148,19 @@ const AsansolOperationSimulator = () => {
 
   const openBusCoupler1 = () => {
     if (busCoupler1Status === 'open') return;
+    const ltSetter = isDG1_ON ? setLt2Status : setLt1Status;
     setBusCoupler1Status('open');
     updateStatus(setBusCoupler1StatusDisplay, 'off', 'OPEN');
+    updateStatus(ltSetter, 'off', 'NO SUPPLY');
     logEvent('Bus Coupler-1 opened (isolated).', 'info');
   };
 
   const openBusCoupler2 = () => {
     if (busCoupler2Status === 'open') return;
+    const ltSetter = isDG1_ON ? setLt2Status : setLt1Status;
     setBusCoupler2Status('open');
     updateStatus(setBusCoupler2StatusDisplay, 'off', 'OPEN');
+    updateStatus(ltSetter, 'off', 'NO SUPPLY');
     logEvent('Bus Coupler-2 opened (isolated).', 'info');
   };
 
@@ -400,7 +406,7 @@ const AsansolOperationSimulator = () => {
     const dgStateSetter = currentDG === 'DG-1' ? setIsDG1_ON : setIsDG2_ON;
 
     updateStatus(dgLightSetter, 'standby', 'STARTING...');
-    updateStatus(ltSetter, 'CLOSE', `Restored with ${currentDG}`);
+    updateStatus(ltSetter, 'CLOSE', `Restoring with ${currentDG}`);
     logEvent(`Manually starting ${currentDG}...`, 'info');
     
     setDgMeter({voltage: 0, frequency: 0, visible: true});
@@ -628,6 +634,7 @@ const AsansolOperationSimulator = () => {
           </div>
         )}
 
+        {/* Manual Mode Controls */}
         {operationMode === 'manual' && (
           <div className="control-group manual-buttons-container" id="manualControls">
             <h3>Manual Mode Controls</h3>
@@ -641,56 +648,101 @@ const AsansolOperationSimulator = () => {
               <option value="DG-2">DG-2</option>
             </select>
             <br />
+
+            {/* EB → DG Transition */}
+            <button 
+              id="manualOpenEB1" 
+              className="action-button"
+              onClick={() => {
+                updateStatus(setEb1Status, 'off', 'OPEN');
+                setIsEB1_ON(false);
+                updateStatus(setLt1Status, 'off', 'NO SUPPLY');
+                logEvent('EB-1 ACB opened manually.', 'info');
+              }}
+              disabled={isSimulating || !isEB1_ON || isDG1_ON || isDG2_ON}
+            >
+              Open EB-1 ACB
+            </button>
+            <button 
+              id="manualOpenEB2" 
+              className="action-button"
+              onClick={() => {
+                updateStatus(setEb2Status, 'off', 'OPEN');
+                setIsEB2_ON(false);
+                updateStatus(setLt2Status, 'off', 'NO SUPPLY');
+                logEvent('EB-2 ACB opened manually.', 'info');
+              }}
+              disabled={isSimulating || !isEB2_ON || isDG1_ON || isDG2_ON || isEB1_ON}
+            >
+              Open EB-2 ACB
+            </button>
             <button 
               id="manualStartDG" 
               className="action-button"
-              onClick={handleManualStartDG}
-              disabled={isSimulating || isDG1_ON || isDG2_ON || !(isEB1_ON && isEB2_ON)}
+              onClick={() => {
+                logEvent(`Started ${currentDG} manually from local panel.`, 'info');
+                setIsDGRunning(true); // ✅ Track DG running
+              }}
+              disabled={isSimulating || isDG1_ON || isDG2_ON || isEB1_ON || isEB2_ON}
             >
               Start DG
             </button>
             <button 
               id="manualCloseDGAcb" 
               className="action-button"
-              onClick={handleManualCloseDGAcb}
-              disabled={isSimulating || (!isDG1_ON && !isDG2_ON)}
+              onClick={() => {
+                const dgLightSetter = currentDG === 'DG-1' ? setDg1Status : setDg2Status;
+                const ltSetter = currentDG === 'DG-1' ? setLt1Status : setLt2Status;
+                const dgStateSetter = currentDG === 'DG-1' ? setIsDG1_ON : setIsDG2_ON;
+
+                updateStatus(dgLightSetter, 'on', 'CLOSED');
+                updateStatus(ltSetter, 'on', `LIVE (${currentDG})`);
+                dgStateSetter(true);
+                logEvent(`${currentDG} Incomer ACB closed manually.`, 'success');
+              }}
+              disabled={isSimulating || (isDG1_ON || isDG2_ON)}
             >
               Close DG Incomer ACB
             </button>
+
+            {/* Close Bus Couplers */}
             <button 
               id="manualCloseBusCoupler1" 
               className="action-button"
-              onClick={closeBusCoupler1}
-              disabled={isSimulating || busCoupler1Status === 'closed'}
+              onClick={() => {
+                closeBusCoupler1();
+                if (currentDG === 'DG-2' && busCoupler2Status === 'closed') {
+                  updateStatus(setLt1Status, 'on', 'LIVE (DG-2)');
+                }
+              }}
+              disabled={
+                isSimulating || busCoupler1Status === 'closed' || (!isDG1_ON && !isDG2_ON) ||
+                (currentDG === 'DG-2' && busCoupler2Status === 'open')
+              }
             >
               Close Bus Coupler-1
             </button>
             <button 
               id="manualCloseBusCoupler2" 
               className="action-button"
-              onClick={closeBusCoupler2}
-              disabled={isSimulating || busCoupler2Status === 'closed'}
+              onClick={() => {
+                closeBusCoupler2();
+                if (currentDG === 'DG-1' && busCoupler1Status === 'closed') {
+                  updateStatus(setLt2Status, 'on', 'LIVE (DG-1)');
+                }
+              }}
+              disabled={
+                isSimulating || busCoupler2Status === 'closed' || (!isDG1_ON && !isDG2_ON) ||
+                (currentDG === 'DG-1' && busCoupler1Status === 'open')
+              }
             >
               Close Bus Coupler-2
             </button>
-            <br />
-            <button 
-              id="manualOpenDGAcb" 
-              className="action-button"
-              onClick={() => {
-                if (isSimulating || (!isDG1_ON && !isDG2_ON)) return;
-                setIsSimulating(true);
-                const dgLightSetter = isDG1_ON ? setDg1Status : setDg2Status;
-                updateStatus(dgLightSetter, 'off', 'OPEN');
-                updateStatus(setLt1Status, 'off', 'NO SUPPLY');
-                updateStatus(setLt2Status, 'off', 'NO SUPPLY');
-                logEvent(`Manually opened ${currentDG} Incomer ACB.`, 'info');
-                setIsSimulating(false);
-              }}
-              disabled={isSimulating || (!isDG1_ON && !isDG2_ON)}
-            >
-              Open DG Incomer ACB
-            </button>
+
+            <hr />
+            <h4>DG → EB Transition</h4>
+
+            {/* Open Bus Couplers */}
             <button 
               id="manualOpenBusCoupler1" 
               className="action-button"
@@ -707,16 +759,36 @@ const AsansolOperationSimulator = () => {
             >
               Open Bus Coupler-2
             </button>
+
+            {/* Open DG ACB */}
+            <button 
+              id="manualOpenDGAcb" 
+              className="action-button"
+              onClick={() => {
+                const dgLightSetter = isDG1_ON ? setDg1Status : setDg2Status;
+                updateStatus(dgLightSetter, 'off', 'OPEN');
+                updateStatus(setLt1Status, 'off', 'NO SUPPLY');
+                updateStatus(setLt2Status, 'off', 'NO SUPPLY');
+                logEvent(`Manually opened ${currentDG} Incomer ACB.`, 'info');
+
+                // ✅ Update DG running state to false
+                if (isDG1_ON) setIsDG1_ON(false);
+                if (isDG2_ON) setIsDG2_ON(false);
+              }}
+              disabled={isSimulating || (!isDG1_ON && !isDG2_ON) || busCoupler1Status === 'closed' || busCoupler2Status === 'closed'}
+            >
+              Open DG Incomer ACB
+            </button>
+
+            {/* Close EB incomers */}
             <button 
               id="manualCloseEB1" 
               className="action-button"
               onClick={() => {
-                if (isSimulating) return;
-                setIsSimulating(true);
                 updateStatus(setEb1Status, 'on', 'CLOSED');
-                updateStatus(setLt1Status, 'on', 'CLOSED');
-                logEvent('Manually closed EB-1 Incomer ACB.', 'success');
-                setIsSimulating(false);
+                updateStatus(setLt1Status, 'on', 'LIVE (EB-1)');
+                setIsEB1_ON(true);
+                logEvent('EB-1 Incomer closed manually.', 'success');
               }}
               disabled={isSimulating || isEB1_ON || isDG1_ON || isDG2_ON}
             >
@@ -726,32 +798,29 @@ const AsansolOperationSimulator = () => {
               id="manualCloseEB2" 
               className="action-button"
               onClick={() => {
-                if (isSimulating) return;
-                setIsSimulating(false);
                 updateStatus(setEb2Status, 'on', 'CLOSED');
-                updateStatus(setLt2Status, 'on', 'CLOSED');
-                logEvent('Manually closed EB-2 Incomer ACB.', 'success');
-                setIsSimulating(false);
+                updateStatus(setLt2Status, 'on', 'LIVE (EB-2)');
+                setIsEB2_ON(true);
+                logEvent('EB-2 Incomer closed manually.', 'success');
               }}
-              disabled={isSimulating || isEB2_ON || isDG1_ON || isDG2_ON}
+              disabled={isSimulating || isEB2_ON || isDG1_ON || isDG2_ON || !isEB1_ON}
             >
               Close EB-2 ACB
             </button>
+
+            {/* Stop DG */}
             <button 
               id="manualStopDG" 
               className="action-button"
               onClick={() => {
-                if (isSimulating || (!isDG1_ON && !isDG2_ON)) return;
-                setIsSimulating(true);
-                logEvent(`Manually stopped ${currentDG}.`, 'info');
-                if (isDG1_ON) setIsDG1_ON(false);
-                else setIsDG2_ON(false);
-                setIsSimulating(false);
+                logEvent(`Stopped ${currentDG} manually from local panel.`, 'info');
+                setIsDGRunning(false); // ✅ DG stopped
               }}
-              disabled={isSimulating || (!isDG1_ON && !isDG2_ON)}
+              disabled={isSimulating || !isDGRunning || !isEB1_ON || !isEB2_ON}
             >
               Stop DG
             </button>
+
             <div className="bc-controls">
               <small>Manual Bus Coupler controls (BC-1 ⇄ LT-1, BC-2 ⇄ LT-2)</small>
             </div>
