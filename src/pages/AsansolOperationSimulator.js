@@ -24,10 +24,10 @@ const AsansolOperationSimulator = () => {
   const [busCoupler2Timer, setBusCoupler2Timer] = useState(0);
   
   // Status states
-  const [transformerStatus, setTransformerStatus] = useState({light: 'on', text: 'ON'});
-  const [mainICStatus, setMainICStatus] = useState({light: 'on', text: 'ON(CLOSED)'});
-  const [splitter1Status, setSplitter1Status] = useState({light: 'on', text: 'ON(CLOSED)'});
-  const [splitter2Status, setSplitter2Status] = useState({light: 'on', text: 'ON(CLOSED)'});
+  const [transformerStatus, setTransformerStatus] = useState({light: 'on', text: '1kV POWER ON'});
+  const [mainICStatus, setMainICStatus] = useState({light: 'on', text: 'CLOSED'});
+  const [splitter1Status, setSplitter1Status] = useState({light: 'on', text: 'CLOSED'});
+  const [splitter2Status, setSplitter2Status] = useState({light: 'on', text: 'CLOSED'});
   const [eb1Status, setEb1Status] = useState({light: 'on', text: 'CLOSED'});
   const [eb2Status, setEb2Status] = useState({light: 'on', text: 'CLOSED'});
   const [dg1Status, setDg1Status] = useState({light: '', text: 'OPEN'});
@@ -100,10 +100,10 @@ const AsansolOperationSimulator = () => {
     setIsDG1_ON(false);
     setIsDG2_ON(false);
     
-    updateStatus(setTransformerStatus, 'on', 'ON');
-    updateStatus(setMainICStatus, 'on', 'ON(CLOSED)');
-    updateStatus(setSplitter1Status, 'on', 'ON(CLOSED)');
-    updateStatus(setSplitter2Status, 'on', 'ON(CLOSED)');
+    updateStatus(setTransformerStatus, 'on', '1kV POWER ON');
+    updateStatus(setMainICStatus, 'on', 'CLOSED');
+    updateStatus(setSplitter1Status, 'on', 'CLOSED');
+    updateStatus(setSplitter2Status, 'on', 'CLOSED');
     updateStatus(setEb1Status, 'on', 'CLOSED');
     updateStatus(setEb2Status, 'on', 'CLOSED');
     updateStatus(setDg1Status, '', 'OPEN');
@@ -170,10 +170,10 @@ const AsansolOperationSimulator = () => {
     setIsSimulating(true);
     logEvent('Simulating total EB power failure from grid...', 'error');
 
-    updateStatus(setTransformerStatus, 'off', 'OFF');
-    updateStatus(setMainICStatus, 'off', 'OFF(CLOSED)');
-    updateStatus(setSplitter1Status, 'off', 'OFF(CLOSED)');
-    updateStatus(setSplitter2Status, 'off', 'OFF(CLOSED)');
+    updateStatus(setTransformerStatus, 'off', 'NO SUPPLY');
+    updateStatus(setMainICStatus, 'off', 'CLOSED(NO SUPPLY)');
+    updateStatus(setSplitter1Status, 'off', 'CLOSED(NO SUPPLY)');
+    updateStatus(setSplitter2Status, 'off', 'CLOSED(NO SUPPLY)');
     updateStatus(setEb1Status, 'off', 'TRIPPED OPEN');
     updateStatus(setEb2Status, 'off', 'TRIPPED OPEN');
     updateStatus(setLt1Status, 'off', 'NO SUPPLY');
@@ -300,12 +300,13 @@ const AsansolOperationSimulator = () => {
     if (isDG1_ON || isDG2_ON) {
       const selectedDG = isDG1_ON ? 'DG-1' : 'DG-2';
       
-      updateStatus(setTransformerStatus, 'on', 'ON');
-      updateStatus(setMainICStatus, 'on', 'ON(CLOSED)');
-      updateStatus(setSplitter1Status, 'on', 'ON(CLOSED)');
-      updateStatus(setSplitter2Status, 'on', 'ON(CLOSED)');
+      updateStatus(setTransformerStatus, 'on', '1kV POWER ON');
+      updateStatus(setMainICStatus, 'on', 'CLOSED');
+      updateStatus(setSplitter1Status, 'on', 'CLOSED');
+      updateStatus(setSplitter2Status, 'on', 'CLOSED');
       logEvent('Transformer and Main I/C online. Executing restore sequence (DG running).', 'info');
 
+      if (isDG2_ON && !isDG1_ON) {
       // Simplified restoration process
       busCoupler1TimerRef.current = startTimer(4, setBusCoupler1Timer, () => {
         openBusCoupler1();
@@ -323,7 +324,7 @@ const AsansolOperationSimulator = () => {
             logEvent('Step2: EB-1 closed. LT-1 restored to EB-1.', 'success');
 
             const dgTimerSetter = selectedDG === 'DG-1' ? setDg1Timer : setDg2Timer;
-            dg1TimerRef.current = startTimer(180, dgTimerSetter, () => {
+            dg2TimerRef.current = startTimer(180, dgTimerSetter, () => {
               const dgStatusSetter = selectedDG === 'DG-1' ? setDg1Status : setDg2Status;
               const dgStateSetter = selectedDG === 'DG-1' ? setIsDG1_ON : setIsDG2_ON;
               const ltSetter = selectedDG === 'DG-1' ? setLt1Status : setLt2Status;
@@ -351,13 +352,64 @@ const AsansolOperationSimulator = () => {
             });
           });
         });
-      });
+      })} else if (isDG1_ON && !isDG2_ON) {
+        busCoupler2TimerRef.current = startTimer(4, setBusCoupler2Timer, () => {
+        openBusCoupler2();
+        updateStatus(setLt2Status, 'off', 'NO SUPPLY');
+        logEvent('Step1: BC-1 opened. LT-1 -> NO SUPPLY.', 'info');
+
+        busCoupler1TimerRef.current = startTimer(2, setBusCoupler1Timer, () => {
+          openBusCoupler1();
+          logEvent('Step3: BC-2 opened. DG-side LT remains on DG supply.', 'info');
+
+          eb2TimerRef.current = startTimer(5, setEb2Timer, () => {
+            updateStatus(setEb2Status, 'on', 'CLOSED');
+            setIsEB2_ON(true);
+            updateStatus(setLt2Status, 'on', 'LIVE (EB-1)');
+            logEvent('Step2: EB-1 closed. LT-1 restored to EB-1.', 'success');
+
+            const dgTimerSetter = selectedDG === 'DG-1' ? setDg1Timer : setDg2Timer;
+            dg1TimerRef.current = startTimer(180, dgTimerSetter, () => {
+              const dgStatusSetter = selectedDG === 'DG-1' ? setDg1Status : setDg2Status;
+              const dgStateSetter = selectedDG === 'DG-1' ? setIsDG1_ON : setIsDG2_ON;
+              const ltSetter = selectedDG === 'DG-1' ? setLt1Status : setLt2Status;
+              
+              updateStatus(dgStatusSetter, '', 'OPEN');
+              logEvent('Step4: DG incomer stopped. DG-side LT -> NO SUPPLY.', 'info');
+              updateStatus(ltSetter, 'off', 'NO SUPPLY');
+              dgStateSetter(false);
+
+              const ebTimerSetter = selectedDG === 'DG-1' ? setEb1Timer : setEb2Timer;
+              eb1TimerRef.current = startTimer(2, ebTimerSetter, () => {
+                const ebStatusSetter = selectedDG === 'DG-1' ? setEb1Status : setEb2Status;
+                const ebStateSetter = selectedDG === 'DG-1' ? setIsEB1_ON : setIsEB2_ON;
+                
+                updateStatus(ebStatusSetter, 'on', 'CLOSED');
+                ebStateSetter(true);
+                updateStatus(ltSetter, 'on', `LIVE (EB-${selectedDG === 'DG-1' ? '1' : '2'})`);
+                logEvent('Step5: EB on DG side closed and DG-side LT restored to EB.', 'success');
+
+                setBusCoupler1Status('open');
+                setBusCoupler2Status('open');
+                setIsSimulating(false);
+                resetSystem();
+              });
+            });
+          });
+        });
+      })
+      };
     } else {
       // No DG running - simple restore
       if (!isEB1_ON) {
-        openBusCoupler1();
-        openBusCoupler2();
-        updateStatus(setLt1Status, 'off', 'NO SUPPLY');
+        busCoupler1TimerRef.current = startTimer(2, setBusCoupler1Timer, () => {
+          openBusCoupler1();
+          updateStatus(setLt1Status, 'off', 'NO SUPPLY');
+        });
+        busCoupler2TimerRef.current = startTimer(4, setBusCoupler2Timer, () => {
+          openBusCoupler2();
+        });
+
         logEvent('Bus Coupler-1 opened.', 'info');
 
         eb1TimerRef.current = startTimer(5, setEb1Timer, () => {
@@ -369,9 +421,13 @@ const AsansolOperationSimulator = () => {
           resetSystem();
         });
       } else if (!isEB2_ON) {
-        openBusCoupler1();
-        openBusCoupler2();
-        updateStatus(setLt2Status, 'off', 'NO SUPPLY');
+        busCoupler2TimerRef.current = startTimer(4, setBusCoupler2Timer, () => {
+          openBusCoupler2();
+          updateStatus(setLt2Status, 'off', 'NO SUPPLY');
+        });
+        busCoupler1TimerRef.current = startTimer(2, setBusCoupler1Timer, () => {
+          openBusCoupler1();
+        });
         logEvent('Bus Coupler-2 opened.', 'info');
 
         eb2TimerRef.current = startTimer(5, setEb2Timer, () => {
@@ -391,10 +447,10 @@ const AsansolOperationSimulator = () => {
     if (isSimulating) return;
     setIsSimulating(true);
     
-    updateStatus(setTransformerStatus, 'off', 'OFF');
-    updateStatus(setMainICStatus, 'off', 'OFF(CLOSED)');
-    updateStatus(setSplitter1Status, 'off', 'OFF(CLOSED)');
-    updateStatus(setSplitter2Status, 'off', 'OFF(CLOSED)');
+    updateStatus(setTransformerStatus, 'off', 'NO SUPPLY');
+    updateStatus(setMainICStatus, 'off', 'CLOSED(NO SUPPLY)');
+    updateStatus(setSplitter1Status, 'off', 'CLOSED(NO SUPPLY)');
+    updateStatus(setSplitter2Status, 'off', 'CLOSED(NO SUPPLY)');
     updateStatus(setEb1Status, 'off', 'TRIPPED OPEN');
     updateStatus(setEb2Status, 'off', 'TRIPPED OPEN');
     updateStatus(setLt1Status, 'off', 'NO SUPPLY');
@@ -641,7 +697,7 @@ const AsansolOperationSimulator = () => {
             <label htmlFor="manualDGSelector">Select DG:</label>
             <select 
               id="manualDGSelector" 
-              value={currentDG} 
+              value="" 
               onChange={(e) => setCurrentDG(e.target.value)}
             >
               <option value="DG-1">DG-1</option>
@@ -650,7 +706,27 @@ const AsansolOperationSimulator = () => {
             <br />
 
             {/* EB → DG Transition */}
-            <button 
+            <button id="manualOpenEB1" 
+              className="action-button"
+              onClick={() => {
+                updateStatus(setTransformerStatus, 'off', 'NO SUPPLY');
+                updateStatus(setMainICStatus, 'off', 'CLOSED(NO SUPPLY)');
+                updateStatus(setSplitter1Status, 'off', 'CLOSED(NO SUPPLY)');
+                updateStatus(setSplitter2Status, 'off', 'CLOSED(NO SUPPLY)');
+                updateStatus(setEb1Status, 'off', 'TRIPPED OPEN');
+                setIsEB1_ON(false);
+                setIsEB2_ON(false);
+                updateStatus(setEb2Status, 'off', 'TRIPPED OPEN');
+                updateStatus(setLt1Status, 'off', 'NO SUPPLY');
+                updateStatus(setLt2Status, 'off', 'NO SUPPLY');
+                logEvent('Total EB Supply Fail ACB opened manually.', 'info');
+                setIsEB_ON(false);
+              }}
+              disabled={isSimulating || !isEB1_ON || !isEB2_ON || isDG1_ON || isDG2_ON}
+            >
+              EB Supply Failure
+            </button>
+            {/* <button 
               id="manualOpenEB1" 
               className="action-button"
               onClick={() => {
@@ -662,8 +738,8 @@ const AsansolOperationSimulator = () => {
               disabled={isSimulating || !isEB1_ON || isDG1_ON || isDG2_ON}
             >
               Open EB-1 ACB
-            </button>
-            <button 
+            </button> */}
+            {/* <button 
               id="manualOpenEB2" 
               className="action-button"
               onClick={() => {
@@ -675,7 +751,7 @@ const AsansolOperationSimulator = () => {
               disabled={isSimulating || !isEB2_ON || isDG1_ON || isDG2_ON || isEB1_ON}
             >
               Open EB-2 ACB
-            </button>
+            </button> */}
             <button 
               id="manualStartDG" 
               className="action-button"
@@ -683,7 +759,7 @@ const AsansolOperationSimulator = () => {
                 logEvent(`Started ${currentDG} manually from local panel.`, 'info');
                 setIsDGRunning(true); // ✅ Track DG running
               }}
-              disabled={isSimulating || isDG1_ON || isDG2_ON || isEB1_ON || isEB2_ON}
+              disabled={isSimulating || isDG1_ON || isDG2_ON || isEB1_ON || isEB2_ON || isDGRunning}
             >
               Start DG
             </button>
@@ -700,7 +776,7 @@ const AsansolOperationSimulator = () => {
                 dgStateSetter(true);
                 logEvent(`${currentDG} Incomer ACB closed manually.`, 'success');
               }}
-              disabled={isSimulating || (isDG1_ON || isDG2_ON)}
+              disabled={isSimulating || isEB1_ON || isEB2_ON || !isDGRunning || (isDG1_ON || isDG2_ON)}
             >
               Close DG Incomer ACB
             </button>
@@ -743,6 +819,20 @@ const AsansolOperationSimulator = () => {
             <h4>DG → EB Transition</h4>
 
             {/* Open Bus Couplers */}
+            <button id="manualOpenEB1" 
+              className="action-button"
+              onClick={() => {
+                updateStatus(setTransformerStatus, 'on', '11kV POWER ON');
+                updateStatus(setMainICStatus, 'on', 'CLOSED');
+                updateStatus(setSplitter1Status, 'on', 'CLOSED');
+                updateStatus(setSplitter2Status, 'on', 'CLOSED');
+                logEvent('Total EB Supply restore.', 'info');
+                setIsEB_ON(true);
+              }}
+              disabled={isSimulating || isEB1_ON || isEB2_ON || !isDGRunning}
+            >
+              EB Supply Restore
+            </button>
             <button 
               id="manualOpenBusCoupler1" 
               className="action-button"
