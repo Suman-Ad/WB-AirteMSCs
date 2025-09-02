@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import '../assets/AsansolOperationSimulator.css';
+import './SOPCSS/AsansolOperationSimulator.css';
 
 const AsansolOperationSimulator = () => {
   // State variables
@@ -24,7 +24,7 @@ const AsansolOperationSimulator = () => {
   const [busCoupler2Timer, setBusCoupler2Timer] = useState(0);
   
   // Status states
-  const [transformerStatus, setTransformerStatus] = useState({light: 'on', text: '1kV POWER ON'});
+  const [transformerStatus, setTransformerStatus] = useState({light: 'on', text: '11/0.433kV POWER ON'});
   const [mainICStatus, setMainICStatus] = useState({light: 'on', text: 'CLOSED'});
   const [splitter1Status, setSplitter1Status] = useState({light: 'on', text: 'CLOSED'});
   const [splitter2Status, setSplitter2Status] = useState({light: 'on', text: 'CLOSED'});
@@ -100,7 +100,7 @@ const AsansolOperationSimulator = () => {
     setIsDG1_ON(false);
     setIsDG2_ON(false);
     
-    updateStatus(setTransformerStatus, 'on', '1kV POWER ON');
+    updateStatus(setTransformerStatus, 'on', '11/0.433kV POWER ON');
     updateStatus(setMainICStatus, 'on', 'CLOSED');
     updateStatus(setSplitter1Status, 'on', 'CLOSED');
     updateStatus(setSplitter2Status, 'on', 'CLOSED');
@@ -317,7 +317,7 @@ const AsansolOperationSimulator = () => {
     if (isDG1_ON || isDG2_ON) {
       const selectedDG = isDG1_ON ? 'DG-1' : 'DG-2';
       
-      updateStatus(setTransformerStatus, 'on', '1kV POWER ON');
+      updateStatus(setTransformerStatus, 'on', '11/0.433kV POWER ON');
       updateStatus(setMainICStatus, 'on', 'CLOSED');
       updateStatus(setSplitter1Status, 'on', 'CLOSED');
       updateStatus(setSplitter2Status, 'on', 'CLOSED');
@@ -526,7 +526,7 @@ const AsansolOperationSimulator = () => {
   // Render the component
   return (
     <div className="dhr-dashboard-container">
-      <h1>Asansol MSC LT Panel Operation Simulator - V12</h1>
+      <h1 className='h12'>Berhampore MSC LT Panel Operation Simulator - V12</h1>
       <p style={{textAlign: 'center'}}>This model demonstrates the system's logic for automatic and manual changeovers. Timers are visible for every timed action.</p>
 
       <div className="mode-switch">
@@ -726,7 +726,7 @@ const AsansolOperationSimulator = () => {
             <button id="manualOpenEB1" 
               className="action-button"
               onClick={() => {
-                updateStatus(setTransformerStatus, 'off', 'NO SUPPLY');
+                updateStatus(setTransformerStatus, 'off', 'NO SUPPLY'); 
                 updateStatus(setMainICStatus, 'off', 'CLOSED(NO SUPPLY)');
                 updateStatus(setSplitter1Status, 'off', 'CLOSED(NO SUPPLY)');
                 updateStatus(setSplitter2Status, 'off', 'CLOSED(NO SUPPLY)');
@@ -842,7 +842,7 @@ const AsansolOperationSimulator = () => {
             <button id="manualOpenEB1" 
               className="action-button"
               onClick={() => {
-                updateStatus(setTransformerStatus, 'on', '11kV POWER ON');
+                updateStatus(setTransformerStatus, 'on', '11/0.433kV POWER ON');
                 updateStatus(setMainICStatus, 'on', 'CLOSED');
                 updateStatus(setSplitter1Status, 'on', 'CLOSED');
                 updateStatus(setSplitter2Status, 'on', 'CLOSED');

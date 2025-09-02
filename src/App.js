@@ -28,7 +28,7 @@ import PMRegister from "./pages/PMRegister";
 import ThermalImageAnalysis from "./pages/ThermalImageAnalysis";
 import ThermalReportGenerator from "./pages/ThermalReportGenerator"
 import CreateBigDHR from "./pages/CreateBigDHR";
-import AsansolOperationSimulator from "./pages/AsansolOperationSimulator";
+import AsansolOperationSimulator from "./components/SOP/AsansolOperationSimulator";
 
 
 

@@ -477,6 +477,15 @@ Fault details if any: ${r.faultDetails}
           </div>
         </div>
       )}
+      {/* Manage Site Wise LT Panel Auto/Manual Operation */}
+      {/* { userData?.site === "Asansol" ? (
+        // <div style={{ color: "#6b7280", fontSize: 12 }}>📌 Note: For Asansol Site, Please Click Below Button to Manage LT Panel Auto/Manual Operation </div>
+        <button className="segr-manage-btn" onClick={() => navigate("/operation")}>
+          📟 LT Panel Auto/Manual Operation {userData?.site}
+        </button>
+      ) : null
+
+      } */}
       <button className="segr-manage-btn" onClick={() => navigate("/operation")}>
           📟 LT Panel Auto/Manual Operation {userData?.site}
         </button>
