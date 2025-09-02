@@ -148,20 +148,37 @@ const AsansolOperationSimulator = () => {
 
   const openBusCoupler1 = () => {
     if (busCoupler1Status === 'open') return;
-    const ltSetter = isDG1_ON ? setLt2Status : setLt1Status;
-    setBusCoupler1Status('open');
-    updateStatus(setBusCoupler1StatusDisplay, 'off', 'OPEN');
-    updateStatus(ltSetter, 'off', 'NO SUPPLY');
-    logEvent('Bus Coupler-1 opened (isolated).', 'info');
+    if (isDG1_ON || isDG2_ON && (!isEB1_ON && !isEB2_ON)) {
+      const ltSetter = isDG1_ON ? setLt2Status : setLt1Status;
+      setBusCoupler1Status('open');
+      updateStatus(setBusCoupler1StatusDisplay, 'off', 'OPEN');
+      updateStatus(ltSetter, 'off', 'NO SUPPLY');
+      logEvent('Bus Coupler-1 opened (isolated).', 'info');  
+    } else if (isEB1_ON || isEB2_ON && !(!isDG1_ON && !isDG2_ON)) {
+      const ltSetter = isEB1_ON ? setLt2Status : setLt1Status;
+      setBusCoupler1Status('open');
+      updateStatus(setBusCoupler1StatusDisplay, 'off', 'OPEN');
+      updateStatus(ltSetter, 'off', 'NO SUPPLY');
+      logEvent('Bus Coupler-1 opened (isolated).', 'info');
+    }
   };
 
   const openBusCoupler2 = () => {
     if (busCoupler2Status === 'open') return;
-    const ltSetter = isDG1_ON ? setLt2Status : setLt1Status;
-    setBusCoupler2Status('open');
-    updateStatus(setBusCoupler2StatusDisplay, 'off', 'OPEN');
-    updateStatus(ltSetter, 'off', 'NO SUPPLY');
-    logEvent('Bus Coupler-2 opened (isolated).', 'info');
+    if (isDG1_ON || isDG2_ON && (!isEB1_ON && !isEB2_ON)) {
+      const ltSetter = isDG1_ON ? setLt2Status : setLt1Status;
+      setBusCoupler2Status('open');
+      updateStatus(setBusCoupler2StatusDisplay, 'off', 'OPEN');
+      updateStatus(ltSetter, 'off', 'NO SUPPLY');
+      logEvent('Bus Coupler-2 opened (isolated).', 'info');
+    } else if (isEB1_ON || isEB2_ON && !(!isDG1_ON && !isDG2_ON)) {
+      const ltSetter = isEB1_ON ? setLt2Status : setLt1Status;
+      setBusCoupler2Status('open');
+      updateStatus(setBusCoupler2StatusDisplay, 'off', 'OPEN');
+      updateStatus(ltSetter, 'off', 'NO SUPPLY');
+      logEvent('Bus Coupler-2 opened (isolated).', 'info');
+    }
+    
   };
 
   // Failure simulation functions
@@ -421,11 +438,11 @@ const AsansolOperationSimulator = () => {
           resetSystem();
         });
       } else if (!isEB2_ON) {
-        busCoupler2TimerRef.current = startTimer(4, setBusCoupler2Timer, () => {
+        busCoupler2TimerRef.current = startTimer(2, setBusCoupler2Timer, () => {
           openBusCoupler2();
           updateStatus(setLt2Status, 'off', 'NO SUPPLY');
         });
-        busCoupler1TimerRef.current = startTimer(2, setBusCoupler1Timer, () => {
+        busCoupler1TimerRef.current = startTimer(4, setBusCoupler1Timer, () => {
           openBusCoupler1();
         });
         logEvent('Bus Coupler-2 opened.', 'info');
@@ -756,6 +773,9 @@ const AsansolOperationSimulator = () => {
               id="manualStartDG" 
               className="action-button"
               onClick={() => {
+                const selectedDG = currentDG;
+                const dgLightSetter = selectedDG === 'DG-1' ? setDg1Status : setDg2Status;
+                updateStatus(dgLightSetter, 'standby', 'STARTING...');
                 logEvent(`Started ${currentDG} manually from local panel.`, 'info');
                 setIsDGRunning(true); // ✅ Track DG running
               }}
