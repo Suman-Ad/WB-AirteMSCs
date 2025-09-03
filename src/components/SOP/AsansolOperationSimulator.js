@@ -26,7 +26,7 @@ const AsansolOperationSimulator = () => {
   const [busCoupler2Timer, setBusCoupler2Timer] = useState(0);
   
   // Status states
-  const [htVCBStatus, sethtVCBStatus] = useState({light: 'on', text: '⚡ACB CLOSED'});
+  const [htVCBStatus, sethtVCBStatus] = useState({light: 'on', text: '⚡VCB CLOSED'});
   const [transformerStatus, setTransformerStatus] = useState({light: 'on', text: '⚡POWER ON'});
   const [mainICStatus, setMainICStatus] = useState({light: 'on', text: '⚡ACB CLOSED'});
   const [splitter1Status, setSplitter1Status] = useState({light: 'on', text: '⚡ACB CLOSED'});
@@ -106,7 +106,7 @@ const AsansolOperationSimulator = () => {
     setIsDG2_ON(false);
     setIsMobileDG_ON(false);
     
-    updateStatus(sethtVCBStatus, 'on', '⚡ACB CLOSED');
+    updateStatus(sethtVCBStatus, 'on', '⚡VCB CLOSED');
     updateStatus(setTransformerStatus, 'on', '⚡POWER ON');
     updateStatus(setMainICStatus, 'on', '⚡ACB CLOSED');
     updateStatus(setSplitter1Status, 'on', '⚡ACB CLOSED');
@@ -196,7 +196,7 @@ const AsansolOperationSimulator = () => {
     setIsSimulating(true);
     logEvent('Simulating total EB power failure from grid...', 'error');
 
-    updateStatus(sethtVCBStatus, 'standby', 'ACB CLOSED');
+    updateStatus(sethtVCBStatus, 'standby', 'VCB CLOSED');
     updateStatus(setTransformerStatus, 'off', 'POWER OFF');
     updateStatus(setMainICStatus, 'standby', 'ACB CLOSED');
     updateStatus(setSplitter1Status, 'standby', 'ACB CLOSED');
@@ -216,7 +216,7 @@ const AsansolOperationSimulator = () => {
     const dgLightSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : setMobileDGStatus;
     const dgTimerSetter = selectedDG === 'DG-1' ? setDg1Timer : selectedDG === 'DG-2' ? setDg2Timer : setmobileDGTimer;
     const ltLoadSetter = selectedDG === 'DG-1' ? setLt1Status : setLt2Status;
-    const dgStatusSetter = selectedDG === 'DG-1' ? setIsDG1_ON : selectedDG === 'DG-1' ? setIsDG2_ON : setIsMobileDG_ON;
+    const dgStatusSetter = selectedDG === 'DG-1' ? setIsDG1_ON : selectedDG === 'DG-2' ? setIsDG2_ON : setIsMobileDG_ON;
 
     updateStatus(dgLightSetter, 'standby', 'STARTING...');
     logEvent(`${selectedDG} received start signal. DG is starting...`, 'info');
@@ -345,7 +345,7 @@ const AsansolOperationSimulator = () => {
     if (isDG1_ON || isDG2_ON || isMobileDG_ON) {
       const selectedDG = isDG1_ON ? 'DG-1' : isDG2_ON ? 'DG-2' : 'Mobile-DG';
       
-      updateStatus(sethtVCBStatus, 'on', '⚡ACB CLOSED');
+      updateStatus(sethtVCBStatus, 'on', '⚡VCB CLOSED');
       updateStatus(setTransformerStatus, 'on', '⚡POWER ON');
       updateStatus(setMainICStatus, 'on', '⚡ACB CLOSED');
       updateStatus(setSplitter1Status, 'on', '⚡ACB CLOSED');
@@ -372,18 +372,23 @@ const AsansolOperationSimulator = () => {
             updateStatus(setLt1Status, 'on', 'LIVE (EB-1)');
             logEvent('Step2: EB-1 closed. LT-1 restored to EB-1.', 'success');
 
+            const dgStatusSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : setMobileDGStatus;
+            updateStatus(dgStatusSetter, 'standby', 'OPENING...');
             {/* Set Time 180 sec*/}
-            const dgTimerSetter = selectedDG === 'DG-1' ? setDg1Timer : selectedDG === 'DG-1' ? setDg2Timer : setmobileDGTimer;
+            const dgTimerSetter = selectedDG === 'DG-1' ? setDg1Timer : selectedDG === 'DG-2' ? setDg2Timer : setmobileDGTimer;
             const dgTimerRef = selectedDG === 'DG-1' ? dg1TimerRef : selectedDG === 'DG-2' ? dg2TimerRef : mobileDGTimerRef;
             dgTimerRef.current = startTimer(10, dgTimerSetter, () => {
-              const dgStatusSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : setMobileDGStatus;
               const dgStateSetter = selectedDG === 'DG-1' ? setIsDG1_ON : selectedDG === 'DG-2' ? setIsDG2_ON : setIsMobileDG_ON;
               const ltSetter = selectedDG === 'DG-1' ? setLt1Status : setLt2Status;
               
-              updateStatus(dgStatusSetter, 'off', 'OPEN');
+              updateStatus(dgStatusSetter, 'standby', `OPEN (Running ${selectedDG} in IDEL Mode......)`);
+              logEvent('Step4: DG incomer stopped. DG-side LT -> NO SUPPLY.', 'info');
               logEvent('Step4: DG incomer stopped. DG-side LT -> NO SUPPLY.', 'info');
               updateStatus(ltSetter, 'off', 'NO SUPPLY');
               dgStateSetter(false);
+              dgTimerRef.current = startTimer(180, dgTimerSetter, () => {
+                updateStatus(dgStatusSetter, 'off', `OPEN (DG STOP)`);
+              });
 
               updateStatus(setEb2Status, 'standby', 'CLOSING...');
 
@@ -400,7 +405,6 @@ const AsansolOperationSimulator = () => {
                 setBusCoupler1Status('open');
                 setBusCoupler2Status('open');
                 setIsSimulating(false);
-                resetSystem();
               });
             });
           });
@@ -437,7 +441,7 @@ const AsansolOperationSimulator = () => {
               dgStateSetter(false);
               {/*set time 180 sec hear for idel time */}
               dg1TimerRef.current = startTimer(180, dgTimerSetter, () => {
-                updateStatus(dgStatusSetter, 'off', `OPEN (DG STOP)`)
+                updateStatus(dgStatusSetter, 'off', `OPEN (DG STOP)`);
                 resetSystem();
               });
 
@@ -516,7 +520,7 @@ const AsansolOperationSimulator = () => {
     if (isSimulating) return;
     setIsSimulating(true);
     
-    updateStatus(sethtVCBStatus, 'off', 'ACB CLOSED');
+    updateStatus(sethtVCBStatus, 'off', 'VCB CLOSED');
     updateStatus(setTransformerStatus, 'off', 'OFF');
     updateStatus(setMainICStatus, 'off', 'ACB CLOSED');
     updateStatus(setSplitter1Status, 'off', 'ACB CLOSED');
@@ -790,6 +794,7 @@ const AsansolOperationSimulator = () => {
             >
               <option value="DG-1">DG-1</option>
               <option value="DG-2">DG-2</option>
+              <option value="Mobile-DG">Mobile DG</option>
             </select>
             <br />
 
@@ -797,7 +802,7 @@ const AsansolOperationSimulator = () => {
             <button id="manualOpenEB1" 
               className="action-button"
               onClick={() => {
-                updateStatus(sethtVCBStatus, 'off', 'ACB CLOSED');
+                updateStatus(sethtVCBStatus, 'off', 'VCB CLOSED');
                 updateStatus(setTransformerStatus, 'off', 'POWER OFF'); 
                 updateStatus(setMainICStatus, 'off', 'ACB CLOSED');
                 updateStatus(setSplitter1Status, 'off', 'ACB CLOSED');
@@ -918,7 +923,7 @@ const AsansolOperationSimulator = () => {
             <button id="manualOpenEB1" 
               className="action-button"
               onClick={() => {
-                updateStatus(sethtVCBStatus, 'on', '⚡ACB CLOSED');
+                updateStatus(sethtVCBStatus, 'on', '⚡VCB CLOSED');
                 updateStatus(setTransformerStatus, 'on', '⚡POWER ON');
                 updateStatus(setMainICStatus, 'on', '⚡ACB CLOSED');
                 updateStatus(setSplitter1Status, 'on', '⚡ACB CLOSED');
