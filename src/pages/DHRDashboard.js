@@ -27,6 +27,8 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { buildQueries } from "@testing-library/dom";
+import { DeploymentUnitOutlined } from "@ant-design/icons";
 
 export default function DHRDashboard({ userData }) {
   const userName = userData?.name;
@@ -486,8 +488,11 @@ Fault details if any: ${r.faultDetails}
       ) : null
 
       } */}
-      <button className="segr-manage-btn" onClick={() => navigate("/operation")}>
-          📟 LT Panel Auto/Manual Operation {userData?.site}
+      <button className="segr-manage-btn" onClick={() => navigate("/asansol-operation")}>
+          📟 LT Panel Auto/Manual Operation Asansol
+        </button>
+      <button className="segr-manage-btn" onClick={() => navigate("/Berhampore-operation")}>
+          📟 LT Panel Auto/Manual Operation Berhampore
         </button>
 
       {/* Filters */}
@@ -692,3 +697,4 @@ Fault details if any: ${r.faultDetails}
     </div>
   );
 }
+

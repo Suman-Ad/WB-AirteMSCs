@@ -90,6 +90,7 @@ const AsansolOperationSimulator = () => {
     if (dg2TimerRef.current) clearInterval(dg2TimerRef.current);
     if (eb1TimerRef.current) clearInterval(eb1TimerRef.current);
     if (eb2TimerRef.current) clearInterval(eb2TimerRef.current);
+    if (mobileDGTimerRef.current) clearInterval(mobileDGTimerRef.current);
     if (busCoupler1TimerRef.current) clearInterval(busCoupler1TimerRef.current);
     if (busCoupler2TimerRef.current) clearInterval(busCoupler2TimerRef.current);
   };

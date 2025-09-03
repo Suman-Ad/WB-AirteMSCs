@@ -29,6 +29,7 @@ import ThermalImageAnalysis from "./pages/ThermalImageAnalysis";
 import ThermalReportGenerator from "./pages/ThermalReportGenerator"
 import CreateBigDHR from "./pages/CreateBigDHR";
 import AsansolOperationSimulator from "./components/SOP/AsansolOperationSimulator";
+import BerhamporeOperationSimulator from "./components/SOP/BerhamporeOperationSimulator";
 
 
 
@@ -236,10 +237,17 @@ function App() {
               </Layout>
         </RoleProtectedRoute>} />
 
-        <Route path="/operation" element={
+        <Route path="/asansol-operation" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <AsansolOperationSimulator userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/berhampore-operation" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <BerhamporeOperationSimulator userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
 
