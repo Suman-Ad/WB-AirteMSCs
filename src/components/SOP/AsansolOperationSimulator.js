@@ -382,13 +382,14 @@ const AsansolOperationSimulator = () => {
               const dgStateSetter = selectedDG === 'DG-1' ? setIsDG1_ON : selectedDG === 'DG-2' ? setIsDG2_ON : setIsMobileDG_ON;
               const ltSetter = selectedDG === 'DG-1' ? setLt1Status : setLt2Status;
               
-              updateStatus(dgStatusSetter, 'standby', `OPEN (Running ${selectedDG} in IDEL Mode......)`);
+              updateStatus(dgStatusSetter, 'off', `OPEN (Running ${selectedDG} in IDEL Mode......)`);
               logEvent('Step4: DG incomer stopped. DG-side LT -> NO SUPPLY.', 'info');
               logEvent('Step4: DG incomer stopped. DG-side LT -> NO SUPPLY.', 'info');
               updateStatus(ltSetter, 'off', 'NO SUPPLY');
               dgStateSetter(false);
               dgTimerRef.current = startTimer(180, dgTimerSetter, () => {
                 updateStatus(dgStatusSetter, 'off', `OPEN (DG STOP)`);
+                resetSystem();
               });
 
               updateStatus(setEb2Status, 'standby', 'CLOSING...');
@@ -436,7 +437,7 @@ const AsansolOperationSimulator = () => {
               const dgStateSetter = selectedDG === 'DG-1' ? setIsDG1_ON : selectedDG === 'DG-2' ? setIsDG2_ON : setIsMobileDG_ON;
               const ltSetter = selectedDG === 'DG-1' ? setLt1Status : setLt2Status;
               
-              updateStatus(dgStatusSetter, 'standby', `OPEN (Running ${selectedDG} in IDEL Mode......)`);
+              updateStatus(dgStatusSetter, 'off', `OPEN (Running ${selectedDG} in IDEL Mode......)`);
               logEvent('Step4: DG incomer stopped. DG-side LT -> NO SUPPLY.', 'info');
               updateStatus(ltSetter, 'off', 'NO SUPPLY');
               dgStateSetter(false);
@@ -613,37 +614,37 @@ const AsansolOperationSimulator = () => {
 
       <div className="opdashboard">
         <div className="panel">
-          <h3>11kV HT Panel (VCB)</h3>
+          <h3>11kV HT Panel (VCB 400A)</h3>
           <div className={`status-light ${htVCBStatus.light}`}></div>
           <p>{htVCBStatus.text}</p>
         </div>
 
         <div className="panel">
-          <h3>11/0.433kV Transformer</h3>
+          <h3>Transformer (11/0.433kV-1000kVA)</h3>
           <div className={`status-light ${transformerStatus.light}`}></div>
           <p>{transformerStatus.text}</p>
         </div>
 
         <div className="panel">
-          <h3>Main LT 0.433kV I/C Panel</h3>
+          <h3>Main LT 0.433kV I/C Panel (ACB 1600A)</h3>
           <div className={`status-light ${mainICStatus.light}`}></div>
           <p>{mainICStatus.text}</p>
         </div>
 
         <div className="panel">
-          <h3>Splitter Panel-I</h3>
+          <h3>Splitter Panel-I (ACB 1600A)</h3>
           <div className={`status-light ${splitter1Status.light}`}></div>
           <p>{splitter1Status.text}</p>
         </div>
 
         <div className="panel">
-          <h3>Splitter Panel-II</h3>
+          <h3>Splitter Panel-II (ACB 1600A)</h3>
           <div className={`status-light ${splitter2Status.light}`}></div>
           <p>{splitter2Status.text}</p>
         </div>
 
         <div className="panel">
-          <h3>EB-1 Incomer (LT Panel-1)</h3>
+          <h3>EB-1 Incomer (ACB 1600A LT Panel-1)</h3>
           <div className={`status-light ${eb1Status.light}`}></div>
           <p>{eb1Status.text}</p>
           <div className="timer-container" style={{display: eb1Timer > 0 ? 'block' : 'none'}}>
@@ -652,7 +653,7 @@ const AsansolOperationSimulator = () => {
         </div>
 
         <div className="panel">
-          <h3>EB-2 Incomer (LT Panel-2)</h3>
+          <h3>EB-2 Incomer (ACB 1600A LT Panel-2)</h3>
           <div className={`status-light ${eb2Status.light}`}></div>
           <p>{eb2Status.text}</p>
           <div className="timer-container" style={{display: eb2Timer > 0 ? 'block' : 'none'}}>
@@ -661,7 +662,7 @@ const AsansolOperationSimulator = () => {
         </div>
 
         <div className="panel">
-          <h3>DG-1 Incomer (LT Panel-1)</h3>
+          <h3>DG-1 Incomer (ACB 1600A LT Panel-1)</h3>
           <div className={`status-light ${dg1Status.light}`}></div>
           <p>{dg1Status.text}</p>
           <div className="timer-container" style={{display: dg1Timer > 0 ? 'block' : 'none'}}>
@@ -670,7 +671,7 @@ const AsansolOperationSimulator = () => {
         </div>
 
         <div className="panel">
-          <h3>DG-2 Incomer (LT Panel-2)</h3>
+          <h3>DG-2 Incomer (ACB 1600A LT Panel-2)</h3>
           <div className={`status-light ${dg2Status.light}`}></div>
           <p>{dg2Status.text}</p>
           <div className="timer-container" style={{display: dg2Timer > 0 ? 'block' : 'none'}}>
@@ -679,7 +680,7 @@ const AsansolOperationSimulator = () => {
         </div>
 
         <div className="panel">
-          <h3>Mobile DG Incomer (LT Panel-2)</h3>
+          <h3>Mobile DG Incomer (ACB 1600A LT Panel-2)</h3>
           <div className={`status-light ${mobileDGStatus.light}`}></div>
           <p>{mobileDGStatus.text}</p>
           <div className="timer-container" style={{display: mobileDGTimer > 0 ? 'block' : 'none'}}>
@@ -688,7 +689,7 @@ const AsansolOperationSimulator = () => {
         </div>
 
         <div className="panel">
-          <h3>Bus Coupler-1 (LT Panel-1)</h3>
+          <h3>Bus Coupler-1 (ACB 1600A LT Panel-1)</h3>
           <div className={`status-light ${busCoupler1StatusDisplay.light}`}></div>
           <p>{busCoupler1StatusDisplay.text}</p>
           <div className="timer-container" style={{display: busCoupler1Timer > 0 ? 'block' : 'none'}}>
@@ -697,7 +698,7 @@ const AsansolOperationSimulator = () => {
         </div>
 
         <div className="panel">
-          <h3>Bus Coupler-2 (LT Panel-2)</h3>
+          <h3>Bus Coupler-2 (ACB 1600A LT Panel-2)</h3>
           <div className={`status-light ${busCoupler2StatusDisplay.light}`}></div>
           <p>{busCoupler2StatusDisplay.text}</p>
           <div className="timer-container" style={{display: busCoupler2Timer > 0 ? 'block' : 'none'}}>
@@ -772,25 +773,25 @@ const AsansolOperationSimulator = () => {
             >
               Simulate EB Restoration
             </button>
-            <button 
+            {/* <button 
               id="reset" 
               className="action-button"
               onClick={resetSystem}
               disabled={isSimulating}
             >
               Reset System
-            </button>
+            </button> */}
           </div>
         )}
 
         {/* Manual Mode Controls */}
         {operationMode === 'manual' && (
           <div className="control-group manual-buttons-container" id="manualControls">
-            <h3>Manual Mode Controls</h3>
-            <label htmlFor="manualDGSelector">Select DG:</label>
+            <h3><strong>Manual Mode Controls</strong></h3>
+            <label htmlFor="manualDGSelector">Select DG: {currentDG}</label>
             <select 
               id="manualDGSelector" 
-              value="" 
+              value={currentDG} 
               onChange={(e) => setCurrentDG(e.target.value)}
             >
               <option value="DG-1">DG-1</option>
@@ -819,34 +820,8 @@ const AsansolOperationSimulator = () => {
               }}
               disabled={isSimulating || !isEB1_ON || !isEB2_ON || isDG1_ON || isDG2_ON}
             >
-              EB Supply Failure
+              Stop EB Supply
             </button>
-            {/* <button 
-              id="manualOpenEB1" 
-              className="action-button"
-              onClick={() => {
-                updateStatus(setEb1Status, 'off', 'OPEN');
-                setIsEB1_ON(false);
-                updateStatus(setLt1Status, 'off', 'NO SUPPLY');
-                logEvent('EB-1 ACB opened manually.', 'info');
-              }}
-              disabled={isSimulating || !isEB1_ON || isDG1_ON || isDG2_ON}
-            >
-              Open EB-1 ACB
-            </button> */}
-            {/* <button 
-              id="manualOpenEB2" 
-              className="action-button"
-              onClick={() => {
-                updateStatus(setEb2Status, 'off', 'OPEN');
-                setIsEB2_ON(false);
-                updateStatus(setLt2Status, 'off', 'NO SUPPLY');
-                logEvent('EB-2 ACB opened manually.', 'info');
-              }}
-              disabled={isSimulating || !isEB2_ON || isDG1_ON || isDG2_ON || isEB1_ON}
-            >
-              Open EB-2 ACB
-            </button> */}
             <button 
               id="manualStartDG" 
               className="action-button"
@@ -854,16 +829,17 @@ const AsansolOperationSimulator = () => {
                 const selectedDG = currentDG;
                 const dgLightSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : setMobileDGStatus;
                 const dgTimer = selectedDG === 'DG-1' ? setDg1Timer : selectedDG === 'DG-2' ? setDg2Timer : setmobileDGTimer;
+                const dgTimerRef = selectedDG === 'DG-1' ? dg1TimerRef : selectedDG === 'DG-2' ? dg2TimerRef : mobileDGTimerRef;
                 updateStatus(dgLightSetter, 'standby', 'STARTING...');
                 logEvent(`Started ${currentDG} manually from local panel.`, 'info');
-                dg1TimerRef.current = startTimer(10, dgTimer, () => {
+                dgTimerRef.current = startTimer(10, dgTimer, () => {
                   updateStatus(dgLightSetter, 'standby', 'DG RUNNING...');
                   setIsDGRunning(true); // ✅ Track DG running
                 });
               }}
-              disabled={isSimulating || isDG1_ON || isDG2_ON || isEB1_ON || isEB2_ON || isDGRunning}
+              disabled={isSimulating || isDG1_ON || isDG2_ON || isEB1_ON || isEB2_ON || isDGRunning }
             >
-              Start DG
+              Start {currentDG} Manually From Controls Panel
             </button>
             <button 
               id="manualCloseDGAcb" 
@@ -878,9 +854,9 @@ const AsansolOperationSimulator = () => {
                 dgStateSetter(true);
                 logEvent(`${currentDG} Incomer ACB closed manually.`, 'success');
               }}
-              disabled={isSimulating || isEB1_ON || isEB2_ON || !isDGRunning || (isDG1_ON || isDG2_ON)}
+              disabled={isSimulating || isEB1_ON || isEB2_ON || !isDGRunning || (isDG1_ON || isDG2_ON || isMobileDG_ON)}
             >
-              Close DG Incomer ACB
+              Close {currentDG} Incomer ACB
             </button>
 
             {/* Close Bus Couplers */}
@@ -889,13 +865,13 @@ const AsansolOperationSimulator = () => {
               className="action-button"
               onClick={() => {
                 closeBusCoupler1();
-                if (currentDG === 'DG-2' && busCoupler2Status === 'closed') {
-                  updateStatus(setLt1Status, 'on', 'LIVE (DG-2)');
+                if (currentDG === 'DG-2' || currentDG === 'Mobile-DG' && busCoupler2Status === 'closed') {
+                  updateStatus(setLt1Status, 'on', `LIVE (${currentDG})`);
                 }
               }}
               disabled={
-                isSimulating || busCoupler1Status === 'closed' || (!isDG1_ON && !isDG2_ON) ||
-                (currentDG === 'DG-2' && busCoupler2Status === 'open')
+                isSimulating || busCoupler1Status === 'closed' || (!isDG1_ON && !isDG2_ON && !isMobileDG_ON) ||
+                (currentDG === 'DG-2' && busCoupler2Status === 'open') || (currentDG === 'Mobile-DG' && busCoupler2Status === 'open')
               }
             >
               Close Bus Coupler-1
@@ -910,7 +886,7 @@ const AsansolOperationSimulator = () => {
                 }
               }}
               disabled={
-                isSimulating || busCoupler2Status === 'closed' || (!isDG1_ON && !isDG2_ON) ||
+                isSimulating || busCoupler2Status === 'closed' || (!isDG1_ON && !isDG2_ON && !isMobileDG_ON) ||
                 (currentDG === 'DG-1' && busCoupler1Status === 'open')
               }
             >
@@ -930,9 +906,9 @@ const AsansolOperationSimulator = () => {
                 updateStatus(setSplitter1Status, 'on', '⚡ACB CLOSED');
                 updateStatus(setSplitter2Status, 'on', '⚡ACB CLOSED');
                 logEvent('Total EB Supply restore.', 'info');
-                setIsEB_ON(true);
+                // setIsEB_ON(true);
               }}
-              disabled={isSimulating || isEB1_ON || isEB2_ON || !isDGRunning}
+              disabled={isSimulating || isEB1_ON || isEB2_ON || !isDGRunning || htVCBStatus.text === '⚡VCB CLOSED'}
             >
               EB Supply Restore
             </button>
@@ -970,7 +946,7 @@ const AsansolOperationSimulator = () => {
                 if (isMobileDG_ON) setIsMobileDG_ON(false);
                 setIsDGRunning(false);
               }}
-              disabled={isSimulating || (!isDG1_ON && !isDG2_ON) || busCoupler1Status === 'closed' || busCoupler2Status === 'closed'}
+              disabled={isSimulating || (!isDG1_ON && !isDG2_ON && !isMobileDG_ON) || busCoupler1Status === 'closed' || busCoupler2Status === 'closed'}
             >
               Open DG Incomer ACB
             </button>
@@ -985,7 +961,7 @@ const AsansolOperationSimulator = () => {
                 setIsEB1_ON(true);
                 logEvent('EB-1 Incomer closed manually.', 'success');
               }}
-              disabled={isSimulating || isEB1_ON || isDG1_ON || isDG2_ON}
+              disabled={isSimulating || isEB1_ON || isDG1_ON || isDG2_ON || isMobileDG_ON || transformerStatus.light === 'off'}
             >
               Close EB-1 ACB
             </button>
@@ -998,7 +974,7 @@ const AsansolOperationSimulator = () => {
                 setIsEB2_ON(true);
                 logEvent('EB-2 Incomer closed manually.', 'success');
               }}
-              disabled={isSimulating || isEB2_ON || isDG1_ON || isDG2_ON || !isEB1_ON}
+              disabled={isSimulating || isEB2_ON || isDG1_ON || isDG2_ON || isMobileDG_ON || transformerStatus.light === 'off'}
             >
               Close EB-2 ACB
             </button>
