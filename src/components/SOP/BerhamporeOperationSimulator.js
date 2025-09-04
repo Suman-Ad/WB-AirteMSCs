@@ -8,8 +8,8 @@ const BerhamporeOperationSimulator = () => {
   const [isEB2_ON, setIsEB2_ON] = useState(true);
   const [isDG1_ON, setIsDG1_ON] = useState(false);
   const [isDG2_ON, setIsDG2_ON] = useState(false);
+  const [isMobileDG1_ON, setIsMobileDG1_ON] = useState(false);
   const [isMobileDG_ON, setIsMobileDG_ON] = useState(false);
-  const [isMobile1DG_ON, setIsMobileDG1_ON] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [currentDG, setCurrentDG] = useState('DG-1');
   const [operationMode, setOperationMode] = useState('auto');
@@ -94,7 +94,7 @@ const BerhamporeOperationSimulator = () => {
     if (dg2TimerRef.current) clearInterval(dg2TimerRef.current);
     if (eb1TimerRef.current) clearInterval(eb1TimerRef.current);
     if (eb2TimerRef.current) clearInterval(eb2TimerRef.current);
-    if (mobileDG1TimerRef.current) clearInterval(mobileDG1TimerRef.current);
+    if (mobileDG1TimerRef.current) clearInterval(mobileDGTimerRef.current);
     if (mobileDGTimerRef.current) clearInterval(mobileDGTimerRef.current);
     if (busCoupler1TimerRef.current) clearInterval(busCoupler1TimerRef.current);
     if (busCoupler2TimerRef.current) clearInterval(busCoupler2TimerRef.current);
@@ -110,6 +110,7 @@ const BerhamporeOperationSimulator = () => {
     setIsEB2_ON(true);
     setIsDG1_ON(false);
     setIsDG2_ON(false);
+    setIsMobileDG1_ON(false);
     setIsMobileDG_ON(false);
     
     updateStatus(sethtVCBStatus, 'on', '⚡VCB CLOSED');
@@ -140,6 +141,8 @@ const BerhamporeOperationSimulator = () => {
     setDg2Timer(0);
     setEb1Timer(0);
     setEb2Timer(0);
+    setmobileDG1Timer(0);
+    setmobileDGTimer(0);
     setBusCoupler1Timer(0);
     setBusCoupler2Timer(0);
     
@@ -164,13 +167,13 @@ const BerhamporeOperationSimulator = () => {
 
   const openBusCoupler1 = () => {
     if (busCoupler1Status === 'open') return;
-    if (isDG1_ON || isDG2_ON || isMobileDG_ON && (!isEB1_ON && !isEB2_ON)) {
-      const ltSetter = isDG1_ON ? setLt2Status : setLt1Status;
+    if (isDG1_ON || isDG2_ON || isMobileDG1_ON || isMobileDG_ON && (!isEB1_ON && !isEB2_ON)) {
+      const ltSetter = isDG1_ON || isMobileDG1_ON ? setLt2Status : setLt1Status;
       setBusCoupler1Status('open');
       updateStatus(setBusCoupler1StatusDisplay, 'off', 'OPEN');
       updateStatus(ltSetter, 'off', 'NO SUPPLY');
       logEvent('Bus Coupler-1 opened (isolated).', 'info');  
-    } else if (isEB1_ON || isEB2_ON && !(!isDG1_ON && !isDG2_ON)) {
+    } else if (isEB1_ON || isEB2_ON && !(!isDG1_ON && !isDG2_ON && !isMobileDG1_ON && !isMobileDG_ON)) {
       const ltSetter = isEB1_ON ? setLt2Status : setLt1Status;
       setBusCoupler1Status('open');
       updateStatus(setBusCoupler1StatusDisplay, 'off', 'OPEN');
@@ -181,13 +184,13 @@ const BerhamporeOperationSimulator = () => {
 
   const openBusCoupler2 = () => {
     if (busCoupler2Status === 'open') return;
-    if (isDG1_ON || isDG2_ON || isMobileDG_ON && (!isEB1_ON && !isEB2_ON)) {
-      const ltSetter = isDG1_ON ? setLt2Status : setLt1Status;
+    if (isDG1_ON || isDG2_ON || isMobileDG1_ON || isMobileDG_ON && (!isEB1_ON && !isEB2_ON)) {
+      const ltSetter = isDG1_ON || isMobileDG1_ON ? setLt2Status : setLt1Status;
       setBusCoupler2Status('open');
       updateStatus(setBusCoupler2StatusDisplay, 'off', 'OPEN');
       updateStatus(ltSetter, 'off', 'NO SUPPLY');
       logEvent('Bus Coupler-2 opened (isolated).', 'info');
-    } else if (isEB1_ON || isEB2_ON && !(!isDG1_ON && !isDG2_ON)) {
+    } else if (isEB1_ON || isEB2_ON && !(!isDG1_ON && !isDG2_ON && !isMobileDG1_ON && !isMobileDG_ON)) {
       const ltSetter = isEB1_ON ? setLt2Status : setLt1Status;
       setBusCoupler2Status('open');
       updateStatus(setBusCoupler2StatusDisplay, 'off', 'OPEN');
@@ -220,10 +223,10 @@ const BerhamporeOperationSimulator = () => {
     logEvent('All EB incomers have opened. Both LT Panels are de-energized.', 'info');
 
     const selectedDG = currentDG;
-    const dgLightSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : selectedDG === 'Mobile-DG' ? setMobileDGStatus : setMobileDG1Status;
-    const dgTimerSetter = selectedDG === 'DG-1' ? setDg1Timer : selectedDG === 'DG-2' ? setDg2Timer : selectedDG === 'Mobile-DG' ? setmobileDGTimer : setmobileDG1Timer;
-    const ltLoadSetter = selectedDG === 'DG-1' ? setLt1Status : setLt2Status;
-    const dgStatusSetter = selectedDG === 'DG-1' ? setIsDG1_ON : selectedDG === 'DG-2' ? setIsDG2_ON : selectedDG === 'Mobile-DG' ? setIsMobileDG_ON : setIsMobileDG1_ON;
+    const dgLightSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : selectedDG === 'Mobile-DG1' ? setMobileDG1Status: setMobileDGStatus;
+    const dgTimerSetter = selectedDG === 'DG-1' ? setDg1Timer : selectedDG === 'DG-2' ? setDg2Timer : selectedDG === 'Mobile-DG1' ? setmobileDG1Timer : setmobileDGTimer;
+    const ltLoadSetter = selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ? setLt1Status : setLt2Status;
+    const dgStatusSetter = selectedDG === 'DG-1' ? setIsDG1_ON : selectedDG === 'DG-2' ? setIsDG2_ON : selectedDG === 'Mobile-DG1' ? setIsMobileDG1_ON : setIsMobileDG_ON;
 
     updateStatus(dgLightSetter, 'standby', 'STARTING...');
     logEvent(`${selectedDG} received start signal. DG is starting...`, 'info');
@@ -240,7 +243,8 @@ const BerhamporeOperationSimulator = () => {
     }, 1000);
 
     // Start DG timer
-    dg1TimerRef.current = startTimer(10, dgTimerSetter, () => {
+    const dgTimerRef = selectedDG === 'DG-1' ? dg1TimerRef : selectedDG === 'DG-2' ? dg2TimerRef : selectedDG === 'Mobile-DG1' ? mobileDG1TimerRef: mobileDGTimerRef;
+    dgTimerRef.current = startTimer(10, dgTimerSetter, () => {
       clearInterval(dgMeterIntervalRef.current);
       setDgMeter(prev => ({...prev, visible: false}));
       
@@ -251,7 +255,7 @@ const BerhamporeOperationSimulator = () => {
       dgStatusSetter(true);
       
       // Close bus couplers in sequence
-      if (selectedDG === 'DG-1') {
+      if (selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ) {
         updateStatus(setBusCoupler1StatusDisplay, 'standby', 'CLOSING...');
         busCoupler1TimerRef.current = startTimer(9, setBusCoupler1Timer, () => {
           closeBusCoupler1();
@@ -349,8 +353,8 @@ const BerhamporeOperationSimulator = () => {
     // Complex restoration logic would go here
     // This is a simplified version for demonstration
     
-    if (isDG1_ON || isDG2_ON || isMobileDG_ON) {
-      const selectedDG = isDG1_ON ? 'DG-1' : isDG2_ON ? 'DG-2' : 'Mobile-DG';
+    if (isDG1_ON || isDG2_ON || isMobileDG1_ON || isMobileDG_ON) {
+      const selectedDG = isDG1_ON ? 'DG-1' : isDG2_ON ? 'DG-2' : isMobileDG1_ON ? 'Mobile-DG1' : 'Mobile-DG';
       
       updateStatus(sethtVCBStatus, 'on', '⚡VCB CLOSED');
       updateStatus(setTransformerStatus, 'on', '⚡POWER ON');
@@ -359,7 +363,7 @@ const BerhamporeOperationSimulator = () => {
       updateStatus(setSplitter2Status, 'on', '⚡ACB CLOSED');
       logEvent('Transformer and Main I/C online. Executing restore sequence (DG running).', 'info');
 
-      if (isDG2_ON || isMobileDG_ON && !isDG1_ON) {
+      if (isDG2_ON || isMobileDG_ON && !isDG1_ON && !isMobileDG1_ON) {
       // Simplified restoration process
       updateStatus(setBusCoupler1StatusDisplay, 'standby', 'OPENING...');
       busCoupler1TimerRef.current = startTimer(4, setBusCoupler1Timer, () => {
@@ -379,34 +383,35 @@ const BerhamporeOperationSimulator = () => {
             updateStatus(setLt1Status, 'on', 'LIVE (EB-1)');
             logEvent('Step2: EB-1 closed. LT-1 restored to EB-1.', 'success');
 
-            const dgStatusSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : selectedDG === 'Mobile-DG' ? setMobileDGStatus : setMobileDG1Status;
+            const dgStatusSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : selectedDG === 'Mobile-DG1' ? setMobileDG1Status : setMobileDGStatus;
             updateStatus(dgStatusSetter, 'standby', 'OPENING...');
             {/* Set Time 180 sec*/}
-            const dgTimerSetter = selectedDG === 'DG-1' ? setDg1Timer : selectedDG === 'DG-2' ? setDg2Timer : selectedDG === 'Mobile-DG' ? setmobileDGTimer : setmobileDG1Timer;
-            const dgTimerRef = selectedDG === 'DG-1' ? dg1TimerRef : selectedDG === 'DG-2' ? dg2TimerRef : selectedDG === 'Mobile-DG' ? mobileDGTimerRef : mobileDG1TimerRef;
-            dgTimerRef.current = startTimer(10, dgTimerSetter, () => {
-              const dgStateSetter = selectedDG === 'DG-1' ? setIsDG1_ON : selectedDG === 'DG-2' ? setIsDG2_ON : selectedDG === 'Mobile-DG' ? setIsMobileDG_ON : setIsMobileDG1_ON;
-              const ltSetter = selectedDG === 'DG-1' ? setLt1Status : setLt2Status;
+            const dgTimerSetter = selectedDG === 'DG-1' ? setDg1Timer : selectedDG === 'DG-2' ? setDg2Timer : selectedDG === 'Mobile-DG1' ? setmobileDG1Timer : setmobileDGTimer;
+            const dgTimerRef = selectedDG === 'DG-1' ? dg1TimerRef : selectedDG === 'DG-2' ? dg2TimerRef : selectedDG === 'Mobile-DG1' ? mobileDG1TimerRef : mobileDGTimerRef;
+            dgTimerRef.current = startTimer(600, dgTimerSetter, () => {
+              const dgStateSetter = selectedDG === 'DG-1' ? setIsDG1_ON : selectedDG === 'DG-2' ? setIsDG2_ON : selectedDG === 'Mobile-DG1' ? setIsMobileDG1_ON : setIsMobileDG_ON;
+              const ltSetter = selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ? setLt1Status : setLt2Status;
               
-              updateStatus(dgStatusSetter, 'standby', `OPEN (Running ${selectedDG} in IDEL Mode......)`);
+              updateStatus(dgStatusSetter, 'off', `OPEN (Running ${selectedDG} in IDEL Mode......)`);
               logEvent('Step4: DG incomer stopped. DG-side LT -> NO SUPPLY.', 'info');
               logEvent('Step4: DG incomer stopped. DG-side LT -> NO SUPPLY.', 'info');
               updateStatus(ltSetter, 'off', 'NO SUPPLY');
               dgStateSetter(false);
               dgTimerRef.current = startTimer(180, dgTimerSetter, () => {
                 updateStatus(dgStatusSetter, 'off', `OPEN (DG STOP)`);
+                resetSystem();
               });
 
               updateStatus(setEb2Status, 'standby', 'CLOSING...');
 
-              const ebTimerSetter = selectedDG === 'DG-1' ? setEb1Timer : setEb2Timer;
+              const ebTimerSetter = selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ? setEb1Timer : setEb2Timer;
               eb2TimerRef.current = startTimer(2, ebTimerSetter, () => {
-                const ebStatusSetter = selectedDG === 'DG-1' ? setEb1Status : setEb2Status;
-                const ebStateSetter = selectedDG === 'DG-1' ? setIsEB1_ON : setIsEB2_ON;
+                const ebStatusSetter = selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ? setEb1Status : setEb2Status;
+                const ebStateSetter = selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ? setIsEB1_ON : setIsEB2_ON;
                 
                 updateStatus(ebStatusSetter, 'on', 'CLOSED');
                 ebStateSetter(true);
-                updateStatus(ltSetter, 'on', `LIVE (EB-${selectedDG === 'DG-1' ? '1' : '2'})`);
+                updateStatus(ltSetter, 'on', `LIVE (EB-${selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ? '1' : '2'})`);
                 logEvent('Step5: EB on DG side closed and DG-side LT restored to EB.', 'success');
 
                 setBusCoupler1Status('open');
@@ -416,7 +421,7 @@ const BerhamporeOperationSimulator = () => {
             });
           });
         });
-      })} else if (isDG1_ON && !isDG2_ON && !isMobileDG_ON) {
+      })} else if (isDG1_ON || isMobileDG1_ON && !isDG2_ON && !isMobileDG_ON) {
         updateStatus(setBusCoupler2StatusDisplay, 'standby', 'OPENING...');
         busCoupler2TimerRef.current = startTimer(4, setBusCoupler2Timer, () => {
         openBusCoupler2();
@@ -436,32 +441,34 @@ const BerhamporeOperationSimulator = () => {
             updateStatus(setLt2Status, 'on', 'LIVE (EB-1)');
             logEvent('Step2: EB-1 closed. LT-1 restored to EB-1.', 'success');
             updateStatus(setDg1Status, 'standby', 'OPENING...');
-            const dgTimerSetter = selectedDG === 'DG-1' ? setDg1Timer : setDg2Timer;
-            dg1TimerRef.current = startTimer(10, dgTimerSetter, () => {
-              const dgStatusSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : selectedDG === 'Mobile-DG' ? setMobileDGStatus : setMobileDG1Status;
-              const dgStateSetter = selectedDG === 'DG-1' ? setIsDG1_ON : selectedDG === 'DG-2' ? setIsDG2_ON : selectedDG === 'Mobile-DG' ? setIsMobileDG_ON : setIsMobileDG1_ON;
-              const ltSetter = selectedDG === 'DG-1' ? setLt1Status : setLt2Status;
+            const dgTimerSetter = selectedDG === 'DG-1' ? setDg1Timer : selectedDG === 'DG-1'? setDg2Timer : selectedDG === 'Mobile-DG1'? setmobileDG1Timer : setmobileDGTimer;
+  
+            const dgTimerRef = selectedDG === 'DG-1' ? dg1TimerRef : selectedDG === 'DG-2' ? dg2TimerRef : selectedDG === 'Mobile-DG1' ? mobileDG1TimerRef : mobileDGTimerRef;
+            dgTimerRef.current = startTimer(600, dgTimerSetter, () => {
+              const dgStatusSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : selectedDG === 'Mobile-DG1' ? setMobileDG1Status : setMobileDGStatus;
+              const dgStateSetter = selectedDG === 'DG-1' ? setIsDG1_ON : selectedDG === 'DG-2' ? setIsDG2_ON : selectedDG === 'Mobile-DG1' ? setIsMobileDG1_ON : setIsMobileDG_ON;
+              const ltSetter = selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ? setLt1Status : setLt2Status;
               
-              updateStatus(dgStatusSetter, 'standby', `OPEN (Running ${selectedDG} in IDEL Mode......)`);
+              updateStatus(dgStatusSetter, 'off', `OPEN (Running ${selectedDG} in IDEL Mode......)`);
               logEvent('Step4: DG incomer stopped. DG-side LT -> NO SUPPLY.', 'info');
               updateStatus(ltSetter, 'off', 'NO SUPPLY');
               dgStateSetter(false);
               {/*set time 180 sec hear for idel time */}
-              dg1TimerRef.current = startTimer(180, dgTimerSetter, () => {
+              dgTimerRef.current = startTimer(180, dgTimerSetter, () => {
                 updateStatus(dgStatusSetter, 'off', `OPEN (DG STOP)`);
                 resetSystem();
               });
 
               updateStatus(setEb1Status, 'standby', 'CLOSING...');
 
-              const ebTimerSetter = selectedDG === 'DG-1' ? setEb1Timer : setEb2Timer;
+              const ebTimerSetter = selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ? setEb1Timer : setEb2Timer;
               eb1TimerRef.current = startTimer(2, ebTimerSetter, () => {
-                const ebStatusSetter = selectedDG === 'DG-1' ? setEb1Status : setEb2Status;
-                const ebStateSetter = selectedDG === 'DG-1' ? setIsEB1_ON : setIsEB2_ON;
+                const ebStatusSetter = selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ? setEb1Status : setEb2Status;
+                const ebStateSetter = selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ? setIsEB1_ON : setIsEB2_ON;
                 
                 updateStatus(ebStatusSetter, 'on', 'CLOSED');
                 ebStateSetter(true);
-                updateStatus(ltSetter, 'on', `LIVE (EB-${selectedDG === 'DG-1' ? '1' : '2'})`);
+                updateStatus(ltSetter, 'on', `LIVE (EB-${selectedDG === 'DG-1' || selectedDG === 'Mobile-DG1' ? '1' : '2'})`);
                 logEvent('Step5: EB on DG side closed and DG-side LT restored to EB.', 'success');
 
                 setBusCoupler1Status('open');
@@ -537,7 +544,7 @@ const BerhamporeOperationSimulator = () => {
     updateStatus(setLt1Status, 'off', 'NO SUPPLY');
     updateStatus(setLt2Status, 'off', 'NO SUPPLY');
 
-    const dgLightSetter = currentDG === 'DG-1' ? setDg1Status : currentDG === 'DG-2' ? setDg2Status : currentDG === 'Mobile-DG' ? setMobileDGStatus : setMobileDG1Status;
+    const dgLightSetter = currentDG === 'DG-1' ? setDg1Status : currentDG === 'DG-2' ? setDg2Status : setMobileDGStatus;
     const dgTimerSetter = currentDG === 'DG-1' ? setDg1Timer : setDg2Timer;
     const ltSetter = currentDG === 'DG-1' ? setLt1Status : setLt2Status;
     const dgStateSetter = currentDG === 'DG-1' ? setIsDG1_ON : currentDG === 'DG-2' ? setIsDG2_ON : setIsMobileDG_ON;
@@ -592,8 +599,8 @@ const BerhamporeOperationSimulator = () => {
   // Render the component
   return (
     <div className="dhr-dashboard-container">
-      <h1 className='h12'>Berhampore MSC LT Panel Operation Simulator - V12</h1>
-      <p style={{textAlign: 'center'}}>This model demonstrates the system's PLC logic for automatic and manual changeovers. Timers are visible for every timed action.</p>
+      <h1 className='h12'>Berhampore MSC LT Panel <strong>"Auto/Manual"</strong> Operation Simulator</h1>
+      <p style={{textAlign: 'center'}}>This model demonstrates the system's logic for automatic and manual changeovers. Timers are visible for every timed action.</p>
 
       <div className="mode-switch">
         <label>Operation Mode:</label>
@@ -616,118 +623,165 @@ const BerhamporeOperationSimulator = () => {
         />
         <label htmlFor="manualMode">Manual</label>
       </div>
-
+      {/* <div style={{textAlign:'center'}}><h1>EB </h1></div> */}
       <div className="opdashboard">
         <div className="panel">
-          <h3>11kV HT Panel (VCB)</h3>
+          <h3>11kV HT Panel (VCB 1250A)</h3>
+          <p>Incoming From WBSEDCL VCB</p>
           <div className={`status-light ${htVCBStatus.light}`}></div>
           <p>{htVCBStatus.text}</p>
         </div>
-
+      </div>
+      <div className="opdashboard">
         <div className="panel">
-          <h3>11/0.433kV Transformer</h3>
+          <h3>Transformer (11/0.433kV-750kVA)</h3>
+          <p>Incoming From HT Panel</p>
           <div className={`status-light ${transformerStatus.light}`}></div>
           <p>{transformerStatus.text}</p>
         </div>
+      </div>
 
+      <div className="opdashboard">
         <div className="panel">
-          <h3>Main LT 0.433kV I/C Panel</h3>
+          <h3>Main LT 0.433kV I/C Panel (ACB 1600A)</h3>
+          <p>Incoming From Transformer</p>
           <div className={`status-light ${mainICStatus.light}`}></div>
           <p>{mainICStatus.text}</p>
-        </div>
+          <div style={{display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: '20px',
+            marginBottom: '30px',
+            padding: '20px',
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #e4eaf1 100%)',
+            borderRadius: '12px',
+            boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)'}}>
+            <div className="panel">
+              <h3>MLTP-I (ACB 1600A)</h3>
+              <p>Incoming From Main I/C Panel</p>
+              <div className={`status-light ${splitter1Status.light}`}></div>
+              <p>{splitter1Status.text}</p>
+            </div>
 
-        <div className="panel">
-          <h3>MLTP Panel-I</h3>
-          <div className={`status-light ${splitter1Status.light}`}></div>
-          <p>{splitter1Status.text}</p>
-        </div>
-
-        <div className="panel">
-          <h3>MLTP Panel-II</h3>
-          <div className={`status-light ${splitter2Status.light}`}></div>
-          <p>{splitter2Status.text}</p>
-        </div>
-
-        <div className="panel">
-          <h3>EB-1 Incomer (LT Panel-1)</h3>
-          <div className={`status-light ${eb1Status.light}`}></div>
-          <p>{eb1Status.text}</p>
-          <div className="timer-container" style={{display: eb1Timer > 0 ? 'block' : 'none'}}>
-            Timer: <span className="timer-display">{eb1Timer}</span>s
+            <div className="panel">
+              <h3>MLTP-II (ACB 1600A)</h3>
+              <p>Incoming From Main I/C Panel</p>
+              <div className={`status-light ${splitter2Status.light}`}></div>
+              <p>{splitter2Status.text}</p>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="panel">
-          <h3>EB-2 Incomer (LT Panel-2)</h3>
-          <div className={`status-light ${eb2Status.light}`}></div>
-          <p>{eb2Status.text}</p>
-          <div className="timer-container" style={{display: eb2Timer > 0 ? 'block' : 'none'}}>
-            Timer: <span className="timer-display">{eb2Timer}</span>s
-          </div>
-        </div>
-
-        <div className="panel">
-          <h3>DG-1 Incomer (LT Panel-1)</h3>
-          <div className={`status-light ${dg1Status.light}`}></div>
-          <p>{dg1Status.text}</p>
-          <div className="timer-container" style={{display: dg1Timer > 0 ? 'block' : 'none'}}>
-            Timer: <span className="timer-display">{dg1Timer}</span>s
-          </div>
-        </div>
-
-        <div className="panel">
-          <h3>DG-2 Incomer (LT Panel-2)</h3>
-          <div className={`status-light ${dg2Status.light}`}></div>
-          <p>{dg2Status.text}</p>
-          <div className="timer-container" style={{display: dg2Timer > 0 ? 'block' : 'none'}}>
-            Timer: <span className="timer-display">{dg2Timer}</span>s
-          </div>
-        </div>
-
-        <div className="panel">
-          <h3>Mobile DG-1 Incomer (LT Panel-1)</h3>
-          <div className={`status-light ${mobileDG1Status.light}`}></div>
-          <p>{mobileDG1Status.text}</p>
-          <div className="timer-container" style={{display: mobileDG1Timer > 0 ? 'block' : 'none'}}>
-            Timer: <span className="timer-display">{mobileDG1Timer}</span>s
-          </div>
-        </div>
-
-        <div className="panel">
-          <h3>Mobile DG-2 Incomer (LT Panel-2)</h3>
-          <div className={`status-light ${mobileDGStatus.light}`}></div>
-          <p>{mobileDGStatus.text}</p>
-          <div className="timer-container" style={{display: mobileDGTimer > 0 ? 'block' : 'none'}}>
-            Timer: <span className="timer-display">{mobileDGTimer}</span>s
-          </div>
-        </div>
-
-        <div className="panel">
-          <h3>Bus Coupler-1 (LT Panel-1)</h3>
-          <div className={`status-light ${busCoupler1StatusDisplay.light}`}></div>
-          <p>{busCoupler1StatusDisplay.text}</p>
-          <div className="timer-container" style={{display: busCoupler1Timer > 0 ? 'block' : 'none'}}>
-            Timer: <span className="timer-display">{busCoupler1Timer}</span>s
-          </div>
-        </div>
-
-        <div className="panel">
-          <h3>Bus Coupler-2 (LT Panel-2)</h3>
-          <div className={`status-light ${busCoupler2StatusDisplay.light}`}></div>
-          <p>{busCoupler2StatusDisplay.text}</p>
-          <div className="timer-container" style={{display: busCoupler2Timer > 0 ? 'block' : 'none'}}>
-            Timer: <span className="timer-display">{busCoupler2Timer}</span>s
-          </div>
-        </div>
-
+      <div className='opdashboard'>
         <div className="panel">
           <h3>LT Panel-1 Load</h3>
+          <p>Outgoing To 1st/2nd/3rd Floor Sub-LT Panel-1</p>
+          {/* Sub-Panel-1 */}
+          <div style={{display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: '20px',
+            marginBottom: '30px',
+            padding: '20px',
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #e4eaf1 100%)',
+            borderRadius: '12px',
+            boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)'}}>
+            <div className="panel">
+              <h3>EB-1 Incomer (ACB 1600A LT Panel-1)</h3>
+              <p>Incoming From MLTP-I</p>
+              <div className={`status-light ${eb1Status.light}`}></div>
+              <p>{eb1Status.text}</p>
+              <div className="timer-container" style={{display: eb1Timer > 0 ? 'block' : 'none'}}>
+                Timer: <span className="timer-display">{eb1Timer}</span>s
+              </div>
+            </div>
+
+            <div className="panel">
+              <h3>DG-1 Incomer (ACB 1600A LT Panel-1)</h3>
+              <p>Incoming From 750kVA DG-1 Alternator Output</p>
+              <div className={`status-light ${dg1Status.light}`}></div>
+              <p>{dg1Status.text}</p>
+              <div className="timer-container" style={{display: dg1Timer > 0 ? 'block' : 'none'}}>
+                Timer: <span className="timer-display">{dg1Timer}</span>s
+              </div>
+            </div>
+
+            <div className="panel">
+              <h3>Bus Coupler-1 (ACB 1600A LT Panel-1)</h3>
+              <p>Connected With Buscoupler-2</p>
+              <div className={`status-light ${busCoupler1StatusDisplay.light}`}></div>
+              <p>{busCoupler1StatusDisplay.text}</p>
+              <div className="timer-container" style={{display: busCoupler1Timer > 0 ? 'block' : 'none'}}>
+                Timer: <span className="timer-display">{busCoupler1Timer}</span>s
+              </div>
+            </div>
+
+            <div className="panel">
+              <h3>Mobile DG-1 Incomer (ACB 1600A LT Panel-1)</h3>
+              <p>Incoming From Mobile DG Alternator Output</p>
+              <div className={`status-light ${mobileDG1Status.light}`}></div>
+              <p>{mobileDG1Status.text}</p>
+              <div className="timer-container" style={{display: mobileDG1Timer > 0 ? 'block' : 'none'}}>
+                Timer: <span className="timer-display">{mobileDG1Timer}</span>s
+              </div>
+            </div>
+
+          </div>
           <div className={`status-light ${lt1Status.light}`}></div>
           <p>{lt1Status.text}</p>
         </div>
-
+        
         <div className="panel">
           <h3>LT Panel-2 Load</h3>
+          <p>Outgoing To 1st/2nd/3rd Floor Sub-LT Panel-2</p>
+          {/* Sub-Panel-2 */}
+          <div style={{display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: '20px',
+            marginBottom: '30px',
+            padding: '20px',
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #e4eaf1 100%)',
+            borderRadius: '12px',
+            boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)'}}>
+            <div className="panel">
+              <h3>EB-2 Incomer (ACB 1600A LT Panel-2)</h3>
+              <p>Incoming From MLTP-II</p>
+              <div className={`status-light ${eb2Status.light}`}></div>
+              <p>{eb2Status.text}</p>
+              <div className="timer-container" style={{display: eb2Timer > 0 ? 'block' : 'none'}}>
+                Timer: <span className="timer-display">{eb2Timer}</span>s
+              </div>
+            </div>
+
+            <div className="panel">
+              <h3>DG-2 Incomer (ACB 1600A LT Panel-2)</h3>
+              <p>Incoming From 750kVA DG-2 Alternator Output</p>
+              <div className={`status-light ${dg2Status.light}`}></div>
+              <p>{dg2Status.text}</p>
+              <div className="timer-container" style={{display: dg2Timer > 0 ? 'block' : 'none'}}>
+                Timer: <span className="timer-display">{dg2Timer}</span>s
+              </div>
+            </div>
+
+            <div className="panel">
+              <h3>Bus Coupler-2 (ACB 1600A LT Panel-2)</h3>
+              <p>Connected With Buscoupler-1</p>
+              <div className={`status-light ${busCoupler2StatusDisplay.light}`}></div>
+              <p>{busCoupler2StatusDisplay.text}</p>
+              <div className="timer-container" style={{display: busCoupler2Timer > 0 ? 'block' : 'none'}}>
+                Timer: <span className="timer-display">{busCoupler2Timer}</span>s
+              </div>
+            </div>
+
+            <div className="panel">
+              <h3>Mobile DG-2 Incomer (ACB 1600A LT Panel-2)</h3>
+              <p>Incoming From Mobile DG Alternator Output</p>
+              <div className={`status-light ${mobileDGStatus.light}`}></div>
+              <p>{mobileDGStatus.text}</p>
+              <div className="timer-container" style={{display: mobileDGTimer > 0 ? 'block' : 'none'}}>
+                Timer: <span className="timer-display">{mobileDGTimer}</span>s
+              </div>
+            </div>
+          </div>
           <div className={`status-light ${lt2Status.light}`}></div>
           <p>{lt2Status.text}</p>
         </div>
@@ -788,25 +842,25 @@ const BerhamporeOperationSimulator = () => {
             >
               Simulate EB Restoration
             </button>
-            <button 
+            {/* <button 
               id="reset" 
               className="action-button"
               onClick={resetSystem}
               disabled={isSimulating}
             >
               Reset System
-            </button>
+            </button> */}
           </div>
         )}
 
         {/* Manual Mode Controls */}
         {operationMode === 'manual' && (
           <div className="control-group manual-buttons-container" id="manualControls">
-            <h3>Manual Mode Controls</h3>
-            <label htmlFor="manualDGSelector">Select DG:</label>
+            <h3><strong>Manual Mode Controls</strong></h3>
+            <label htmlFor="manualDGSelector">Select DG: {currentDG}</label>
             <select 
               id="manualDGSelector" 
-              value="" 
+              value={currentDG} 
               onChange={(e) => setCurrentDG(e.target.value)}
             >
               <option value="DG-1">DG-1</option>
@@ -836,68 +890,43 @@ const BerhamporeOperationSimulator = () => {
               }}
               disabled={isSimulating || !isEB1_ON || !isEB2_ON || isDG1_ON || isDG2_ON}
             >
-              EB Supply Failure
+              Stop EB Supply
             </button>
-            {/* <button 
-              id="manualOpenEB1" 
-              className="action-button"
-              onClick={() => {
-                updateStatus(setEb1Status, 'off', 'OPEN');
-                setIsEB1_ON(false);
-                updateStatus(setLt1Status, 'off', 'NO SUPPLY');
-                logEvent('EB-1 ACB opened manually.', 'info');
-              }}
-              disabled={isSimulating || !isEB1_ON || isDG1_ON || isDG2_ON}
-            >
-              Open EB-1 ACB
-            </button> */}
-            {/* <button 
-              id="manualOpenEB2" 
-              className="action-button"
-              onClick={() => {
-                updateStatus(setEb2Status, 'off', 'OPEN');
-                setIsEB2_ON(false);
-                updateStatus(setLt2Status, 'off', 'NO SUPPLY');
-                logEvent('EB-2 ACB opened manually.', 'info');
-              }}
-              disabled={isSimulating || !isEB2_ON || isDG1_ON || isDG2_ON || isEB1_ON}
-            >
-              Open EB-2 ACB
-            </button> */}
             <button 
               id="manualStartDG" 
               className="action-button"
               onClick={() => {
                 const selectedDG = currentDG;
-                const dgLightSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : selectedDG === 'Mobile-DG' ? setMobileDGStatus : setMobileDG1Status;
-                const dgTimer = selectedDG === 'DG-1' ? setDg1Timer : selectedDG === 'DG-2' ? setDg2Timer : selectedDG === 'DG-2' ? setmobileDGTimer : setmobileDG1Timer;
+                const dgLightSetter = selectedDG === 'DG-1' ? setDg1Status : selectedDG === 'DG-2' ? setDg2Status : selectedDG === 'Mobile-DG1' ? setMobileDG1Status : setMobileDGStatus;
+                const dgTimer = selectedDG === 'DG-1' ? setDg1Timer : selectedDG === 'DG-2' ? setDg2Timer : selectedDG === 'Mobile-DG1' ? setmobileDG1Timer : setmobileDGTimer;
+                const dgTimerRef = selectedDG === 'DG-1' ? dg1TimerRef : selectedDG === 'DG-2' ? dg2TimerRef : selectedDG === 'Mobile-DG1' ? mobileDG1TimerRef : mobileDGTimerRef;
                 updateStatus(dgLightSetter, 'standby', 'STARTING...');
                 logEvent(`Started ${currentDG} manually from local panel.`, 'info');
-                dg1TimerRef.current = startTimer(10, dgTimer, () => {
+                dgTimerRef.current = startTimer(10, dgTimer, () => {
                   updateStatus(dgLightSetter, 'standby', 'DG RUNNING...');
                   setIsDGRunning(true); // ✅ Track DG running
                 });
               }}
-              disabled={isSimulating || isDG1_ON || isDG2_ON || isEB1_ON || isEB2_ON || isDGRunning}
+              disabled={isSimulating || isDG1_ON || isDG2_ON || isEB1_ON || isEB2_ON || isDGRunning }
             >
-              Start DG
+              Start {currentDG} Manually From Controls Panel
             </button>
             <button 
               id="manualCloseDGAcb" 
               className="action-button"
               onClick={() => {
-                const dgLightSetter = currentDG === 'DG-1' ? setDg1Status : currentDG === 'DG-2' ? setDg2Status : currentDG === 'Mobile-DG' ? setMobileDGStatus : setMobileDG1Status;
+                const dgLightSetter = currentDG === 'DG-1' ? setDg1Status : currentDG === 'DG-2' ? setDg2Status : setMobileDGStatus;
                 const ltSetter = currentDG === 'DG-1' ? setLt1Status : setLt2Status;
-                const dgStateSetter = currentDG === 'DG-1' ? setIsDG1_ON : currentDG === 'DG-2' ? setIsDG2_ON : currentDG === 'Mobile-DG' ? setIsMobileDG_ON : setIsMobileDG1_ON;
+                const dgStateSetter = currentDG === 'DG-1' ? setIsDG1_ON : currentDG === 'DG-2' ? setIsDG2_ON : setIsMobileDG_ON;
 
                 updateStatus(dgLightSetter, 'on', 'CLOSED');
                 updateStatus(ltSetter, 'on', `LIVE (${currentDG})`);
                 dgStateSetter(true);
                 logEvent(`${currentDG} Incomer ACB closed manually.`, 'success');
               }}
-              disabled={isSimulating || isEB1_ON || isEB2_ON || !isDGRunning || (isDG1_ON || isDG2_ON)}
+              disabled={isSimulating || isEB1_ON || isEB2_ON || !isDGRunning || (isDG1_ON || isDG2_ON || isMobileDG_ON)}
             >
-              Close DG Incomer ACB
+              Close {currentDG} Incomer ACB
             </button>
 
             {/* Close Bus Couplers */}
@@ -906,13 +935,13 @@ const BerhamporeOperationSimulator = () => {
               className="action-button"
               onClick={() => {
                 closeBusCoupler1();
-                if (currentDG === 'DG-2' && busCoupler2Status === 'closed') {
-                  updateStatus(setLt1Status, 'on', 'LIVE (DG-2)');
+                if (currentDG === 'DG-2' || currentDG === 'Mobile-DG' && busCoupler2Status === 'closed') {
+                  updateStatus(setLt1Status, 'on', `LIVE (${currentDG})`);
                 }
               }}
               disabled={
-                isSimulating || busCoupler1Status === 'closed' || (!isDG1_ON && !isDG2_ON) ||
-                (currentDG === 'DG-2' && busCoupler2Status === 'open')
+                isSimulating || busCoupler1Status === 'closed' || (!isDG1_ON && !isDG2_ON && !isMobileDG_ON) ||
+                (currentDG === 'DG-2' && busCoupler2Status === 'open') || (currentDG === 'Mobile-DG' && busCoupler2Status === 'open')
               }
             >
               Close Bus Coupler-1
@@ -927,7 +956,7 @@ const BerhamporeOperationSimulator = () => {
                 }
               }}
               disabled={
-                isSimulating || busCoupler2Status === 'closed' || (!isDG1_ON && !isDG2_ON) ||
+                isSimulating || busCoupler2Status === 'closed' || (!isDG1_ON && !isDG2_ON && !isMobileDG_ON) ||
                 (currentDG === 'DG-1' && busCoupler1Status === 'open')
               }
             >
@@ -947,9 +976,9 @@ const BerhamporeOperationSimulator = () => {
                 updateStatus(setSplitter1Status, 'on', '⚡ACB CLOSED');
                 updateStatus(setSplitter2Status, 'on', '⚡ACB CLOSED');
                 logEvent('Total EB Supply restore.', 'info');
-                setIsEB_ON(true);
+                // setIsEB_ON(true);
               }}
-              disabled={isSimulating || isEB1_ON || isEB2_ON || !isDGRunning}
+              disabled={isSimulating || isEB1_ON || isEB2_ON || !isDGRunning || htVCBStatus.text === '⚡VCB CLOSED'}
             >
               EB Supply Restore
             </button>
@@ -975,7 +1004,7 @@ const BerhamporeOperationSimulator = () => {
               id="manualOpenDGAcb" 
               className="action-button"
               onClick={() => {
-                const dgLightSetter = isDG1_ON ? setDg1Status : isDG2_ON ? setDg2Status : isMobileDG_ON ? setMobileDGStatus : setMobileDG1Status;
+                const dgLightSetter = isDG1_ON ? setDg1Status : isDG2_ON ? setDg2Status : setMobileDGStatus;
                 updateStatus(dgLightSetter, 'off', 'OPEN');
                 updateStatus(setLt1Status, 'off', 'NO SUPPLY');
                 updateStatus(setLt2Status, 'off', 'NO SUPPLY');
@@ -987,7 +1016,7 @@ const BerhamporeOperationSimulator = () => {
                 if (isMobileDG_ON) setIsMobileDG_ON(false);
                 setIsDGRunning(false);
               }}
-              disabled={isSimulating || (!isDG1_ON && !isDG2_ON) || busCoupler1Status === 'closed' || busCoupler2Status === 'closed'}
+              disabled={isSimulating || (!isDG1_ON && !isDG2_ON && !isMobileDG_ON) || busCoupler1Status === 'closed' || busCoupler2Status === 'closed'}
             >
               Open DG Incomer ACB
             </button>
@@ -1002,7 +1031,7 @@ const BerhamporeOperationSimulator = () => {
                 setIsEB1_ON(true);
                 logEvent('EB-1 Incomer closed manually.', 'success');
               }}
-              disabled={isSimulating || isEB1_ON || isDG1_ON || isDG2_ON}
+              disabled={isSimulating || isEB1_ON || isDG1_ON || isDG2_ON || isMobileDG_ON || transformerStatus.light === 'off'}
             >
               Close EB-1 ACB
             </button>
@@ -1015,7 +1044,7 @@ const BerhamporeOperationSimulator = () => {
                 setIsEB2_ON(true);
                 logEvent('EB-2 Incomer closed manually.', 'success');
               }}
-              disabled={isSimulating || isEB2_ON || isDG1_ON || isDG2_ON || !isEB1_ON}
+              disabled={isSimulating || isEB2_ON || isDG1_ON || isDG2_ON || isMobileDG_ON || transformerStatus.light === 'off'}
             >
               Close EB-2 ACB
             </button>
@@ -1040,7 +1069,7 @@ const BerhamporeOperationSimulator = () => {
         )}
       </div>
 
-      <div className="log-panel">
+      {/* <div className="log-panel">
         <h3>System Event Log</h3>
         <div id="eventLog">
           {eventLog.map((entry, index) => (
@@ -1049,7 +1078,7 @@ const BerhamporeOperationSimulator = () => {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

@@ -587,7 +587,7 @@ const AsansolOperationSimulator = () => {
   // Render the component
   return (
     <div className="dhr-dashboard-container">
-      <h1 className='h12'>Asansol MSC LT Panel Operation Simulator - V12</h1>
+      <h1 className='h12'>Asansol MSC LT Panel <strong>"Auto/Manual"</strong> Operation Simulator</h1>
       <p style={{textAlign: 'center'}}>This model demonstrates the system's logic for automatic and manual changeovers. Timers are visible for every timed action.</p>
 
       <div className="mode-switch">
@@ -615,6 +615,7 @@ const AsansolOperationSimulator = () => {
       <div className="opdashboard">
         <div className="panel">
           <h3>11kV HT Panel (VCB 400A)</h3>
+          <p>Incomin From WBSEDCL VCB</p>
           <div className={`status-light ${htVCBStatus.light}`}></div>
           <p>{htVCBStatus.text}</p>
         </div>
@@ -622,6 +623,7 @@ const AsansolOperationSimulator = () => {
       <div className="opdashboard">
         <div className="panel">
           <h3>Transformer (11/0.433kV-1000kVA)</h3>
+          <p>Incoming From HT Panel (VCB 400A)</p>
           <div className={`status-light ${transformerStatus.light}`}></div>
           <p>{transformerStatus.text}</p>
         </div>
@@ -630,6 +632,7 @@ const AsansolOperationSimulator = () => {
       <div className="opdashboard">
         <div className="panel">
           <h3>Main LT 0.433kV I/C Panel (ACB 1600A)</h3>
+          <p>Incoming From Transformer 0.433kV LT Output</p>
           <div className={`status-light ${mainICStatus.light}`}></div>
           <p>{mainICStatus.text}</p>
           <div style={{display: 'grid',
@@ -642,12 +645,14 @@ const AsansolOperationSimulator = () => {
             boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)'}}>
             <div className="panel">
               <h3>Splitter Panel-I (ACB 1600A)</h3>
+              <p>Incoming from Main LT 0.433kV I/C Panel (ACB 1600A)</p>
               <div className={`status-light ${splitter1Status.light}`}></div>
               <p>{splitter1Status.text}</p>
             </div>
 
             <div className="panel">
               <h3>Splitter Panel-II (ACB 1600A)</h3>
+              <p>Incoming from Main LT 0.433kV I/C Panel (ACB 1600A)</p>
               <div className={`status-light ${splitter2Status.light}`}></div>
               <p>{splitter2Status.text}</p>
             </div>
@@ -658,6 +663,7 @@ const AsansolOperationSimulator = () => {
       <div className='opdashboard'>
         <div className="panel">
           <h3>LT Panel-1 Load</h3>
+          <p>Outgoing to GF PDB Panel-1</p>
           {/* Sub-Panel-1 */}
           <div style={{display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
@@ -669,6 +675,7 @@ const AsansolOperationSimulator = () => {
             boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)'}}>
             <div className="panel">
               <h3>EB-1 Incomer (ACB 1600A LT Panel-1)</h3>
+              <p>Incoming from Splitter Panel-I</p>
               <div className={`status-light ${eb1Status.light}`}></div>
               <p>{eb1Status.text}</p>
               <div className="timer-container" style={{display: eb1Timer > 0 ? 'block' : 'none'}}>
@@ -678,6 +685,7 @@ const AsansolOperationSimulator = () => {
 
             <div className="panel">
               <h3>DG-1 Incomer (ACB 1600A LT Panel-1)</h3>
+              <p>Incoming From 1010kVA DG-1 Alternator Output</p>
               <div className={`status-light ${dg1Status.light}`}></div>
               <p>{dg1Status.text}</p>
               <div className="timer-container" style={{display: dg1Timer > 0 ? 'block' : 'none'}}>
@@ -687,6 +695,7 @@ const AsansolOperationSimulator = () => {
 
             <div className="panel">
               <h3>Bus Coupler-1 (ACB 1600A LT Panel-1)</h3>
+              <p>Connected with Bus Coupler Panel-2</p>
               <div className={`status-light ${busCoupler1StatusDisplay.light}`}></div>
               <p>{busCoupler1StatusDisplay.text}</p>
               <div className="timer-container" style={{display: busCoupler1Timer > 0 ? 'block' : 'none'}}>
@@ -700,6 +709,7 @@ const AsansolOperationSimulator = () => {
         
         <div className="panel">
           <h3>LT Panel-2 Load</h3>
+          <p>Outgoing to GF PDB Panel-2</p>
           {/* Sub-Panel-2 */}
           <div style={{display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
@@ -711,6 +721,7 @@ const AsansolOperationSimulator = () => {
             boxShadow: '0 5px 15px rgba(0, 0, 0, 0.08)'}}>
             <div className="panel">
               <h3>EB-2 Incomer (ACB 1600A LT Panel-2)</h3>
+              <p>Incoming from Splitter Panel-II</p>
               <div className={`status-light ${eb2Status.light}`}></div>
               <p>{eb2Status.text}</p>
               <div className="timer-container" style={{display: eb2Timer > 0 ? 'block' : 'none'}}>
@@ -720,6 +731,7 @@ const AsansolOperationSimulator = () => {
 
             <div className="panel">
               <h3>DG-2 Incomer (ACB 1600A LT Panel-2)</h3>
+              <p>Incoming From 1010kVA DG-2 Alternator Output</p>
               <div className={`status-light ${dg2Status.light}`}></div>
               <p>{dg2Status.text}</p>
               <div className="timer-container" style={{display: dg2Timer > 0 ? 'block' : 'none'}}>
@@ -729,6 +741,7 @@ const AsansolOperationSimulator = () => {
 
             <div className="panel">
               <h3>Bus Coupler-2 (ACB 1600A LT Panel-2)</h3>
+              <p>Connected with Bus Coupler Panel-1</p>
               <div className={`status-light ${busCoupler2StatusDisplay.light}`}></div>
               <p>{busCoupler2StatusDisplay.text}</p>
               <div className="timer-container" style={{display: busCoupler2Timer > 0 ? 'block' : 'none'}}>
@@ -738,6 +751,7 @@ const AsansolOperationSimulator = () => {
 
             <div className="panel">
               <h3>Mobile DG Incomer (ACB 1600A LT Panel-2)</h3>
+              <p>Incoming From Mobile DG Alternator Output</p>
               <div className={`status-light ${mobileDGStatus.light}`}></div>
               <p>{mobileDGStatus.text}</p>
               <div className="timer-container" style={{display: mobileDGTimer > 0 ? 'block' : 'none'}}>

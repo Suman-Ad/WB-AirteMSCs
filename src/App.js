@@ -60,6 +60,7 @@ function App() {
         <Route path="/login" element={<Login setUserData={setUserData} />} />
         <Route path="/register" element={<Register />} />
         <Route path="/asansol-operation" element={<AsansolOperationSimulator />} />
+        <Route path="/berhampore-operation" element={<BerhamporeOperationSimulator />} />
 
         {/* Protected Layout Routes */}
         <Route
