@@ -18,6 +18,9 @@ const IncidentDashboard = ({ userData }) => {
     equipment: ''
     });
 
+  // New state for modal
+  const [selectedIncident, setSelectedIncident] = useState(null);
+
   // Fetch dashboard instruction
   useEffect(() => {
     const fetchInstruction = async () => {
@@ -133,6 +136,7 @@ const IncidentDashboard = ({ userData }) => {
           onChange={(e) => setFilters({...filters, site: e.target.value})}
         >
           <option value="">All Sites</option>
+          <option value="Asansol">Asansol</option>
           <option value="Site1">Site 1</option>
           <option value="Site2">Site 2</option>
         </select>
@@ -207,7 +211,7 @@ const IncidentDashboard = ({ userData }) => {
                   <td>{incident.status}</td>
                   <td>
                     <button 
-                      onClick={() => console.log('View details:', incident)}
+                      onClick={() => setSelectedIncident(incident)}
                     >
                       View
                     </button>
@@ -216,6 +220,39 @@ const IncidentDashboard = ({ userData }) => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Incident Details Modal */}
+      {selectedIncident && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h1 className='noticeboard-header'><strong>🚨Incident Details</strong></h1>
+            <div className='child-container'>
+              <p><strong>Circle:</strong> {selectedIncident.circle}</p>
+              <p><strong>Site:</strong> {selectedIncident.siteName}</p>
+              <p><strong>OEM Name:</strong> {selectedIncident.ompPartner}</p>
+              <p><strong>Date:</strong> {formatDate(selectedIncident.dateKey)}</p>
+              <p><strong>Time:</strong> {selectedIncident.timeOfIncident}</p>
+              <p><strong>SA/NSA:</strong> {selectedIncident.saNsa}</p>
+              <p><strong>Equipment:</strong> {selectedIncident.equipmentCategory}</p>
+              <p><strong>Title:</strong> {selectedIncident.incidentTitle}</p>
+              <p><strong>Type:</strong> {selectedIncident.type}</p>
+              <p><strong>Affected Equipment Details:</strong> {selectedIncident.effectedEquipmentDetails}</p>
+              <p><strong>actionsTaken:</strong> {selectedIncident.actionsTaken}</p>
+              <p><strong>RCA Status:</strong> {selectedIncident.rcaStatus}</p>
+              <p><strong>Ownership:</strong> {selectedIncident.ownership}</p>
+              <p><strong>Reason:</strong> {selectedIncident.realReason}</p>
+              <p><strong>Impact Type:</strong> {selectedIncident.impactType}</p>
+              <p><strong>Remarks:</strong> {selectedIncident.remarks}</p>
+              <p><strong>Closure Date:</strong> {selectedIncident.closureDate}</p>
+              <p><strong>Closure Time:</strong> {selectedIncident.closureTime}</p>
+              <p><strong>Status:</strong> {selectedIncident.status}</p>
+              <p><strong>Description:</strong> {selectedIncident.incidentDescription || "N/A"}</p>
+              <p><strong>Closure Remarks:</strong> {selectedIncident.closureRemarks}</p>
+            </div>
+            <button onClick={() => setSelectedIncident(null)} className='pm-manage-btn btn-danger'>Close</button>
+          </div>
         </div>
       )}
     </div>
