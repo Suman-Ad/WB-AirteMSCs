@@ -155,6 +155,13 @@ function App() {
               </Layout>
         </RoleProtectedRoute>} />
 
+        <Route path="/incident-edit/:incidentId" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <IncidentManagement userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
         <Route path="/dhr-dashboard" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>

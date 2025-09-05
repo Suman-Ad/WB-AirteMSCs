@@ -1,7 +1,7 @@
 import React from 'react';
 import '../assets/IncidentEditor.css';
 
-const IncidentEditorPage = ({ formData, onFormChange, onSubmit, userData }) => {
+const IncidentEditorPage = ({ formData, onFormChange, onSubmit, userData, incidentId }) => {
   const equipmentCategories = [
     "ACS","Air Conditioner","BMS","CCTV","Comfort AC","Diesel Generator","Earth Pit",
     "Exhust Fan","FAS","FSS","HT Panel","Inverter","LT Panel","PAS","PFE","SMPS",
@@ -99,7 +99,14 @@ const IncidentEditorPage = ({ formData, onFormChange, onSubmit, userData }) => {
 
   return (
     <div className="incident-editor">
-      <h2 className='noticeboard-header'><strong>{userData?.site}</strong> New Incident Report Form</h2>
+      <h2 className='noticeboard-header'>
+        <strong>
+          {incidentId 
+            ? `Edit Incident Report (${formData.siteName || userData?.site})` 
+            : `${userData?.site} New Incident Report Form`}
+        </strong>
+      </h2>
+
       <div className="form-container child-container">
         {fields.map((field) => (
           <div key={field.name} className={`form-group ${field.disabled ? 'read-only-field' : ''}`}>
@@ -113,8 +120,9 @@ const IncidentEditorPage = ({ formData, onFormChange, onSubmit, userData }) => {
           </div>
         ))}
       </div>
+
       <button onClick={onSubmit} className="submit-btn">
-        Submit Incident
+        {incidentId ? "Update Incident" : "Submit Incident"}
       </button>
     </div>
   );

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, query, where, orderBy, setDoc, doc, getDoc } from 'firebase/firestore';
 import '../assets/IncidentDashboard.css';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const IncidentDashboard = ({ userData }) => {
   const [incidents, setIncidents] = useState([]);
@@ -10,6 +10,7 @@ const IncidentDashboard = ({ userData }) => {
   const [instructionText, setInstructionText] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState("");
+  const navigate = useNavigate();
   const [filters, setFilters] = useState({
     site: userData?.site || '',
     status: '',
@@ -20,6 +21,13 @@ const IncidentDashboard = ({ userData }) => {
 
   // New state for modal
   const [selectedIncident, setSelectedIncident] = useState(null);
+
+  // Equipment Categories
+  const equipmentCategories = [
+    "ACS","Air Conditioner","BMS","CCTV","Comfort AC","Diesel Generator","Earth Pit",
+    "Exhust Fan","FAS","FSS","HT Panel","Inverter","LT Panel","PAS","PFE","SMPS",
+    "SMPS BB","Solar System","UPS","UPS BB","DCDB/ACDB","Transformer"
+  ];
 
   // Fetch dashboard instruction
   useEffect(() => {
@@ -155,8 +163,14 @@ const IncidentDashboard = ({ userData }) => {
           onChange={(e) => setFilters({...filters, equipment: e.target.value})}
         >
           <option value="">All Equipment</option>
-          <option value="PAC">PAC</option>
-          <option value="DG">DG</option>
+          <option value="PAC">
+            {equipmentCategories.map((field) => (
+            <div key={field.name} className={`form-group ${field.disabled ? 'read-only-field' : ''}`}>
+
+            </div>
+            ))}
+          </option>
+          {/* <option value="DG">DG</option> */}
         </select>
 
         <input
@@ -193,7 +207,8 @@ const IncidentDashboard = ({ userData }) => {
                 <th>Time</th>
                 <th>Equipment</th>
                 <th>Title</th>
-                <th>Type</th>
+                <th>Description</th>
+                <th>Docket ID</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -207,14 +222,31 @@ const IncidentDashboard = ({ userData }) => {
                   <td>{incident.timeOfIncident}</td>
                   <td>{incident.equipmentCategory}</td>
                   <td>{incident.incidentTitle}</td>
-                  <td>{incident.type}</td>
+                  <td>{incident.incidentDescription}</td>
+                  <td>{incident.ttDocketNo}</td>
                   <td>{incident.status}</td>
                   <td>
-                    <button 
+                    {/* View Button */}
+                    <button
+                      className='pm-manage-btn small'
                       onClick={() => setSelectedIncident(incident)}
                     >
                       View
                     </button>
+
+                    {/* Edit Button - Role & Site Based Access */}
+                    {(
+                      ["Super Admin", "Admin"].includes(userData.role) || 
+                      (incident.siteId === userData.site && !userData.role=== 'User') // only own site
+                    ) && (
+                      <button 
+                        // to={`/incident-edit/${incident.id}`} 
+                        className="pm-manage-btn small warning"
+                        onClick={() => navigate(`/incident-edit/${incident.id}`)}
+                      >
+                        Edit
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -229,27 +261,28 @@ const IncidentDashboard = ({ userData }) => {
           <div className="modal-content">
             <h1 className='noticeboard-header'><strong>🚨Incident Details</strong></h1>
             <div className='child-container'>
-              <p><strong>Circle:</strong> {selectedIncident.circle}</p>
-              <p><strong>Site:</strong> {selectedIncident.siteName}</p>
-              <p><strong>OEM Name:</strong> {selectedIncident.ompPartner}</p>
-              <p><strong>Date:</strong> {formatDate(selectedIncident.dateKey)}</p>
-              <p><strong>Time:</strong> {selectedIncident.timeOfIncident}</p>
-              <p><strong>SA/NSA:</strong> {selectedIncident.saNsa}</p>
-              <p><strong>Equipment:</strong> {selectedIncident.equipmentCategory}</p>
-              <p><strong>Title:</strong> {selectedIncident.incidentTitle}</p>
-              <p><strong>Type:</strong> {selectedIncident.type}</p>
-              <p><strong>Affected Equipment Details:</strong> {selectedIncident.effectedEquipmentDetails}</p>
-              <p><strong>actionsTaken:</strong> {selectedIncident.actionsTaken}</p>
-              <p><strong>RCA Status:</strong> {selectedIncident.rcaStatus}</p>
-              <p><strong>Ownership:</strong> {selectedIncident.ownership}</p>
-              <p><strong>Reason:</strong> {selectedIncident.realReason}</p>
-              <p><strong>Impact Type:</strong> {selectedIncident.impactType}</p>
-              <p><strong>Remarks:</strong> {selectedIncident.remarks}</p>
-              <p><strong>Closure Date:</strong> {selectedIncident.closureDate}</p>
-              <p><strong>Closure Time:</strong> {selectedIncident.closureTime}</p>
-              <p><strong>Status:</strong> {selectedIncident.status}</p>
+              <h3><strong>Docket No: {selectedIncident.ttDocketNo || "N/A"}</strong></h3>
+              <p><strong>Circle:</strong> {selectedIncident.circle || "N/A"}</p>
+              <p><strong>Site:</strong> {selectedIncident.siteName || "N/A"}</p>
+              <p><strong>OEM Name:</strong> {selectedIncident.ompPartner || "N/A"}</p>
+              <p><strong>Date:</strong> {formatDate(selectedIncident.dateKey || "N/A")}</p>
+              <p><strong>Time:</strong> {selectedIncident.timeOfIncident || "N/A"}</p>
+              <p><strong>SA/NSA:</strong> {selectedIncident.saNsa || "N/A"}</p>
+              <p><strong>Equipment:</strong> {selectedIncident.equipmentCategory || "N/A"}</p>
+              <p><strong>Title:</strong> {selectedIncident.incidentTitle || "N/A"}</p>
+              <p><strong>Type:</strong> {selectedIncident.type || "N/A"}</p>
+              <p><strong>Affected Equipment Details:</strong> {selectedIncident.effectedEquipmentDetails || "N/A"}</p>
+              <p><strong>ActionsTaken:</strong> {selectedIncident.actionsTaken || "N/A"}</p>
+              <p><strong>RCA Status:</strong> {selectedIncident.rcaStatus || "N/A"}</p>
+              <p><strong>Ownership:</strong> {selectedIncident.ownership || "N/A"}</p>
+              <p><strong>Reason:</strong> {selectedIncident.realReason || "N/A"}</p>
+              <p><strong>Impact Type:</strong> {selectedIncident.impactType || "N/A"}</p>
+              <p><strong>Remarks:</strong> {selectedIncident.remarks || "N/A"}</p>
+              <p><strong>Closure Date:</strong> {selectedIncident.closureDate || "N/A"}</p>
+              <p><strong>Closure Time:</strong> {selectedIncident.closureTime || "N/A"}</p>
+              <p><strong>Status:</strong> {selectedIncident.status || "N/A"}</p>
               <p><strong>Description:</strong> {selectedIncident.incidentDescription || "N/A"}</p>
-              <p><strong>Closure Remarks:</strong> {selectedIncident.closureRemarks}</p>
+              <p><strong>Closure Remarks:</strong> {selectedIncident.closureRemarks || "N/A"}</p>
             </div>
             <button onClick={() => setSelectedIncident(null)} className='pm-manage-btn btn-danger'>Close</button>
           </div>
