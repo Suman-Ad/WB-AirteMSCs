@@ -216,8 +216,8 @@
 .pm-manage-btn {
   display: inline-block;
   padding: 8px 16px;
-  background-color: #3498db;
-  color: white !important; /* Force white text regardless of link state */
+  background-color: #32b17e;
+  color: rgb(0, 0, 0) !important; /* Force white text regardless of link state */
   text-decoration: none !important; /* Remove underline */
   border-radius: 4px;
   font-weight: 500;
@@ -232,7 +232,7 @@
 
 /* Hover state */
 .pm-manage-btn:hover {
-  background-color: #35b929;
+  background-color: #35b929c9;
   transform: translateY(-1px);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
 }
@@ -240,7 +240,7 @@
 /* Active/focus state */
 .pm-manage-btn:active,
 .pm-manage-btn:focus {
-  background-color: #eb3118;
+  background-color: #eb3118b4;
   transform: translateY(0);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   outline: none;
@@ -266,11 +266,17 @@
 
 /* Color variations */
 .pm-manage-btn.secondary {
-  background-color: #2ecc71;
+  background-color: #61a57d;
 }
 
 .pm-manage-btn.secondary:hover {
-  background-color: #27ae60;
+  background-color: #00cc55;
+}
+.pm-manage-btn.secondary:active {
+  background-color: #eb311880;
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  outline: none;
 }
 
 .pm-manage-btn.warning {

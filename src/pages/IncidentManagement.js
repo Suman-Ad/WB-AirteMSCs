@@ -19,6 +19,7 @@ const IncidentManagement = ({ userData }) => {
   const [formData, setFormData] = useState({
     region: userData?.region || '',
     circle: userData?.circle || '',
+    siteId: userData?.siteId || '',
     siteName: userData?.site || '',
     ompPartner: '',
     dateOfIncident: '',
@@ -40,7 +41,7 @@ const IncidentManagement = ({ userData }) => {
     closureDate: '',
     closureTime: '',
     status: 'Open',
-    mttr: 0,
+    mttr: '',
     learningShared: 'N',
     closureRemarks: '',
     ttDocketNo: ''
@@ -49,7 +50,7 @@ const IncidentManagement = ({ userData }) => {
   // 🔹 Fetch Notice Board Text
   useEffect(() => {
     const fetchInstruction = async () => {
-      const docRef = doc(db, "config", "dashboard_instruction");
+      const docRef = doc(db, "config", "incident_Edit_instruction");
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setInstructionText(docSnap.data().text || "");
@@ -136,7 +137,7 @@ const IncidentManagement = ({ userData }) => {
           reportedById: userData.uid,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-          siteId: userData.site,
+          siteId: userData.siteId,
           year,
           month,
           day,
@@ -174,7 +175,7 @@ const IncidentManagement = ({ userData }) => {
               <button
                 className="bg-blue-600 text-white px-3 py-1 rounded"
                 onClick={async () => {
-                  const docRef = doc(db, "config", "dashboard_instruction");
+                  const docRef = doc(db, "config", "incident_Edit_instruction");
                   await setDoc(docRef, { text: editText });
                   setInstructionText(editText);
                   setIsEditingNotice(false);
