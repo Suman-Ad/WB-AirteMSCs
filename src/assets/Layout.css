@@ -1,12 +1,12 @@
 /* ===== GENERAL RESET & BASE STYLES ===== */
 :root {
-  --sidebar-bg: linear-gradient(135deg, #4b502c 0%, #4cafa7 100%);        /* Dark Gray */
+  --sidebar-bg: linear-gradient(135deg, #4b502cf3 0%, #4cafa7af 100%);        /* Dark Gray */
   --sidebar-hover: #374151;     /* Hover BG */
-  --sidebar-text: #e5e7eb;
+  --sidebar-text: #f3f3f3;
   --sidebar-text-muted: #9ca3af;
-  --navbar-bg: linear-gradient(135deg, #ffffff 50%, #f1b718c9 0%);         /* White */
+  --navbar-bg: linear-gradient(135deg, #4cafa7 0%, #4b502c 100%);         /* White */
   --navbar-border: #fcc309;
-  --content-bg: #f9fafb;        /* Light Gray */
+  --content-bg: #0d0d0e1c;        /* Light Gray */
   --primary-color: #3b82f6;     /* Blue-500 */
   --danger-color: #ef4444;      /* Red-500 */
   --transition-speed: 0.3s;
@@ -30,18 +30,20 @@ body {
   display: flex;
   min-height: 100vh;
   overflow: hidden;
+  background: linear-gradient(135deg, #4cafa7 0%, #4b502c 100%);
 }
 
 /* ===== SIDEBAR (ENHANCED) ===== */
 .sidebar {
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
-  height: inherit;
+  height: 525px;
   overflow-y: auto;
   transition: all var(--transition-speed) ease;
-  position: relative;
+  position: fixed;
   z-index: 1000;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  margin-top: 120px;
 }
 
 .sidebar.expanded {
@@ -50,8 +52,8 @@ body {
 }
 
 .sidebar.collapsed {
-  width: 60px;
-  padding: 20px 8px;
+  width: 0px;
+  padding: 20px 0px;
 }
 
 /* Sidebar Header */
@@ -62,12 +64,12 @@ body {
 }
 
 .toggle-btn {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(212, 27, 27, 0);
   color: white;
   border: none;
   border-radius: 4px;
-  padding: 8px 12px;
-  width: 100%;
+  padding: 8px 10px;
+  width: 10px;
   cursor: pointer;
   font-weight: 600;
   display: flex;
@@ -140,21 +142,23 @@ body {
 
 /* Navbar */  
 .navbar {
-  height: 120px;
+  /* height: 100px; */
   background: var(--navbar-bg);
   display: flex;
   align-items: center;
   padding: 0 25px;
   border-bottom: 1px solid var(--navbar-border);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  /* position: fixed; */
-  /* width: 100%; */
+  position: fixed;
+  width: 1350px;
+  z-index: 1000;
+
 }
 
 .navbar h1 {
-  font-size: 1.3rem;
+  font-size: 2rem;
   color: #111827;
-  font-weight: 600;
+  font-weight: 1000;
   margin: 0 auto;
   text-align: center;
 }
@@ -173,7 +177,8 @@ body {
   padding: 5px;
   overflow-y: auto;
   background: var(--content-bg);
-  /* margin-top: 120px; */
+  margin-top: 125px;
+  /* background-color: #27ae60; */
 }
 
 /* ===== MOBILE RESPONSIVENESS ===== */

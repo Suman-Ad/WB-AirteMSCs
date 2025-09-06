@@ -82,13 +82,13 @@ body {
 /* Containers */
 .create-dhr-container,
 .dhr-dashboard-container {
-  max-width: 1275px;
+  max-width: 100%;
   margin: 0 auto;
   padding: var(--space-lg);
-  background: var(--bg-white);
+  background: linear-gradient(135deg, #4b502c 0%, #4cafa7 100%);   ;
   border-radius: 8px;
   box-shadow: var(--shadow-sm);
-  /* height: 675px;
+  /* height: inherit;
   overflow-y: auto; */
 }
 
@@ -286,7 +286,7 @@ button:disabled {
 /* ===== DHR DASHBOARD SPECIFIC STYLES ===== */
 
 .dashboard-subinfo {
-  color: var(--text-medium);
+  color: #070707;
   margin-bottom: var(--space-lg);
   display: flex;
   gap: var(--space-md);
@@ -294,7 +294,7 @@ button:disabled {
 }
 
 .instruction-tab {
-  background: var(--bg-white);
+  background: linear-gradient(135deg, #4cafa7 0%, #4b502c 100%);;
   border-radius: 8px;
   padding: var(--space-md);
   margin-bottom: var(--space-lg);

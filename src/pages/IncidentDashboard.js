@@ -139,7 +139,7 @@ const IncidentDashboard = ({ userData }) => {
       Completion_Date: item.closureDate  || "",
       Status: item.status || "",
       Remarks: item.remarks || "",
-
+      RCA_File: item.rcaFileUrl || "",   // ✅ Added
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -333,7 +333,7 @@ const IncidentDashboard = ({ userData }) => {
                 <th>Clouser Date</th>
                 <th>MTTR (Days)</th>
                 <th>Status</th>
-                {/* <th>Actions</th> */}
+                <th>RCA</th>
               </tr>
             </thead>
             <tbody>
@@ -352,6 +352,13 @@ const IncidentDashboard = ({ userData }) => {
                   <td>{incident.closureDate}</td>
                   <td>{incident.mttr}</td>
                   <td>{incident.status}</td>
+                  
+                    <td>
+                      {incident.rcaFileUrl ? 
+                      <Link to={incident.rcaFileUrl}>
+                       👁️‍🗨️
+                      </Link> : "N" }
+                    </td>
                 </tr>
               ))}
             </tbody>
@@ -389,6 +396,14 @@ const IncidentDashboard = ({ userData }) => {
               <p><strong>Status:</strong> {selectedIncident.status || "N/A"}</p>
               <p><strong>Description:</strong> {selectedIncident.incidentDescription || "N/A"}</p>
               <p><strong>Closure Remarks:</strong> {selectedIncident.closureRemarks || "N/A"}</p>
+              {selectedIncident.rcaFileUrl && (
+                <p>
+                  <strong>RCA File:</strong>{" "}
+                  <a href={selectedIncident.rcaFileUrl} target="_blank" rel="noopener noreferrer">
+                    👁️‍🗨️ View File
+                  </a>
+                </p>
+              )}
             </div>
             {/* Edit Button - Role & Site Based Access */}
             {(

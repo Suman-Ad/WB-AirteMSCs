@@ -39,13 +39,13 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
-.instruction-tab {
+/* .instruction-tab {
     background: white;
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 25px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-}
+} */
 
 .instruction-tab h6 {
     text-align: right;

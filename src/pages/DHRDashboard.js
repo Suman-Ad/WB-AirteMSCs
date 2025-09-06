@@ -379,7 +379,7 @@ Fault details if any: ${r.faultDetails}
       </h1>
 
       {/* Summary Stats Panel */}
-      <div style={{ color: "#6b7280", fontSize: 15 }}>📌 Date: {filterDate}</div>
+      <div style={{ color: "#030303ff", fontSize: 15 }}>📌 Date: {filterDate}</div>
       <div className="summary-stats child-container">
         <div className="stat-card">
           <h3>Total Diesel Available (Ltrs)</h3>
@@ -398,7 +398,7 @@ Fault details if any: ${r.faultDetails}
           <p>{totalFault}</p>
         </div>
       </div>
-      <div style={{ color: "#6b7280", fontSize: 12 }}>"<strong>Click</strong>'' The Below 👇<strong>"CPH/SEGR Manager"</strong> Button <strong>||</strong> You can calculate DG <strong>load %, SEGR, CPH</strong> as per <strong>"Cummins Disign CHP"</strong> by giving only Three Inputs <strong>(Select DG Capacity - Generate kW - DG Run Hrs)</strong> </div>
+      <div style={{ color: "#000000ff", fontSize: 12 }}>"<strong>Click</strong>'' The Below 👇<strong>"CPH/SEGR Manager"</strong> Button <strong>||</strong> You can calculate DG <strong>load %, SEGR, CPH</strong> as per <strong>"Cummins Disign CHP"</strong> by giving only Three Inputs <strong>(Select DG Capacity - Generate kW - DG Run Hrs)</strong> </div>
       <button 
         className="segr-manage-btn" 
         onClick={() => setShowFuelModal(true)}
@@ -497,13 +497,13 @@ Fault details if any: ${r.faultDetails}
 
       {/* Filters */}
       <div className="dhr-filters">
-        <div style={{ color: "#6b7280", fontSize: 12 }}>Filter By Date</div>
+        <div style={{ color: "#000000ff", fontSize: 12 }}>Filter By Date</div>
         <input
           type="date"
           value={filterDate}
           onChange={(e) => setFilterDate(e.target.value)}
         />
-        <div style={{ color: "#6b7280", fontSize: 12 }}>Filter By Site</div>
+        <div style={{ color: "#000000ff", fontSize: 12 }}>Filter By Site</div>
         <input
           type="text"
           placeholder="Search by site"

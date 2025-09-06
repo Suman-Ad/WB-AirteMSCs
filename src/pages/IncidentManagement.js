@@ -44,7 +44,8 @@ const IncidentManagement = ({ userData }) => {
     mttr: '',
     learningShared: 'N',
     closureRemarks: '',
-    ttDocketNo: ''
+    ttDocketNo: '',
+    rcaFileUrl: ''
   });
 
   // 🔹 Fetch Notice Board Text
@@ -115,18 +116,24 @@ const IncidentManagement = ({ userData }) => {
   // 🔹 Submit handler (Create or Update)
   const handleSubmit = async () => {
     if (!validateForm()) return;
+    if (formData.rcaStatus === "Y" && !formData.rcaFileUrl) {
+      alert("Please upload an RCA file before submitting.");
+      return;
+    }
 
     try {
       const incidentDate = new Date(formData.dateOfIncident);
       const year = incidentDate.getFullYear();
       const month = String(incidentDate.getMonth() + 1).padStart(2, '0');
       const day = String(incidentDate.getDate()).padStart(2, '0');
+      
 
       if (incidentId) {
         // 🔸 Update existing incident
         await updateDoc(doc(db, "incidents", incidentId), {
           ...formData,
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
+          rcaFileUrl: formData.rcaFileUrl || ""   // ✅ Update RCA file link
         });
         alert("Incident updated successfully!");
       } else {
@@ -142,7 +149,8 @@ const IncidentManagement = ({ userData }) => {
           month,
           day,
           dateKey: `${year}-${month}-${day}`,
-          siteDateKey: `${userData.site}_${year}-${month}-${day}`
+          siteDateKey: `${userData.site}_${year}-${month}-${day}`,
+          rcaFileUrl: formData.rcaFileUrl || ""   // ✅ Save RCA file link
         });
         alert("Incident reported successfully!");
       }

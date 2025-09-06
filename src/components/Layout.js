@@ -17,13 +17,24 @@ const Layout = ({ userData, children }) => {
 
       {/* Main Area */}
       <div className="main">
+        
         {/* Navbar */}
         <div className="navbar">
+          <button
+            className="toggle-btn"
+              onClick={() => setCollapsed(!collapsed)}
+              title={collapsed ? "Expand Menu" : "Collapse Menu"}
+            >
+              {collapsed ? "☰" : "◀" }
+          </button>
           <div style={{ flex: 1, textAlign: "center" }}>
             <header className="main-header">
               <div className="header-top">
                 <h1 className="title">
-                  <img 
+                  
+                  WB - Airtel - MSC Data Management System
+                </h1>
+                <img 
                     src={Vertiv} 
                     alt="Vertiv Logo" 
                     className="logo"
@@ -33,8 +44,6 @@ const Layout = ({ userData, children }) => {
                       margin: '0 0.2em',
                     }}
                   />
-                  WB - Airtel - MSC Data Management System
-                </h1>
               </div>
               <p className="dashboard-subinfo">
                 <strong>🏢{userData?.site || "All"}</strong>|&nbsp;<strong>🆔{userData.siteId || "All"}</strong>

@@ -67,14 +67,6 @@
   font-weight: bold;
 }
 
-.instruction-tab {
-  background: #f0f9ff;
-  border: 1px solid #bde0fe;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
-}
 
 .dashboard-instruction-panel {
   width: 97%;

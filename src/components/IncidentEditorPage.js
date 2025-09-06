@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import '../assets/IncidentEditor.css';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db } from "../firebase";
 
 const IncidentEditorPage = ({ formData, onFormChange, onSubmit, userData, incidentId }) => {
   const [calculatedMttr, setCalculatedMttr] = useState(0);

@@ -66,7 +66,7 @@ function App() {
         <Route
           path="/pdf-dashboard"
           element={
-            <RoleProtectedRoute userData={userData} allowedRoles={["User", "Super User", "Admin", "Super Admin"]}>
+            <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
               <Layout userData={userData}>
                 <Dashboard userData={userData} />
               </Layout>
@@ -88,7 +88,7 @@ function App() {
         <Route
           path="/site/:siteName"
           element={
-            <RoleProtectedRoute userData={userData} allowedRoles={["Super User", "Admin", "Super Admin", "User"]}>
+            <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
               <Layout userData={userData}>
                 <SitePage userData={userData} />
               </Layout>
@@ -99,7 +99,7 @@ function App() {
         <Route
           path="/history"
           element={
-            <RoleProtectedRoute userData={userData} allowedRoles={["User", "Super User", "Admin", "Super Admin"]}>
+            <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
               <Layout userData={userData}>
                 <PMHistoryPage userData={userData} />
               </Layout>
@@ -117,7 +117,7 @@ function App() {
             </RoleProtectedRoute>
           }
         />
-        <Route path="/excel-data-manager" element={<ExcelDataManager userData={userData} />} />
+        {/* <Route path="/excel-data-manager" element={<ExcelDataManager userData={userData} />} /> */}
         <Route path="/excel-live-edit" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["User", "Super User", "Admin", "Super Admin"]}>
               <Layout userData={userData}>
@@ -205,35 +205,35 @@ function App() {
         </RoleProtectedRoute>} />
 
         <Route path="/daily-activity-dashboard" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
             <Layout userData={userData}>
               <DailyActivityDashboard userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
 
         <Route path="/daily-activity-management" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
             <Layout userData={userData}>
               <DailyActivityManage userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
 
         <Route path="/pm-register" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
             <Layout userData={userData}>
               <PMRegister userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
 
         <Route path="/thermal-analysis" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
             <Layout userData={userData}>
               <ThermalImageAnalysis userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
 
         <Route path="/thermal-analysis-report" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
             <Layout userData={userData}>
               <ThermalReportGenerator userData={userData} />
               </Layout>
