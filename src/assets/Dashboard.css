@@ -16,11 +16,6 @@
     gap: 10px;
 }
 
-.dashboard-subinfo {
-  margin-bottom: 20px;
-  font-size: 0.95rem;
-}
-
 .stats-panel {
   background-color: #f3f4f6;
   padding: 16px;
@@ -196,13 +191,6 @@
   background: #fff;
 }
 
-.dashboard-subinfo span {
-  padding: 4px 8px;
-  background-color: #f1f5f9;
-  border-radius: 6px;
-  margin-right: 8px;
-  display: inline-block;
-}
 
 /* Link button style - to be added to your PMCalendar.css */
 .pm-manage-btn {

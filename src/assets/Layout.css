@@ -1,6 +1,6 @@
 /* ===== GENERAL RESET & BASE STYLES ===== */
 :root {
-  --sidebar-bg: linear-gradient(135deg, #4b502cf3 0%, #4cafa7af 100%);        /* Dark Gray */
+  --sidebar-bg: linear-gradient(135deg, #4b502cf3 0%, #4cafa7 100%);        /* Dark Gray */
   --sidebar-hover: #374151;     /* Hover BG */
   --sidebar-text: #f3f3f3;
   --sidebar-text-muted: #9ca3af;
@@ -30,24 +30,45 @@ body {
   display: flex;
   min-height: 100vh;
   overflow: hidden;
-  background: linear-gradient(135deg, #4cafa7 0%, #4b502c 100%);
+  /* background: linear-gradient(135deg, #4cafa7 0%, #4b502c 100%); */
+}
+
+/* Back button styles */
+.back-button {
+  /* position: absolute; */
+  left: 20px;
+  top: 20px;
+  padding: 8px 16px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin-top: 110px;
+  /* position: fixed; */
+}
+
+.back-button:hover {
+  background-color: #e0e0e0;
 }
 
 /* ===== SIDEBAR (ENHANCED) ===== */
 .sidebar {
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
-  height: 525px;
+  height: 100%;
   overflow-y: auto;
   transition: all var(--transition-speed) ease;
   position: fixed;
   z-index: 1000;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  margin-top: 120px;
 }
 
 .sidebar.expanded {
-  width: 251px;
+  width: 360px;
   padding: 20px 15px;
 }
 
@@ -59,7 +80,7 @@ body {
 /* Sidebar Header */
 .sidebar-header {
   padding-bottom: 15px;
-  margin-bottom: 10px;
+  /* margin-bottom: 10px; */
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -150,7 +171,7 @@ body {
   border-bottom: 1px solid var(--navbar-border);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   position: fixed;
-  width: 1350px;
+  width: 100%;
   z-index: 1000;
 
 }
@@ -178,7 +199,6 @@ body {
   overflow-y: auto;
   background: var(--content-bg);
   margin-top: 125px;
-  /* background-color: #27ae60; */
 }
 
 /* ===== MOBILE RESPONSIVENESS ===== */
@@ -191,14 +211,15 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    height: inherit;
+    height: 100%;
     transform: translateX(-100%);
     z-index: 1000;
+    overflow-y: auto;
   }
 
   .sidebar.expanded {
     transform: translateX(0);
-    width: 260px;
+    width: 300px;
   }
 
   .sidebar.collapsed {
@@ -216,7 +237,7 @@ body {
     position: fixed;
     top: 0;
     width: 100%;
-    z-index: 900;
+    z-index: 1000;
   }
 
   .navbar h1 {
@@ -233,6 +254,28 @@ body {
     color: #4b5563;
     cursor: pointer;
     margin-right: 15px;
+  }
+
+  /* Back button styles */
+  .back-button {
+    /* position: absolute; */
+    left: 20px;
+    top: 20px;
+    padding: 8px 16px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    margin-top: 5px;
+  }
+
+  .back-button:hover {
+    background-color: #e0e0e0;
+
   }
 }
 
@@ -264,32 +307,13 @@ body {
   vertical-align: middle;
 }
 
-/* Back button styles */
-.back-button {
-  position: absolute;
-  left: 20px;
-  top: 20px;
-  padding: 8px 16px;
-  background-color: #f0f0f0;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-}
 
-.back-button:hover {
-  background-color: #e0e0e0;
-}
 
 .header-top {
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 10px;
 }
 
 /* Link button style - to be added to your PMCalendar.css */

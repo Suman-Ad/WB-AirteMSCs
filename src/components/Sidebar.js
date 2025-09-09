@@ -22,6 +22,13 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
     <div className={`sidebar ${collapsed ? "collapsed" : "expanded"}`}>
       {/* Sidebar Header with Collapse Toggle */}
       <div className="sidebar-header">
+        <button
+            className="toggle-btn"
+              onClick={() => setCollapsed(!collapsed)}
+              title={collapsed ? "Expand Menu" : "Collapse Menu"}
+            >
+              {collapsed ? "☰" : "X" }
+          </button>
         {collapsed ? "" :  
           <button onClick={goProfile} className="profile-manage-btn" title="Profile">
             {userData?.role === "Super Admin" && <span>👑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super Admin*</div></span>}

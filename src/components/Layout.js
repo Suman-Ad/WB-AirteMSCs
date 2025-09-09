@@ -12,12 +12,9 @@ const Layout = ({ userData, children }) => {
 
   return (
     <div className="layout">
-      {/* Sidebar */}
-      <Sidebar userData={userData} collapsed={collapsed} setCollapsed={setCollapsed} />
-
+      
       {/* Main Area */}
-      <div className="main">
-        
+      <div className="main">    
         {/* Navbar */}
         <div className="navbar">
           <button
@@ -31,7 +28,6 @@ const Layout = ({ userData, children }) => {
             <header className="main-header">
               <div className="header-top">
                 <h1 className="title">
-                  
                   WB - Airtel - MSC Data Management System
                 </h1>
                 <img 
@@ -52,11 +48,14 @@ const Layout = ({ userData, children }) => {
             </header>
           </div>
         </div>
+        
         {/* Page Content */}  
         <div>
+          {/* Sidebar */}
+          <Sidebar userData={userData} collapsed={collapsed} setCollapsed={setCollapsed} />
           <button 
             onClick={() => navigate(-1)} 
-            className="contentback"
+            className="back-button"
           >
             <FaArrowLeft /> Back
           </button>
