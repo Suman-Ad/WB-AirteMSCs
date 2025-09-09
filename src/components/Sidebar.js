@@ -96,6 +96,10 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
           <Link to="/admin" className="sidepanel-manage-btn" title={collapsed ? "Admin Panel":""}>🔑 <span className="label">Admin Panel</span></Link>
         )}
 
+        {(role === "Super User" || role === "Admin" || role === "Super Admin" || role === "User") && (
+          <Link to="/sld-editor" className="sidepanel-manage-btn" title={collapsed ? "SLD Editor":""}>📐 <span className="label">SLD Editor</span></Link>
+        )}
+
         {/* <Link to="/profile" className="sidepanel-manage-btn" title={collapsed ? "Profile":""}>👷 <span className="label">Profile</span></Link> */}
       </nav>
     </div>

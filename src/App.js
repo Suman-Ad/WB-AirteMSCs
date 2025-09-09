@@ -30,6 +30,8 @@ import ThermalReportGenerator from "./pages/ThermalReportGenerator"
 import CreateBigDHR from "./pages/CreateBigDHR";
 import AsansolOperationSimulator from "./components/SOP/AsansolOperationSimulator";
 import BerhamporeOperationSimulator from "./components/SOP/BerhamporeOperationSimulator";
+import SLDEditor from "./pages/SLDEditor"
+
 
 
 
@@ -257,6 +259,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <BerhamporeOperationSimulator userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/sld-editor" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <SLDEditor userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
 
