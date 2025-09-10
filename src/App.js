@@ -31,8 +31,7 @@ import CreateBigDHR from "./pages/CreateBigDHR";
 import AsansolOperationSimulator from "./components/SOP/AsansolOperationSimulator";
 import BerhamporeOperationSimulator from "./components/SOP/BerhamporeOperationSimulator";
 import SLDEditor from "./pages/SLDEditor"
-
-
+import DailyDGLog from "./pages/DailyDGLog";
 
 
 function App() {
@@ -266,6 +265,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <SLDEditor userData={userData} />
+              </Layout>
+        </RoleProtectedRoute>} />
+
+        <Route path="/daily-dg-log-editor" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <DailyDGLog userData={userData} />
               </Layout>
         </RoleProtectedRoute>} />
 

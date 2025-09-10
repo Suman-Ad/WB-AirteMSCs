@@ -1,0 +1,165 @@
+.daily-log-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background: #f9fafb;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.daily-log-container h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #1f2937;
+  text-align: center;
+  font-weight: 600;
+}
+
+.daily-log-container h3 {
+  font-size: 1.2rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.daily-log-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.daily-log-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.daily-log-form input {
+  margin-top: 0.3rem;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #f9fafb;
+  transition: border-color 0.2s;
+}
+
+.daily-log-form input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: #ffffff;
+}
+
+.daily-log-form button {
+  grid-column: 1 / -1;
+  justify-self: center;
+  margin-top: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: #2563eb;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.daily-log-form button:hover {
+  background: #1d4ed8;
+}
+
+.logs-table {
+  margin-top: 1.5rem;
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  overflow-x: auto;
+}
+
+.logs-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.logs-table th,
+.logs-table td {
+  padding: 0.7rem;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.logs-table th {
+  background: #f3f4f6;
+  font-weight: 600;
+  color: #111827;
+}
+
+.logs-table tr:hover td {
+  background: #f9fafb;
+}
+
+.logs-table button {
+  padding: 0.4rem 0.8rem;
+  margin: 0 0.2rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.logs-table button:first-child {
+  background: #10b981;
+  color: white;
+}
+
+.logs-table button:first-child:hover {
+  background: #059669;
+}
+
+.logs-table button:last-child {
+  background: #ef4444;
+  color: white;
+}
+
+.logs-table button:last-child:hover {
+  background: #dc2626;
+}
+
+.row-inefficient {
+  background-color: rgba(255, 0, 0, 0.2); /* red highlight */
+}
+
+.row-warning {
+  background-color: rgba(255, 165, 0, 0.2); /* orange highlight */
+}
+
+.row-error {
+  background-color: rgba(255, 0, 0, 0.4); /* stronger red for invalid */
+}
+
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .daily-log-form {
+    grid-template-columns: 1fr;
+  }
+
+  .logs-table table {
+    font-size: 0.8rem;
+  }
+}
+
+

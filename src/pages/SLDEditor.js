@@ -9,8 +9,33 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-// deep copy helper for history snapshots
-const deepCopy = (v) => JSON.parse(JSON.stringify(v));
+// FIXED: deep copy helper that excludes React refs and circular structures
+const deepCopy = (v) => {
+  if (v === null || typeof v !== 'object') return v;
+  if (v instanceof Element) return null; // Skip DOM elements
+  if (typeof v === 'function') return null; // Skip functions
+  
+  if (Array.isArray(v)) {
+    return v.map(item => deepCopy(item));
+  }
+  
+  const obj = {};
+  for (const key in v) {
+    // Skip React-specific properties and refs
+    if (key.includes('react') || key.includes('Ref') || key === 'svgRef') {
+      continue;
+    }
+    // Skip circular references and non-serializable properties
+    try {
+      JSON.stringify(v[key]);
+      obj[key] = deepCopy(v[key]);
+    } catch (e) {
+      // Skip properties that can't be serialized
+      continue;
+    }
+  }
+  return obj;
+};
 
 export default function SLDEditor() {
   // core state
@@ -21,12 +46,36 @@ export default function SLDEditor() {
   const [tool, setTool] = useState("select"); // select,line,rect,circle,arrow,freehand,text,highlighter,eraser
   const [zoom, setZoom] = useState(1);
   const [selectedId, setSelectedId] = useState(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   // drag & draw refs
   const drawState = useRef({ drawing: false, id: null, start: null });
   const dragState = useRef({ dragging: false, id: null, startClient: null, startEl: null, mode: null }); // mode: move|resize
   // undo / redo
   const historyRef = useRef({ stack: [], idx: -1, capacity: 60 });
+  const containerRef = useRef(null);
+  const svgRefs = useRef([]); // Separate ref storage to avoid circular issues
+
+  // Initialize svg refs
+  useEffect(() => {
+    svgRefs.current = svgRefs.current.slice(0, pages.length);
+  }, [pages.length]);
+
+  // --- Container size tracking ---
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        setContainerSize({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight
+        });
+      }
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
   // --- History helpers ---
   const pushHistory = (label = "") => {
@@ -63,18 +112,32 @@ export default function SLDEditor() {
 
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
     const pageEntries = [];
-    const baseScale = 1;
     const devicePixelRatio = Math.max(1, window.devicePixelRatio || 1);
     const renderScale = devicePixelRatio * 2; // boost for crispness
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      // base viewport (logical/display units)
-      const baseViewport = page.getViewport({ scale: baseScale });
-      const displayWidth = Math.round(baseViewport.width);
-      const displayHeight = Math.round(baseViewport.height);
+      
+      // Calculate display scale to fit container
+      const viewport = page.getViewport({ scale: 1 });
+      const pageWidth = viewport.width;
+      const pageHeight = viewport.height;
+      
+      // Calculate scale to fit container with padding
+      const containerWidth = containerRef.current?.clientWidth || window.innerWidth - 100;
+      const containerHeight = containerRef.current?.clientHeight || window.innerHeight - 200;
+      const padding = 40;
+      
+      const scaleX = (containerWidth - padding) / pageWidth;
+      const scaleY = (containerHeight - padding) / pageHeight;
+      const displayScale = Math.min(scaleX, scaleY, 1.5); // Cap at 1.5x to prevent huge pages
+      
+      // Display viewport
+      const displayViewport = page.getViewport({ scale: displayScale });
+      const displayWidth = Math.round(displayViewport.width);
+      const displayHeight = Math.round(displayViewport.height);
 
-      // render viewport (high-res for export)
+      // Render viewport (high-res for export)
       const renderViewport = page.getViewport({ scale: renderScale });
       const renderWidth = Math.round(renderViewport.width);
       const renderHeight = Math.round(renderViewport.height);
@@ -84,21 +147,20 @@ export default function SLDEditor() {
       canvas.width = renderWidth;
       canvas.height = renderHeight;
       const ctx = canvas.getContext("2d");
-      // optional: scale context? pdfjs render uses viewport so OK
       await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
 
-      // store high-res PNG dataUrl (we will draw it at render size when exporting)
+      // store high-res PNG dataUrl
       const dataUrl = canvas.toDataURL("image/png");
 
       pageEntries.push({
         displayWidth,
         displayHeight,
+        displayScale,
         renderWidth,
         renderHeight,
         renderScale,
         dataUrl,
-        elements: [],
-        svgRef: React.createRef(),
+        elements: []
       });
     }
 
@@ -210,13 +272,13 @@ export default function SLDEditor() {
   const onOverlayDown = (ev) => {
     // ignore right click
     if (ev.button === 2) return;
-    const svg = pages[currentPage]?.svgRef.current;
+    const svg = svgRefs.current[currentPage];
     if (!svg) return;
     const local = clientToSvgPoint(svg, ev.clientX, ev.clientY);
 
     // If select tool and click on an element -> start move or start resize if clicked on a handle
     if (tool === "select") {
-      const hit = hitTest(local.x, local.y, pages[currentPage].elements);
+      const hit = hitTest(local.x, local.y, pages[currentPage]?.elements);
       if (hit) {
         setSelectedId(hit.id);
         // start dragging move
@@ -239,7 +301,7 @@ export default function SLDEditor() {
 
     // Eraser: delete clicked
     if (tool === "eraser") {
-      const hit = hitTest(local.x, local.y, pages[currentPage].elements);
+      const hit = hitTest(local.x, local.y, pages[currentPage]?.elements);
       if (hit) removeElementById(hit.id);
       return;
     }
@@ -278,11 +340,11 @@ export default function SLDEditor() {
   const onOverlayMove = (ev) => {
     // drawing update
     if (drawState.current.drawing) {
-      const svg = pages[currentPage]?.svgRef.current;
+      const svg = svgRefs.current[currentPage];
       if (!svg) return;
       const local = clientToSvgPoint(svg, ev.clientX, ev.clientY);
       const state = drawState.current;
-      const el = pages[currentPage].elements.find(x => x.id === state.id);
+      const el = pages[currentPage]?.elements.find(x => x.id === state.id);
       if (!el) return;
       if (el.type === "line") updateElement(el.id, { x2: local.x, y2: local.y });
       else if (el.type === "rect") updateElement(el.id, { w: local.x - state.start.x, h: local.y - state.start.y });
@@ -310,7 +372,7 @@ export default function SLDEditor() {
   const onWindowDragMove = (ev) => {
     const ds = dragState.current;
     if (!ds.dragging) return;
-    const svg = pages[currentPage]?.svgRef.current;
+    const svg = svgRefs.current[currentPage];
     if (!svg) return;
     const currentClient = { x: ev.clientX, y: ev.clientY };
     const dx = (currentClient.x - ds.startClient.x);
@@ -338,12 +400,6 @@ export default function SLDEditor() {
         const nums = el.d.match(/-?\d+(\.\d+)?/g)?.map(Number);
         if (nums) {
           for (let i = 0; i < nums.length; i += 2) { nums[i] += sx; nums[i+1] += sy; }
-          const pts = [];
-          let idx = 0;
-          el.d.replace(/([A-Za-z])|(-?\d+(\.\d+)?)/g, (m, letter, num) => {
-            if (letter) pts.push(letter); else { pts.push(nums[idx++]); }
-            return m;
-          });
           // reconstruct naive (we'll just build 'M x y L x y ...')
           let d = "";
           for (let i = 0; i < nums.length; i += 2) { if (i === 0) d += `M ${nums[i]} ${nums[i+1]}`; else d += ` L ${nums[i]} ${nums[i+1]}`; }
@@ -367,11 +423,9 @@ export default function SLDEditor() {
   };
 
   // --- Resize handles rendering and behavior ---
-  // For simplicity: when element is selected and is rect/circle, we render corner handles.
-  // Clicking and dragging a handle will resize. We'll implement drag-mode based on handle name.
   const startResize = (ev, handle, el) => {
     ev.stopPropagation();
-    const svg = pages[currentPage]?.svgRef.current;
+    const svg = svgRefs.current[currentPage];
     if (!svg) return;
     const local = clientToSvgPoint(svg, ev.clientX, ev.clientY);
     dragState.current = {
@@ -388,7 +442,7 @@ export default function SLDEditor() {
   const onResizeMove = (ev) => {
     const ds = dragState.current;
     if (!ds.dragging || !ds.mode?.startsWith("resize")) return;
-    const svg = pages[currentPage]?.svgRef.current;
+    const svg = svgRefs.current[currentPage];
     if (!svg) return;
     const local = clientToSvgPoint(svg, ev.clientX, ev.clientY);
     const elStart = ds.startEl;
@@ -454,7 +508,7 @@ export default function SLDEditor() {
       ctx.drawImage(base, 0, 0, pg.renderWidth, pg.renderHeight);
 
       // prepare SVG clone scaled up: set viewBox to display dimensions and set width/height to render dims
-      const svgEl = pg.svgRef.current;
+      const svgEl = svgRefs.current[i];
       if (svgEl) {
         const clone = svgEl.cloneNode(true);
         clone.setAttribute("viewBox", `0 0 ${pg.displayWidth} ${pg.displayHeight}`);
@@ -555,13 +609,13 @@ export default function SLDEditor() {
         { cx: x + w, cy: y + h, name: "br" }
       ];
       return corners.map(c => (
-        <rect key={c.name} className="handle" x={c.cx - 6} y={c.cy - 6} width={12} height={12}
+        <rect key={c.name} className={`handle handle-${c.name}`} x={c.cx - 6} y={c.cy - 6} width={12} height={12}
           onMouseDown={(ev) => startResize(ev, c.name, el)} />
       ));
     } else if (el.type === "circle") {
       // single handle at rightmost point
       const cx = el.cx, cy = el.cy, r = el.r || 0;
-      return <rect className="handle" x={cx + r - 6} y={cy - 6} width={12} height={12} onMouseDown={(ev) => startResize(ev, "r", el)} />;
+      return <rect className="handle handle-r" x={cx + r - 6} y={cy - 6} width={12} height={12} onMouseDown={(ev) => startResize(ev, "r", el)} />;
     }
     return null;
   };
@@ -581,11 +635,6 @@ export default function SLDEditor() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  // ensure history snapshot exists whenever pages change externally (avoid double push from internal pushes)
-  useEffect(() => {
-    // no-op: we manage history manually inside mutations
-  }, [pages]);
 
   return (
     <div className="sld-editor-root">
@@ -609,33 +658,42 @@ export default function SLDEditor() {
           <button className="btn" onClick={undo}>Undo</button>
           <button className="btn" onClick={redo}>Redo</button>
           <label style={{ fontSize: 13 }}>Zoom</label>
-          <input type="range" min="0.25" max="2" step="0.05" value={zoom} onChange={(e) => setZoom(parseFloat(e.target.value))} />
+          <input type="range" min="0.25" max="5" step="0.05" value={zoom} onChange={(e) => setZoom(parseFloat(e.target.value))} />
           <button className="btn btn-active" onClick={exportPdf}>Export PDF</button>
         </div>
       </header>
 
-      <main className="editor-main">
-        {!pdfBuffer && <div className="empty">No PDF loaded — choose a file above.</div>}
+      <main className="editor-main" ref={containerRef}>
+        {!pdfBuffer && <div className="empt">No PDF loaded — choose a file above.</div>}
 
         {pdfBuffer && pages[currentPage] && (
-          <div className="page-wrapper" style={{ transform: `scale(${zoom})` }}>
-            <div className="page-container" style={{ width: pages[currentPage].displayWidth, height: pages[currentPage].displayHeight }}>
-              <img src={pages[currentPage].dataUrl} alt={`page-${currentPage+1}`} draggable={false}
-                style={{ width: pages[currentPage].displayWidth, height: pages[currentPage].displayHeight }} />
-              <svg
-                ref={pages[currentPage].svgRef}
-                width={pages[currentPage].displayWidth}
-                height={pages[currentPage].displayHeight}
-                onMouseDown={onOverlayDown}
-                onMouseMove={onOverlayMove}
-                onMouseUp={onOverlayUp}
-                className={`overlay-svg tool-${tool}`}
-              >
-                {/* elements */}
-                {pages[currentPage].elements.map(e => <SvgElement key={e.id} e={e} />)}
-                {/* handles */}
-                {renderHandles()}
-              </svg>
+          <div className="scroll-container">
+            <div className="page-wrapper" style={{ 
+              transform: `scale(${zoom})`,
+              width: pages[currentPage].displayWidth * zoom,
+              height: pages[currentPage].displayHeight * zoom
+            }}>
+              <div className="page-container" style={{ 
+                width: pages[currentPage].displayWidth, 
+                height: pages[currentPage].displayHeight 
+              }}>
+                <img src={pages[currentPage].dataUrl} alt={`page-${currentPage+1}`} draggable={false}
+                  style={{ width: pages[currentPage].displayWidth, height: pages[currentPage].displayHeight }} />
+                <svg
+                  ref={el => svgRefs.current[currentPage] = el}
+                  width={pages[currentPage].displayWidth}
+                  height={pages[currentPage].displayHeight}
+                  onMouseDown={onOverlayDown}
+                  onMouseMove={onOverlayMove}
+                  onMouseUp={onOverlayUp}
+                  className={`overlay-svg tool-${tool}`}
+                >
+                  {/* elements */}
+                  {pages[currentPage].elements.map(e => <SvgElement key={e.id} e={e} />)}
+                  {/* handles */}
+                  {renderHandles()}
+                </svg>
+              </div>
             </div>
           </div>
         )}

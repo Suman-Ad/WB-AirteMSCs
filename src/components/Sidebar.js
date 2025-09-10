@@ -54,16 +54,20 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
       <nav>
         <Link to="/dhr-dashboard" className="sidepanel-manage-btn" title={collapsed ? "DHR Dashboard":""}>⚡<span className="label">DHR Dashboard</span></Link>
 
+        {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
+          <Link to="/daily-dg-log-editor" className="sidepanel-manage-btn" title={collapsed ? "Insident Dashboard":""}>☣️ <span className="label">Daily DG Log Book</span></Link>
+        )}
+
         {(role === "Super User" || role === "Admin" || role === "Super Admin") && (
           <Link to="/daily-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Daily Details Dashboard":""}>📅 <span className="label">Daily Dashboard</span></Link>
         )}
 
-        {(role === "Admin" || role === "Super Admin") && (
-          <Link to="/daily-activity-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Daily Activity Dashboard":""}>🏗️ <span className="label">Daily Activity Dashboard</span></Link>
-        )}
-
         {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
           <Link to="/incident-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Insident Dashboard":""}>🚨 <span className="label">Incident Dashboard</span></Link>
+        )}
+
+        {(role === "Admin" || role === "Super Admin") && (
+          <Link to="/daily-activity-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Daily Activity Dashboard":""}>🏗️ <span className="label">Daily Activity Dashboard</span></Link>
         )}
 
         {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (

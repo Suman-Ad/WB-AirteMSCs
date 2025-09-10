@@ -197,7 +197,7 @@ export default function ManageCompliance({ userData }) {
   const handleUploadRecord = async () => {
     // validation: template, dates, file
     if (!newRecord.templateId || !newRecord.issueDate || !newRecord.file) {
-      return alert("Please select template, issue date, expiry date and file.");
+      return alert("Please select template, issue date, expiry date if available and file.");
     }
 
     try {
@@ -230,7 +230,7 @@ export default function ManageCompliance({ userData }) {
             site: userSite,
             // store as issueDate & expiryDate (new standard)
             issueDate: newRecord.issueDate,
-            expiryDate: newRecord.expiryDate,
+            expiryDate: newRecord.expiryDate || "NA",
             fileUrl,
             uploadedBy: userData.uid || "",
             uploadedAt: serverTimestamp(),
@@ -257,14 +257,10 @@ export default function ManageCompliance({ userData }) {
 
   // ---------------- Edit record ----------------
   const startEditRecord = (r) => {
-    // Backwards compatibility: old records may use expiryDate/renewalDate fields.
-    const issueVal = r.issueDate ?? r.expiryDate ?? r.renewalDate ?? "";
-    const expiryVal = r.expiryDate ?? r.renewalDate ?? r.issueDate ?? "";
-
     setEditingRecordId(r.id);
     setEditingRecordForm({
-      issueDate: issueVal,
-      expiryDate: expiryVal,
+      issueDate: r.issueDate,
+      expiryDate: r.expiryDate, // can be empty for non-expiring docs
       file: null,
       site: r.site || userSite,
       region: r.region || userRegion,
@@ -278,7 +274,7 @@ export default function ManageCompliance({ userData }) {
       const recordRef = doc(db, "compliance_records", editingRecordId);
       const updates = {
         issueDate: editingRecordForm.issueDate || "",
-        expiryDate: editingRecordForm.expiryDate || "",
+        expiryDate: editingRecordForm.expiryDate || "NA",
         site: editingRecordForm.site || userSite,
         region: editingRecordForm.region || userRegion,
         circle: editingRecordForm.circle || userCircle,
@@ -533,40 +529,42 @@ export default function ManageCompliance({ userData }) {
       )}
 
       {/* Templates table */}
-      <section>
-        <h3>Compliance Templates</h3>
-        <table className="dhr-table">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Scope</th>
-              <th>Region</th>
-              <th>Circle</th>
-              <th>Sites</th>
-              <th>Description</th>
-              {canManageTemplates && <th>Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {templates.map(t => (
-              <tr key={t.id}>
-                <td>{t.title}</td>
-                <td>{t.scope}</td>
-                <td>{t.region || "-"}</td>
-                <td>{t.circle || "-"}</td>
-                <td>{Array.isArray(t.sites) && t.sites.length ? t.sites.join(", ") : (t.site || "-")}</td>
-                <td>{t.description || "-"}</td>
-                {canManageTemplates && (
-                  <td className="action-buttons">
-                    <button className="btn-primary" onClick={() => startEditTemplate(t)}>✏️ Edit</button>
-                    <button className="btn-danger" onClick={() => handleDeleteTemplate(t.id)}>❌ Delete</button>
-                  </td>
-                )}
+      {canManageTemplates && (
+        <section>
+          <h3>Compliance Templates</h3>
+          <table className="dhr-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Scope</th>
+                <th>Region</th>
+                <th>Circle</th>
+                <th>Sites</th>
+                <th>Description</th>
+                {canManageTemplates && <th>Actions</th>}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody>
+              {templates.map(t => (
+                <tr key={t.id}>
+                  <td>{t.title}</td>
+                  <td>{t.scope}</td>
+                  <td>{t.region || "-"}</td>
+                  <td>{t.circle || "-"}</td>
+                  <td>{Array.isArray(t.sites) && t.sites.length ? t.sites.join(", ") : (t.site || "-")}</td>
+                  <td>{t.description || "-"}</td>
+                  {canManageTemplates && (
+                    <td className="action-buttons">
+                      <button className="btn-primary" onClick={() => startEditTemplate(t)}>✏️ Edit</button>
+                      <button className="btn-danger" onClick={() => handleDeleteTemplate(t.id)}>❌ Delete</button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {/* Uploaded records table with inline edit for records */}
       <section style={{ marginTop: "1.25rem" }}>
@@ -588,16 +586,21 @@ export default function ManageCompliance({ userData }) {
             {records
               .filter(r => canManageTemplates || r.site === userSite)
               .map(r => {
-                const canEditRecord = (userRole === "Super User" && r.site === userSite && r.uploadedBy === userData.uid) || canManageTemplates;
+                const canEditRecord = (userRole === "Super User" || r.site === userSite && r.uploadedBy === userData.uid) || canManageTemplates;
 
                 // compatibility: read issue & expiry from possible legacy fields
-                const issueVal = r.issueDate ?? r.expiryDate ?? r.renewalDate ?? "";
-                const expiryVal = r.expiryDate ?? r.renewalDate ?? r.issueDate ?? "";
+                const issueVal = r.issueDate || "";
+                const expiryVal = r.expiryDate || ""; // allow blank = non-expiring
 
-                const expiryForCalc = r.expiryDate ?? r.renewalDate ?? r.issueDate ?? null;
-                const daysLeft = expiryForCalc ? Math.ceil((new Date(expiryForCalc) - new Date()) / (1000*60*60*24)) : null;
-                const rowClass = daysLeft === null ? "missing" : (daysLeft <= 0 ? "overdue" : (daysLeft <= 7 ? "near-expiry" : ""));
+                let rowClass = "missing";
+                let daysLeft = null;
 
+                if (expiryVal) {
+                  daysLeft = Math.ceil((new Date(expiryVal) - new Date()) / (1000*60*60*24));
+                  rowClass = daysLeft <= 0 ? "overdue" : (daysLeft <= 7 ? "near-expiry" : "");
+                } else if (r.fileUrl) {
+                  rowClass = ""; // available, no expiry
+                }
                 return (
                   <tr key={r.id} className={rowClass}>
                     <td>{r.complianceType}</td>

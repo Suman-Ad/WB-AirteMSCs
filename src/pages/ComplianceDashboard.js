@@ -61,8 +61,8 @@ export default function ComplianceDashboard({ userData }) {
           region: t.region || "",
           circle: t.circle || "",
           site: "All Sites",
+          issueDate: null,
           expiryDate: null,
-          renewalDate: null,
           fileUrl: null,
           recordId: null,
         });
@@ -76,8 +76,8 @@ export default function ComplianceDashboard({ userData }) {
             region: r.region || t.region || "",
             circle: r.circle || t.circle || "",
             site: r.site || "Unknown",
+            issueDate: r.issueDate || null,
             expiryDate: r.expiryDate || null,
-            renewalDate: r.renewalDate || null,
             fileUrl: r.fileUrl || null,
             recordId: r.id,
             uploadedBy: r.uploadedBy || null,
@@ -97,8 +97,8 @@ export default function ComplianceDashboard({ userData }) {
           region: t.region || "",
           circle: t.circle || "",
           site: "Not assigned",
+          issueDate: null,
           expiryDate: null,
-          renewalDate: null,
           fileUrl: null,
           recordId: null,
         });
@@ -114,8 +114,8 @@ export default function ComplianceDashboard({ userData }) {
               region: rec.region || t.region || "",
               circle: rec.circle || t.circle || "",
               site: siteName,
+              issueDate: rec.issueDate || null,
               expiryDate: rec.expiryDate || null,
-              renewalDate: rec.renewalDate || null,
               fileUrl: rec.fileUrl || null,
               recordId: rec.id,
               uploadedBy: rec.uploadedBy || null,
@@ -129,8 +129,8 @@ export default function ComplianceDashboard({ userData }) {
               region: t.region || "",
               circle: t.circle || "",
               site: siteName,
+              issueDate: null,
               expiryDate: null,
-              renewalDate: null,
               fileUrl: null,
               recordId: null,
             });
@@ -145,15 +145,42 @@ export default function ComplianceDashboard({ userData }) {
     ? merged.filter(m => m.site === userSite || m.site === "All Sites")
     : merged;
 
-  // Summary group circle -> site counts (using filtered)
+ // Enhanced Summary: Circle -> Site -> {total, available, missing, nearestExpiry}
   const summary = {};
+
   filtered.forEach(item => {
     const circle = item.circle || "—";
     const site = item.site || "—";
+
     if (!summary[circle]) summary[circle] = {};
-    if (!summary[circle][site]) summary[circle][site] = 0;
-    summary[circle][site] += 1;
+    if (!summary[circle][site]) {
+      summary[circle][site] = {
+        total: 0,
+        available: 0,
+        missing: 0,
+        nearestExpiry: null,
+      };
+    }
+
+    summary[circle][site].total += 1;
+
+    if (item.fileUrl) {
+      summary[circle][site].available += 1;
+
+      if (item.expiryDate) {
+        const expiry = new Date(item.expiryDate);
+        if (
+          !summary[circle][site].nearestExpiry ||
+          expiry < summary[circle][site].nearestExpiry
+        ) {
+          summary[circle][site].nearestExpiry = expiry;
+        }
+      }
+    } else {
+      summary[circle][site].missing += 1;
+    }
   });
+
 
   // Delete record or template record (Admin / SuperAdmin / SuperUser as allowed)
   const handleDeleteRecord = async (id, isTemplateRecord = false, templateId = null) => {
@@ -236,21 +263,35 @@ export default function ComplianceDashboard({ userData }) {
               <tr>
                 <th>Circle</th>
                 <th>Site</th>
-                <th>Total Items</th>
+                <th>Total Templates</th>
+                <th>Available Docs</th>
+                <th>Missing Docs</th>
+                <th>Nearest Expiry</th>
               </tr>
             </thead>
             <tbody>
-              {Object.keys(summary).map(circle => (
-                Object.keys(summary[circle]).map(site => (
-                  <tr key={`${circle}-${site}`}>
-                    <td>{circle}</td>
-                    <td>{site}</td>
-                    <td>{summary[circle][site]}</td>
-                  </tr>
-                ))
-              ))}
+              {Object.keys(summary).map(circle =>
+                Object.keys(summary[circle]).map(site => {
+                  const s = summary[circle][site];
+                  return (
+                    <tr key={`${circle}-${site}`}>
+                      <td>{circle}</td>
+                      <td>{site}</td>
+                      <td>{s.total}</td>
+                      <td>{s.available}</td>
+                      <td>{s.missing}</td>
+                      <td>
+                        {s.nearestExpiry
+                          ? s.nearestExpiry.toLocaleDateString()
+                          : (s.available > 0 ? "No Expiry (Permanent Docs)" : "-")}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
+
         </div>
       )}
 
@@ -271,23 +312,27 @@ export default function ComplianceDashboard({ userData }) {
         <tbody>
           {filtered.map(row => {
             const hasDocument = !!row.fileUrl;
-            const renewalDate = row.renewalDate ? new Date(row.renewalDate) : null;
-            const daysLeft = renewalDate ? Math.ceil((renewalDate - new Date()) / (1000*60*60*24)) : null;
+            const expiryDate = row.expiryDate ? new Date(row.expiryDate) : null;
             let statusText = "Missing Document";
             let rowClass = "missing";
-            if (hasDocument && daysLeft !== null) {
-              if (daysLeft <= 0) {
-                statusText = "Overdue";
-                rowClass = "overdue";
-              } else if (daysLeft <= 30) {
-                statusText = `${daysLeft} days left`;
-                rowClass = "near-expiry";
-              } else if (daysLeft == null) {
-                statusText = `Available`;
+
+            if (hasDocument) {
+              if (!expiryDate) {
+                // Document exists but no expiry → treat as permanently valid
+                statusText = "Available";
                 rowClass = "";
               } else {
-                statusText = `${daysLeft} days left`;
-                rowClass = "";
+                const daysLeft = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+                if (daysLeft <= 0) {
+                  statusText = "Overdue";
+                  rowClass = "overdue";
+                } else if (daysLeft <= 30) {
+                  statusText = `${daysLeft} days left`;
+                  rowClass = "near-expiry";
+                } else {
+                  statusText = `${daysLeft} days left`;
+                  rowClass = "";
+                }
               }
             }
 
@@ -299,8 +344,8 @@ export default function ComplianceDashboard({ userData }) {
                 <td>{row.circle || "-"}</td>
                 <td>{row.site || "-"}</td>
                 <td>{row.complianceType}</td>
+                <td>{row.issueDate || "-"}</td>
                 <td>{row.expiryDate || "-"}</td>
-                <td>{row.renewalDate || "-"}</td>
                 <td>
                   {hasDocument ? <a href={row.fileUrl} target="_blank" rel="noreferrer">{statusText}</a> : statusText}
                 </td>
