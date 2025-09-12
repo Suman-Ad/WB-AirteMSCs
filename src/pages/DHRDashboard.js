@@ -379,7 +379,7 @@ Fault details if any: ${r.faultDetails}
       </h1>
 
       {/* Summary Stats Panel */}
-      <div style={{ color: "#030303ff", fontSize: 15 }}>📌 Date: {filterDate}</div>
+      <h2 style={{ color: "#030303ff", fontSize: 15 }}>📌 Date: {filterDate}</h2>
       <div className="summary-stats child-container">
         <div className="stat-card">
           <h3>Total Diesel Available (Ltrs)</h3>
@@ -480,20 +480,29 @@ Fault details if any: ${r.faultDetails}
         </div>
       )}
       {/* Manage Site Wise LT Panel Auto/Manual Operation */}
-      {/* { userData?.site === "Asansol" ? (
+      { userData?.site === "Asansol" ? (
         // <div style={{ color: "#6b7280", fontSize: 12 }}>📌 Note: For Asansol Site, Please Click Below Button to Manage LT Panel Auto/Manual Operation </div>
-        <button className="segr-manage-btn" onClick={() => navigate("/operation")}>
-          📟 LT Panel Auto/Manual Operation {userData?.site}
+        <button className="segr-manage-btn" onClick={() => navigate("/asansol-operation")}>
+          📟 LT Panel Auto/Manual Operation Asansol
         </button>
       ) : null
 
-      } */}
-      <button className="segr-manage-btn" onClick={() => navigate("/asansol-operation")}>
+      }
+
+      { userData?.site === "Berhampore" ? (
+        // <div style={{ color: "#6b7280", fontSize: 12 }}>📌 Note: For Asansol Site, Please Click Below Button to Manage LT Panel Auto/Manual Operation </div>
+        <button className="segr-manage-btn" onClick={() => navigate("/Berhampore-operation")}>
+          📟 LT Panel Auto/Manual Operation Berhampore
+        </button>
+      ) : null
+
+      }
+      {/* <button className="segr-manage-btn" onClick={() => navigate("/asansol-operation")}>
           📟 LT Panel Auto/Manual Operation Asansol
         </button>
       <button className="segr-manage-btn" onClick={() => navigate("/Berhampore-operation")}>
           📟 LT Panel Auto/Manual Operation Berhampore
-        </button>
+        </button> */}
 
       {/* Filters */}
       <div className="dhr-filters">

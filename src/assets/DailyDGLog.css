@@ -1,8 +1,8 @@
 .daily-log-container {
-  max-width: 1200px;
+  max-width: inherit;
   margin: 0 auto;
   padding: 1.5rem;
-  background: #f9fafb;
+  background: linear-gradient(135deg, #4b502cb9 0%, #4cafa7bb 100%);;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -11,7 +11,7 @@
 .daily-log-container h2 {
   font-size: 1.5rem;
   margin-bottom: 1rem;
-  color: #1f2937;
+  color: #ffffff;
   text-align: center;
   font-weight: 600;
 }
@@ -24,13 +24,22 @@
   font-weight: 500;
 }
 
+.daily-log-container label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+
 .daily-log-form {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 1rem;
   margin-top: 1rem;
   padding: 1rem;
-  background: #ffffff;
+  background: linear-gradient(135deg, #4b502c 0%, #4cafa7 100%);
   border-radius: 10px;
   border: 1px solid #e5e7eb;
 }
@@ -40,7 +49,7 @@
   flex-direction: column;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #374151;
+  color: #ffffff;
 }
 
 .daily-log-form input {
@@ -148,6 +157,110 @@
 
 .row-error {
   background-color: rgba(255, 0, 0, 0.4); /* stronger red for invalid */
+}
+
+.avg-segr {
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avg-segr.low {
+  color: red;
+}
+
+.avg-segr.low::after {
+  content: "🚩";
+}
+
+.avg-segr.high {
+  color: green;
+}
+
+.avg-segr.high::after {
+  content: "✅";
+}
+
+.month {
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.month.January {
+  color: #4b8fdd;
+}
+.month.January::before {
+  content: "☃️";
+}
+.month.February {
+  color: #ce2e8b;
+}
+.month.February::before {
+  content: "❤️";
+}
+.month.March {
+  color: #83ce2e;
+}
+.month.March::before {
+  content: "🌱";
+}
+.month.April {
+  color: #3b4f53;
+}
+.month.April::before {
+  content: "🌧️";
+}.month.May {
+  color: #dad74f;
+}
+.month.May::before {
+  content: "👩‍👧";
+}.month.June {
+  color: #dd8430;
+}
+.month.June::before {
+  content: "🌞";
+}.month.July {
+  color: #6a2d9c;
+}
+.month.July::before {
+  content: "🎆";
+}.month.August {
+  color: #4c69c9;
+}
+.month.August::before {
+  content: "🏖️";
+}
+.month.September {
+  color: #ad3880;
+}
+.month.September::before {
+  content: "🍎";
+}
+.month.October {
+  color: #af5011;
+}
+.month.October::before {
+  content: "🍂";
+}
+.month.November {
+  color: #5f3316;
+}
+.month.November::before {
+  content: "🦃";
+}
+.month.December {
+  color: #07611b;
+}
+.month.December::before {
+  content: "🎄";
+}
+
+/* Missing Input*/
+.input-missing {
+  border: 2px solid red;
+  background-color: #ffecec;
 }
 
 
