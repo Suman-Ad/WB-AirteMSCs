@@ -27,24 +27,24 @@ const Layout = ({ userData, children }) => {
           <div style={{ flex: 1, textAlign: "center" }}>
             <header className="main-header">
               <div className="header-top">
-                <h1 className="title">
-                  WB - Airtel - MSC Data Management System
+                <h1 className="title" title="Prepared By Sumen Adhikari">
+                  WB - Airtel - MSC - DBMS
                 </h1>
-                <img 
-                    src={Vertiv} 
-                    alt="Vertiv Logo" 
-                    className="logo"
-                    style={{
-                      height: '4em',
-                      verticalAlign: 'middle',
-                      margin: '0 0.2em',
-                    }}
-                  />
+                <img
+                  src={Vertiv}
+                  alt="Vertiv Logo"
+                  className="logo"
+                  title="Prepaired By Sumen Adhikari"
+                  style={{
+                    height: '4em',
+                    verticalAlign: 'middle',
+                    margin: '0 0.2em',
+                  }}
+                />
               </div>
               <p className="dashboard-subinfo">
                 <strong>🏢{userData?.site || "All"}</strong>|&nbsp;<strong>🆔{userData.siteId || "All"}</strong>
               </p>
-
             </header>
           </div>
         </div>

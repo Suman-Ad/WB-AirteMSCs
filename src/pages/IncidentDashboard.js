@@ -20,6 +20,7 @@ const IncidentDashboard = ({ userData }) => {
   const [editText, setEditText] = useState("");
   const navigate = useNavigate();
   const [summaryData, setSummaryData] = useState([]);
+  const [textSummary, setTextSummary] = useState({ total: 0, sites: {} });
 
   
   const [filters, setFilters] = useState({
@@ -27,7 +28,9 @@ const IncidentDashboard = ({ userData }) => {
     status: '',
     equipment: '',
     rcaStatus: '',
-    search: ''
+    search: '',
+    ompPartner: '',
+    dateOfIncident: ''
   });
 
 
@@ -78,6 +81,9 @@ const IncidentDashboard = ({ userData }) => {
       if (filters.rcaStatus) {
         data = data.filter(i => i.rcaStatus === filters.rcaStatus);
       }
+      if (filters.ompPartner) {
+        data = data.filter(i => (i.ompPartner || "").toLowerCase() === filters.ompPartner.toLowerCase());
+      }
       if (filters.search) {
         const searchText = filters.search.toLowerCase();
         data = data.filter(item =>
@@ -86,7 +92,9 @@ const IncidentDashboard = ({ userData }) => {
           (item.ttDocketNo || "").toLowerCase().includes(searchText) ||
           (item.siteName || "").toLowerCase().includes(searchText) ||
           (item.ompPartner || "").toLowerCase().includes(searchText) ||
-          (item.status || "").toLowerCase().includes(searchText)
+          (item.status || "").toLowerCase().includes(searchText) ||
+          (item.dateOfIncident || "").toLowerCase().includes(searchText) ||
+          (item.dateKey || "").toLowerCase().includes(searchText)
         );
       }
 
@@ -95,11 +103,19 @@ const IncidentDashboard = ({ userData }) => {
 
       setIncidents(data);
 
-      // 🔹 Summary
+      // 🔹 Summary counts
       const openCount = data.filter(i => i.status === "Open").length;
       const closedCount = data.filter(i => i.status === "Closed").length;
       const rcaReceived = data.filter(i => i.rcaStatus === "Y").length;
       const rcaPending = data.filter(i => i.rcaStatus === "N").length;
+
+      // 🔹 Site-wise counts
+      const siteCounts = {};
+      data.forEach(i => {
+        if (i.siteName) {
+          siteCounts[i.siteName] = (siteCounts[i.siteName] || 0) + 1;
+        }
+      });
 
       setSummaryData([
         { name: "Open Points", value: openCount },
@@ -107,12 +123,20 @@ const IncidentDashboard = ({ userData }) => {
         { name: "RCA Received", value: rcaReceived },
         { name: "RCA Pending", value: rcaPending }
       ]);
+
+      // Save text stats
+      setTextSummary({
+        total: data.length,
+        sites: siteCounts
+      });
+
     } catch (error) {
       console.error('Error fetching incidents:', error);
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchIncidents();
@@ -129,7 +153,6 @@ const IncidentDashboard = ({ userData }) => {
       alert("No incident data to export!");
       return;
     }
-    let sl = 0
     // Convert to plain JSON (remove nested objects if needed)
     const exportData = incidents.map((item, i) => ({
       // ID: item.id,
@@ -145,7 +168,7 @@ const IncidentDashboard = ({ userData }) => {
       Completion_Date: item.closureDate  || "",
       Status: item.status || "",
       Remarks: item.remarks || "",
-      RCA_File: item.rcaFileUrl || "",   // ✅ Added
+      RCA_File: item.rcaFileUrl? "Received" : "Pending",   // ✅ Added
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -164,33 +187,6 @@ const IncidentDashboard = ({ userData }) => {
       <h1 className="dashboard-header">
         <strong>🚨 Incident Dashboard</strong>
       </h1>
-
-      {/* 🔹 Summary Chart */}
-      <div className="summary-chart-container">
-        <h2 className="noticeboard-header">📊 Incident Summary</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={summaryData}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              outerRadius={100}
-              label
-            >
-              {summaryData.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={["#FF6384", "#36A2EB", "#4BC0C0", "#FFCE56"][index % 4]} 
-                />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
 
       {/* Existing Notice Board */}
       <div className="instruction-tab">
@@ -244,16 +240,14 @@ const IncidentDashboard = ({ userData }) => {
       {/* Filter Button */}
       <div className="filters">
         <button className="pm-manage-btn info" onClick={() => setShowFilterModal(true)}>
-          🔍 Filter
+          🔍 Filter Options
         </button>
 
         {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin" || userData.role === "User") && (
           <Link to="/incident-management" className="pm-manage-btn"> ➕ Add <strong>"{userData.site || "All"}"</strong> Incidents</Link>
         )}
 
-        <button className="pm-manage-btn" onClick={downloadExcel}>
-          ⬇️ Download Excel
-        </button>
+        
 
       </div>
 
@@ -299,6 +293,18 @@ const IncidentDashboard = ({ userData }) => {
               ))}
             </select>
 
+            {/* OEM Partner Filter */}
+            <select
+              value={filters.ompPartner}
+              onChange={(e) => setFilters({...filters, ompPartner: e.target.value})}
+            >
+              <option value="">All OEM Partners</option>
+              {/* Dynamically extract unique OEM names from incidents */}
+              {[...new Set(incidents.map(i => i.ompPartner).filter(Boolean))].map(oem => (
+                <option key={oem} value={oem}>{oem}</option>
+              ))}
+            </select>
+
             {/* RCA Filter */}
             <select
               value={filters.rcaStatus}
@@ -308,14 +314,6 @@ const IncidentDashboard = ({ userData }) => {
               <option value="N">N</option>
               <option value="Y">Y</option>
             </select>
-
-            {/* Universal Search */}
-            <input
-              type="text"
-              placeholder="Search incidents..."
-              value={filters.search}
-              onChange={(e) => setFilters({...filters, search: e.target.value})}
-            />
 
             <div className="flex gap-2" style={{marginTop:"10px"}}>
               <button className="pm-manage-btn" onClick={() => { fetchIncidents(); setShowFilterModal(false); }}>
@@ -328,6 +326,57 @@ const IncidentDashboard = ({ userData }) => {
           </div>
         </div>
       )}
+
+      {/* Universal Search */}
+      <input
+        type="text"
+        placeholder="🔍Search incidents..."
+        value={filters.search}
+        onChange={(e) => setFilters({...filters, search: e.target.value})}
+      />
+
+      {/* 🔹 Summary Chart */}
+      <div className="summary-chart-container">
+        <h2 className="noticeboard-header">📊 Incident Status & RCA</h2>
+        <div className="summary-chart-container">
+          <p><strong>Total Incidents:</strong> {textSummary.total}</p>
+          <ul>
+            {Object.keys(textSummary.sites).map(site => (
+              <li key={site}>
+                <strong>{site}:</strong> {textSummary.sites[site]}
+              </li>
+            ))}
+          </ul>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={summaryData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                label
+              >
+                {summaryData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={["#FF6384", "#36A2EB", "#4BC0C0", "#FFCE56"][index % 4]} 
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User") && (
+      <button className="pm-manage-btn" onClick={downloadExcel}>
+        ⬇️ Download Excel
+      </button>
+      )}
+      
 
       {loading ? (
         <p>Loading...</p>

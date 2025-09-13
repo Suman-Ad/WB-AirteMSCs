@@ -12,13 +12,13 @@ export const siteList = {
     "MPCG": ["Bhopal Center 1st floor", "Bhopal Center 4th floor", "Gobindpura", "Gwalior", "Indore Geeta Bhawan", "Jabalpur", "Pardesipura", "Raipur"],
     "ROM": ["Nagpur", "Vega Center", "E-Space", "Kolhapur", "Nagpur New", "Nagpur BTSOL"],
   },
-  "North": {
-    "DEL": ["DLF", "Mira Tower"],
-    "HR": ["GLOBSYN"]
-  },
-  "South": {
-    "KA": ["Infinity-I", "Infinity-II"],
-    "TS": ["Siliguri"]
-  }
+  // "North": {
+  //   "DEL": ["DLF", "Mira Tower"],
+  //   "HR": ["GLOBSYN"]
+  // },
+  // "South": {
+  //   "KA": ["Infinity-I", "Infinity-II"],
+  //   "TS": ["Siliguri"]
+  // }
 };
 
