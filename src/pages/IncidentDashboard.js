@@ -26,6 +26,7 @@ const IncidentDashboard = ({ userData }) => {
     siteId: userData?.siteId || '',
     status: '',
     equipment: '',
+    rcaStatus: '',
     search: ''
   });
 
@@ -60,22 +61,23 @@ const IncidentDashboard = ({ userData }) => {
   const fetchIncidents = async () => {
     setLoading(true);
     try {
-      let q = query(collection(db, 'incidents'), orderBy('dateKey', 'desc'));
-
-      if (filters.siteId) {
-        q = query(q, where('siteId', '==', filters.siteId));
-      }
-      if (filters.status) {
-        q = query(q, where('status', '==', filters.status));
-      }
-      if (filters.equipment) {
-        q = query(q, where('equipmentCategory', '==', filters.equipment));
-      }
-
-      const snapshot = await getDocs(q);
+      // ✅ Fetch all incidents once
+      const snapshot = await getDocs(collection(db, 'incidents'));
       let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      // Universal search filter (client-side)
+      // ✅ Apply filters client-side
+      if (filters.siteId) {
+        data = data.filter(i => i.siteId === filters.siteId);
+      }
+      if (filters.status) {
+        data = data.filter(i => i.status === filters.status);
+      }
+      if (filters.equipment) {
+        data = data.filter(i => i.equipmentCategory === filters.equipment);
+      }
+      if (filters.rcaStatus) {
+        data = data.filter(i => i.rcaStatus === filters.rcaStatus);
+      }
       if (filters.search) {
         const searchText = filters.search.toLowerCase();
         data = data.filter(item =>
@@ -88,8 +90,12 @@ const IncidentDashboard = ({ userData }) => {
         );
       }
 
+      // ✅ Sort by dateKey descending (client-side)
+      data.sort((a, b) => (b.dateKey || "").localeCompare(a.dateKey || ""));
+
       setIncidents(data);
-      // 🔹 Compute summary
+
+      // 🔹 Summary
       const openCount = data.filter(i => i.status === "Open").length;
       const closedCount = data.filter(i => i.status === "Closed").length;
       const rcaReceived = data.filter(i => i.rcaStatus === "Y").length;
@@ -259,8 +265,8 @@ const IncidentDashboard = ({ userData }) => {
 
             {/* Site Filter */}
             <select
-              value={filters.site}
-              onChange={(e) => setFilters({...filters, site: e.target.value})}
+              value={filters.siteId}
+              onChange={(e) => setFilters({...filters, siteId: e.target.value})}
             >
               <option value="">All Sites</option>
               {Object.keys(siteList).map(region =>
@@ -291,6 +297,16 @@ const IncidentDashboard = ({ userData }) => {
               {equipmentCategories.map(eq => (
                 <option key={eq} value={eq}>{eq}</option>
               ))}
+            </select>
+
+            {/* RCA Filter */}
+            <select
+              value={filters.rcaStatus}
+              onChange={(e) => setFilters({...filters, rcaStatus: e.target.value})}
+            >
+              <option value="">All RCA Statuses</option>
+              <option value="N">N</option>
+              <option value="Y">Y</option>
             </select>
 
             {/* Universal Search */}
