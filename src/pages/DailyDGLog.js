@@ -558,8 +558,9 @@ const DailyDGLog = ({ userData }) => {
 
           return (
             <div className="monthly-stats" >
+              <p style={{ fontSize: "20px" }}><strong>📊 Summery Data</strong></p>
               {/* <p><strong>📊 Avg DG CPH – {monthlyAvgCPH}/Hrs</strong></p> */}
-              <p style={{ fontSize: "20px"}}><strong>⚡ Site Running Load – {fmt(avgSiteRunningKw)} kWh</strong></p>
+              <p style={{ borderTop: "3px solid #eee"}}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p>
               <p style={{ borderTop: "1px solid #eee"}}>⚡ Total DG KW Generation – <strong>{fmt(totalKwh)} kW</strong></p>
               <p style={{ marginLeft: "20px" }}>
                 • DG-1: <strong>{fmt1(totalDG1Kw)} kW</strong>
