@@ -192,15 +192,15 @@ const DailyDashboard = ({ userData }) => {
     // example: add a Final Summary sheet (static)
     const finalSummaryData = [
       ["Edge Data Centres Count", "WB"],
-      ["Total Site Count", {f: "=COUNTA('Diesel Back Up'!C2:C13)"}],
+      ["Total Site Count", {f: "=COUNTA('Diesel Back Up'!A2:A13)"}],
       ["Category Checks", ""],
-      ["Sites Less Than 12 Hrs Diesel Back Up", { f: "=COUNTIF('Diesel Back Up'!M:M, \"<12\")" }],
-      ["Sites More Than 12 Hrs Diesel Back Up", { f: "=COUNTIF('Diesel Back Up'!M:M, \">12\")" }],
-      ["MSC more than 2500 Litres excluding Day Tanks", { f: "=COUNTIF('Diesel Back Up'!G:G, \">2500\")" }],
-      ["MSC more than 2500 Litres Including Day Tanks", { f: "=COUNTIF('Diesel Back Up'!I:I, \">2500\")" }],
+      ["Sites Less Than 12 Hrs Diesel Back Up", { f: "=COUNTIF('Diesel Back Up'!L:L, \"<12\")" }],
+      ["Sites More Than 12 Hrs Diesel Back Up", { f: "=COUNTIF('Diesel Back Up'!L:L, \">12\")" }],
+      ["MSC more than 2500 Litres excluding Day Tanks", { f: "=COUNTIF('Diesel Back Up'!F:F, \">2500\")" }],
+      ["MSC more than 2500 Litres Including Day Tanks", { f: "=COUNTIF('Diesel Back Up'!H:H, \">2500\")" }],
       ["DG Running Hrs.", {f: "=SUM('DG-EB Backup'!F2:F21)"}],
-      ["EB Availability Hrs.", {f: "=(B2*24)-SUM('DG-EB Backup'!E2:E21)"}],
-      ["Infra Uptime", {f: "=AVERAGE('Infra Update'!F2:F22)"}],
+      ["EB Availability Hrs.", {f: "=(B2*24)-SUM('DG-EB Backup'!D2:D21)"}],
+      ["Infra Uptime", {f: "=AVERAGE('Infra Update'!E2:E22)"}],
       ["Infra Uptime with Redundancy", "100%"],
       ["Minor Fault Details (If any)", "N"],
       ["Major Fault Details (If any)", "N"],
@@ -211,11 +211,11 @@ const DailyDashboard = ({ userData }) => {
       ["Total Site Count", {f: "=B2"}],
       ["Category Checks", ""],
       ["O&M Manpower Availability as Per LOI", "Ok"],
-      [`In House PM Planned (${monthYear} Month)`, {f: "=COUNTA('In House PM'!C2:C10000)"}],
-      [`In House PM Completed (${monthYear} Month)`, {f: "=COUNTIF('In House PM'!I:I, \"Done\")"}],
+      [`In House PM Planned (${monthYear} Month)`, {f: "=COUNTA('In House PM'!A2:A10000)"}],
+      [`In House PM Completed (${monthYear} Month)`, {f: "=COUNTIF('In House PM'!H:H, \"Done\")"}],
       ["Inhouse PM Completion %", { f: "=(B21/B20)*100" }],
-      [`OEM PM Planned (${monthYear} Month)`, {f: "=COUNTA('OEM PM'!C2:C10000)"}],
-      [`OEM PM Completed (${monthYear} Month)`, {f: "=COUNTIF('OEM PM'!P:P, \"Done\")"}],
+      [`OEM PM Planned (${monthYear} Month)`, {f: "=COUNTA('OEM PM'!A2:A10000)"}],
+      [`OEM PM Completed (${monthYear} Month)`, {f: "=COUNTIF('OEM PM'!O:O, \"Done\")"}],
       ["OEM PM Completion %", { f: "=(B24/B23)*100" }],
       ["Incidents / Accidents Reported", 0],
       ["EOL Replacement Planned", 0],
@@ -235,7 +235,7 @@ const DailyDashboard = ({ userData }) => {
         if (!Array.isArray(rows) || rows.length === 0) return;
         const evaluated = evaluateFormulasForRows(rows, sheetKey);
         evaluated.forEach(er => {
-          const out = { Site: site };
+          const out = {};
           // use template column order if available
           const template = sheetTemplates[sheetKey];
           const cols = template ? Object.keys(template[0]) : Object.keys(er);

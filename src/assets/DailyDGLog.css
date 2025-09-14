@@ -2,7 +2,7 @@
   max-width: inherit;
   margin: 0 auto;
   padding: 1.5rem;
-  background: linear-gradient(135deg, #4b502cb9 0%, #4cafa7bb 100%);;
+  background: linear-gradient(135deg, #4b502cb9 0%, #4cafa7bb 100%);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -151,13 +151,25 @@
   background-color: rgba(255, 0, 0, 0.2); /* red highlight */
 }
 
+.row-inefficient::after {
+  content: "🔴";
+}
+
 .row-warning {
   background-color: rgba(255, 165, 0, 0.2); /* orange highlight */
   color: #dc2626;
 }
 
+.row-warning::after {
+  content: "⚠️";
+}
+
 .row-error {
   background-color: rgba(255, 0, 0, 0.4); /* stronger red for invalid */
+}
+
+.row-offload {
+  background-color: #dc2626;
 }
 
 .avg-segr {
