@@ -436,6 +436,18 @@ button:disabled {
   color: #333;
 }
 
+.chart-container .segr-section {
+  flex: 1; /* left side (SEGR info) */
+}
+
+.chart-container .monthly-stats {
+  flex: 1; /* right side (your stats block) */
+  background: rgba(255, 255, 255, 0.1); /* optional card look */
+  padding: 15px;
+  border-radius: 8px;
+  border-top: 1px solid #eee;
+}
+
 .missing { background-color: #fff0f0; }      /* light red */
 .overdue { background-color: #ffe6e6; }      /* red-ish */
 .near-expiry { background-color: #fff9e6; }  /* yellow-ish */

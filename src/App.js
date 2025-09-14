@@ -276,8 +276,8 @@ function App() {
         </RoleProtectedRoute>} />
 
         {/* Fallback */}
-        <Route path="/" element={<Navigate to="/dhr-dashboard" />} />
-        <Route path="*" element={<Navigate to="/dhr-dashboard" />} />
+        <Route path="/" element={<Navigate to="/daily-dg-log-editor" />} />
+        <Route path="*" element={<Navigate to="/daily-dg-log-editor" />} />
       </Routes>
     </Router>
   );

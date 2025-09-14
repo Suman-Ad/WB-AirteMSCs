@@ -27,19 +27,20 @@ const Layout = ({ userData, children }) => {
           <div style={{ flex: 1, textAlign: "center" }}>
             <header className="main-header">
               <div className="header-top">
-                <h1 className="title" title="Prepared By Sumen Adhikari">
+                <h1 className="title" title="Prepared By @Sumen Adhikari">
                   WB - Airtel - MSC - DBMS
                 </h1>
                 <img
                   src={Vertiv}
                   alt="Vertiv Logo"
                   className="logo"
-                  title="Prepaired By Sumen Adhikari"
+                  title="Prepaired By @Sumen Adhikari"
                   style={{
                     height: '4em',
                     verticalAlign: 'middle',
                     margin: '0 0.2em',
                   }}
+                  onClick={() => {navigate("/")}}
                 />
               </div>
               <p className="dashboard-subinfo">

@@ -135,7 +135,7 @@ const siteWiseDefaults = {
       "Infinity-II": 0.00,
       "Kharagpur": 2000.00,
       "SDF": 0.00,
-      "Siliguri": 1990.00
+      "Siliguri": 1980.00
 
     },
 
