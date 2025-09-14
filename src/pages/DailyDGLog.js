@@ -27,6 +27,9 @@ const DailyDGLog = ({ userData }) => {
 
   const siteName = userData?.site || "UnknownSite";
 
+  const [showEditModal, setShowEditModal] = useState(false);
+
+
   const fmt = (val) => (val !== undefined && val !== null ? Number(val).toFixed(2) : "0.0");
   const fmt1 = (val) => (val !== undefined && val !== null ? Number(val).toFixed(1) : "0.0");
 
@@ -163,22 +166,23 @@ const DailyDGLog = ({ userData }) => {
   };
 
   const getYesterdayData = () => {
-    if (!logs.length) return null;
-    const today = new Date(form.Date);
-    const yesterdayDate = new Date(today);
-    yesterdayDate.setDate(today.getDate() - 1);
-    const ymd = yesterdayDate.toISOString().split("T")[0];
+    if (!logs.length || !form.Date) return null;
 
+    const selected = new Date(form.Date);     // use selected date
+    const yesterdayDate = new Date(selected);
+    yesterdayDate.setDate(selected.getDate() - 1);
+
+    const ymd = yesterdayDate.toISOString().split("T")[0];
     return logs.find((entry) => entry.Date === ymd) || null;
   };
 
-
   useEffect(() => {
-    if (logs.length > 0) {
+    if (logs.length > 0 && form.Date) {
       const yesterday = getYesterdayData();
       if (yesterday) {
-        setForm({
-          Date: getFormattedDate(),
+        setForm((prev) => ({
+          ...prev,
+          Date: form.Date,   // keep current selected date
           "DG-1 KWH Opening": yesterday["DG-1 KWH Closing"] || "",
           "DG-2 KWH Opening": yesterday["DG-2 KWH Closing"] || "",
           "DG-1 Fuel Opening": yesterday["DG-1 Fuel Closing"] || "",
@@ -187,10 +191,10 @@ const DailyDGLog = ({ userData }) => {
           "DG-2 Hour Opening": yesterday["DG-2 Hour Closing"] || "",
           "EB-1 KWH Opening": yesterday["EB-1 KWH Closing"] || "",
           "EB-2 KWH Opening": yesterday["EB-2 KWH Closing"] || "",
-        });
+        }));
       }
     }
-  }, [logs]);
+  }, [logs, form.Date]);   // ✅ run also when Date changes
 
 
   useEffect(() => {
@@ -202,6 +206,44 @@ const DailyDGLog = ({ userData }) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
+
+  const handleDateChange = (newDate) => {
+    setForm((prev) => ({ ...prev, Date: newDate }));
+
+    // Check if entry already exists for this date
+    const existing = logs.find((entry) => entry.Date === newDate);
+
+    if (existing) {
+      // ✅ Populate with saved values
+      setForm({ ...existing, Date: newDate });
+    } else {
+      // ✅ If not found, fall back to yesterday’s data
+      const selected = new Date(newDate);
+      const yesterdayDate = new Date(selected);
+      yesterdayDate.setDate(selected.getDate() - 1);
+      const ymd = yesterdayDate.toISOString().split("T")[0];
+
+      const yesterday = logs.find((entry) => entry.Date === ymd);
+
+      if (yesterday) {
+        setForm({
+          Date: newDate,
+          "DG-1 KWH Opening": yesterday["DG-1 KWH Closing"] || "",
+          "DG-2 KWH Opening": yesterday["DG-2 KWH Closing"] || "",
+          "DG-1 Fuel Opening": yesterday["DG-1 Fuel Closing"] || "",
+          "DG-2 Fuel Opening": yesterday["DG-2 Fuel Closing"] || "",
+          "DG-1 Hour Opening": yesterday["DG-1 Hour Closing"] || "",
+          "DG-2 Hour Opening": yesterday["DG-2 Hour Closing"] || "",
+          "EB-1 KWH Opening": yesterday["EB-1 KWH Closing"] || "",
+          "EB-2 KWH Opening": yesterday["EB-2 KWH Closing"] || "",
+        });
+      } else {
+        // ✅ Empty form if neither current nor yesterday’s exists
+        setForm({ Date: newDate });
+      }
+    }
+  };
+
 
   // 🔹 Save entry
   const handleSubmit = async (e) => {
@@ -261,7 +303,7 @@ const DailyDGLog = ({ userData }) => {
 
     setForm({ Date: getFormattedDate() });
     fetchLogs();
-    
+    setShowEditModal(false);    
   };
 
   // 🔹 Delete log
@@ -325,7 +367,7 @@ const DailyDGLog = ({ userData }) => {
         "DG-1 Fuel Opening": fmt(calculated["DG-1 Fuel Opening"]),
         "DG-1 Fuel Closing": fmt(calculated["DG-1 Fuel Closing"]),
         "DG-1 Fuel Filling": fmt(calculated["DG-1 Fuel Filling"]),
-        "DG-1 ON Load Consumption": fmt(calculated["DG-1 ON Load Consumptionr"]),
+        "DG-1 ON Load Consumption": fmt(calculated["DG-1 ON Load Consumption"]),
         "DG-1 OFF Load Consumption": fmt(calculated["DG-1 OFF Load Consumption"]),
         "DG-1 Fuel Consumption": fmt(calculated["DG-1 Fuel Consumption"]),
         "DG-1 Hour Opening": fmt1(calculated["DG-1 Hour Opening"]),
@@ -339,7 +381,7 @@ const DailyDGLog = ({ userData }) => {
         "DG-2 Fuel Closing": fmt(calculated["DG-2 Fuel Closing"]),
         "DG-2 Fuel Filling": fmt(calculated["DG-2 Fuel Filling"]),
         "DG-1 Fuel Filling": fmt(calculated["DG-1 Fuel Filling"]),
-        "DG-2 ON Load Consumption": fmt(calculated["DG-2 ON Load Consumptionr"]),
+        "DG-2 ON Load Consumption": fmt(calculated["DG-2 ON Load Consumption"]),
         "DG-2 OFF Load Consumption": fmt(calculated["DG-2 OFF Load Consumption"]),
         "DG-2 Fuel Consumption": fmt(calculated["DG-2 Fuel Consumption"]),
         "DG-2 Hour Opening": fmt1(calculated["DG-2 Hour Opening"]),
@@ -365,37 +407,31 @@ const DailyDGLog = ({ userData }) => {
 
   // 🔹 Field validation color
   const getFieldClass = (name) => {
-    const prefix = name.split(" ")[0];
+    const [prefix, type] = name.split(" "); // ["DG-1", "KWH", "Opening"]
 
-    // KWH validation
-    if (name.includes("KWH")) {
+    if (type === "KWH") {
       const open = parseFloat(form[`${prefix} KWH Opening`]);
       const close = parseFloat(form[`${prefix} KWH Closing`]);
-
-      if (!isNaN(open) && (form[`${prefix} KWH Closing`] === "")) return "field-red";
+      if (form[`${prefix} KWH Closing`] === "") return "field-red";
       if (!isNaN(open) && !isNaN(close)) {
         return close >= open ? "field-green" : "field-red";
       }
     }
 
-    // Hours
-    if (name.includes("Hour")) {
+    if (type === "Hour") {
       const open = parseFloat(form[`${prefix} Hour Opening`]);
       const close = parseFloat(form[`${prefix} Hour Closing`]);
-
-      if (!isNaN(open) && (form[`${prefix} Hour Closing`] === "")) return "field-red";
+      if (form[`${prefix} Hour Closing`] === "") return "field-red";
       if (!isNaN(open) && !isNaN(close)) {
         return close >= open ? "field-green" : "field-red";
       }
     }
 
-    // Fuel
-    if (name.includes("Fuel Opening") || name.includes("Fuel Closing")) {
+    if (type === "Fuel") {
       const open = parseFloat(form[`${prefix} Fuel Opening`]);
       const close = parseFloat(form[`${prefix} Fuel Closing`]);
       const fill = parseFloat(form[`${prefix} Fuel Filling`] || 0);
-
-      if (!isNaN(open) && (form[`${prefix} Fuel Closing`] === "")) return "field-red";
+      if (form[`${prefix} Fuel Closing`] === "") return "field-red";
       if (!isNaN(open) && !isNaN(close)) {
         if (fill > 0) return close > open ? "field-green" : "field-red";
         return close <= open ? "field-green" : "field-red";
@@ -404,7 +440,6 @@ const DailyDGLog = ({ userData }) => {
 
     return "";
   };
-
 
 
   return (
@@ -417,25 +452,33 @@ const DailyDGLog = ({ userData }) => {
         </h2>
         <p className={monthlyAvgDG1SEGR < 3 ? "avg-segr low" : "avg-segr high"}>DG-1 Average SEGR – {monthlyAvgDG1SEGR}</p>
         <p className={monthlyAvgDG2SEGR < 3 ? "avg-segr low" : "avg-segr high"}>DG-2 Average SEGR – {monthlyAvgDG2SEGR}</p>
-        {(() => {
+        {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User") &&(() => {
           const entry = logs.find((e) => e.Date === form.Date);
           return entry ? (
-            <p>
-              Last Update: {entry.updatedBy} {entry.updatedAt?.toDate().toLocaleString()}
+            <p style={{ fontSize:12, color:'#666' }}>
+              Last Update By: <strong>{entry.updatedBy}</strong> {entry.updatedAt?.toDate().toLocaleString()}
             </p>
           ) : null;
         })()}
 
       </div>
-      <label>
-        Select Month:
-        <input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-        />
-      </label>
-
+      <div className="controls">
+        <label>
+          Select Month:
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+          />
+          <button 
+            className="pm-manage-btn info" 
+            onClick={() => setShowEditModal(!showEditModal)}
+          >
+            {showEditModal ? "✖ Close" : "✎ Edit / Add Log"}
+          </button>
+        </label>
+      </div>
+      {showEditModal && (
       <form className="daily-log-form" onSubmit={handleSubmit}>
         <label>
           Date:
@@ -443,7 +486,7 @@ const DailyDGLog = ({ userData }) => {
             type="date"
             name="Date"
             value={form.Date || ""}
-            onChange={handleChange}
+            onChange={(e) => handleDateChange(e.target.value)}
             required
           />
         </label>
@@ -464,11 +507,15 @@ const DailyDGLog = ({ userData }) => {
 
         <button className="submit-btn" type="submit">Save Entry</button>
       </form>
+      )}
       
-    <div>
-        <h2>📝 {formatMonthName(selectedMonth)} Logs :</h2>
-        <button className="download-btn" onClick={handleDownloadExcel}>⬇️ Download Excel</button>
-    </div>
+
+
+      
+      <div>
+          <h2>📝 {formatMonthName(selectedMonth)} Logs :</h2>
+          <button className="download-btn" onClick={handleDownloadExcel}>⬇️ Download Excel</button>
+      </div>
 
       <div className="logs-table">
         <table>
@@ -535,7 +582,7 @@ const DailyDGLog = ({ userData }) => {
               rowClass = "row-warning"; // ⚠️ investigate
               }
               return (
-                <tr key={entry.id} className={rowClass}>
+                <tr key={entry.id} className={rowClass} onClick={() => {setForm(entry); setShowEditModal(true)}}>
                   <td>{entry.Date}</td>
                   <td>{fmt(calculated["DG-1 KWH Opening"])}</td>
                   <td>{fmt(calculated["DG-1 KWH Closing"])}</td>
@@ -584,7 +631,7 @@ const DailyDGLog = ({ userData }) => {
                   <td>{fmt1(calculated["Total DG Hours"])}</td>
                   
                   <td>
-                    <button onClick={() => setForm(entry)}>Edit</button>
+                    {/* <button onClick={() => {setForm(entry); setShowEditModal(true)}}>Edit</button> */}
                     <button onClick={() => handleDelete(entry.id)}>
                       Delete
                     </button>
