@@ -32,11 +32,11 @@ const DailyDGLog = ({ userData }) => {
   const [dgHmr, setDgHmr] = useState("");
   const [calculationResult, setCalculationResult] = useState("");
   const [selectedCapacity, setSelectedCapacity] = useState("");
-  
+
   const dgCapacityOptions = [
-    "82.5 kVA", "125.0 kVA", "160.0 kVA", "180.0 kVA", "200.0 kVA", 
-    "250.0 kVA", "320.0 kVA", "380.0 kVA", "400.0 kVA", "500.0 kVA", 
-    "600.0 kVA", "625.0 kVA", "650.0 kVA", "750.0 kVA", "1010.0 kVA", 
+    "82.5 kVA", "125.0 kVA", "160.0 kVA", "180.0 kVA", "200.0 kVA",
+    "250.0 kVA", "320.0 kVA", "380.0 kVA", "400.0 kVA", "500.0 kVA",
+    "600.0 kVA", "625.0 kVA", "650.0 kVA", "750.0 kVA", "1010.0 kVA",
     "1250.0 kVA", "1500.0 kVA", "2000.0 kVA", "2250.0 kVA", "2500.0 kVA"
   ];
 
@@ -98,22 +98,22 @@ const DailyDGLog = ({ userData }) => {
     "71%": [14.9, 21.2, 27.2, 30.3, 33.1, 39.6, 49.6, 60.7, 64.5, 77.8, 92.6, 96.7, 98.1, 126.9, 146.1, 181.6, 219.6, 275.8, 314.3, 314.3],
     "72%": [15.1, 21.5, 27.5, 30.7, 33.5, 40.1, 50.2, 61.4, 65.2, 78.8, 93.7, 97.8, 99.3, 128.2, 148.1, 183.9, 222.4, 279.6, 318.5, 318.5],
     "73%": [15.3, 21.8, 27.8, 31.1, 33.8, 40.7, 50.7, 62.1, 66.0, 79.7, 94.7, 98.8, 100.4, 129.6, 150.0, 186.2, 225.3, 283.4, 322.6, 322.6],
-    "74%": [15.5, 22.1, 28.1, 31.4, 34.2, 41.3, 51.3, 62.8, 66.7, 80.6, 95.8, 99.9, 101.5, 131.0, 151.9, 188.5, 228.1, 287.2, 326.8, 326.8], 
-    "75%": [15.7, 22.4, 28.4, 31.8, 34.6, 41.8, 51.8, 63.5, 67.5, 81.6, 96.9, 101.0, 102.7, 132.4, 153.8, 190.8, 231.0, 291.0, 331.0, 331.0], 
-    "76%": [16.1, 23.4, 29.6, 32.8, 37.0, 43.9, 55.2, 66.3, 70.1, 83.6, 99.6, 102.3, 105.1, 133.2, 157.8, 196.5, 233.0, 298.8, 340.7, 340.7], 
-    "77%": [16.3, 23.6, 29.9, 33.1, 37.4, 44.5, 55.8, 67.0, 70.9, 84.5, 100.7, 103.4, 106.2, 134.6, 159.7, 198.8, 235.9, 302.6, 344.9, 344.9], 
-    "78%": [16.5, 23.9, 30.2, 33.5, 37.8, 45.1, 56.3, 67.7, 71.6, 85.5, 101.7, 104.4, 107.3, 136.0, 161.6, 201.1, 238.7, 306.4, 349.0, 349.0], 
-    "79%": [16.7, 24.2, 30.5, 33.9, 38.2, 45.6, 56.9, 68.4, 72.4, 86.4, 102.8, 105.5, 108.5, 137.4, 163.6, 203.4, 241.6, 310.2, 353.2, 353.2], 
-    "80%": [16.9, 24.5, 30.8, 34.3, 38.5, 46.2, 57.4, 69.1, 73.1, 87.4, 103.9, 106.6, 109.6, 138.7, 165.5, 205.7, 244.5, 314.0, 357.4, 357.4], 
-    "81%": [17.1, 24.8, 31.1, 34.6, 38.9, 46.8, 58.0, 69.8, 73.8, 88.3, 105.0, 107.7, 110.8, 140.1, 167.4, 208.0, 247.3, 317.8, 361.6, 361.6], 
-    "82%": [17.3, 25.1, 31.4, 35.0, 39.3, 47.3, 58.5, 70.5, 74.6, 89.3, 106.0, 108.8, 111.9, 141.5, 169.3, 210.3, 250.2, 321.6, 365.8, 365.8], 
-    "83%": [17.5, 25.4, 31.7, 35.4, 39.7, 47.9, 59.1, 71.2, 75.3, 90.2, 107.1, 109.8, 113.0, 142.9, 171.2, 212.6, 253.0, 325.4, 369.9, 369.9], 
-    "84%": [17.7, 25.7, 32.1, 35.8, 40.1, 48.5, 59.6, 71.9, 76.1, 91.2, 108.2, 110.9, 114.2, 144.3, 173.1, 214.9, 255.9, 329.2, 374.1, 374.1], 
-    "85%": [17.9, 26.0, 32.4, 36.1, 40.5, 49.0, 60.2, 72.6, 76.8, 92.1, 109.3, 112.0, 115.3, 145.7, 175.1, 217.2, 258.8, 333.0, 378.3, 378.3], 
-    "89%": [18.7, 27.1, 33.6, 37.6, 42.0, 51.3, 62.4, 75.4, 79.8, 95.9, 113.5, 116.3, 119.9, 151.2, 182.7, 226.5, 270.2, 348.2, 395.0, 395.0], 
-    "90%": [18.9, 27.4, 33.9, 38.0, 42.4, 51.9, 62.9, 76.2, 80.5, 96.8, 114.6, 117.4, 121.0, 152.6, 184.6, 228.8, 273.1, 352.0, 399.2, 399.2], 
+    "74%": [15.5, 22.1, 28.1, 31.4, 34.2, 41.3, 51.3, 62.8, 66.7, 80.6, 95.8, 99.9, 101.5, 131.0, 151.9, 188.5, 228.1, 287.2, 326.8, 326.8],
+    "75%": [15.7, 22.4, 28.4, 31.8, 34.6, 41.8, 51.8, 63.5, 67.5, 81.6, 96.9, 101.0, 102.7, 132.4, 153.8, 190.8, 231.0, 291.0, 331.0, 331.0],
+    "76%": [16.1, 23.4, 29.6, 32.8, 37.0, 43.9, 55.2, 66.3, 70.1, 83.6, 99.6, 102.3, 105.1, 133.2, 157.8, 196.5, 233.0, 298.8, 340.7, 340.7],
+    "77%": [16.3, 23.6, 29.9, 33.1, 37.4, 44.5, 55.8, 67.0, 70.9, 84.5, 100.7, 103.4, 106.2, 134.6, 159.7, 198.8, 235.9, 302.6, 344.9, 344.9],
+    "78%": [16.5, 23.9, 30.2, 33.5, 37.8, 45.1, 56.3, 67.7, 71.6, 85.5, 101.7, 104.4, 107.3, 136.0, 161.6, 201.1, 238.7, 306.4, 349.0, 349.0],
+    "79%": [16.7, 24.2, 30.5, 33.9, 38.2, 45.6, 56.9, 68.4, 72.4, 86.4, 102.8, 105.5, 108.5, 137.4, 163.6, 203.4, 241.6, 310.2, 353.2, 353.2],
+    "80%": [16.9, 24.5, 30.8, 34.3, 38.5, 46.2, 57.4, 69.1, 73.1, 87.4, 103.9, 106.6, 109.6, 138.7, 165.5, 205.7, 244.5, 314.0, 357.4, 357.4],
+    "81%": [17.1, 24.8, 31.1, 34.6, 38.9, 46.8, 58.0, 69.8, 73.8, 88.3, 105.0, 107.7, 110.8, 140.1, 167.4, 208.0, 247.3, 317.8, 361.6, 361.6],
+    "82%": [17.3, 25.1, 31.4, 35.0, 39.3, 47.3, 58.5, 70.5, 74.6, 89.3, 106.0, 108.8, 111.9, 141.5, 169.3, 210.3, 250.2, 321.6, 365.8, 365.8],
+    "83%": [17.5, 25.4, 31.7, 35.4, 39.7, 47.9, 59.1, 71.2, 75.3, 90.2, 107.1, 109.8, 113.0, 142.9, 171.2, 212.6, 253.0, 325.4, 369.9, 369.9],
+    "84%": [17.7, 25.7, 32.1, 35.8, 40.1, 48.5, 59.6, 71.9, 76.1, 91.2, 108.2, 110.9, 114.2, 144.3, 173.1, 214.9, 255.9, 329.2, 374.1, 374.1],
+    "85%": [17.9, 26.0, 32.4, 36.1, 40.5, 49.0, 60.2, 72.6, 76.8, 92.1, 109.3, 112.0, 115.3, 145.7, 175.1, 217.2, 258.8, 333.0, 378.3, 378.3],
+    "89%": [18.7, 27.1, 33.6, 37.6, 42.0, 51.3, 62.4, 75.4, 79.8, 95.9, 113.5, 116.3, 119.9, 151.2, 182.7, 226.5, 270.2, 348.2, 395.0, 395.0],
+    "90%": [18.9, 27.4, 33.9, 38.0, 42.4, 51.9, 62.9, 76.2, 80.5, 96.8, 114.6, 117.4, 121.0, 152.6, 184.6, 228.8, 273.1, 352.0, 399.2, 399.2],
     "95%": [19.9, 28.9, 35.4, 39.9, 44.3, 54.7, 65.7, 79.7, 84.3, 101.6, 120.0, 122.8, 126.7, 159.5, 194.2, 240.3, 287.4, 371.0, 420.1, 420.1],
-    "100%": [20.9, 30.4, 36.9, 41.8, 46.2, 57.5, 68.4, 83.2, 88.0, 106.3, 125.4, 128.2, 132.4, 166.4, 203.8, 251.8, 301.7, 390.0, 441.0, 441.0], 
+    "100%": [20.9, 30.4, 36.9, 41.8, 46.2, 57.5, 68.4, 83.2, 88.0, 106.3, 125.4, 128.2, 132.4, 166.4, 203.8, 251.8, 301.7, 390.0, 441.0, 441.0],
     "112%": [23.3, 33.8, 40.5, 46.2, 50.8, 64.3, 75.0, 91.7, 96.9, 117.6, 138.2, 141.2, 146.0, 183.0, 226.8, 279.4, 336.0, 435.6, 491.2, 491.2],
     // ... include all other percentage columns from your Python data
   };
@@ -148,9 +148,9 @@ const DailyDGLog = ({ userData }) => {
       result[`DG-${i} KWH Generation`] = kwhClose - kwhOpen;
       result[`DG-${i} Fuel Consumption`] = totalFuelCon;
       result[`DG-${i} Running Hrs`] = hrClose - hrOpen;
-      result[`DG-${i} CPH`] = hrClose > hrOpen && totalFuelCon - offLoadFuelCon > 0 ? (totalFuelCon - offLoadFuelCon)/(hrClose - hrOpen - offLoadHrs) : 0;
-      result[`DG-${i} SEGR`] = totalFuelCon - offLoadFuelCon > 0 ? (kwhClose - kwhOpen)/(totalFuelCon - offLoadFuelCon) : 0;
-      result[`DG-${i} Run Min`] = (hrClose - hrOpen)*60;
+      result[`DG-${i} CPH`] = hrClose > hrOpen && totalFuelCon - offLoadFuelCon > 0 ? (totalFuelCon - offLoadFuelCon) / (hrClose - hrOpen - offLoadHrs) : 0;
+      result[`DG-${i} SEGR`] = totalFuelCon - offLoadFuelCon > 0 ? (kwhClose - kwhOpen) / (totalFuelCon - offLoadFuelCon) : 0;
+      result[`DG-${i} Run Min`] = (hrClose - hrOpen) * 60;
       result[`DG-${i} ON Load Consumption`] = Math.max(totalFuelCon - offLoadFuelCon, 0);
       result[`DG-${i} OFF Load Consumption`] = offLoadFuelCon;
       result[`DG-${i} ON Load Hour`] = (hrClose - hrOpen - offLoadHrs);
@@ -161,9 +161,9 @@ const DailyDGLog = ({ userData }) => {
       result[`DG-${i} Avg Fuel/Hr`] =
         result[`DG-${i} Running Hrs`] > 0
           ? Number(
-              (result[`DG-${i} Fuel Consumption`] /
-                result[`DG-${i} Running Hrs`]).toFixed(2)
-            )
+            (result[`DG-${i} Fuel Consumption`] /
+              result[`DG-${i} Running Hrs`]).toFixed(2)
+          )
           : 0;
     }
 
@@ -208,23 +208,23 @@ const DailyDGLog = ({ userData }) => {
 
   // compute individual DG averages
   const dg1Values = logs
-  .map((entry) => calculateFields(entry)["DG-1 SEGR"])
-  .filter((val) => val > 0);
+    .map((entry) => calculateFields(entry)["DG-1 SEGR"])
+    .filter((val) => val > 0);
   const monthlyAvgDG1SEGR =
     dg1Values.length > 0
       ? (
-          dg1Values.reduce((sum, val) => sum + val, 0) / dg1Values.length
-        ).toFixed(2)
+        dg1Values.reduce((sum, val) => sum + val, 0) / dg1Values.length
+      ).toFixed(2)
       : 0;
 
   const dg2Values = logs
-  .map((entry) => calculateFields(entry)["DG-2 SEGR"])
-  .filter((val) => val > 0);
+    .map((entry) => calculateFields(entry)["DG-2 SEGR"])
+    .filter((val) => val > 0);
   const monthlyAvgDG2SEGR =
     dg2Values.length > 0
       ? (
-          dg2Values.reduce((sum, val) => sum + val, 0) / dg2Values.length
-        ).toFixed(2)
+        dg2Values.reduce((sum, val) => sum + val, 0) / dg2Values.length
+      ).toFixed(2)
       : 0;
 
   // compute monthly average SEGR
@@ -235,14 +235,14 @@ const DailyDGLog = ({ userData }) => {
   const monthlyAvgSEGR =
     allSEGRValues.length > 0
       ? (
-          allSEGRValues.reduce((sum, val) => sum + val, 0) / allSEGRValues.length
-        ).toFixed(2)
+        allSEGRValues.reduce((sum, val) => sum + val, 0) / allSEGRValues.length
+      ).toFixed(2)
       : 0;
 
   const formatMonthName = (ym) => {
     const [year, month] = ym.split("-");
     const date = new Date(year, month - 1); // month is 0-based
-    return date.toLocaleString("default", { month: "long"}); // , year: "numeric" 
+    return date.toLocaleString("default", { month: "long" }); // , year: "numeric" 
   };
 
   const formatYear = (ym) => {
@@ -256,7 +256,7 @@ const DailyDGLog = ({ userData }) => {
     const monthKey = selectedMonth;
     const logsCol = collection(db, "dailyDGLogs", siteName, monthKey);
     const snapshot = await getDocs(logsCol);
-    
+
 
     const data = [];
     snapshot.forEach((docSnap) => {
@@ -359,41 +359,41 @@ const DailyDGLog = ({ userData }) => {
 
     // ✅ validation
     for (let i = 1; i <= 2; i++) {
-        const kwhOpen = parseFloat(form[`DG-${i} KWH Opening`] || 0);
-        const kwhClose = parseFloat(form[`DG-${i} KWH Closing`] || 0);
-        const hrOpen = parseFloat(form[`DG-${i} Hour Opening`] || 0);
-        const hrClose = parseFloat(form[`DG-${i} Hour Closing`] || 0);
-        const fuelOpen = parseFloat(form[`DG-${i} Fuel Opening`] || 0);
-        const fuelClose = parseFloat(form[`DG-${i} Fuel Closing`] || 0);
-        const fuelFill = parseFloat(form[`DG-${i} Fuel Filling`] || 0);
-        const offLoadFuelCon = parseFloat(form[`DG-${i} Off Load Fuel Consumption`] || 0);
+      const kwhOpen = parseFloat(form[`DG-${i} KWH Opening`] || 0);
+      const kwhClose = parseFloat(form[`DG-${i} KWH Closing`] || 0);
+      const hrOpen = parseFloat(form[`DG-${i} Hour Opening`] || 0);
+      const hrClose = parseFloat(form[`DG-${i} Hour Closing`] || 0);
+      const fuelOpen = parseFloat(form[`DG-${i} Fuel Opening`] || 0);
+      const fuelClose = parseFloat(form[`DG-${i} Fuel Closing`] || 0);
+      const fuelFill = parseFloat(form[`DG-${i} Fuel Filling`] || 0);
+      const offLoadFuelCon = parseFloat(form[`DG-${i} Off Load Fuel Consumption`] || 0);
 
-        if (kwhClose < kwhOpen) {
+      if (kwhClose < kwhOpen) {
         return alert(`DG-${i} KWH Closing cannot be less than Opening`);
-        }
-        if (hrClose < hrOpen) {
+      }
+      if (hrClose < hrOpen) {
         return alert(`DG-${i} Hour Closing cannot be less than Opening`);
+      }
+      if (fuelFill > 0) {
+        // in filling case → Closing must be greater than Opening
+        if (fuelClose <= fuelOpen) {
+          return alert(`DG-${i} Fuel Closing must be greater than Opening when filling fuel`);
         }
-        if (fuelFill > 0) {
-          // in filling case → Closing must be greater than Opening
-          if (fuelClose <= fuelOpen) {
-            return alert(`DG-${i} Fuel Closing must be greater than Opening when filling fuel`);
-          }
-        } else {
-          // in normal case → Closing must be less than or equal Opening
-          if (fuelClose > fuelOpen) {
-            return alert(`DG-${i} Fuel Closing cannot be greater than Opening (no fuel filling)`);
-          }
+      } else {
+        // in normal case → Closing must be less than or equal Opening
+        if (fuelClose > fuelOpen) {
+          return alert(`DG-${i} Fuel Closing cannot be greater than Opening (no fuel filling)`);
         }
+      }
     }
 
     // EB validation
     for (let i = 1; i <= 2; i++) {
-        const ebOpen = parseFloat(form[`EB-${i} KWH Opening`] || 0);
-        const ebClose = parseFloat(form[`EB-${i} KWH Closing`] || 0);
-        if (ebClose < ebOpen) {
+      const ebOpen = parseFloat(form[`EB-${i} KWH Opening`] || 0);
+      const ebClose = parseFloat(form[`EB-${i} KWH Closing`] || 0);
+      if (ebClose < ebOpen) {
         return alert(`EB-${i} KWH Closing cannot be less than Opening`);
-        }
+      }
     }
 
     const monthKey = selectedMonth;
@@ -403,7 +403,7 @@ const DailyDGLog = ({ userData }) => {
 
     setForm({ Date: getFormattedDate() });
     fetchLogs();
-    setShowEditModal(false);    
+    setShowEditModal(false);
   };
 
   // 🔹 Delete log
@@ -429,7 +429,7 @@ const DailyDGLog = ({ userData }) => {
       `DG-${i} Fuel Opening`,
       `DG-${i} Fuel Closing`,
       `DG-${i} Off Load Fuel Consumption`,
-      `DG-${i} Fuel Filling`,   
+      `DG-${i} Fuel Filling`,
       `DG-${i} Hour Opening`,
       `DG-${i} Hour Closing`,
       `DG-${i} Off Load Hour`,
@@ -437,16 +437,16 @@ const DailyDGLog = ({ userData }) => {
   }
 
   // 🔹 Download logs as Excel
-    const handleDownloadExcel = () => {
+  const handleDownloadExcel = () => {
     if (!logs.length) {
-        alert("No data available to download");
-        return;
+      alert("No data available to download");
+      return;
     }
 
     // Map logs with calculations
     const exportData = logs.map((entry) => {
-        const calculated = calculateFields(entry);
-        return {
+      const calculated = calculateFields(entry);
+      return {
         Date: calculated.Date,
         "DG-1 KWH Opening": fmt(calculated["DG-1 KWH Opening"]),
         "DG-1 KWH Closing": fmt(calculated["DG-1 KWH Closing"]),
@@ -496,8 +496,8 @@ const DailyDGLog = ({ userData }) => {
         "Total Unit Consumption(EB+DG)": fmt(calculated["Total Unit Consumption"]),
         "Total Fuel": fmt(calculated["Total DG Fuel"]),
         "Total DG Hours": fmt1(calculated["Total DG Hours"]),
-        "Site Running kW": fmt(calculated["Total Unit Consumption"]/24),
-        };
+        "Site Running kW": fmt(calculated["Total Unit Consumption"] / 24),
+      };
     });
 
     // Create worksheet + workbook
@@ -507,7 +507,7 @@ const DailyDGLog = ({ userData }) => {
 
     // Export Excel file
     XLSX.writeFile(wb, `DailyDGLogs_${siteName}_${formatMonthName(selectedMonth)}${formatYear(selectedMonth)}.xlsx`);
-    };
+  };
 
   // 🔹 Field validation color
   const getFieldClass = (name) => {
@@ -545,7 +545,7 @@ const DailyDGLog = ({ userData }) => {
     return "";
   };
 
-  
+
 
   // Then in your component, add these functions:
   const findRowDgCapacity = (dgRating) => {
@@ -595,7 +595,7 @@ const DailyDGLog = ({ userData }) => {
           }
         }
         const finalSegr = kw / x;
-        
+
         result += `🖋 As per Load % OEM Diesel CPH: OEM CPH Data Not Available for ${roundedPercent}% Load....\n`;
         result += `🖋 Achieve CPH as per Physical Inspection: 80.00 ltrs/Hour....\n`;
         result += `🖋 Total Fuel Consumption for ${hmr * 60} Minutes DG Running: ${adjustableCPH.toFixed(2)} Ltrs....\n`;
@@ -634,9 +634,9 @@ const DailyDGLog = ({ userData }) => {
           type="month"
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-        />    
+        />
       </label>
-      
+
       <div className="chart-container" >
         <strong>
           <h1 className={`month ${formatMonthName(selectedMonth)}`}>
@@ -676,7 +676,7 @@ const DailyDGLog = ({ userData }) => {
           const totalFuel = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Fuel"] || 0), 0);
           const totalHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Hours"] || 0), 0);
           const totalFilling = calculatedLogs.reduce((sum, cl) => sum + (cl["Total Fuel Filling"] || 0), 0);
-          
+
 
           const siteRunningKwValues = calculatedLogs
             .map(cl => cl["Site Running kW"])
@@ -698,7 +698,7 @@ const DailyDGLog = ({ userData }) => {
               (sum, cl) => sum + (cl["DG-2 KWH Generation"] || 0),
               0
             );
-          
+
           // Indivisual DG Fuel Fill in Ltrs
           const totalDG1Filling =
             calculatedLogs.reduce(
@@ -710,7 +710,7 @@ const DailyDGLog = ({ userData }) => {
               (sum, cl) => sum + (cl["DG-2 Fuel Filling"] || 0),
               0
             );
-          
+
           // ON / OFF load Consupmtion
           const totalOnLoadCon =
             calculatedLogs.reduce(
@@ -741,30 +741,30 @@ const DailyDGLog = ({ userData }) => {
           return (
             <div className="monthly-stats" >
               <p style={{ fontSize: "25px", textAlign: "center" }}><strong>📊 Summery Data</strong></p>
-              <p style={{ borderTop: "3px solid #eee"}}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p>
+              <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p>
               <p>⛽ Avg DG CPH – <strong>{monthlyAvgCPH}/Hrs</strong></p>
-              <p style={{ borderTop: "1px solid #eee"}}>⚡ Total DG KW Generation – <strong>{fmt(totalKwh)} kW</strong></p>
+              <p style={{ borderTop: "1px solid #eee" }}>⚡ Total DG KW Generation – <strong>{fmt(totalKwh)} kW</strong></p>
               <p style={{ marginLeft: "20px" }}>
                 • DG-1: <strong>{fmt1(totalDG1Kw)} kW</strong>
               </p>
               <p style={{ marginLeft: "20px" }}>
                 • DG-2: <strong>{fmt1(totalDG2Kw)} kW</strong>
               </p>
-              <p style={{ borderTop: "1px solid #eee"}}>⛽ Total Fuel Filling – <strong>{fmt(totalFilling)} Ltrs</strong></p>
+              <p style={{ borderTop: "1px solid #eee" }}>⛽ Total Fuel Filling – <strong>{fmt(totalFilling)} Ltrs</strong></p>
               <p style={{ marginLeft: "20px" }}>
                 • DG-1: <strong>{fmt1(totalDG1Filling)} Ltrs</strong>
               </p>
               <p style={{ marginLeft: "20px" }}>
                 • DG-2: <strong>{fmt1(totalDG2Filling)} Ltrs</strong>
               </p>
-              <p style={{ borderTop: "1px solid #eee"}}>⛽ Total DG Fuel Consumption – <strong>{fmt(totalFuel)} Ltrs</strong></p>
+              <p style={{ borderTop: "1px solid #eee" }}>⛽ Total DG Fuel Consumption – <strong>{fmt(totalFuel)} Ltrs</strong></p>
               <p style={{ marginLeft: "20px" }}>
                 • ON Load: <strong>{fmt1(totalOnLoadCon)} Ltrs</strong>
               </p>
               <p style={{ marginLeft: "20px" }}>
                 • OFF Load: <strong>{fmt1(totalOffLoadCon)} Ltrs</strong>
               </p>
-              <p style={{ borderTop: "1px solid #eee"}}>⏱️ Total DG Run Hours – <strong>{fmt1(totalHrs)} Hour</strong></p>
+              <p style={{ borderTop: "1px solid #eee" }}>⏱️ Total DG Run Hours – <strong>{fmt1(totalHrs)} Hour</strong></p>
               <p style={{ marginLeft: "20px" }}>
                 • ON Load: <strong>{fmt1(totalOnLoadHrs)} hrs</strong> ({totalOnLoadMin} min)
               </p>
@@ -790,23 +790,23 @@ const DailyDGLog = ({ userData }) => {
           })()
         }
       </div>
-      <button 
-        className="segr-manage-btn" 
+      <button
+        className="segr-manage-btn"
         onClick={() => setShowFuelModal(true)}
-        style={{width: "100%"}}
+        style={{ width: "100%" }}
       >
         💥 Cummins DG CPH/SEGR Manager
       </button>
-      
+
       {showFuelModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{maxWidth: '600px'}}>
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
             <h1>Cummins DG CPH/SEGR Monitor</h1>
             <h3>WB-AirtelMSCs</h3>
-            
+
             <div className="form-group">
               <label>Select DG Capacity:</label>
-              <select 
+              <select
                 value={selectedCapacity}
                 onChange={(e) => {
                   setSelectedCapacity(e.target.value);
@@ -820,7 +820,7 @@ const DailyDGLog = ({ userData }) => {
                 ))}
               </select>
             </div>
-            
+
             <div className="form-group">
               <label>Enter DG Generated kW:</label>
               <input
@@ -831,7 +831,7 @@ const DailyDGLog = ({ userData }) => {
                 placeholder="Enter kW"
               />
             </div>
-            
+
             <div className="form-group">
               <label>Enter DG Hour Meter Reading:</label>
               <input
@@ -843,15 +843,15 @@ const DailyDGLog = ({ userData }) => {
                 step="0.1"
               />
             </div>
-            
+
             <div className="button-group">
-              <button 
+              <button
                 onClick={calculateFuel}
                 className="btn-primary"
               >
                 Calculate
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setShowFuelModal(false);
                   setCalculationResult("");
@@ -861,7 +861,7 @@ const DailyDGLog = ({ userData }) => {
                 Close
               </button>
             </div>
-            
+
             {calculationResult && (
               <div className="result-container">
                 <h4>Calculation Results:</h4>
@@ -872,48 +872,48 @@ const DailyDGLog = ({ userData }) => {
         </div>
       )}
       <div className="controls">
-        
-        <button 
-            className="segr-manage-btn info" 
-            onClick={() => setShowEditModal(!showEditModal)}
-          >
-            {showEditModal ? "✖ Close" : "✎ Add / Edit DG Log"}
-          </button>
+
+        <button
+          className="segr-manage-btn info"
+          onClick={() => setShowEditModal(!showEditModal)}
+        >
+          {showEditModal ? "✖ Close" : "✎ Add / Edit DG Log"}
+        </button>
       </div>
       {showEditModal && (
-      <form className="daily-log-form" onSubmit={handleSubmit}>
-        <label>
-          Date:
-          <input
-            type="date"
-            name="Date"
-            value={form.Date || ""}
-            onChange={(e) => handleDateChange(e.target.value)}
-            required
-          />
-        </label>
-
-        {inputFields.map((field) => (
-          <label key={field}>
-            {field}:
+        <form className="daily-log-form" onSubmit={handleSubmit}>
+          <label>
+            Date:
             <input
-              type="number"
-              step="any"
-              name={field}
-              value={form[field] || ""}
-              onChange={handleChange}
-              className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
+              type="date"
+              name="Date"
+              value={form.Date || ""}
+              onChange={(e) => handleDateChange(e.target.value)}
+              required
             />
           </label>
-        ))}
 
-        <button className="submit-btn" type="submit">Save Entry</button>
-      </form>
+          {inputFields.map((field) => (
+            <label key={field}>
+              {field}:
+              <input
+                type="number"
+                step="any"
+                name={field}
+                value={form[field] || ""}
+                onChange={handleChange}
+                className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
+              />
+            </label>
+          ))}
+
+          <button className="submit-btn" type="submit">Save Entry</button>
+        </form>
       )}
-      
+
       <div>
-          <h2>📝 {formatMonthName(selectedMonth)} Logs :</h2>
-          <button className="download-btn" onClick={handleDownloadExcel}>⬇️ Download Excel</button>
+        <h2>📝 {formatMonthName(selectedMonth)} Logs :</h2>
+        <button className="download-btn" onClick={handleDownloadExcel}>⬇️ Download Excel</button>
       </div>
 
       <div className="table-container">
@@ -979,14 +979,14 @@ const DailyDGLog = ({ userData }) => {
               // thresholds
               let rowClass = "";
               if ((calculated["DG-1 CPH"] > 100 && calculated["DG-1 CPH"] < 80) || (calculated["DG-2 CPH"] > 100 && calculated["DG-2 CPH"] < 80)) {
-              rowClass = "row-inefficient"; // 🔴 inefficient
+                rowClass = "row-inefficient"; // 🔴 inefficient
               } else if ((calculated["DG-1 SEGR"] < 3 && calculated["DG-1 SEGR"] > 0) || (calculated["DG-2 SEGR"] < 3 && calculated["DG-2 SEGR"] > 0)) {
-              rowClass = "row-warning"; // ⚠️ investigate
+                rowClass = "row-warning"; // ⚠️ investigate
               } else if ((calculated["DG-1 OFF Load Consumption"] > 0 && calculated["DG-1 OFF Load Hour"] > 0) || (calculated["DG-2 OFF Load Consumption"] > 0 && calculated["DG-2 OFF Load Hour"] > 0)) {
-              rowClass = "row-offload"; // ⚠️ investigate
+                rowClass = "row-offload"; // ⚠️ investigate
               }
               return (
-                <tr key={entry.id} className={rowClass} onClick={() => {setForm(entry); setShowEditModal(true)}}>
+                <tr key={entry.id} className={rowClass} onClick={() => { setForm(entry); setShowEditModal(true) }}>
                   <td>{entry.Date}</td>
                   <td>{fmt(calculated["DG-1 KWH Opening"])}</td>
                   <td>{fmt(calculated["DG-1 KWH Closing"])}</td>
@@ -1033,8 +1033,8 @@ const DailyDGLog = ({ userData }) => {
                   <td>{fmt(calculated["Total Unit Consumption"])}</td>
                   <td>{fmt(calculated["Total DG Fuel"])}</td>
                   <td>{fmt1(calculated["Total DG Hours"])}</td>
-                  <td>{fmt(calculated["Total Unit Consumption"]/24)}</td>
-                  
+                  <td>{fmt(calculated["Total Unit Consumption"] / 24)}</td>
+
                   <td>
                     {userData?.role === "Super Admin" && (
                       <button onClick={() => handleDelete(entry.id)}>

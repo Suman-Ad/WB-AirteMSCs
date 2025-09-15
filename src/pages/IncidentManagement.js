@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { 
-  collection, addDoc, serverTimestamp, 
-  doc, getDoc, setDoc, updateDoc 
+import {
+  collection, addDoc, serverTimestamp,
+  doc, getDoc, setDoc, updateDoc
 } from 'firebase/firestore';
 import IncidentEditorPage from '../components/IncidentEditorPage';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -29,7 +29,7 @@ const IncidentManagement = ({ userData }) => {
     incidentTitle: '',
     incidentDescription: '',
     type: 'Alarm',
-    effect: '',
+    effect: 'Non-Outage',
     effectedEquipmentDetails: '',
     actionsTaken: '',
     rcaStatus: 'N',
@@ -126,7 +126,7 @@ const IncidentManagement = ({ userData }) => {
       const year = incidentDate.getFullYear();
       const month = String(incidentDate.getMonth() + 1).padStart(2, '0');
       const day = String(incidentDate.getDate()).padStart(2, '0');
-      
+
 
       if (incidentId) {
         // 🔸 Update existing incident
@@ -218,7 +218,7 @@ const IncidentManagement = ({ userData }) => {
       </div>
 
       {/* Incident Editor Form */}
-      <IncidentEditorPage 
+      <IncidentEditorPage
         formData={formData}
         onFormChange={handleFormChange}
         onSubmit={handleSubmit}

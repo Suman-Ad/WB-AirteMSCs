@@ -22,7 +22,7 @@ const IncidentDashboard = ({ userData }) => {
   const [summaryData, setSummaryData] = useState([]);
   const [textSummary, setTextSummary] = useState({ total: 0, sites: {} });
 
-  
+
   const [filters, setFilters] = useState({
     siteId: userData?.siteId || '',
     status: '',
@@ -42,9 +42,9 @@ const IncidentDashboard = ({ userData }) => {
 
   // Equipment Categories
   const equipmentCategories = [
-    "ACS","Air Conditioner","BMS","CCTV","Comfort AC","Diesel Generator","Earth Pit",
-    "Exhust Fan","FAS","FSS","HT Panel","Inverter","LT Panel","PAS","PFE","SMPS",
-    "SMPS BB","Solar System","UPS","UPS BB","DCDB/ACDB","Transformer"
+    "ACS", "Air Conditioner", "BMS", "CCTV", "Comfort AC", "Diesel Generator", "Earth Pit",
+    "Exhust Fan", "FAS", "FSS", "HT Panel", "Inverter", "LT Panel", "PAS", "PFE", "SMPS",
+    "SMPS BB", "Solar System", "UPS", "UPS BB", "DCDB/ACDB", "Transformer"
   ];
 
   // Fetch dashboard instruction
@@ -157,18 +157,35 @@ const IncidentDashboard = ({ userData }) => {
     const exportData = incidents.map((item, i) => ({
       // ID: item.id,
       Sl_No: i + 1,
-      // Region: item.region || "",
-      // Circle: item.circle || "",
-      Site: item.siteName || "",
+      Region: item.region || "",
+      Circle: item.circle || "",
       Site_ID: item.siteId || "",
+      Site_Name: item.siteName || "",
+      OEM_Partner: item.ompPartner || "",
+      Date: item. dateOfIncident || "",
+      Time: item. timeOfIncident || "",
+      SA_NSA: item.saNsa ||"",
+      Equipment_Category: item.equipmentCategory || "",
+      Title: item.incidentTitle || "",
       Issue_Details: item.incidentDescription || "",
-      // OEM_Partner: item.ompPartner || "",
-      Date: item.dateOfIncident || "",
-      TT_Docket: item.ttDocketNo || "",
-      Completion_Date: item.closureDate  || "",
-      Status: item.status || "",
+      Type: item.type || "",
+      Effect: item.effect || "",
+      Effect_Equipment_Details: item.effectedEquipmentDetails || "",
+      Action_Taken: item.actionsTaken || "",
+      RCA_Status: item.rcaStatus || "",
+      Ownership: item.ownership|| "",
+      Reason_Category: item.reasonCategory || "",
+      Real_Reason: item.realReason || "",
+      Impact_Type: item.impactType || "",
       Remarks: item.remarks || "",
-      RCA_File: item.rcaFileUrl? "Received" : "Pending",   // ✅ Added
+      Closure_Date: item.closureDate || "",
+      Clouser_Time: item.closureTime || "",
+      Status: item.status || "",
+      MTTR : item.mttr || "",
+      Learning: item.learningShared || "",
+      Clouser_Remarks: item.closureRemarks || "",
+      TT_Docket: item.ttDocketNo || "",
+      RCA_File: item.rcaFileUrl ? "Received" : "Pending",   // ✅ Added
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -234,9 +251,9 @@ const IncidentDashboard = ({ userData }) => {
             )}
           </>
         )}
-        <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
+        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @Suman Adhikari</h6>
       </div>
-      
+
       {/* Filter Button */}
       <div className="filters">
         <button className="pm-manage-btn info" onClick={() => setShowFilterModal(true)}>
@@ -247,7 +264,7 @@ const IncidentDashboard = ({ userData }) => {
           <Link to="/incident-management" className="pm-manage-btn"> ➕ Add <strong>"{userData.site || "All"}"</strong> Incidents</Link>
         )}
 
-        
+
 
       </div>
 
@@ -260,7 +277,7 @@ const IncidentDashboard = ({ userData }) => {
             {/* Site Filter */}
             <select
               value={filters.siteId}
-              onChange={(e) => setFilters({...filters, siteId: e.target.value})}
+              onChange={(e) => setFilters({ ...filters, siteId: e.target.value })}
             >
               <option value="">All Sites</option>
               {Object.keys(siteList).map(region =>
@@ -275,7 +292,7 @@ const IncidentDashboard = ({ userData }) => {
             {/* Status Filter */}
             <select
               value={filters.status}
-              onChange={(e) => setFilters({...filters, status: e.target.value})}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
             >
               <option value="">All Statuses</option>
               <option value="Open">Open</option>
@@ -285,7 +302,7 @@ const IncidentDashboard = ({ userData }) => {
             {/* Equipment Filter */}
             <select
               value={filters.equipment}
-              onChange={(e) => setFilters({...filters, equipment: e.target.value})}
+              onChange={(e) => setFilters({ ...filters, equipment: e.target.value })}
             >
               <option value="">All Equipment</option>
               {equipmentCategories.map(eq => (
@@ -296,7 +313,7 @@ const IncidentDashboard = ({ userData }) => {
             {/* OEM Partner Filter */}
             <select
               value={filters.ompPartner}
-              onChange={(e) => setFilters({...filters, ompPartner: e.target.value})}
+              onChange={(e) => setFilters({ ...filters, ompPartner: e.target.value })}
             >
               <option value="">All OEM Partners</option>
               {/* Dynamically extract unique OEM names from incidents */}
@@ -308,14 +325,14 @@ const IncidentDashboard = ({ userData }) => {
             {/* RCA Filter */}
             <select
               value={filters.rcaStatus}
-              onChange={(e) => setFilters({...filters, rcaStatus: e.target.value})}
+              onChange={(e) => setFilters({ ...filters, rcaStatus: e.target.value })}
             >
               <option value="">All RCA Statuses</option>
               <option value="N">N</option>
               <option value="Y">Y</option>
             </select>
 
-            <div className="flex gap-2" style={{marginTop:"10px"}}>
+            <div className="flex gap-2" style={{ marginTop: "10px" }}>
               <button className="pm-manage-btn" onClick={() => { fetchIncidents(); setShowFilterModal(false); }}>
                 Apply
               </button>
@@ -332,7 +349,7 @@ const IncidentDashboard = ({ userData }) => {
         type="text"
         placeholder="🔍Search incidents..."
         value={filters.search}
-        onChange={(e) => setFilters({...filters, search: e.target.value})}
+        onChange={(e) => setFilters({ ...filters, search: e.target.value })}
       />
 
       {/* 🔹 Summary Chart */}
@@ -359,9 +376,9 @@ const IncidentDashboard = ({ userData }) => {
                 label
               >
                 {summaryData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={["#FF6384", "#36A2EB", "#4BC0C0", "#FFCE56"][index % 4]} 
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={["#FF6384", "#36A2EB", "#4BC0C0", "#FFCE56"][index % 4]}
                   />
                 ))}
               </Pie>
@@ -372,11 +389,11 @@ const IncidentDashboard = ({ userData }) => {
         </div>
       </div>
       {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User") && (
-      <button className="pm-manage-btn" onClick={downloadExcel}>
-        ⬇️ Download Excel
-      </button>
+        <button className="pm-manage-btn" onClick={downloadExcel}>
+          ⬇️ Download Excel
+        </button>
       )}
-      
+
 
       {loading ? (
         <p>Loading...</p>
@@ -417,13 +434,13 @@ const IncidentDashboard = ({ userData }) => {
                   <td>{incident.closureDate}</td>
                   <td>{incident.mttr}</td>
                   <td>{incident.status}</td>
-                  
-                    <td>
-                      {incident.rcaFileUrl ? 
+
+                  <td>
+                    {incident.rcaFileUrl ?
                       <Link to={incident.rcaFileUrl}>
-                       👁️‍🗨️
-                      </Link> : "N" }
-                    </td>
+                        👁️‍🗨️
+                      </Link> : "N"}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -472,17 +489,17 @@ const IncidentDashboard = ({ userData }) => {
             </div>
             {/* Edit Button - Role & Site Based Access */}
             {(
-              ["Super Admin", "Admin", "Super User"].includes(userData.role) || 
+              ["Super Admin", "Admin", "Super User"].includes(userData.role) ||
               (selectedIncident.siteName === userData.site) // only own site
             ) && (
-              <button 
-                // to={`/incident-edit/${incident.id}`} 
-                className="pm-manage-btn small"
-                onClick={() => navigate(`/incident-edit/${selectedIncident.id}`)}
-              >
-               ✎ Edit
-              </button>
-            )}
+                <button
+                  // to={`/incident-edit/${incident.id}`} 
+                  className="pm-manage-btn small"
+                  onClick={() => navigate(`/incident-edit/${selectedIncident.id}`)}
+                >
+                  ✎ Edit
+                </button>
+              )}
             <button onClick={() => setSelectedIncident(null)} className='pm-manage-btn btn-danger'>Close</button>
           </div>
         </div>

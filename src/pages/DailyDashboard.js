@@ -1,7 +1,7 @@
 // src/pages/DailyDashboard.js
 import React, { useEffect, useState, useMemo } from "react";
 import { db } from "../firebase";
-import { collection, getDocs, doc, setDoc,getDoc, } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, getDoc, } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { Parser } from "hot-formula-parser";
 import { sheetTemplates } from "../components/ExcelSheetEditor";
@@ -129,16 +129,16 @@ const DailyDashboard = ({ userData }) => {
   const [summaryMetrics, setSummaryMetrics] = useState(null);
 
   useEffect(() => {
-        const fetchInstruction = async () => {
-          const docRef = doc(db, "config", "daily_details_dashboard_instruction");
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setInstructionText(docSnap.data().text || "");
-            setEditText(docSnap.data().text || "");
-          }
-        };
-        fetchInstruction();
-      }, []);
+    const fetchInstruction = async () => {
+      const docRef = doc(db, "config", "daily_details_dashboard_instruction");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setInstructionText(docSnap.data().text || "");
+        setEditText(docSnap.data().text || "");
+      }
+    };
+    fetchInstruction();
+  }, []);
 
   // fetch date list
   useEffect(() => {
@@ -192,15 +192,15 @@ const DailyDashboard = ({ userData }) => {
     // example: add a Final Summary sheet (static)
     const finalSummaryData = [
       ["Edge Data Centres Count", "WB"],
-      ["Total Site Count", {f: "=COUNTA('Diesel Back Up'!A2:A13)"}],
+      ["Total Site Count", { f: "=COUNTA('Diesel Back Up'!A2:A13)" }],
       ["Category Checks", ""],
       ["Sites Less Than 12 Hrs Diesel Back Up", { f: "=COUNTIF('Diesel Back Up'!L:L, \"<12\")" }],
       ["Sites More Than 12 Hrs Diesel Back Up", { f: "=COUNTIF('Diesel Back Up'!L:L, \">12\")" }],
       ["MSC more than 2500 Litres excluding Day Tanks", { f: "=COUNTIF('Diesel Back Up'!F:F, \">2500\")" }],
       ["MSC more than 2500 Litres Including Day Tanks", { f: "=COUNTIF('Diesel Back Up'!H:H, \">2500\")" }],
-      ["DG Running Hrs.", {f: "=SUM('DG-EB Backup'!F2:F21)"}],
-      ["EB Availability Hrs.", {f: "=(B2*24)-SUM('DG-EB Backup'!D2:D21)"}],
-      ["Infra Uptime", {f: "=AVERAGE('Infra Update'!E2:E22)"}],
+      ["DG Running Hrs.", { f: "=SUM('DG-EB Backup'!F2:F21)" }],
+      ["EB Availability Hrs.", { f: "=(B2*24)-SUM('DG-EB Backup'!D2:D21)" }],
+      ["Infra Uptime", { f: "=AVERAGE('Infra Update'!E2:E22)" }],
       ["Infra Uptime with Redundancy", "100%"],
       ["Minor Fault Details (If any)", "N"],
       ["Major Fault Details (If any)", "N"],
@@ -208,14 +208,14 @@ const DailyDashboard = ({ userData }) => {
 
       [`Month ${monthYear}`],
       ["Edge Data Centres Count", "WB"],
-      ["Total Site Count", {f: "=B2"}],
+      ["Total Site Count", { f: "=B2" }],
       ["Category Checks", ""],
       ["O&M Manpower Availability as Per LOI", "Ok"],
-      [`In House PM Planned (${monthYear} Month)`, {f: "=COUNTA('In House PM'!A2:A10000)"}],
-      [`In House PM Completed (${monthYear} Month)`, {f: "=COUNTIF('In House PM'!H:H, \"Done\")"}],
+      [`In House PM Planned (${monthYear} Month)`, { f: "=COUNTA('In House PM'!A2:A10000)" }],
+      [`In House PM Completed (${monthYear} Month)`, { f: "=COUNTIF('In House PM'!H:H, \"Done\")" }],
       ["Inhouse PM Completion %", { f: "=(B21/B20)*100" }],
-      [`OEM PM Planned (${monthYear} Month)`, {f: "=COUNTA('OEM PM'!A2:A10000)"}],
-      [`OEM PM Completed (${monthYear} Month)`, {f: "=COUNTIF('OEM PM'!O:O, \"Done\")"}],
+      [`OEM PM Planned (${monthYear} Month)`, { f: "=COUNTA('OEM PM'!A2:A10000)" }],
+      [`OEM PM Completed (${monthYear} Month)`, { f: "=COUNTIF('OEM PM'!O:O, \"Done\")" }],
       ["OEM PM Completion %", { f: "=(B24/B23)*100" }],
       ["Incidents / Accidents Reported", 0],
       ["EOL Replacement Planned", 0],
@@ -223,7 +223,7 @@ const DailyDashboard = ({ userData }) => {
       ["Operational Governance Call Planned", 0],
       ["Operational Governance Call Executed", 0],
     ];
-    
+
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(finalSummaryData), "Final Summary");
 
     // compile sheets site-wise using evaluated values
@@ -244,7 +244,7 @@ const DailyDashboard = ({ userData }) => {
         });
       });
       if (allRows.length) {
-        const ws = XLSX.utils.json_to_sheet(allRows, {raw: false});
+        const ws = XLSX.utils.json_to_sheet(allRows, { raw: false });
         XLSX.utils.book_append_sheet(wb, ws, sheetLabel);
       }
     });
@@ -419,7 +419,7 @@ const DailyDashboard = ({ userData }) => {
         </div>
       )} */}
 
-      
+
       <h3>✅ Completed Site Submission Status</h3>
       <div style={{ overflowX: "auto" }} className="status-table-container">
         <table className="status-table child-container" style={{ minWidth: "800px", borderCollapse: "collapse", marginBottom: "2rem" }}>
@@ -509,13 +509,13 @@ const DailyDashboard = ({ userData }) => {
             )}
           </>
         )}
-        <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
-      </div>      
+        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @Suman Adhikari</h6>
+      </div>
       <h2>📘 Daily Details Dashboard - WB Circle</h2>
-        {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin") && (
-                                <Link to="/excel-live-edit" className="pm-manage-btn">Edit <strong>"{userData.site}"</strong> Daily Details Dashboard ✎ </Link>
-                                )}
-      <div style={{ marginBottom: "1rem"}}>
+      {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin") && (
+        <Link to="/excel-live-edit" className="pm-manage-btn">Edit <strong>"{userData.site}"</strong> Daily Details Dashboard ✎ </Link>
+      )}
+      <div style={{ marginBottom: "1rem" }}>
         <label>Select Date: </label>
         <select value={selectedDate} onChange={e => setSelectedDate(e.target.value)}>
           {!dates.includes(today) && <option value={today}>{today} (Today)</option>}
@@ -556,12 +556,12 @@ const DailyDashboard = ({ userData }) => {
                             <tr key={rIdx}>
                               {cols.map((c, ci) => (
                                 <td key={ci}>
-                                  {["Admin","Super Admin"].includes(userRole) ? (
+                                  {["Admin", "Super Admin"].includes(userRole) ? (
                                     <input
                                       type="text"
                                       defaultValue={rows[rIdx]?.[c] ?? ""}
                                       onBlur={(e) => handleEdit(site, sheetKey, rIdx, c, e.target.value)}
-                                      disabled={ (typeof rows[rIdx]?.[c] === "string" && rows[rIdx][c].trim().startsWith("=")) || Boolean(formulasConfig[sheetKey]?.[c]) }
+                                      disabled={(typeof rows[rIdx]?.[c] === "string" && rows[rIdx][c].trim().startsWith("=")) || Boolean(formulasConfig[sheetKey]?.[c])}
                                     />
                                   ) : (
                                     er[c] ?? ""
