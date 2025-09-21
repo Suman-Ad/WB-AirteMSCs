@@ -209,7 +209,6 @@ const IncidentDashboard = ({ userData }) => {
       <div className="instruction-tab">
         {/* ... (keep existing notice board code) ... */}
         <h2 className="noticeboard-header">📌 Notice Board </h2>
-        {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>
             <textarea
@@ -430,8 +429,8 @@ const IncidentDashboard = ({ userData }) => {
                   <td>{incident.incidentTitle}</td>
                   <td>{incident.incidentDescription}</td>
                   <td>{incident.ompPartner}</td>
-                  <td>{incident.ttDocketNo}</td>
-                  <td>{incident.closureDate}</td>
+                  <td>{incident.ttDocketNo || "To be raised"}</td>
+                  <td>{incident.closureDate || "--/--/--"}</td>
                   <td>{incident.mttr}</td>
                   <td>{incident.status}</td>
 
@@ -454,33 +453,33 @@ const IncidentDashboard = ({ userData }) => {
           <div className="modal-content">
             <h1 className='noticeboard-header'><strong>🚨Incident Details</strong></h1>
             <div className='child-container'>
-              <h1><strong> {selectedIncident.incidentTitle || "N/A"} </strong></h1>
-              <h3><strong>Docket No: #{selectedIncident.ttDocketNo || "N/A"}</strong></h3>
-              <p><strong>Circle: </strong> {selectedIncident.circle || "N/A"}</p>
-              <p><strong>Site Id:</strong> {selectedIncident.siteId || "N/A"}</p>
-              <p><strong>Site:</strong> {selectedIncident.siteName || "N/A"}</p>
-              <p><strong>OEM Name:</strong> {selectedIncident.ompPartner || "N/A"}</p>
-              <p><strong>Date:</strong> {formatDate(selectedIncident.dateKey || "N/A")}</p>
-              <p><strong>Time:</strong> {selectedIncident.timeOfIncident || "N/A"}</p>
-              <p><strong>SA/NSA:</strong> {selectedIncident.saNsa || "N/A"}</p>
-              <p><strong>Equipment:</strong> {selectedIncident.equipmentCategory || "N/A"}</p>
-              <p><strong>Title:</strong> {selectedIncident.incidentTitle || "N/A"}</p>
-              <p><strong>Type:</strong> {selectedIncident.type || "N/A"}</p>
-              <p><strong>Affected Equipment Details:</strong> {selectedIncident.effectedEquipmentDetails || "N/A"}</p>
-              <p><strong>ActionsTaken:</strong> {selectedIncident.actionsTaken || "N/A"}</p>
-              <p><strong>RCA Status:</strong> {selectedIncident.rcaStatus || "N/A"}</p>
-              <p><strong>Ownership:</strong> {selectedIncident.ownership || "N/A"}</p>
-              <p><strong>Reason:</strong> {selectedIncident.realReason || "N/A"}</p>
-              <p><strong>Impact Type:</strong> {selectedIncident.impactType || "N/A"}</p>
-              <p><strong>Remarks:</strong> {selectedIncident.remarks || "N/A"}</p>
-              <p><strong>Closure Date:</strong> {selectedIncident.closureDate || "N/A"}</p>
-              <p><strong>Closure Time:</strong> {selectedIncident.closureTime || "N/A"}</p>
-              <p><strong>Status:</strong> {selectedIncident.status || "N/A"}</p>
-              <p><strong>Description:</strong> {selectedIncident.incidentDescription || "N/A"}</p>
-              <p><strong>Closure Remarks:</strong> {selectedIncident.closureRemarks || "N/A"}</p>
+              <h1><strong> {selectedIncident.incidentTitle || "⚠️Missing"} </strong></h1>
+              <h3><strong>Docket No: #{selectedIncident.ttDocketNo || "To Be Raised"}</strong></h3>
+              <p><strong>Circle: </strong> {selectedIncident.circle || "⚠️Missing"}</p>
+              <p><strong>Site Id:</strong> {selectedIncident.siteId || "⚠️Missing"}</p>
+              <p><strong>Site:</strong> {selectedIncident.siteName || "⚠️Missing"}</p>
+              <p><strong>OEM Name:</strong> {selectedIncident.ompPartner || "⚠️Missing"}</p>
+              <p><strong>Date:</strong> {formatDate(selectedIncident.dateKey || "⚠️Missing")}</p>
+              <p><strong>Time:</strong> {selectedIncident.timeOfIncident || "⚠️Missing"}</p>
+              <p><strong>SA/NSA:</strong> {selectedIncident.saNsa || "⚠️Missing"}</p>
+              <p><strong>Equipment:</strong> {selectedIncident.equipmentCategory || "⚠️Missing"}</p>
+              <p><strong>Title:</strong> {selectedIncident.incidentTitle || "⚠️Missing"}</p>
+              <p><strong>Type:</strong> {selectedIncident.type || "⚠️Missing"}</p>
+              <p><strong>Affected Equipment Details:</strong> {selectedIncident.effectedEquipmentDetails || "⚠️Missing"}</p>
+              <p><strong>ActionsTaken:</strong> {selectedIncident.actionsTaken || "⚠️Missing"}</p>
+              <p><strong>RCA Status:</strong> {selectedIncident.rcaStatus || "⚠️Missing"}</p>
+              <p><strong>Ownership:</strong> {selectedIncident.ownership || "⚠️Missing"}</p>
+              <p><strong>Reason:</strong> {selectedIncident.realReason || "⚠️Missing"}</p>
+              <p><strong>Impact Type:</strong> {selectedIncident.impactType || "⚠️Missing"}</p>
+              <p><strong>Remarks:</strong> {selectedIncident.remarks || "⚠️Missing"}</p>
+              <p><strong>Closure Date:</strong> {selectedIncident.closureDate || "⚠️Missing"}</p>
+              <p><strong>Closure Time:</strong> {selectedIncident.closureTime || "⚠️Missing"}</p>
+              <p><strong>Status:</strong> {selectedIncident.status || "⚠️Missing"}</p>
+              <p><strong>Description:</strong> {selectedIncident.incidentDescription || "⚠️Missing"}</p>
+              <p><strong>Closure Remarks:</strong> {selectedIncident.closureRemarks || "⚠️Missing"}</p>
               {selectedIncident.rcaFileUrl && (
                 <p>
-                  <strong>RCA File:</strong>{" "}
+                  <strong>RCA File:</strong>{""}
                   <a href={selectedIncident.rcaFileUrl} target="_blank" rel="noopener noreferrer">
                     👁️‍🗨️ View File
                   </a>

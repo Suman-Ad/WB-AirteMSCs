@@ -24,7 +24,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 // sheetKeys same as before
 const sheetKeys = {
-  "Final Summary": "Final_Summary",
+  // "Final Summary": "Final_Summary",
   "Diesel Back Up": "Diesel_Back_Up",
   "DG-EB Backup": "DG_EB_Backup",
   "Infra Update": "Infra_Update",

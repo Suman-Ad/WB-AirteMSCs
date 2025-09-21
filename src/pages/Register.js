@@ -117,6 +117,8 @@ const Register = () => {
     "Vertiv Site Infra Engineer",
     "Vertiv Supervisor",
     "Vertiv Technician",
+    "LT Panel Engg.(Alexis)",
+    "Site Infra Manager(Nxtra)"
   ];
 
   const getRoleFromDesignation = (designation) => {

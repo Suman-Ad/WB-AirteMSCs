@@ -7,7 +7,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import "../assets/ExcelLiveEditPage.css";
 
 const sheetKeys = {
-  "Final Summary": "Final_Summary",
+  // "Final Summary": "Final_Summary",
   "Diesel Back Up": "Diesel_Back_Up",
   "DG-EB Backup": "DG_EB_Backup",
   "Infra Update": "Infra_Update",
@@ -22,7 +22,7 @@ const sheetKeys = {
 };
 
 const ExcelLiveEditPage = ({ userData }) => {
-  const [selectedTab, setSelectedTab] = useState("Final Summary");
+  const [selectedTab, setSelectedTab] = useState("Diesel Back Up");
   const [sheetData, setSheetData] = useState({});
   const [loading, setLoading] = useState(true);
   const today = new Date().toISOString().split("T")[0];

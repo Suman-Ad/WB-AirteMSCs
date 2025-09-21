@@ -102,7 +102,7 @@ const IncidentManagement = ({ userData }) => {
     const requiredFields = [
       'region', 'circle', 'siteName', 'ompPartner', 'dateOfIncident',
       'timeOfIncident', 'saNsa', 'equipmentCategory', 'incidentTitle', 'incidentDescription',
-      'effectedEquipmentDetails', 'actionsTaken', 'ttDocketNo'
+      'effectedEquipmentDetails', 'actionsTaken'
     ];
     for (const field of requiredFields) {
       if (!formData[field]) {
@@ -144,6 +144,7 @@ const IncidentManagement = ({ userData }) => {
           reportedById: userData.uid,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
+          ttDocketNo: formData.ttDocketNo || "To Be raised",
           siteId: userData.siteId,
           year,
           month,
