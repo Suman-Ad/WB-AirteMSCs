@@ -198,7 +198,7 @@ const DailyDashboard = ({ userData }) => {
       ["Sites More Than 12 Hrs Diesel Back Up", { f: "=COUNTIF('Diesel Back Up'!L:L, \">12\")" }],
       ["MSC more than 2500 Litres excluding Day Tanks", { f: "=COUNTIF('Diesel Back Up'!F:F, \">2500\")" }],
       ["MSC more than 2500 Litres Including Day Tanks", { f: "=COUNTIF('Diesel Back Up'!H:H, \">2500\")" }],
-      ["DG Running Hrs.", { f: "=SUM('DG-EB Backup'!F2:F21)" }],
+      ["DG Running Hrs.", { f: "=SUM('DG-EB Backup'!E2:E21)" }],
       ["EB Availability Hrs.", { f: "=(B2*24)-SUM('DG-EB Backup'!D2:D21)" }],
       ["Infra Uptime", { f: "=AVERAGE('Infra Update'!E2:E22)" }],
       ["Infra Uptime with Redundancy", "100%"],

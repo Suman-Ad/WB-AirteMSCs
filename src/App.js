@@ -32,7 +32,8 @@ import AsansolOperationSimulator from "./components/SOP/AsansolOperationSimulato
 import BerhamporeOperationSimulator from "./components/SOP/BerhamporeOperationSimulator";
 import SLDEditor from "./pages/SLDEditor"
 import DailyDGLog from "./pages/DailyDGLog";
-
+import DGLogForm from "./components/DGLogForm";
+import DGLogTable from "./components/DGLogTable";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -121,159 +122,173 @@ function App() {
         {/* <Route path="/excel-data-manager" element={<ExcelDataManager userData={userData} />} /> */}
         <Route path="/excel-live-edit" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["User", "Super User", "Admin", "Super Admin"]}>
-              <Layout userData={userData}>
-                <ExcelLiveEditPage userData={userData} />
-                </Layout>
-              </RoleProtectedRoute>
-            }
+            <Layout userData={userData}>
+              <ExcelLiveEditPage userData={userData} />
+            </Layout>
+          </RoleProtectedRoute>
+        }
         />
-        
+
         <Route path="/daily-dashboard" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <DailyDashboard userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/pm-calendar" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
             <Layout userData={userData}>
               <PMCalendarManagement userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/incident-dashboard" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <IncidentDashboard userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/incident-management" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <IncidentManagement userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/incident-edit/:incidentId" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <IncidentManagement userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/dhr-dashboard" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <DHRDashboard userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/create-dhr" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <CreateDHR userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/compliance-dashboard" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <ComplianceDashboard userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/manage-compliance" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
             <Layout userData={userData}>
               <ManageCompliance userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/assets-register" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
             <Layout userData={userData}>
               <AssetsRegister userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/assets-dashboard" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <AssetsDashboard userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/daily-activity-dashboard" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
             <Layout userData={userData}>
               <DailyActivityDashboard userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/daily-activity-management" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
             <Layout userData={userData}>
               <DailyActivityManage userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/pm-register" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
             <Layout userData={userData}>
               <PMRegister userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/thermal-analysis" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
             <Layout userData={userData}>
               <ThermalImageAnalysis userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/thermal-analysis-report" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
             <Layout userData={userData}>
               <ThermalReportGenerator userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/create-big-dhr" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <CreateBigDHR userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/asansol-operation" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <AsansolOperationSimulator userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/berhampore-operation" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <BerhamporeOperationSimulator userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/sld-editor" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <SLDEditor userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         <Route path="/daily-dg-log-editor" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <DailyDGLog userData={userData} />
-              </Layout>
-        </RoleProtectedRoute>} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+        <Route path="/dg-log-entry" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <DGLogForm userData={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+        <Route path="/dg-log-table" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <DGLogTable userData={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
 
         {/* Fallback */}
         <Route path="/" element={<Navigate to="/daily-dg-log-editor" />} />
