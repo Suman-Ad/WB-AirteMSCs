@@ -11,8 +11,6 @@ import {
 import { db } from "../firebase";
 import "../assets/DailyDGLog.css";
 import * as XLSX from "xlsx";
-import { number } from "framer-motion";
-import { oemDieselCphData } from "../config/oemDieselCphData";
 import { useNavigate } from "react-router-dom";
 
 
@@ -808,10 +806,10 @@ const DailyDGLog = ({ userData }) => {
           return (
             <div className="monthly-stats" >
               <p style={{ fontSize: "30px", textAlign: "center" }}><strong>📊 Summery Data</strong></p>
-              <p style={{ fontSize: "25px", borderTop: "3px solid #eee" }}><strong>⛽ Available Fuel – {currentFuel} ltrs.</strong></p>
+              <p style={{ fontSize: "25px", borderTop: "3px solid #eee" }}><strong>⛽ Fuel BackUp – {currentFuel} ltrs. - ({fmt1(currentFuel / fmt1(totalOnLoadCon / totalOnLoadHrs))} Hrs.)</strong></p>
               <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p>
               <p>📡 Avg IT Load – <strong>{monthlyAvgITLoad} kWh</strong></p>
-              <p>⛽ Avg DG CPH – <strong>{monthlyAvgCPH} Ltrs/Hrs</strong></p>
+              <p>⛽ Avg DG CPH – <strong>{fmt1(totalOnLoadCon / totalOnLoadHrs)} Ltrs/Hrs</strong></p>
               <p style={{ borderTop: "1px solid #eee" }}>⚡ Total DG KW Generation – <strong>{fmt(totalKwh)} kW</strong></p>
               <p style={{ marginLeft: "20px" }}>
                 • DG-1: <strong>{fmt1(totalDG1Kw)} kW</strong>
