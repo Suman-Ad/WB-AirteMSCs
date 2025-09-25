@@ -186,88 +186,86 @@ const DGLogForm = ({ userData }) => {
         setCalculationResult(result);
     };
 
-useEffect(() => {
-  const fetchPrevHrMeter = async () => {
-    try {
-      if (!dgNumber) return;
+    useEffect(() => {
+        const fetchPrevHrMeter = async () => {
+            try {
+                if (!dgNumber) return;
 
-      const today = getTodayDate();
-      const dateObj = new Date(today);
+                const today = getTodayDate();
+                const dateObj = new Date(today);
 
-      // Month key like "Sep-2025"
-      const monthKey =
-        dateObj.toLocaleString("en-US", { month: "short" }) +
-        "-" +
-        dateObj.getFullYear();
+                // Month key like "Sep-2025"
+                const monthKey =
+                    dateObj.toLocaleString("en-US", { month: "short" }) +
+                    "-" +
+                    dateObj.getFullYear();
 
-      // Path to today's runs
-      const runsRef = collection(
-        db,
-        "dgLogs",
-        userData.site,
-        monthKey,
-        today,
-        "runs"
-      );
+                // Path to today's runs
+                const runsRef = collection(
+                    db,
+                    "dgLogs",
+                    userData.site,
+                    monthKey,
+                    today,
+                    "runs"
+                );
 
-      // 🔹 Get last few runs today
-      const q = query(runsRef, orderBy("createdAt", "desc"), limit(5));
-      const snap = await getDocs(q);
+                // 🔹 Get last few runs today
+                const q = query(runsRef, orderBy("createdAt", "desc"), limit(5));
+                const snap = await getDocs(q);
 
-      let found = null;
-      snap.forEach((doc) => {
-        const data = doc.data();
-        if (data.dgNumber === dgNumber) {
-          found = data;
-        }
-      });
+                let found = null;
+                snap.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.dgNumber === dgNumber) {
+                        found = data;
+                    }
+                });
 
-      if (found) {
-        setForm((prev) => ({ ...prev, hrMeterStart: found.hrMeterEnd }));
-        return;
-      }
+                if (found) {
+                    setForm((prev) => ({ ...prev, hrMeterStart: found.hrMeterEnd }));
+                    return;
+                }
 
-      // fallback → yesterday’s closing
-      const yesterday = new Date(dateObj);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yDate = yesterday.toISOString().split("T")[0];
-      const yMonthKey =
-        yesterday.toLocaleString("en-US", { month: "short" }) +
-        "-" +
-        yesterday.getFullYear();
+                // fallback → yesterday’s closing
+                const yesterday = new Date(dateObj);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yDate = yesterday.toISOString().split("T")[0];
+                const yMonthKey =
+                    yesterday.toLocaleString("en-US", { month: "short" }) +
+                    "-" +
+                    yesterday.getFullYear();
 
-      const yRunsRef = collection(
-        db,
-        "dgLogs",
-        userData.site,
-        yMonthKey,
-        yDate,
-        "runs"
-      );
+                const yRunsRef = collection(
+                    db,
+                    "dgLogs",
+                    userData.site,
+                    yMonthKey,
+                    yDate,
+                    "runs"
+                );
 
-      const yq = query(yRunsRef, orderBy("createdAt", "desc"), limit(5));
-      const ysnap = await getDocs(yq);
+                const yq = query(yRunsRef, orderBy("createdAt", "desc"), limit(5));
+                const ysnap = await getDocs(yq);
 
-      let yfound = null;
-      ysnap.forEach((doc) => {
-        const data = doc.data();
-        if (data.dgNumber === dgNumber) {
-          yfound = data;
-        }
-      });
+                let yfound = null;
+                ysnap.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.dgNumber === dgNumber) {
+                        yfound = data;
+                    }
+                });
 
-      if (yfound) {
-        setForm((prev) => ({ ...prev, hrMeterStart: yfound.hrMeterEnd }));
-      }
-    } catch (err) {
-      console.error("Error fetching prev hrMeterStart:", err);
-    }
-  };
+                if (yfound) {
+                    setForm((prev) => ({ ...prev, hrMeterStart: yfound.hrMeterEnd }));
+                }
+            } catch (err) {
+                console.error("Error fetching prev hrMeterStart:", err);
+            }
+        };
 
-  fetchPrevHrMeter();
-}, [dgNumber, userData.site]);
-
-
+        fetchPrevHrMeter();
+    }, [dgNumber, userData.site]);
 
 
     return (

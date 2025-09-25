@@ -11,6 +11,14 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
   const handleLogout = async () => {
     await auth.signOut();
     localStorage.removeItem("userData");
+    localStorage.removeItem("summary");
+    localStorage.removeItem("dailyLogs");
+    localStorage.removeItem("incidents");
+    localStorage.removeItem("incidentSummary");
+    localStorage.removeItem("incidentTextSummary");
+    localStorage.removeItem("assets");
+    localStorage.removeItem("pmData");
+    localStorage.removeItem("thermalReports");
     navigate("/login");
   };
 

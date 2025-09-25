@@ -102,6 +102,7 @@ const IncidentDashboard = ({ userData }) => {
       data.sort((a, b) => (b.dateKey || "").localeCompare(a.dateKey || ""));
 
       setIncidents(data);
+      localStorage.setItem("incidents", JSON.stringify(data));
 
       // 🔹 Summary counts
       const openCount = data.filter(i => i.status === "Open").length;
@@ -123,12 +124,22 @@ const IncidentDashboard = ({ userData }) => {
         { name: "RCA Received", value: rcaReceived },
         { name: "RCA Pending", value: rcaPending }
       ]);
+      localStorage.setItem("incidentSummary", JSON.stringify([
+        { name: "Open Points", value: openCount },
+        { name: "Closed Points", value: closedCount },
+        { name: "RCA Received", value: rcaReceived },
+        { name: "RCA Pending", value: rcaPending }
+      ]));
 
       // Save text stats
       setTextSummary({
         total: data.length,
         sites: siteCounts
       });
+      localStorage.setItem("incidentTextSummary", JSON.stringify({
+        total: data.length,
+        sites: siteCounts
+      }));
 
     } catch (error) {
       console.error('Error fetching incidents:', error);
@@ -140,6 +151,18 @@ const IncidentDashboard = ({ userData }) => {
 
   useEffect(() => {
     fetchIncidents();
+    const cached = localStorage.getItem("incidents");
+    const cached1 = localStorage.getItem("incidentSummary");
+    const cached2 = localStorage.getItem("incidentTextSummary");
+    if (cached2) {
+      setTextSummary(JSON.parse(cached2));
+    }
+    if (cached1) {
+      setSummaryData(JSON.parse(cached1));
+    }
+      if (cached) {
+        setIncidents(JSON.parse(cached));
+      }
   }, [filters]);
 
   const formatDate = (dateString) => {

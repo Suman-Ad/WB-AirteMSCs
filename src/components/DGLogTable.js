@@ -97,6 +97,8 @@ const DGLogTable = ({ userData }) => {
       }
 
       setSummary(counts);
+      localStorage.setItem("summary", JSON.stringify(counts));
+
     } catch (err) {
       console.error("Error fetching monthly summary:", err);
     }
@@ -106,6 +108,14 @@ const DGLogTable = ({ userData }) => {
     setEditingId(log.id);
     setEditForm(log);
   };
+
+  useEffect(() => {
+  const cached = localStorage.getItem("summary");
+  if (cached) {
+    setSummary(JSON.parse(cached));
+  }
+}, []);
+
 
   const handleSave = async () => {
     try {
@@ -124,6 +134,7 @@ const DGLogTable = ({ userData }) => {
         "runs",
         editingId
       );
+
       await updateDoc(logRef, {
         ...editForm,
         totalRunHours:
@@ -131,6 +142,7 @@ const DGLogTable = ({ userData }) => {
           parseFloat(editForm.hrMeterStart || 0),
       });
 
+      alert("Run log Updated ✅");
       setEditingId(null);
       fetchLogs();
       fetchMonthlySummary();
@@ -153,28 +165,32 @@ const DGLogTable = ({ userData }) => {
 
       {/* Summary table */}
       <div style={{ marginTop: "2rem" }}>
-        <h3>📊 Monthly Summary ({selectedDate.slice(0, 7)})</h3>
-        <table border="1" cellPadding="8" style={{ width: "60%" }}>
-          <thead>
-            <tr>
-              <th>DG No</th>
-              <th>On Load Count</th>
-              <th>No Load Count</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>DG-1</td>
-              <td>{summary.DG1_OnLoad}</td>
-              <td>{summary.DG1_NoLoad}</td>
-            </tr>
-            <tr>
-              <td>DG-2</td>
-              <td>{summary.DG2_OnLoad}</td>
-              <td>{summary.DG2_NoLoad}</td>
-            </tr>
-          </tbody>
-        </table>
+        <h1><strong>📊 Monthly Summary ({selectedDate.slice(0, 7)})</strong></h1>
+        {(summary.DG1_OnLoad > 0 || summary.DG1_NoLoad > 0 || summary.DG2_OnLoad > 0 || summary.DG2_NoLoad > 0) ? (
+          <table border="1" cellPadding="8" style={{ width: "60%" }}>
+            <thead>
+              <tr>
+                <th>DG No</th>
+                <th>On Load Count</th>
+                <th>No Load Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>DG-1</td>
+                <td>{summary.DG1_OnLoad}</td>
+                <td>{summary.DG1_NoLoad}</td>
+              </tr>
+              <tr>
+                <td>DG-2</td>
+                <td>{summary.DG2_OnLoad}</td>
+                <td>{summary.DG2_NoLoad}</td>
+              </tr>
+            </tbody>
+          </table>
+         ) : (
+          <h3><strong>Loading.......</strong></h3>
+        )}
       </div>
 
       {/* Date selector */}

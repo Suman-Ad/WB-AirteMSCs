@@ -24,6 +24,7 @@ const DailyDGLog = ({ userData }) => {
   const [dayFuelCon, setDayFuelCon] = useState(0);
   const [form, setForm] = useState({ Date: "" });
   const Navigate = useNavigate();
+  const [fuelRate, setFuelRate] = useState(92.25); // default value
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().slice(0, 7) // YYYY-MM
   );
@@ -195,7 +196,15 @@ const DailyDGLog = ({ userData }) => {
       data.push({ id: docSnap.id, ...docSnap.data() });
     });
     setLogs(data);
+    localStorage.setItem("dailyLogs", JSON.stringify(data));
   };
+
+  useEffect(() => {
+    const cached = localStorage.getItem("dailyLogs");
+    if (cached) {
+      setLogs(JSON.parse(cached));
+    }
+  }, []);
 
   // After logs are fetched, set last submitted date
   useEffect(() => {
@@ -247,81 +256,81 @@ const DailyDGLog = ({ userData }) => {
   }, [logs, form.Date]);   // ✅ run also when Date changes
 
   const fetchAndAggregateRuns = async (selectedDate) => {
-        if (!userData.site || !selectedDate) return;
+    if (!userData.site || !selectedDate) return;
 
-        try {
-            const dateObj = new Date(selectedDate);
-            const monthKey =
-                dateObj.toLocaleString("en-US", { month: "short" }) +
-                "-" +
-                dateObj.getFullYear();
+    try {
+      const dateObj = new Date(selectedDate);
+      const monthKey =
+        dateObj.toLocaleString("en-US", { month: "short" }) +
+        "-" +
+        dateObj.getFullYear();
 
-            const runsCollectionRef = collection(
-                db,
-                "dgLogs",
-                userData.site,
-                monthKey,
-                selectedDate,
-                "runs"
-            );
+      const runsCollectionRef = collection(
+        db,
+        "dgLogs",
+        userData.site,
+        monthKey,
+        selectedDate,
+        "runs"
+      );
 
-            const snapshot = await getDocs(runsCollectionRef);
-            if (snapshot.empty) {
-                console.log("No DG runs found for this date.");
-                return; // No runs to process
-            }
+      const snapshot = await getDocs(runsCollectionRef);
+      if (snapshot.empty) {
+        console.log("No DG runs found for this date.");
+        return; // No runs to process
+      }
 
-            const runs = snapshot.docs.map((doc) => doc.data());
+      const runs = snapshot.docs.map((doc) => doc.data());
 
-            // --- Aggregation Logic ---
-            let dg1TotalConsumption = 0;
-            let dg1TotalRunHours = 0;
-            let dg1MinStartMeter = Infinity;
-            let dg1MaxEndMeter = 0;
+      // --- Aggregation Logic ---
+      let dg1TotalConsumption = 0;
+      let dg1TotalRunHours = 0;
+      let dg1MinStartMeter = Infinity;
+      let dg1MaxEndMeter = 0;
 
-            let dg2TotalConsumption = 0;
-            let dg2TotalRunHours = 0;
-            let dg2MinStartMeter = Infinity;
-            let dg2MaxEndMeter = 0;
+      let dg2TotalConsumption = 0;
+      let dg2TotalRunHours = 0;
+      let dg2MinStartMeter = Infinity;
+      let dg2MaxEndMeter = 0;
 
-            runs.forEach((run) => {
-                const startMeter = parseFloat(run.hrMeterStart || 0);
-                const endMeter = parseFloat(run.hrMeterEnd || 0);
+      runs.forEach((run) => {
+        const startMeter = parseFloat(run.hrMeterStart || 0);
+        const endMeter = parseFloat(run.hrMeterEnd || 0);
 
-                if (run.dgNumber === "DG-1") {
-                    dg1TotalConsumption += parseFloat(run.fuelConsumption || 0);
-                    dg1TotalRunHours += parseFloat(run.totalRunHours || 0);
-                    if (startMeter < dg1MinStartMeter) dg1MinStartMeter = startMeter;
-                    if (endMeter > dg1MaxEndMeter) dg1MaxEndMeter = endMeter;
-                } else if (run.dgNumber === "DG-2") {
-                    dg2TotalConsumption += parseFloat(run.fuelConsumption || 0);
-                    dg2TotalRunHours += parseFloat(run.totalRunHours || 0);
-                    if (startMeter < dg2MinStartMeter) dg2MinStartMeter = startMeter;
-                    if (endMeter > dg2MaxEndMeter) dg2MaxEndMeter = endMeter;
-                }
-            });
-
-            // --- Update the form state with aggregated data ---
-            setForm((prevForm) => ({
-                ...prevForm,
-                // Only update if runs were found for that DG
-                "DG-1 Fuel Closing": dg1TotalConsumption && prevForm["DG-1 Fuel Opening"] > 0 ? prevForm["DG-1 Fuel Opening"] - dg1TotalConsumption : prevForm["DG-1 Fuel Closinging"],
-                "DG-2 Fuel Closing": dg2TotalConsumption && prevForm["DG-2 Fuel Opening"] > 0 ? prevForm["DG-2 Fuel Opening"] - dg2TotalConsumption : prevForm["DG-2 Fuel Closinging"],
-                "DG-1 Hour Closing": dg1MaxEndMeter > 0 ? dg1MaxEndMeter : prevForm["DG-1 Hour Closing"],
-                // "DG-2 Hour Opening": dg2MaxEndMeter > 0 ? dg2MinStartMeter : prevForm["DG-2 Hour Opening"],
-                "DG-2 Hour Closing": dg2MaxEndMeter > 0 ? dg2MaxEndMeter : prevForm["DG-2 Hour Closing"],
-                
-                // Note: The form calculates total consumption from opening/closing fuel.
-                // This aggregated value is useful for verification or other logic.
-                // For now, we'll focus on populating meter readings.
-            }));
-
-            setDayFuelCon(() => (dg1TotalConsumption + dg2TotalConsumption));
-
-        } catch (err) {
-            console.error("Error fetching and aggregating run logs:", err);
+        if (run.dgNumber === "DG-1") {
+          dg1TotalConsumption += parseFloat(run.fuelConsumption || 0);
+          dg1TotalRunHours += parseFloat(run.totalRunHours || 0);
+          if (startMeter < dg1MinStartMeter) dg1MinStartMeter = startMeter;
+          if (endMeter > dg1MaxEndMeter) dg1MaxEndMeter = endMeter;
+        } else if (run.dgNumber === "DG-2") {
+          dg2TotalConsumption += parseFloat(run.fuelConsumption || 0);
+          dg2TotalRunHours += parseFloat(run.totalRunHours || 0);
+          if (startMeter < dg2MinStartMeter) dg2MinStartMeter = startMeter;
+          if (endMeter > dg2MaxEndMeter) dg2MaxEndMeter = endMeter;
         }
-    };
+      });
+
+      // --- Update the form state with aggregated data ---
+      setForm((prevForm) => ({
+        ...prevForm,
+        // Only update if runs were found for that DG
+        "DG-1 Fuel Closing": dg1TotalConsumption && prevForm["DG-1 Fuel Opening"] > 0 ? prevForm["DG-1 Fuel Opening"] - dg1TotalConsumption : prevForm["DG-1 Fuel Closinging"],
+        "DG-2 Fuel Closing": dg2TotalConsumption && prevForm["DG-2 Fuel Opening"] > 0 ? prevForm["DG-2 Fuel Opening"] - dg2TotalConsumption : prevForm["DG-2 Fuel Closinging"],
+        "DG-1 Hour Closing": dg1MaxEndMeter > 0 ? dg1MaxEndMeter : prevForm["DG-1 Hour Closing"],
+        // "DG-2 Hour Opening": dg2MaxEndMeter > 0 ? dg2MinStartMeter : prevForm["DG-2 Hour Opening"],
+        "DG-2 Hour Closing": dg2MaxEndMeter > 0 ? dg2MaxEndMeter : prevForm["DG-2 Hour Closing"],
+
+        // Note: The form calculates total consumption from opening/closing fuel.
+        // This aggregated value is useful for verification or other logic.
+        // For now, we'll focus on populating meter readings.
+      }));
+
+      setDayFuelCon(() => (dg1TotalConsumption + dg2TotalConsumption));
+
+    } catch (err) {
+      console.error("Error fetching and aggregating run logs:", err);
+    }
+  };
 
 
   useEffect(() => {
@@ -652,7 +661,7 @@ const DailyDGLog = ({ userData }) => {
         <p className={monthlyAvgDG2SEGR < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
           DG-2 Average SEGR – {monthlyAvgDG2SEGR}
         </p>
-        </div>
+      </div>
 
       <div className="chart-container" >
         ️
@@ -792,8 +801,8 @@ const DailyDGLog = ({ userData }) => {
               (sum, cl) => sum + (cl["DG-2 OFF Load Hour"] || 0),
               0
             );
-          
-            // Convert total hours to hours and minutes
+
+          // Convert total hours to hours and minutes
           const totalHrsMin = (totalHrs * 60).toFixed(0);
           const totalDG1OnLoadHrsMin = (totalDG1OnLoadHrs * 60).toFixed(0);
           const totalDG2OnLoadHrsMin = (totalDG2OnLoadHrs * 60).toFixed(0);
@@ -805,8 +814,10 @@ const DailyDGLog = ({ userData }) => {
 
           return (
             <div className="monthly-stats" >
-              <p style={{ fontSize: "30px", textAlign: "center" }}><strong>📊 Summery Data</strong></p>
-              <p style={{ fontSize: "25px", borderTop: "3px solid #eee" }}><strong>⛽ Fuel BackUp – {currentFuel} ltrs. - ({fmt1(currentFuel / fmt1(totalOnLoadCon / totalOnLoadHrs))} Hrs.)</strong></p>
+              <h1 style={{ fontSize: "25px", }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
+              <h1 style={{ fontSize: "25px", }}> <strong>⏱️BackUp Hours – {fmt1(currentFuel / fmt1(totalOnLoadCon / totalOnLoadHrs))} Hrs.</strong></h1>
+              <p style={{ fontSize: "30px", borderTop: "3px solid #eee", textAlign: "center" }}><strong>📊 Summery Data</strong></p>
+              <p>📅 Total Days Logged – <strong>{calculatedLogs.length} Days</strong></p>
               <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p>
               <p>📡 Avg IT Load – <strong>{monthlyAvgITLoad} kWh</strong></p>
               <p>⛽ Avg DG CPH – <strong>{fmt1(totalOnLoadCon / totalOnLoadHrs)} Ltrs/Hrs</strong></p>
@@ -817,13 +828,46 @@ const DailyDGLog = ({ userData }) => {
               <p style={{ marginLeft: "20px" }}>
                 • DG-2: <strong>{fmt1(totalDG2Kw)} kW</strong>
               </p>
-              <p style={{ borderTop: "1px solid #eee" }}>⛽ Total Fuel Filling – <strong>{fmt(totalFilling)} Ltrs</strong> (₹{fmt(totalFilling * 92.25)})</p>
+
+              {/* 🔹 Last Fuel Filling */}
+{(() => {
+  const lastFilling = [...logs]
+    .map((e) => ({
+      Date: e.Date,
+      DG1: parseFloat(e["DG-1 Fuel Filling"] || 0),
+      DG2: parseFloat(e["DG-2 Fuel Filling"] || 0),
+    }))
+    .filter((e) => e.DG1 > 0 || e.DG2 > 0)
+    .sort((a, b) => (a.Date < b.Date ? 1 : -1))[0]; // latest first
+
+  if (!lastFilling) return null;
+
+  return (
+    <p style={{ borderTop: "1px solid #eee", color: "green" }}>
+      📅 Last Fuel Filling – <strong>{lastFilling.Date}</strong> :{" "}
+      <strong>
+        {fmt1(lastFilling.DG1)} Ltrs (DG-1), {fmt1(lastFilling.DG2)} Ltrs (DG-2)
+      </strong>
+    </p>
+  );
+})()}
+              <p style={{ borderTop: "1px solid #eee" }}>
+                ⛽ Total Fuel Filling – <strong>{fmt(totalFilling)}Ltrs. x </strong>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={fuelRate}
+                  onChange={(e) => setFuelRate(parseFloat(e.target.value) || 0)}
+                  style={{ width: "70px", marginLeft: "4px", height: "20px" }}
+                /><strong>₹/Ltr. = ₹{fmt(totalFilling * fuelRate)}</strong>
+              </p>
               <p style={{ marginLeft: "20px" }}>
                 • DG-1: <strong>{fmt1(totalDG1Filling)} Ltrs</strong>
               </p>
               <p style={{ marginLeft: "20px" }}>
                 • DG-2: <strong>{fmt1(totalDG2Filling)} Ltrs</strong>
               </p>
+              
               <p style={{ borderTop: "1px solid #eee" }}>⛽ Total Fuel Consumption – <strong>{fmt(totalFuel)} Ltrs</strong></p>
               <p style={{ marginLeft: "20px" }}>
                 • DG-1: <strong>{fmt1(totalDG1OnLoadCon + totalDG1OffLoadCon)} Ltrs</strong>
@@ -881,7 +925,7 @@ const DailyDGLog = ({ userData }) => {
           })()
         }
       </div>
-      
+
       <div className="controls">
 
         <button

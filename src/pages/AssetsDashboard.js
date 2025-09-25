@@ -51,6 +51,7 @@ export default function AssetsDashboard({userData}) {
     const unsub = onSnapshot(collection(db, "assets_flat"), (snapshot) => {
       const data = snapshot.docs.map((doc) => doc.data());
       setAssets(data);
+      // localStorage.setItem("assets", JSON.stringify(data));
       setLoading(false);
     });
 
@@ -79,6 +80,10 @@ export default function AssetsDashboard({userData}) {
     }
 
     setFilteredAssets(filtered);
+    // const cached = localStorage.getItem("assets");
+    //   if (cached) {
+    //     setAssets(JSON.parse(cached));
+    //   }
   }, [assets, selectedCircle, selectedRegion, selectedSite, searchTerm]);
 
   // ✅ Unique filter options
