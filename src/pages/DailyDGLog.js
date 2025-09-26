@@ -618,257 +618,265 @@ const DailyDGLog = ({ userData }) => {
 
   return (
     <div className="daily-log-container">
-      <h1 className="dashboard-header"><strong>☣️ Daily DG Log Book – {formatYear(selectedMonth)}</strong> </h1>
-      <h2>{siteName} MSC</h2>
-      <label>
-        Select Month:
-        <input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-        />
-      </label>
-
-      <label>
-        Date:
-        <input
-          type="date"
-          name="Date"
-          value={form.Date || ""}
-          onChange={(e) => handleDateChange(e.target.value)}
-          required
-        />
-      </label>
-
-      <div className="chart-container" >
-        <strong>
-          <h1 className={`month ${formatMonthName(selectedMonth)}`}>
+      <h1 className="dashboard-header">
+        <strong>☣️ Daily DG Log Book</strong>
+      </h1>
+      <div className="noticeboard-header">
+        <h1 className={`month ${formatMonthName(selectedMonth)}`}>
+          <strong>
             {formatMonthName(selectedMonth)}
-          </h1>
-        </strong>
+          </strong>
 
-        {/* Average PUE */}
-        <h2 className={monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
-          Average PUE – <strong>{monthlyAvgPUE}</strong>
-        </h2>
-        {/* Average SEGR */}
-        <h2 className={monthlyAvgSEGR < 3 ? "avg-segr low" : "avg-segr high"}>
-          Average SEGR – <strong>{monthlyAvgSEGR}</strong>
-        </h2>
-        <p className={monthlyAvgDG1SEGR < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
-          DG-1 Average SEGR – {monthlyAvgDG1SEGR}
-        </p>
-        <p className={monthlyAvgDG2SEGR < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
-          DG-2 Average SEGR – {monthlyAvgDG2SEGR}
-        </p>
+          <label>
+            Select Month:
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            // className={`month ${formatMonthName(selectedMonth)}`}
+            // style={{width: "inherit"}}
+            />
+          </label>
+
+          <label>
+            Date:
+            <input
+              type="date"
+              name="Date"
+              value={form.Date || ""}
+              onChange={(e) => handleDateChange(e.target.value)}
+              required
+            />
+          </label>
+        </h1>
       </div>
 
-      <div className="chart-container" >
-        ️
-        {/* 🔹 New Monthly Stats */}
-        {(() => {
-          if (!logs.length) return null;
+      {/* <div className="chart-container" > */}
+      {/* 🔹 New Monthly Stats */}
+      {(() => {
+        if (!logs.length) return null;
 
-          // calculate all fields
-          const calculatedLogs = logs.map((e) => calculateFields(e));
+        // calculate all fields
+        const calculatedLogs = logs.map((e) => calculateFields(e));
 
-          // Average DG CPH (combined DG1+DG2)
-          const cphValues = calculatedLogs.flatMap((cl) => [
-            cl["DG-1 CPH"], cl["DG-2 CPH"],
-          ]).filter((v) => v > 0);
-          const monthlyAvgCPH =
-            cphValues.length > 0
-              ? (cphValues.reduce((a, b) => a + b, 0) / cphValues.length).toFixed(2)
-              : 0;
+        // Average DG CPH (combined DG1+DG2)
+        const cphValues = calculatedLogs.flatMap((cl) => [
+          cl["DG-1 CPH"], cl["DG-2 CPH"],
+        ]).filter((v) => v > 0);
+        const monthlyAvgCPH =
+          cphValues.length > 0
+            ? (cphValues.reduce((a, b) => a + b, 0) / cphValues.length).toFixed(2)
+            : 0;
 
-          // Average IT Load
-          const itLoad = calculatedLogs.flatMap((cl) => [
-            cl["Total IT Load KWH"],
-          ]).filter((v) => v > 0);
-          const monthlyAvgITLoad =
-            itLoad.length > 0
-              ? (itLoad.reduce((a, b) => a + b, 0) / itLoad.length).toFixed(2)
-              : 0;
+        // Average IT Load
+        const itLoad = calculatedLogs.flatMap((cl) => [
+          cl["Total IT Load KWH"],
+        ]).filter((v) => v > 0);
+        const monthlyAvgITLoad =
+          itLoad.length > 0
+            ? (itLoad.reduce((a, b) => a + b, 0) / itLoad.length).toFixed(2)
+            : 0;
 
-          // Totals
-          const totalKwh = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG KWH"] || 0), 0);
-          const totalFuel = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Fuel"] || 0), 0);
-          const totalHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Hours"] || 0), 0);
-          const totalFilling = calculatedLogs.reduce((sum, cl) => sum + (cl["Total Fuel Filling"] || 0), 0);
-          const yesterday = getYesterdayData();
-          const availableFuel = (() => {
-            if (!yesterday) return 0;
-            return (
-              (parseFloat(yesterday["DG-1 Fuel Closing"]) || 0) +
-              (parseFloat(yesterday["DG-2 Fuel Closing"]) || 0)
-            );
-          })();
-          const siteRunningKwValues = calculatedLogs
-            .map(cl => cl["Site Running kW"])
-            .filter(v => v > 0);
-
-          const avgSiteRunningKw =
-            siteRunningKwValues.length > 0
-              ? (siteRunningKwValues.reduce((sum, v) => sum + v, 0) / siteRunningKwValues.length).toFixed(2)
-              : 0;
-
-          // Indivisual DG Fuel Fill in Ltrs
-          const totalDG1Kw =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-1 KWH Generation"] || 0),
-              0
-            );
-          const totalDG2Kw =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-2 KWH Generation"] || 0),
-              0
-            );
-
-          // Indivisual DG Fuel Fill in Ltrs
-          const totalDG1Filling =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-1 Fuel Filling"] || 0),
-              0
-            );
-          const totalDG2Filling =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-2 Fuel Filling"] || 0),
-              0
-            );
-
-          // ON / OFF load Consupmtion
-          const totalOnLoadCon =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-1 ON Load Consumption"] || 0) + (cl["DG-2 ON Load Consumption"] || 0),
-              0
-            );
-
-          const totalDG1OnLoadCon =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-1 ON Load Consumption"] || 0),
-              0
-            );
-          const totalDG2OnLoadCon =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-2 ON Load Consumption"] || 0),
-              0
-            );
-          const totalOffLoadCon =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-1 OFF Load Consumption"] || 0) + (cl["DG-2 OFF Load Consumption"] || 0),
-              0
-            );
-          const totalDG1OffLoadCon =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-1 OFF Load Consumption"] || 0),
-              0
-            );
-          const totalDG2OffLoadCon =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-2 OFF Load Consumption"] || 0),
-              0
-            );
-
-          // ON / OFF load hours + minutes
-          const totalOnLoadHrs =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-1 ON Load Hour"] || 0) + (cl["DG-2 ON Load Hour"] || 0),
-              0
-            );
-          const totalDG1OnLoadHrs =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-1 ON Load Hour"] || 0),
-              0
-            );
-          const totalDG2OnLoadHrs =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-2 ON Load Hour"] || 0),
-              0
-            );
-          const totalOffLoadHrs =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-1 OFF Load Hour"] || 0) + (cl["DG-2 OFF Load Hour"] || 0),
-              0
-            );
-          const totalDG1OffLoadHrs =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-1 OFF Load Hour"] || 0),
-              0
-            );
-
-          const totalDG2OffLoadHrs =
-            calculatedLogs.reduce(
-              (sum, cl) => sum + (cl["DG-2 OFF Load Hour"] || 0),
-              0
-            );
-
-          // Convert total hours to hours and minutes
-          const totalHrsMin = (totalHrs * 60).toFixed(0);
-          const totalDG1OnLoadHrsMin = (totalDG1OnLoadHrs * 60).toFixed(0);
-          const totalDG2OnLoadHrsMin = (totalDG2OnLoadHrs * 60).toFixed(0);
-          const totalDG1OffLoadHrsMin = (totalDG1OffLoadHrs * 60).toFixed(0);
-          const totalDG2OffLoadHrsMin = (totalDG2OffLoadHrs * 60).toFixed(0);
-          const totalDG1HrsMin = ((totalDG1OnLoadHrs + totalDG1OffLoadHrs) * 60).toFixed(0);
-          const totalDG2HrsMin = ((totalDG2OnLoadHrs + totalDG2OffLoadHrs) * 60).toFixed(0);
-          const currentFuel = fmt(availableFuel - dayFuelCon)
-
+        // Totals
+        const totalKwh = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG KWH"] || 0), 0);
+        const totalFuel = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Fuel"] || 0), 0);
+        const totalHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Hours"] || 0), 0);
+        const totalFilling = calculatedLogs.reduce((sum, cl) => sum + (cl["Total Fuel Filling"] || 0), 0);
+        const yesterday = getYesterdayData();
+        const availableFuel = (() => {
+          if (!yesterday) return 0;
           return (
-            <div className="monthly-stats" >
-              <h1 style={{ fontSize: "25px", }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
-              <h1 style={{ fontSize: "25px", }}> <strong>⏱️BackUp Hours – {fmt1(currentFuel / fmt1(totalOnLoadCon / totalOnLoadHrs))} Hrs.</strong></h1>
-              <p style={{ fontSize: "30px", borderTop: "3px solid #eee", textAlign: "center" }}><strong>📊 Summery Data</strong></p>
-              <p>📅 Total Days Logged – <strong>{calculatedLogs.length} Days</strong></p>
-              <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p>
-              <p>📡 Avg IT Load – <strong>{monthlyAvgITLoad} kWh</strong></p>
-              <p>⛽ Avg DG CPH – <strong>{fmt1(totalOnLoadCon / totalOnLoadHrs)} Ltrs/Hrs</strong></p>
-              <p style={{ borderTop: "1px solid #eee" }}>⚡ Total DG KW Generation – <strong>{fmt(totalKwh)} kW</strong></p>
+            (parseFloat(yesterday["DG-1 Fuel Closing"]) || 0) +
+            (parseFloat(yesterday["DG-2 Fuel Closing"]) || 0)
+          );
+        })();
+        const siteRunningKwValues = calculatedLogs
+          .map(cl => cl["Site Running kW"])
+          .filter(v => v > 0);
+
+        const avgSiteRunningKw =
+          siteRunningKwValues.length > 0
+            ? (siteRunningKwValues.reduce((sum, v) => sum + v, 0) / siteRunningKwValues.length).toFixed(2)
+            : 0;
+
+        // Indivisual DG Fuel Fill in Ltrs
+        const totalDG1Kw =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-1 KWH Generation"] || 0),
+            0
+          );
+        const totalDG2Kw =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-2 KWH Generation"] || 0),
+            0
+          );
+
+        // Indivisual DG Fuel Fill in Ltrs
+        const totalDG1Filling =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-1 Fuel Filling"] || 0),
+            0
+          );
+        const totalDG2Filling =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-2 Fuel Filling"] || 0),
+            0
+          );
+
+        // ON / OFF load Consupmtion
+        const totalOnLoadCon =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-1 ON Load Consumption"] || 0) + (cl["DG-2 ON Load Consumption"] || 0),
+            0
+          );
+
+        const totalDG1OnLoadCon =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-1 ON Load Consumption"] || 0),
+            0
+          );
+        const totalDG2OnLoadCon =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-2 ON Load Consumption"] || 0),
+            0
+          );
+        const totalOffLoadCon =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-1 OFF Load Consumption"] || 0) + (cl["DG-2 OFF Load Consumption"] || 0),
+            0
+          );
+        const totalDG1OffLoadCon =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-1 OFF Load Consumption"] || 0),
+            0
+          );
+        const totalDG2OffLoadCon =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-2 OFF Load Consumption"] || 0),
+            0
+          );
+
+        // ON / OFF load hours + minutes
+        const totalOnLoadHrs =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-1 ON Load Hour"] || 0) + (cl["DG-2 ON Load Hour"] || 0),
+            0
+          );
+        const totalDG1OnLoadHrs =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-1 ON Load Hour"] || 0),
+            0
+          );
+        const totalDG2OnLoadHrs =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-2 ON Load Hour"] || 0),
+            0
+          );
+        const totalOffLoadHrs =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-1 OFF Load Hour"] || 0) + (cl["DG-2 OFF Load Hour"] || 0),
+            0
+          );
+        const totalDG1OffLoadHrs =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-1 OFF Load Hour"] || 0),
+            0
+          );
+
+        const totalDG2OffLoadHrs =
+          calculatedLogs.reduce(
+            (sum, cl) => sum + (cl["DG-2 OFF Load Hour"] || 0),
+            0
+          );
+
+        // Convert total hours to hours and minutes
+        const totalHrsMin = (totalHrs * 60).toFixed(0);
+        const totalDG1OnLoadHrsMin = (totalDG1OnLoadHrs * 60).toFixed(0);
+        const totalDG2OnLoadHrsMin = (totalDG2OnLoadHrs * 60).toFixed(0);
+        const totalDG1OffLoadHrsMin = (totalDG1OffLoadHrs * 60).toFixed(0);
+        const totalDG2OffLoadHrsMin = (totalDG2OffLoadHrs * 60).toFixed(0);
+        const totalDG1HrsMin = ((totalDG1OnLoadHrs + totalDG1OffLoadHrs) * 60).toFixed(0);
+        const totalDG2HrsMin = ((totalDG2OnLoadHrs + totalDG2OffLoadHrs) * 60).toFixed(0);
+        const currentFuel = fmt(availableFuel - dayFuelCon)
+        const fuelHours = fmt1(currentFuel / fmt1(totalOnLoadCon / totalOnLoadHrs))
+
+        return (
+          <div className="chart-container" >
+            <h1 style={fuelHours < 12 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
+            <h1 style={fuelHours < 12 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
+
+            {/* 🔹 Last Fuel Filling */}
+            {(() => {
+              const lastFilling = [...logs]
+                .map((e) => ({
+                  Date: e.Date,
+                  DG1: parseFloat(e["DG-1 Fuel Filling"] || 0),
+                  DG2: parseFloat(e["DG-2 Fuel Filling"] || 0),
+                  DG1Hrs: parseFloat(e["DG-1 Hour Closing"] || 0),
+                  DG2Hrs: parseFloat(e["DG-2 Hour Closing"] || 0),
+                }))
+                .filter((e) => e.DG1 > 0 || e.DG2 > 0)
+                .sort((a, b) => (a.Date < b.Date ? 1 : -1))[0]; // latest first
+
+              if (!lastFilling) return null;
+
+              return (
+                <p style={{ borderTop: "3px solid #eee", color: "black", fontSize: "10px" }}>
+                  📅 Last Fuel Filling – <strong>{lastFilling.Date}</strong> :{" "}
+                  <strong>
+                    {fmt1(lastFilling.DG1)} Ltrs (DG–1 - {lastFilling.DG1Hrs}), {fmt1(lastFilling.DG2)} Ltrs (DG–2 - {lastFilling.DG2Hrs})
+                  </strong>
+                </p>
+              );
+            })()}
+            <h1 className="noticeboard-header"><strong>📊Summery - {allValues.length} Days</strong></h1>
+            {/* Average PUE */}
+            <p className={monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
+              Average PUE – <strong>{monthlyAvgPUE}</strong>
+            </p>
+            {/* Average SEGR */}
+            <p className={monthlyAvgSEGR < 3 ? "avg-segr low" : "avg-segr high"}>
+              Average SEGR – <strong>{monthlyAvgSEGR}</strong>
+            </p>
+            <p className={monthlyAvgDG1SEGR < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
+              DG-1 Average SEGR – {monthlyAvgDG1SEGR}
+            </p>
+            <p className={monthlyAvgDG2SEGR < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
+              DG-2 Average SEGR – {monthlyAvgDG2SEGR}
+            </p>
+            <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p>
+            <p>📡 Avg IT Load – <strong>{monthlyAvgITLoad} kWh</strong></p>
+            <p>⛽ Avg DG CPH – <strong>{fmt1(totalOnLoadCon / totalOnLoadHrs)} Ltrs/Hrs</strong></p>
+            <p style={{ borderTop: "1px solid #eee" }}>⚡ Total DG KW Generation – <strong>{fmt(totalKwh)} kW</strong></p>
+            <div style={{ display: "flex" }}>
               <p style={{ marginLeft: "20px" }}>
                 • DG-1: <strong>{fmt1(totalDG1Kw)} kW</strong>
               </p>
               <p style={{ marginLeft: "20px" }}>
                 • DG-2: <strong>{fmt1(totalDG2Kw)} kW</strong>
               </p>
-
-              {/* 🔹 Last Fuel Filling */}
-{(() => {
-  const lastFilling = [...logs]
-    .map((e) => ({
-      Date: e.Date,
-      DG1: parseFloat(e["DG-1 Fuel Filling"] || 0),
-      DG2: parseFloat(e["DG-2 Fuel Filling"] || 0),
-    }))
-    .filter((e) => e.DG1 > 0 || e.DG2 > 0)
-    .sort((a, b) => (a.Date < b.Date ? 1 : -1))[0]; // latest first
-
-  if (!lastFilling) return null;
-
-  return (
-    <p style={{ borderTop: "1px solid #eee", color: "green" }}>
-      📅 Last Fuel Filling – <strong>{lastFilling.Date}</strong> :{" "}
-      <strong>
-        {fmt1(lastFilling.DG1)} Ltrs (DG-1), {fmt1(lastFilling.DG2)} Ltrs (DG-2)
-      </strong>
-    </p>
-  );
-})()}
-              <p style={{ borderTop: "1px solid #eee" }}>
-                ⛽ Total Fuel Filling – <strong>{fmt(totalFilling)}Ltrs. x </strong>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={fuelRate}
-                  onChange={(e) => setFuelRate(parseFloat(e.target.value) || 0)}
-                  style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-                /><strong>₹/Ltr. = ₹{fmt(totalFilling * fuelRate)}</strong>
-              </p>
+            </div>
+            <p style={{ borderTop: "1px solid #eee" }}>
+              ⛽ Total Fuel Filling – <strong>{fmt(totalFilling)}Ltrs. x </strong>
+              <input
+                type="number"
+                step="0.01"
+                value={fuelRate}
+                onChange={(e) => setFuelRate(parseFloat(e.target.value) || 0)}
+                style={{ width: "70px", marginLeft: "4px", height: "20px" }}
+              /><strong>₹/Ltr. = ₹{fmt(totalFilling * fuelRate)}</strong>
+            </p>
+            <div style={{ display: "flex" }}>
               <p style={{ marginLeft: "20px" }}>
                 • DG-1: <strong>{fmt1(totalDG1Filling)} Ltrs</strong>
               </p>
               <p style={{ marginLeft: "20px" }}>
                 • DG-2: <strong>{fmt1(totalDG2Filling)} Ltrs</strong>
               </p>
-              
-              <p style={{ borderTop: "1px solid #eee" }}>⛽ Total Fuel Consumption – <strong>{fmt(totalFuel)} Ltrs</strong></p>
+            </div>
+
+            <p style={{ borderTop: "1px solid #eee" }}>⛽ Total Fuel Consumption – <strong>{fmt(totalFuel)} Ltrs</strong></p>
+            <div style={{ display: "flex" }}>
               <p style={{ marginLeft: "20px" }}>
                 • DG-1: <strong>{fmt1(totalDG1OnLoadCon + totalDG1OffLoadCon)} Ltrs</strong>
               </p>
@@ -878,6 +886,8 @@ const DailyDGLog = ({ userData }) => {
               <p style={{ marginLeft: "40px", fontSize: "11px" }}>
                 - OFF Load: <strong>{fmt1(totalDG1OffLoadCon)} Ltrs</strong>
               </p>
+            </div>
+            <div style={{ display: "flex" }}>
               <p style={{ marginLeft: "20px" }}>
                 • DG-2: <strong>{fmt1(totalDG2OnLoadCon + totalDG2OffLoadCon)} Ltrs</strong>
               </p>
@@ -887,7 +897,9 @@ const DailyDGLog = ({ userData }) => {
               <p style={{ marginLeft: "40px", fontSize: "11px" }}>
                 - OFF Load: <strong>{fmt1(totalDG2OffLoadCon)} Ltrs</strong>
               </p>
-              <p style={{ borderTop: "1px solid #eee" }}>⏱️ Total DG Run Hours – <strong>{fmt1(totalHrs)} Hour</strong> ({totalHrsMin} min)</p>
+            </div>
+            <p style={{ borderTop: "1px solid #eee" }}>⏱️ Total DG Run Hours – <strong>{fmt1(totalHrs)} Hour</strong> ({totalHrsMin} min)</p>
+            <div style={{ display: "flex" }}>
               <p style={{ marginLeft: "20px" }}>
                 • DG-1: <strong>{fmt1(totalDG1OnLoadHrs + totalDG1OffLoadHrs)} hrs</strong> ({totalDG1HrsMin} min)
               </p>
@@ -897,6 +909,8 @@ const DailyDGLog = ({ userData }) => {
               <p style={{ marginLeft: "40px", fontSize: "11px" }}>
                 - OFF Load: <strong>{fmt1(totalDG1OffLoadHrs)} hrs</strong> ({totalDG1OffLoadHrsMin} min)
               </p>
+            </div>
+            <div style={{ display: "flex" }}>
               <p style={{ marginLeft: "20px" }}>
                 • DG-2: <strong>{fmt1(totalDG2OnLoadHrs + totalDG2OffLoadHrs)} hrs</strong> ({totalDG2HrsMin} min)
               </p>
@@ -907,24 +921,25 @@ const DailyDGLog = ({ userData }) => {
                 - OFF Load: <strong>{fmt1(totalDG2OffLoadHrs)} hrs</strong> ({totalDG2OffLoadHrsMin} min)
               </p>
             </div>
-          );
-        })()}
+          </div>
+        );
+      })()}
 
-        {/* Last update info */}
-        {(userData?.role === "Super Admin" ||
-          userData?.role === "Admin" ||
-          userData?.role === "Super User") &&
-          (() => {
-            const entry = logs.find((e) => e.Date === form.Date);
-            return entry ? (
-              <p style={{ fontSize: 12, color: "#666" }}>
-                Last Update By: <strong>{entry.updatedBy}</strong>{" "}
-                {entry.updatedAt?.toDate().toLocaleString()}
-              </p>
-            ) : null;
-          })()
-        }
-      </div>
+      {/* Last update info */}
+      {(userData?.role === "Super Admin" ||
+        userData?.role === "Admin" ||
+        userData?.role === "Super User") &&
+        (() => {
+          const entry = logs.find((e) => e.Date === form.Date);
+          return entry ? (
+            <p style={{ fontSize: 12, color: "#666" }}>
+              Last Update By: <strong>{entry.updatedBy}</strong>{" "}
+              {entry.updatedAt?.toDate().toLocaleString()}
+            </p>
+          ) : null;
+        })()
+      }
+      {/* </div> */}
 
       <div className="controls">
 
