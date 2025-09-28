@@ -172,6 +172,16 @@ const DailyDGLog = ({ userData }) => {
     ).toFixed(2)
     : 0;
 
+
+  const siteRunningKwValues = allValues
+    .map(cl => cl["Site Running kW"])
+    .filter(v => v > 0);
+
+  const avgSiteRunningKw =
+    siteRunningKwValues.length > 0
+      ? (siteRunningKwValues.reduce((sum, v) => sum + v, 0) / siteRunningKwValues.length).toFixed(2)
+      : 0;
+
   const formatMonthName = (ym) => {
     const [year, month] = ym.split("-");
     const date = new Date(year, month - 1); // month is 0-based
@@ -314,8 +324,8 @@ const DailyDGLog = ({ userData }) => {
       setForm((prevForm) => ({
         ...prevForm,
         // Only update if runs were found for that DG
-        "DG-1 Fuel Closing": dg1TotalConsumption && prevForm["DG-1 Fuel Opening"] > 0 ? prevForm["DG-1 Fuel Opening"] - dg1TotalConsumption : prevForm["DG-1 Fuel Closinging"],
-        "DG-2 Fuel Closing": dg2TotalConsumption && prevForm["DG-2 Fuel Opening"] > 0 ? prevForm["DG-2 Fuel Opening"] - dg2TotalConsumption : prevForm["DG-2 Fuel Closinging"],
+        "DG-1 Fuel Closing": dg1TotalConsumption && prevForm["DG-1 Fuel Opening"] > 0 ? prevForm["DG-1 Fuel Opening"] - dg1TotalConsumption : prevForm["DG-1 Fuel Closing"],
+        "DG-2 Fuel Closing": dg2TotalConsumption && prevForm["DG-2 Fuel Opening"] > 0 ? prevForm["DG-2 Fuel Opening"] - dg2TotalConsumption : prevForm["DG-2 Fuel Closing"],
         "DG-1 Hour Closing": dg1MaxEndMeter > 0 ? dg1MaxEndMeter : prevForm["DG-1 Hour Closing"],
         // "DG-2 Hour Opening": dg2MaxEndMeter > 0 ? dg2MinStartMeter : prevForm["DG-2 Hour Opening"],
         "DG-2 Hour Closing": dg2MaxEndMeter > 0 ? dg2MaxEndMeter : prevForm["DG-2 Hour Closing"],
@@ -626,15 +636,15 @@ const DailyDGLog = ({ userData }) => {
           <strong>
             {formatMonthName(selectedMonth)}
           </strong>
-
+        </h1>
+        <h1 style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <label>
             Select Month:
             <input
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-            // className={`month ${formatMonthName(selectedMonth)}`}
-            // style={{width: "inherit"}}
+              required
             />
           </label>
 
@@ -690,14 +700,8 @@ const DailyDGLog = ({ userData }) => {
             (parseFloat(yesterday["DG-2 Fuel Closing"]) || 0)
           );
         })();
-        const siteRunningKwValues = calculatedLogs
-          .map(cl => cl["Site Running kW"])
-          .filter(v => v > 0);
 
-        const avgSiteRunningKw =
-          siteRunningKwValues.length > 0
-            ? (siteRunningKwValues.reduce((sum, v) => sum + v, 0) / siteRunningKwValues.length).toFixed(2)
-            : 0;
+
 
         // Indivisual DG Fuel Fill in Ltrs
         const totalDG1Kw =
@@ -797,8 +801,8 @@ const DailyDGLog = ({ userData }) => {
         const totalDG2OffLoadHrsMin = (totalDG2OffLoadHrs * 60).toFixed(0);
         const totalDG1HrsMin = ((totalDG1OnLoadHrs + totalDG1OffLoadHrs) * 60).toFixed(0);
         const totalDG2HrsMin = ((totalDG2OnLoadHrs + totalDG2OffLoadHrs) * 60).toFixed(0);
-        const currentFuel = fmt(availableFuel - dayFuelCon)
-        const fuelHours = fmt1(currentFuel / fmt1(totalOnLoadCon / totalOnLoadHrs))
+        const currentFuel = fmt(availableFuel - dayFuelCon);
+        const fuelHours = fmt1(currentFuel / fmt1(totalOnLoadCon / totalOnLoadHrs));
 
         return (
           <div className="chart-container" >
@@ -934,7 +938,9 @@ const DailyDGLog = ({ userData }) => {
           return entry ? (
             <p style={{ fontSize: 12, color: "#666" }}>
               Last Update By: <strong>{entry.updatedBy}</strong>{" "}
-              {entry.updatedAt?.toDate().toLocaleString()}
+              {entry.updatedAt && (typeof entry.updatedAt.toDate === 'function'
+                ? entry.updatedAt.toDate().toLocaleString()
+                : new Date(entry.updatedAt).toLocaleString())}
             </p>
           ) : null;
         })()
@@ -950,12 +956,29 @@ const DailyDGLog = ({ userData }) => {
           {showEditModal ? "✖ Close" : "✎ Add / Edit DG Log"}
         </button>
       </div>
+      <div>
+        Selected Date: <strong style={{ color: "blue" }}>
+        {form.Date}
+        </strong>
+      </div>
       <button
         className="segr-manage-btn warning"
         onClick={() => Navigate('/dg-log-table')}
       >
-        ✎ DG Run Logs - {form.Date}
+        ✎ DG Run Logs
       </button>
+       
+      <button
+        className="download-btn"
+        onClick={() =>
+          Navigate("/fuel-requisition", {
+            state: { logs, siteName, avgSiteRunningKw, userData, form },
+          })
+        }
+      >
+        ⛽ Generate Fuel Request
+      </button>
+
       {showEditModal && (
         <form className="daily-log-form" onSubmit={handleSubmit}>
           <label>
@@ -989,7 +1012,7 @@ const DailyDGLog = ({ userData }) => {
 
       <div>
         <h2>📝 {formatMonthName(selectedMonth)} Logs :</h2>
-        <button className="download-btn" onClick={handleDownloadExcel}>⬇️ Download Excel</button>
+        <button className="download-btn" onClick={handleDownloadExcel}>⬇️ Download Excel UpTo – {allValues.length} {formatMonthName(selectedMonth)}</button>
       </div>
 
       <div className="table-container">

@@ -34,6 +34,7 @@ import SLDEditor from "./pages/SLDEditor"
 import DailyDGLog from "./pages/DailyDGLog";
 import DGLogForm from "./components/DGLogForm";
 import DGLogTable from "./components/DGLogTable";
+import FuelRequisition from "./pages/FuelRequisition";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -287,6 +288,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <DGLogTable userData={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+        <Route path="/fuel-requisition" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <FuelRequisition userData={userData} />
             </Layout>
           </RoleProtectedRoute>} />
 
