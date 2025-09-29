@@ -12,6 +12,7 @@ import { db } from "../firebase";
 import "../assets/DailyDGLog.css";
 import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
+import { asansolSiteConfig } from "../config/siteConfig"; // 👈 Import the config
 
 
 const getFormattedDate = () => {
@@ -625,6 +626,18 @@ const DailyDGLog = ({ userData }) => {
     return "";
   };
 
+  // 👇 Add this handler function inside the component
+  const handleGenerateCCMS = (entry) => {
+    // We pass the specific log entry, the site config, and the current fuel rate
+    Navigate("/ccms-copy", {
+      state: {
+        logData: calculateFields(entry), // Send the fully calculated data
+        siteConfig: asansolSiteConfig,
+        fuelRate: fuelRate,
+      },
+    });
+  };
+
 
   return (
     <div className="daily-log-container">
@@ -1145,6 +1158,15 @@ const DailyDGLog = ({ userData }) => {
                   <td>{fmt(calculated["PUE"])}</td>
 
                   <td>
+                    {/* 👇 Add the button here */}
+                    {calculated['Total Fuel Filling'] > 0 && (
+                      <button 
+                        className="download-btn"
+                        onClick={() => handleGenerateCCMS(entry)}
+                      >
+                        CCMS
+                      </button>
+                    )}
                     {userData?.role === "Super Admin" || userData?.role === "Admin" && (
                       <button onClick={() => handleDelete(entry.id)}>
                         Delete

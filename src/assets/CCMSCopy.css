@@ -1,0 +1,120 @@
+/* src/assets/CCMSCopy.css */
+.ccms-container {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+}
+.ccms-sheet {
+  background-color: white;
+  padding: 25px;
+  border: 1px solid #ccc;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.ccms-header {
+  text-align: center;
+  text-decoration: underline;
+  margin-bottom: 20px;
+}
+
+/* Responsive table container */
+.ccms-table-container {
+  width: 100%;
+  overflow-x: auto;    /* enables horizontal scroll */
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+.ccms-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  width: 100%;
+  /* min-width: 600px; */
+}
+.ccms-table th, .ccms-table td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+  /* white-space: nowrap; */
+}
+.ccms-table th {
+  background-color: #f2f2f2;
+}
+.detailed-table td:first-child {
+    font-weight: bold;
+    width: 30%;
+}
+.ccms-signatures {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 50px;
+  margin-bottom: 30px;
+}
+.signature-block {
+  width: 45%;
+  text-align: center;
+}
+.signature-space {
+  height: 60px; /* Space for signature */
+  border-bottom: 1px solid #000;
+  margin-bottom: 10px;
+}
+.ccms-controls {
+  max-width: 800px;
+  margin: 0 auto 10px auto;
+  display: flex;
+  gap: 10px;
+}
+
+
+/* @media print {
+  .ccms-controls, .daily-log-container {
+    display: none;
+  }
+  .ccms-container {
+    padding: 0;
+    background-color: white;
+  }
+  .ccms-sheet {
+    border: none;
+    box-shadow: none;
+  }
+} */
+
+/* Ensure only CCMS sheet prints */
+@media print {
+  /* Hide everything by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the CCMS sheet */
+  .ccms-sheet, 
+  .ccms-sheet * {
+    visibility: visible;
+  }
+
+  /* Ensure CCMS sheet takes full page */
+  .ccms-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}
+
+
+
+.signature-space {
+  height: 60px;      /* reserved space for signature */
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.signature-img {
+  max-height: 50px;
+  max-width: 150px;
+  object-fit: contain;
+}
