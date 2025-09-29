@@ -22,6 +22,7 @@ const DGLogForm = ({ userData }) => {
         hrMeterEnd: "",
         remarks: "On Load",
         fuelConsumption: "",
+        kWHReading: "",
     });
 
     const handleChange = (e) => {
@@ -90,6 +91,7 @@ const DGLogForm = ({ userData }) => {
                 hrMeterEnd: "",
                 remarks: "On Load",
                 fuelConsumption: "",
+                kWHReading: "",
             });
         } catch (err) {
             console.error("Error saving log: ", err);
@@ -451,6 +453,18 @@ const DGLogForm = ({ userData }) => {
                         value={form.fuelConsumption}
                         onChange={handleChange}
                         placeholder="Fuel consumption (L)"
+                        className="w-full p-2 border rounded"
+                        required
+                    />
+                </label>
+                <label className="form-label">Reading (kWH):
+                    <input
+                        type="number"
+                        step="0.1"
+                        name="kWHReadingn"
+                        value={form.kWHReading}
+                        onChange={handleChange}
+                        placeholder="Generated kWH"
                         className="w-full p-2 border rounded"
                         required
                     />

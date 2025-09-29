@@ -48,7 +48,7 @@ const getFormattedDate = () => {
 
 const FuelRequisition = () => {
     const { state } = useLocation();
-    const { logs, siteName, avgSiteRunningKw, userData, form } = state || {};
+    const { logs, siteName, avgSiteRunningKw, fuelRate, userData, form } = state || {};
 
     const [rows, setRows] = useState([]);
     const Navigate = useNavigate();
@@ -229,7 +229,7 @@ const FuelRequisition = () => {
                     "Present Diesel stock": dg1PresentStock, // ✅ Correct: Using live calculation
                     "Request Date": getFormattedDate(),
                     "Requested Liters": 1090 - dg1PresentStock,
-                    "Requested Amount": (1090 - dg1PresentStock) * 92.25, // Consider making rate dynamic
+                    "Requested Amount": ((1090 - dg1PresentStock) * fuelRate).toFixed(2), // Consider making rate dynamic
                     "Approval by CIH Date": "",
                     "Vehicle No.": "",
                 },
@@ -250,7 +250,7 @@ const FuelRequisition = () => {
                     "Present Diesel stock": dg2PresentStock, // ✅ Correct: Using live calculation
                     "Request Date": getFormattedDate(),
                     "Requested Liters": 1090 - dg2PresentStock,
-                    "Requested Amount": (1090 - dg2PresentStock) * 92.25,
+                    "Requested Amount": ((1090 - dg2PresentStock) * fuelRate).toFixed(2), // Consider making rate dynamic
                     "Approval by CIH Date": "",
                     "Vehicle No.": "",
                 },

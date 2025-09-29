@@ -5,6 +5,7 @@ import {
   doc,
   setDoc,
   getDocs,
+  getDoc,
   deleteDoc,
   serverTimestamp,
 } from "firebase/firestore";
@@ -25,10 +26,31 @@ const DailyDGLog = ({ userData }) => {
   const [dayFuelCon, setDayFuelCon] = useState(0);
   const [form, setForm] = useState({ Date: "" });
   const Navigate = useNavigate();
-  const [fuelRate, setFuelRate] = useState(92.25); // default value
+  const [fuelRate, setFuelRate] = useState(0.00); // default value
+
+  // Debounce helper (optional)
+  let timeout;
+  const saveFuelRate = (rate) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(async () => {
+      try {
+        // Save fuel rate site-wise
+        await setDoc(doc(db, "fuelRates", userData?.site), { rate }, { merge: true });
+        console.log("Fuel rate saved:", rate);
+      } catch (err) {
+        console.error("Error saving fuel rate:", err);
+      }
+    }, 500); // wait 500ms after typing stops
+  };
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().slice(0, 7) // YYYY-MM
   );
+
+  const handleFuelChange = (e) => {
+    const rate = parseFloat(e.target.value) || 0;
+    setFuelRate(rate);
+    saveFuelRate(rate);
+  };
 
 
   const siteName = userData?.site || "UnknownSite";
@@ -230,7 +252,23 @@ const DailyDGLog = ({ userData }) => {
       // fallback → today if no logs
       setForm({ Date: getFormattedDate() });
     }
-  }, [logs]);
+
+    const fetchFuelRate = async () => {
+      try {
+        const docRef = doc(db, "fuelRates", userData?.site);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setFuelRate(docSnap.data().rate || 0);
+        } else {
+          setFuelRate(0); // default if no rate stored
+        }
+      } catch (err) {
+        console.error("Error fetching fuel rate:", err);
+      }
+    };
+
+    fetchFuelRate();
+  }, [logs, userData?.site]);
 
 
   const getYesterdayData = () => {
@@ -298,11 +336,15 @@ const DailyDGLog = ({ userData }) => {
       let dg1TotalRunHours = 0;
       let dg1MinStartMeter = Infinity;
       let dg1MaxEndMeter = 0;
+      let dg1MaxEndkWH = 0;
+      let offLoadDG1Con = 0;
 
       let dg2TotalConsumption = 0;
       let dg2TotalRunHours = 0;
       let dg2MinStartMeter = Infinity;
       let dg2MaxEndMeter = 0;
+      let dg2MaxEndkWH = 0;
+      let offLoadDG2Con = 0;
 
       runs.forEach((run) => {
         const startMeter = parseFloat(run.hrMeterStart || 0);
@@ -310,14 +352,18 @@ const DailyDGLog = ({ userData }) => {
 
         if (run.dgNumber === "DG-1") {
           dg1TotalConsumption += parseFloat(run.fuelConsumption || 0);
+          dg1MaxEndkWH += parseFloat(run.kWHReading || 0);
           dg1TotalRunHours += parseFloat(run.totalRunHours || 0);
           if (startMeter < dg1MinStartMeter) dg1MinStartMeter = startMeter;
           if (endMeter > dg1MaxEndMeter) dg1MaxEndMeter = endMeter;
+          if (run.remarks === "No Load") offLoadDG1Con += parseFloat(run.fuelConsumption || 0);
         } else if (run.dgNumber === "DG-2") {
           dg2TotalConsumption += parseFloat(run.fuelConsumption || 0);
+          dg2MaxEndkWH += parseFloat(run.kWHReading || 0);
           dg2TotalRunHours += parseFloat(run.totalRunHours || 0);
           if (startMeter < dg2MinStartMeter) dg2MinStartMeter = startMeter;
           if (endMeter > dg2MaxEndMeter) dg2MaxEndMeter = endMeter;
+          if (run.remarks === "No Load") offLoadDG2Con += parseFloat(run.fuelConsumption || 0);
         }
       });
 
@@ -325,8 +371,14 @@ const DailyDGLog = ({ userData }) => {
       setForm((prevForm) => ({
         ...prevForm,
         // Only update if runs were found for that DG
-        "DG-1 Fuel Closing": dg1TotalConsumption && prevForm["DG-1 Fuel Opening"] > 0 ? prevForm["DG-1 Fuel Opening"] - dg1TotalConsumption : prevForm["DG-1 Fuel Closing"],
-        "DG-2 Fuel Closing": dg2TotalConsumption && prevForm["DG-2 Fuel Opening"] > 0 ? prevForm["DG-2 Fuel Opening"] - dg2TotalConsumption : prevForm["DG-2 Fuel Closing"],
+        "DG-1 Fuel Closing": dg1TotalConsumption >= 0 ? prevForm["DG-1 Fuel Opening"] - dg1TotalConsumption + (Number(prevForm["DG-1 Fuel Filling"]) || 0) : Number(prevForm["DG-1 Fuel Closing"]) + Number(prevForm["DG-1 Fuel Filling"]),
+        "DG-2 Fuel Closing": dg2TotalConsumption >= 0 ? prevForm["DG-2 Fuel Opening"] - dg2TotalConsumption + (Number(prevForm["DG-2 Fuel Filling"]) || 0) : Number(prevForm["DG-2 Fuel Closing"]) + Number(prevForm["DG-2 Fuel Filling"]),
+        "DG-1 KWH Closing": dg1MaxEndkWH >= 0 ? Number(prevForm["DG-1 KWH Opening"]) + dg1MaxEndkWH : prevForm["DG-1 KWH Closing"],
+        "DG-2 KWH Closing": dg2MaxEndkWH >= 0 ? Number(prevForm["DG-2 KWH Opening"]) + dg2MaxEndkWH : prevForm["DG-2 KWH Closing"],
+        "DG-1 Off Load Fuel Consumption": offLoadDG1Con > 0 ? offLoadDG1Con : prevForm["DG-1 Off Load Fuel Consumption"],
+        "DG-2 Off Load Fuel Consumption": offLoadDG2Con > 0 ? offLoadDG2Con : prevForm["DG-2 Off Load Fuel Consumption"],
+        "DG-1 Off Load Hour": dg1MaxEndkWH < 1 && dg1TotalConsumption > 0 ? dg1TotalRunHours.toFixed(1) : prevForm["DG-1 Off Load Hour"],
+        "DG-2 Off Load Hour": dg2MaxEndkWH < 1 && dg2TotalConsumption > 0 ? dg2TotalRunHours.toFixed(1) : prevForm["DG-2 Off Load Hour"],
         "DG-1 Hour Closing": dg1MaxEndMeter > 0 ? dg1MaxEndMeter : prevForm["DG-1 Hour Closing"],
         // "DG-2 Hour Opening": dg2MaxEndMeter > 0 ? dg2MinStartMeter : prevForm["DG-2 Hour Opening"],
         "DG-2 Hour Closing": dg2MaxEndMeter > 0 ? dg2MaxEndMeter : prevForm["DG-2 Hour Closing"],
@@ -875,13 +927,13 @@ const DailyDGLog = ({ userData }) => {
             </div>
             <p style={{ borderTop: "1px solid #eee" }}>
               ⛽ Total Fuel Filling – <strong>{fmt(totalFilling)}Ltrs. x </strong>
-              <input
+              ₹<input
                 type="number"
                 step="0.01"
                 value={fuelRate}
-                onChange={(e) => setFuelRate(parseFloat(e.target.value) || 0)}
+                onChange={handleFuelChange}
                 style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-              /><strong>₹/Ltr. = ₹{fmt(totalFilling * fuelRate)}</strong>
+              /><strong>/Ltr. = ₹{fmt(totalFilling * fuelRate)}</strong>
             </p>
             <div style={{ display: "flex" }}>
               <p style={{ marginLeft: "20px" }}>
@@ -985,7 +1037,7 @@ const DailyDGLog = ({ userData }) => {
         className="download-btn"
         onClick={() =>
           Navigate("/fuel-requisition", {
-            state: { logs, siteName, avgSiteRunningKw, userData, form },
+            state: { logs, siteName, avgSiteRunningKw, fuelRate, userData, form },
           })
         }
       >
@@ -1015,6 +1067,7 @@ const DailyDGLog = ({ userData }) => {
                 value={form[field] || ""}
                 onChange={handleChange}
                 className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
+                disabled={field === "DG-1 Fuel Opening" || field === "DG-2 Fuel Opening" || field === "DG-1 KWH Opening" || field === "DG-2 KWH Opening" || field === "EB-1 KWH Opening" || field === "EB-2 KWH Opening" || field === "DG-1 Hour Opening" || field === "DG-2 Hour Opening" || field === "DG-1 KWH Closing" || field === "DG-2 KWH Closing" || field === "DG-1 Hour Closing" || field === "DG-2 Hour Closing" || field === "DG-1 Off Load Hour" || field === "DG-2 Off Load Hour" || field === "DG-1 Off Load Fuel Consumption" || field === "DG-2 Off Load Fuel Consumption"}
               />
             </label>
           ))}

@@ -217,6 +217,7 @@ const DGLogTable = ({ userData }) => {
                 <th>Hr Meter End</th>
                 <th>Total Run Hours</th>
                 <th>Fuel Consumption</th>
+                <th>kWH Reading</th>
                 <th>Remarks</th>
                 <th>Actions</th>
               </tr>
@@ -290,6 +291,18 @@ const DGLogTable = ({ userData }) => {
                       </td>
                       <td>
                         <input
+                          type="number"
+                          value={editForm.kWHReading}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              kWHReading: e.target.value,
+                            })
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
                           value={editForm.remarks}
                           onChange={(e) =>
                             setEditForm({ ...editForm, remarks: e.target.value })
@@ -311,7 +324,8 @@ const DGLogTable = ({ userData }) => {
                       <td>{log.hrMeterStart}</td>
                       <td>{log.hrMeterEnd}</td>
                       <td>{log.totalRunHours?.toFixed(1)}</td>
-                      <td>{log.fuelConsumption}</td>
+                      <td>{log.fuelConsumption || 0}</td>
+                      <td>{log.kWHReading || 0}</td>
                       <td>{log.remarks}</td>
                       <td>
                         <button onClick={() => handleEdit(log)}>Edit</button>
