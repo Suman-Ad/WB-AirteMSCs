@@ -101,6 +101,12 @@
     left: 0;
     width: 100%;
   }
+  .ccms-upload input[type="file"] {
+    display: none !important;
+  }
+  .remove-btn {
+    display: none !important;
+  }
 }
 
 
@@ -118,3 +124,45 @@
   max-width: 150px;
   object-fit: contain;
 }
+
+.ccms-upload {
+  margin-top: 20px;
+}
+
+.bill-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  
+}
+
+.bill-img-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.bill-img {
+  max-width: 250px;
+  max-height: 300px;
+  border: 1px solid #ccc;
+  padding: 4px;
+  background: #fff;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.remove-btn:hover {
+  background: #ffdddd;
+}
+
+

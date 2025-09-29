@@ -116,10 +116,12 @@ const IncidentManagement = ({ userData }) => {
   // 🔹 Submit handler (Create or Update)
   const handleSubmit = async () => {
     if (!validateForm()) return;
-    if (formData.rcaStatus === "Y" && !formData.rcaFileUrl) {
-      alert("Please upload an RCA file before submitting.");
-      return;
-    }
+
+    // Additional validation for RCA file if RCA status is 'Y'
+    // if (formData.rcaStatus === "Y" && !formData.rcaFileUrl) {
+    //   alert("Please upload an RCA file before submitting.");
+    //   return;
+    // }
 
     try {
       const incidentDate = new Date(formData.dateOfIncident);
