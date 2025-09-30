@@ -72,6 +72,10 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
           <Link to="/incident-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Insident Dashboard":""}>🚨 <span className="label">Incident Dashboard</span></Link>
         )}
 
+        {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
+          <Link to="/rack-details-form" className="sidepanel-manage-btn" title={collapsed ? "Rack Dashboard":""}>🗄️ <span className="label">Rack Details</span></Link>
+        )}
+
         <Link to="/dhr-dashboard" className="sidepanel-manage-btn" title={collapsed ? "DHR Dashboard":""}>⚡<span className="label">DHR Dashboard</span></Link>
 
         {(role === "Admin" || role === "Super Admin") && (

@@ -36,6 +36,7 @@ import DGLogForm from "./components/DGLogForm";
 import DGLogTable from "./components/DGLogTable";
 import FuelRequisition from "./pages/FuelRequisition";
 import CCMSCopy from "./pages/CCMSCopy";
+import RackTrackerForm from "./pages/RackTrackerForm";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -304,6 +305,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <CCMSCopy />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+        <Route path="/rack-details-form" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <RackTrackerForm userData={userData}/>
             </Layout>
           </RoleProtectedRoute>} />
 
