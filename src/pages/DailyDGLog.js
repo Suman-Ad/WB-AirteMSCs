@@ -379,9 +379,9 @@ const DailyDGLog = ({ userData }) => {
         "DG-2 Off Load Fuel Consumption": offLoadDG2Con > 0 ? offLoadDG2Con : prevForm["DG-2 Off Load Fuel Consumption"],
         "DG-1 Off Load Hour": dg1MaxEndkWH < 1 && dg1TotalConsumption > 0 ? dg1TotalRunHours.toFixed(1) : prevForm["DG-1 Off Load Hour"],
         "DG-2 Off Load Hour": dg2MaxEndkWH < 1 && dg2TotalConsumption > 0 ? dg2TotalRunHours.toFixed(1) : prevForm["DG-2 Off Load Hour"],
-        "DG-1 Hour Closing": dg1MaxEndMeter > 0 ? dg1MaxEndMeter : prevForm["DG-1 Hour Closing"],
+        "DG-1 Hour Closing": dg1MaxEndMeter > 0 ? dg1MaxEndMeter : prevForm["DG-1 Hour Openinging"],
         // "DG-2 Hour Opening": dg2MaxEndMeter > 0 ? dg2MinStartMeter : prevForm["DG-2 Hour Opening"],
-        "DG-2 Hour Closing": dg2MaxEndMeter > 0 ? dg2MaxEndMeter : prevForm["DG-2 Hour Closing"],
+        "DG-2 Hour Closing": dg2MaxEndMeter > 0 ? dg2MaxEndMeter : prevForm["DG-2 Hour Opening"],
 
         // Note: The form calculates total consumption from opening/closing fuel.
         // This aggregated value is useful for verification or other logic.
@@ -1064,7 +1064,7 @@ const DailyDGLog = ({ userData }) => {
                 type="number"
                 step="any"
                 name={field}
-                value={form[field] || ""}
+                value={form[field] || 0}
                 onChange={handleChange}
                 className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
                 disabled={field === "DG-1 Fuel Opening" || field === "DG-2 Fuel Opening" || field === "DG-1 KWH Opening" || field === "DG-2 KWH Opening" || field === "EB-1 KWH Opening" || field === "EB-2 KWH Opening" || field === "DG-1 Hour Opening" || field === "DG-2 Hour Opening" || field === "DG-1 KWH Closing" || field === "DG-2 KWH Closing" || field === "DG-1 Hour Closing" || field === "DG-2 Hour Closing" || field === "DG-1 Off Load Hour" || field === "DG-2 Off Load Hour" || field === "DG-1 Off Load Fuel Consumption" || field === "DG-2 Off Load Fuel Consumption"}
