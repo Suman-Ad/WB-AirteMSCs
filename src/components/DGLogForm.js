@@ -23,6 +23,7 @@ const DGLogForm = ({ userData }) => {
         remarks: "On Load",
         fuelConsumption: "",
         kWHReading: "",
+        fuelFill: "",
     });
 
     const handleChange = (e) => {
@@ -63,11 +64,16 @@ const DGLogForm = ({ userData }) => {
             );
 
             // Unique runId → dgNumber + start/stop
-            const runId = `${form.dgNumber}_${form.startTime}_${form.stopTime}`;
+            const runId = form.fuelFill > 0 && !form.startTime && !form.stopTime ? `${form.dgNumber}_fuelOnly_${Date.now()}` : `${form.dgNumber}_${form.startTime}_${form.stopTime}`;
 
             await setDoc(doc(runsCollectionRef, runId), {
                 ...form,
-                totalRunHours,
+                totalRunHours: form.fuelFill > 0 && !form.startTime && !form.stopTime
+                    ? 0   // no running
+                    : totalRunHours,
+                remarks: form.fuelFill > 0 && !form.startTime && !form.stopTime
+                    ? "Fuel Filling Only"
+                    : form.remarks,
                 siteId: userData.siteId,
                 siteName: userData.site,
                 enteredBy: userData.name,
@@ -92,6 +98,7 @@ const DGLogForm = ({ userData }) => {
                 remarks: "On Load",
                 fuelConsumption: "",
                 kWHReading: "",
+                fuelFill: "",
             });
         } catch (err) {
             console.error("Error saving log: ", err);
@@ -392,7 +399,7 @@ const DGLogForm = ({ userData }) => {
                             value={form.startTime}
                             onChange={handleChange}
                             className="p-2 border rounded"
-                            required
+                            // required
                         />
                     </label>
 
@@ -403,7 +410,7 @@ const DGLogForm = ({ userData }) => {
                             value={form.stopTime}
                             onChange={handleChange}
                             className="p-2 border rounded"
-                            required
+                            // required
                         />
                     </label>
                 </div>
@@ -450,7 +457,7 @@ const DGLogForm = ({ userData }) => {
                         type="number"
                         step="0.1"
                         name="fuelConsumption"
-                        value={form.fuelConsumption}
+                        value={form.fuelConsumption || 0}
                         onChange={handleChange}
                         placeholder="Fuel consumption (L)"
                         className="w-full p-2 border rounded"
@@ -461,10 +468,22 @@ const DGLogForm = ({ userData }) => {
                     <input
                         type="number"
                         step="0.1"
-                        name="kWHReadingn"
-                        value={form.kWHReading}
+                        name="kWHReading"
+                        value={form.kWHReading || 0}
                         onChange={handleChange}
                         placeholder="Generated kWH"
+                        className="w-full p-2 border rounded"
+                        required
+                    />
+                </label>
+                <label className="form-label">Fuel Filling (Liters):
+                    <input
+                        type="number"
+                        step="0.1"
+                        name="fuelFill"
+                        value={form.fuelFill || 0}
+                        onChange={handleChange}
+                        placeholder="Add fuel filling (L)"
                         className="w-full p-2 border rounded"
                         required
                     />

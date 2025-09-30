@@ -219,6 +219,7 @@ const DGLogTable = ({ userData }) => {
                 <th>Fuel Consumption</th>
                 <th>kWH Reading</th>
                 <th>Remarks</th>
+                <th>Fuel Filling</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -310,6 +311,14 @@ const DGLogTable = ({ userData }) => {
                         />
                       </td>
                       <td>
+                        <input
+                          value={editForm.fuelFill}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, fuelFill: e.target.value })
+                          }
+                        />
+                      </td>
+                      <td>
                         <button onClick={handleSave}>Save</button>
                         <button onClick={() => setEditingId(null)}>
                           Cancel
@@ -327,6 +336,7 @@ const DGLogTable = ({ userData }) => {
                       <td>{log.fuelConsumption || 0}</td>
                       <td>{log.kWHReading || 0}</td>
                       <td>{log.remarks}</td>
+                      <td>{log.fuelFill}</td>
                       <td>
                         <button onClick={() => handleEdit(log)}>Edit</button>
                       </td>
