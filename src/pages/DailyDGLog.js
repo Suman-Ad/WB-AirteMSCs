@@ -1135,7 +1135,7 @@ const DailyDGLog = ({ userData }) => {
         return (
           <div style={{ marginTop: "30px" }}>
             <h2>🛢️ Diesel Reconciliation Report</h2>
-            <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%", fontSize: "12px", overflowX: "auto", display: "block", maxWidth: "100%" }}>
+            <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%", fontSize: "12px", overflowX: "auto", display: "block", maxWidth: "100%", whiteSpace: "nowrap" }}>
               <thead>
                 <tr style={{ background: "#f0f0f0" }}>
                   <th>Period</th>
