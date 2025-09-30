@@ -11,6 +11,10 @@ export const asansolSiteConfig = {
     supplierName: "INDIAN OIL CORPORATION LIMITED",
     supplierSiteName: "WEST BENGAL",        // ✅ corrected
     siteId: "61119-ASAN-1815677",
+    designCph: {
+        "DG-1": 99,
+        "DG-2": 98,
+    }, //in Litres
 
 
     preparedBy: "Mr. Ashis Paul.",          // ✅ confirm from CCMS sample

@@ -667,6 +667,36 @@ const DailyDGLog = ({ userData }) => {
     XLSX.writeFile(wb, `DailyDGLogs_${siteName}_${formatMonthName(selectedMonth)}${formatYear(selectedMonth)}.xlsx`);
   };
 
+  // 🔹 Download logs as Excel
+  const handleDownloadExcelOnlyDGLogs = () => {
+    if (!logs.length) {
+      alert("No data available to download");
+      return;
+    }
+
+    // Map logs with calculations
+    const exportData = logs.map((entry) => {
+      const calculated = calculateFields(entry);
+      return {
+        Date: calculated.Date,
+        "DG-1 KWH Opening": fmt(calculated["DG-1 KWH Opening"]),
+        "DG-1 KWH Closing": fmt(calculated["DG-1 KWH Closing"]),
+        "DG-1 Generation": fmt(calculated["DG-1 KWH Generation"]),
+        "DG-2 KWH Opening": fmt(calculated["DG-2 KWH Opening"]),
+        "DG-2 KWH Closing": fmt(calculated["DG-2 KWH Closing"]),
+        "DG-2 Generation": fmt(calculated["DG-2 KWH Generation"]),
+      };
+    });
+
+    // Create worksheet + workbook
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DailyDGLogs");
+
+    // Export Excel file
+    XLSX.writeFile(wb, `${siteName}_DGLogs_${formatMonthName(selectedMonth)}${formatYear(selectedMonth)}.xlsx`);
+  };
+
   // 🔹 Field validation color
   const getFieldClass = (name) => {
     const [prefix, type] = name.split(" "); // ["DG-1", "KWH", "Opening"]
@@ -1027,37 +1057,131 @@ const DailyDGLog = ({ userData }) => {
                 - OFF Load: <strong>{fmt1(totalDG2OffLoadHrs)} hrs</strong> ({totalDG2OffLoadHrsMin} min)
               </p>
             </div>
+            {/* Last update info */}
+            {(userData?.role === "Super Admin" ||
+              userData?.role === "Admin" ||
+              userData?.role === "Super User") &&
+              (() => {
+                const entry = logs.find((e) => e.Date === form.Date);
+                return entry ? (
+                  <p style={{ fontSize: 12, color: "#666" }}>
+                    Last Update By: <strong>{entry.updatedBy}</strong>{" "}
+                    {entry.updatedAt && (typeof entry.updatedAt.toDate === 'function'
+                      ? entry.updatedAt.toDate().toLocaleString()
+                      : new Date(entry.updatedAt).toLocaleString())}
+                  </p>
+                ) : null;
+              })()
+            }
           </div>
         );
       })()}
 
-      {/* Last update info */}
-      {(userData?.role === "Super Admin" ||
-        userData?.role === "Admin" ||
-        userData?.role === "Super User") &&
-        (() => {
-          const entry = logs.find((e) => e.Date === form.Date);
-          return entry ? (
-            <p style={{ fontSize: 12, color: "#666" }}>
-              Last Update By: <strong>{entry.updatedBy}</strong>{" "}
-              {entry.updatedAt && (typeof entry.updatedAt.toDate === 'function'
-                ? entry.updatedAt.toDate().toLocaleString()
-                : new Date(entry.updatedAt).toLocaleString())}
-            </p>
-          ) : null;
-        })()
-      }
+      {/* 🔹 Monthly Diesel Reconciliation */}
+      {(() => {
+        if (!logs.length) return null;
+
+        const startDate = new Date(selectedMonth + "-01");
+        const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+        const daysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
+        const totalHours = daysInMonth * 24;
+
+        const calculatedLogs = logs.map((e) => calculateFields(e));
+
+        const dgReco = [1, 2].map((dg) => {
+          const runHrs = calculatedLogs.reduce(
+            (sum, cl) => sum + (cl[`DG-${dg} Running Hrs`] || 0),
+            0
+          );
+          const fuelCon = calculatedLogs.reduce(
+            (sum, cl) => sum + (cl[`DG-${dg} Fuel Consumption`] || 0),
+            0
+          );
+
+          const onLoadRunHrs = calculatedLogs.reduce(
+            (sum, cl) => sum + (cl[`DG-${dg} ON Load Hour`] || 0),
+            0
+          );
+
+          const ebAvailHrs = totalHours - onLoadRunHrs;
+          const designCph = asansolSiteConfig?.designCph?.[`DG${dg}`] || 100; // fallback
+          const idealCon = runHrs * designCph;
+          const unrecoDiesel = fuelCon - idealCon;
+          const percentVar =
+            idealCon > 0 ? ((unrecoDiesel / idealCon) * 100).toFixed(1) + "%" : "0%";
+          const expectedRunHrs = totalHours - ebAvailHrs;
+          const excessRunHr = runHrs > expectedRunHrs
+            ? (runHrs - expectedRunHrs).toFixed(2)
+            : "0.00";
+
+          return {
+            dg: `#${dg}`,
+            type: dg === 1 ? "1010 KVA" : "1010 KVA", // static for now
+            totalHrs: totalHours.toFixed(1),
+            ebAvailHrs: ebAvailHrs.toFixed(1),
+            runHrs: runHrs.toFixed(2),
+            excessRunHr,
+            aCheckHr: "0",
+            unrecoRunHr: (excessRunHr - 0).toFixed(2), // placeholder
+            testingHr: (excessRunHr - 0).toFixed(2),   // placeholder
+            designCph,
+            idealCon: idealCon.toFixed(2),
+            actualCon: fuelCon.toFixed(2),
+            unrecoDiesel: unrecoDiesel.toFixed(2),
+            percentVar,
+          };
+        });
+
+        return (
+          <div style={{ marginTop: "30px" }}>
+            <h2>🛢️ Diesel Reconciliation Report</h2>
+            <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%", fontSize: "12px", overflowX: "auto", display: "block", maxWidth: "100%" }}>
+              <thead>
+                <tr style={{ background: "#f0f0f0" }}>
+                  <th>Period</th>
+                  <th>DG#</th>
+                  <th>DG Type</th>
+                  <th>Total Hr</th>
+                  <th>EB Availability Hrs</th>
+                  <th>DG Run Hrs</th>
+                  <th>Excess DG Run Hr</th>
+                  <th>Max DG Run A-Check Hr</th>
+                  <th>Unreconciled DG Run Hr</th>
+                  <th>DG Run for Testing Hr</th>
+                  <th>Design CPH</th>
+                  <th>Ideal Diesel Consumption (Ltr)</th>
+                  <th>Actual Diesel Consumption (Ltr)</th>
+                  <th>Unreconciled Diesel (Ltr)</th>
+                  <th>% Variation Diesel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dgReco.map((row, idx) => (
+                  <tr key={idx}>
+                    <td>{`1-${startDate.toLocaleString("default", { month: "short" })}-${startDate.getFullYear()} to ${endDate.getDate()}-${endDate.toLocaleString("default", { month: "short" })}-${endDate.getFullYear()}`}</td>
+                    <td>{row.dg}</td>
+                    <td>{row.type}</td>
+                    <td>{row.totalHrs}</td>
+                    <td>{row.ebAvailHrs}</td>
+                    <td>{row.runHrs}</td>
+                    <td>{row.excessRunHr}</td>
+                    <td>{row.aCheckHr}</td>
+                    <td>{row.unrecoRunHr}</td>
+                    <td>{row.testingHr}</td>
+                    <td>{row.designCph}</td>
+                    <td>{row.idealCon}</td>
+                    <td>{row.actualCon}</td>
+                    <td>{row.unrecoDiesel}</td>
+                    <td>{row.percentVar}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+
       {/* </div> */}
-
-      <div className="controls">
-
-        <button
-          className="segr-manage-btn info"
-          onClick={() => setShowEditModal(!showEditModal)}
-        >
-          {showEditModal ? "✖ Close" : "✎ Add / Edit DG Log"}
-        </button>
-      </div>
       <div>
         Selected Date: <strong style={{ color: "blue" }}>
           {form.Date}
@@ -1069,29 +1193,43 @@ const DailyDGLog = ({ userData }) => {
       >
         🔰 DG Run Logs
       </button>
-       
-      {fuelAlert === true && (
-        <button
-          className="pm-manage-btn danger"
-          onClick={() =>
-            Navigate("/fuel-requisition", {
-              state: { logs, siteName, avgSiteRunningKw, fuelRate, userData, form },
-            })
-          }
-        >
-          ⛽ Generate Fuel Request
-        </button>
-      )}
-       
-      {dayFuelFill > 0 && (
-        <button
-          className="pm-manage-btn"
-          onClick={() => handleGenerateDayCCMS(form)}
-        >
-          🧾 Generate {form.Date} CCMS
-        </button>
-      )}
 
+      {fuelAlert === true && (userData?.role === "Super Admin" ||
+        userData?.role === "Admin" ||
+        userData?.role === "Super User") && (
+
+          <button
+            className="pm-manage-btn danger"
+            onClick={() =>
+              Navigate("/fuel-requisition", {
+                state: { logs, siteName, avgSiteRunningKw, fuelRate, userData, form },
+              })
+            }
+          >
+            ⛽ Generate Fuel Request
+          </button>
+        )}
+
+      {dayFuelFill > 0 && (userData?.role === "Super Admin" ||
+        userData?.role === "Admin" ||
+        userData?.role === "Super User") && (
+          <button
+            className="pm-manage-btn"
+            onClick={() => handleGenerateDayCCMS(form)}
+          >
+            🧾 Generate {form.Date} CCMS
+          </button>
+        )}
+
+      <div className="controls">
+
+        <button
+          className="segr-manage-btn info"
+          onClick={() => setShowEditModal(!showEditModal)}
+        >
+          {showEditModal ? "✖ Close" : "✎ Add / Edit DG Log"}
+        </button>
+      </div>
 
       {showEditModal && (
         <form className="daily-log-form" onSubmit={handleSubmit}>
@@ -1126,8 +1264,9 @@ const DailyDGLog = ({ userData }) => {
       )}
 
       <div>
-        <h2>📝 {formatMonthName(selectedMonth)} Logs :</h2>
-        <button className="download-btn" onClick={handleDownloadExcel}>⬇️ Download Excel UpTo – {allValues.length} {formatMonthName(selectedMonth)}</button>
+        <h2>📝 DG Logs UpTo – {allValues.length}th {formatMonthName(selectedMonth)}:</h2>
+        <button className="download-btn" style={{ padding: "5px", margin: "5px" }} onClick={handleDownloadExcel}>⬇️ Full Excel</button>
+        <button className="download-btn" style={{ padding: "5px", margin: "5px" }} onClick={handleDownloadExcelOnlyDGLogs}>⬇️ DG Log Excel</button>
       </div>
 
       <div className="table-container">
