@@ -23,6 +23,8 @@ const getFormattedDate = (d = new Date()) => {
 
 const DailyDGLog = ({ userData }) => {
   const [logs, setLogs] = useState([]);
+  const [dayLogs, setDayLogs] = useState([]);
+  const [fuelAlert, setFuelAlert] = useState(false);
   const [dayFuelCon, setDayFuelCon] = useState(0);
   const [dayFuelFill, setDayFuelFill] = useState(0);
   const [form, setForm] = useState({ Date: "" });
@@ -249,11 +251,11 @@ const DailyDGLog = ({ userData }) => {
       }, logs[0].Date);
 
       // Add 1 day to latest
-    const nextDate = new Date(latest);
-    nextDate.setDate(nextDate.getDate() + 1 );
+      const nextDate = new Date(latest);
+      nextDate.setDate(nextDate.getDate() + 1);
 
-    // Format back to your expected string
-    const formattedNext = getFormattedDate(nextDate);
+      // Format back to your expected string
+      const formattedNext = getFormattedDate(nextDate);
 
       setForm((prev) => ({ ...prev, Date: formattedNext }));
     } else {
@@ -309,8 +311,14 @@ const DailyDGLog = ({ userData }) => {
           "EB-2 KWH Opening": yesterday["EB-2 KWH Closing"] || "",
         }));
       }
+      const availableFuel =
+        (parseFloat(form["DG-1 Fuel Closing"]) || 0) +
+        (parseFloat(form["DG-2 Fuel Closing"]) || 0);
+      const currentFuel = availableFuel - dayFuelCon + dayFuelFill;
+      setFuelAlert(currentFuel < 1600);
+
     }
-  }, [logs, form.Date]);   // ✅ run also when Date changes
+  }, [logs, form.Date, dayFuelCon, dayFuelFill]);   // ✅ run also when Date changes
 
   const fetchAndAggregateRuns = async (selectedDate) => {
     if (!userData.site || !selectedDate) return;
@@ -405,6 +413,7 @@ const DailyDGLog = ({ userData }) => {
 
       setDayFuelCon(() => (dg1TotalConsumption + dg2TotalConsumption));
       setDayFuelFill(() => (dg1FuelFill + dg2FuelFill));
+      setDayLogs(runs);
 
     } catch (err) {
       console.error("Error fetching and aggregating run logs:", err);
@@ -470,7 +479,7 @@ const DailyDGLog = ({ userData }) => {
 
     // check all required input fields
     for (const field of inputFields) {
-      if (form[field] === undefined ) {
+      if (form[field] === undefined) {
         return alert(`Please fill all fields before saving. Missing: ${field}`);
       }
     }
@@ -696,6 +705,18 @@ const DailyDGLog = ({ userData }) => {
 
   // 👇 Add this handler function inside the component
   const handleGenerateCCMS = (entry) => {
+    // We pass the specific log entry, the site config, and the current fuel rate
+    Navigate("/ccms-copy", {
+      state: {
+        logData: calculateFields(entry), // Send the fully calculated data
+        siteConfig: asansolSiteConfig,
+        fuelRate: fuelRate,
+      },
+    });
+  };
+
+  // 👇 Add this handler function inside the component
+  const handleGenerateDayCCMS = (entry) => {
     // We pass the specific log entry, the site config, and the current fuel rate
     Navigate("/ccms-copy", {
       state: {
@@ -1039,26 +1060,38 @@ const DailyDGLog = ({ userData }) => {
       </div>
       <div>
         Selected Date: <strong style={{ color: "blue" }}>
-        {form.Date}
+          {form.Date}
         </strong>
       </div>
       <button
         className="segr-manage-btn warning"
         onClick={() => Navigate('/dg-log-table')}
       >
-        ✎ DG Run Logs
+        🔰 DG Run Logs
       </button>
        
-      <button
-        className="download-btn"
-        onClick={() =>
-          Navigate("/fuel-requisition", {
-            state: { logs, siteName, avgSiteRunningKw, fuelRate, userData, form },
-          })
-        }
-      >
-        ⛽ Generate Fuel Request
-      </button>
+      {fuelAlert === true && (
+        <button
+          className="pm-manage-btn danger"
+          onClick={() =>
+            Navigate("/fuel-requisition", {
+              state: { logs, siteName, avgSiteRunningKw, fuelRate, userData, form },
+            })
+          }
+        >
+          ⛽ Generate Fuel Request
+        </button>
+      )}
+       
+      {dayFuelFill > 0 && (
+        <button
+          className="pm-manage-btn"
+          onClick={() => handleGenerateDayCCMS(form)}
+        >
+          🧾 Generate {form.Date} CCMS
+        </button>
+      )}
+
 
       {showEditModal && (
         <form className="daily-log-form" onSubmit={handleSubmit}>
@@ -1229,7 +1262,7 @@ const DailyDGLog = ({ userData }) => {
                   <td>
                     {/* 👇 Add the button here */}
                     {calculated['Total Fuel Filling'] > 0 && (
-                      <button 
+                      <button
                         className="download-btn"
                         onClick={() => handleGenerateCCMS(entry)}
                       >

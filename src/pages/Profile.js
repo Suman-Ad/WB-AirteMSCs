@@ -28,17 +28,17 @@ const ProfilePage = ({ userData }) => {
     region: "",
     circle: "",
     siteId: "",
-    empId : "",
+    empId: "",
   });
   const [photo, setPhoto] = useState(null);
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-      await auth.signOut();
-      localStorage.removeItem("userData");
-      navigate("/login");
-    };
+    await auth.signOut();
+    localStorage.removeItem("userData");
+    navigate("/login");
+  };
 
   useEffect(() => {
     if (userData) {
@@ -48,9 +48,9 @@ const ProfilePage = ({ userData }) => {
         designation: userData.designation || "",
         photoURL: userData.photoURL || "",
         region: userData.region || "",
-        circle : userData.circle || "",
-        siteId : userData.siteId || "",
-        empId : userData.empId || "",
+        circle: userData.circle || "",
+        siteId: userData.siteId || "",
+        empId: userData.empId || "",
       });
     }
   }, [userData]);
@@ -195,14 +195,24 @@ const ProfilePage = ({ userData }) => {
       {/* Site */}
       <div className="profile-row">
         <label>🏢 Site:</label>
-          <span>{form.site || "N/A"}</span>
+        <span>{form.site || "N/A"}</span>
       </div>
 
       {/* Site ID */}
       <div className="profile-row">
         <label>🆔 Site ID:</label>
+        {editMode ? (
+          <input
+            type="text"
+            name="siteId"
+            value={form.siteId}
+            onChange={handleChange}
+          />
+        ) : (
           <span>{form.siteId || "N/A"}</span>
+        )}
       </div>
+
 
       {/* Circle */}
       <div className="profile-row">
@@ -236,10 +246,10 @@ const ProfilePage = ({ userData }) => {
         ) : (
           <>
             <button onClick={() => setEditMode(true)} className="edit-btn">
-             ✏️ Edit Profile
+              ✏️ Edit Profile
             </button>
             <button onClick={handleResetPassword} className="reset-btn">
-             🔐 Change Password
+              🔐 Change Password
             </button>
             <button onClick={handleLogout} className="logout-manage-btn">
               📴 Logout
