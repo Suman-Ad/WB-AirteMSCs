@@ -342,7 +342,8 @@ const DailyDGLog = ({ userData }) => {
       const currentFuel = availableFuel - dayFuelCon + dayFuelFill;
       const currentHrs = currentFuel / (totalOnLoadCon/totalOnLoadHrs)
       setFuelAlert(currentHrs < 18);
-      if (currentHrs < 18) alert("Give Fuel Request");
+      // console.log(currentFuel)
+      // if (currentHrs < 10) alert("Give Fuel Request");
 
     }
   }, [logs, form.Date, dayFuelCon, dayFuelFill]);   // ✅ run also when Date changes
@@ -1236,10 +1237,10 @@ const DailyDGLog = ({ userData }) => {
       </button>
       {userData?.name === "Suman Adhikari" && (
         <button
-          className="segr-manage-btn warning"
+          className="segr-manage-btn"
           onClick={() => Navigate('/site-config')}
         >
-          🔰 Site Settings
+          ⚙️ Site Settings
         </button>
       )}
 
@@ -1299,7 +1300,7 @@ const DailyDGLog = ({ userData }) => {
                 type="number"
                 step="any"
                 name={field}
-                value={form[field] || 0}
+                value={form[field] || 0 || ""}
                 onChange={handleChange}
                 className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
                 disabled={field === "DG-1 Fuel Opening" || field === "DG-2 Fuel Opening" || field === "DG-1 KWH Opening" || field === "DG-2 KWH Opening" || field === "EB-1 KWH Opening" || field === "EB-2 KWH Opening" || field === "DG-1 Hour Opening" || field === "DG-2 Hour Opening" || field === "DG-1 KWH Closing" || field === "DG-2 KWH Closing" || field === "DG-1 Hour Closing" || field === "DG-2 Hour Closing" || field === "DG-1 Off Load Hour" || field === "DG-2 Off Load Hour" || field === "DG-1 Off Load Fuel Consumption" || field === "DG-2 Off Load Fuel Consumption" || field === "DG-1 Fuel Filling" || field === "DG-2 Fuel Filling" || field === "DG-1 Fuel Closing" || field === "DG-2 Fuel Closing"}
