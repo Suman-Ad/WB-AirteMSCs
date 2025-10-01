@@ -48,7 +48,7 @@ const getFormattedDate = () => {
 
 const FuelRequisition = () => {
     const { state } = useLocation();
-    const { logs, siteName, avgSiteRunningKw, fuelRate, userData, form } = state || {};
+    const { logs, siteName, avgSiteRunningKw, fuelRate, userData, siteConfig } = state || {};
 
     const [rows, setRows] = useState([]);
     const Navigate = useNavigate();
@@ -218,7 +218,7 @@ const FuelRequisition = () => {
                     "Site Infra Manager": "Suman Mondal", // Consider making this dynamic from userData
                     "DG Capacity": "1010 kVA",
                     "DG load": `${avgSiteRunningKw || 0}kW`,
-                    "OEM Tested CPH": 99,
+                    "OEM Tested CPH": siteConfig.designCph?.["DG-1"],
                     "Last Filling Date": lastFilling?.Date || "N/A",
                     "Last Filling Liters": lastFilling.DG1 || 0,
                     "Dg Run Hour in Last Filling": lastFilling.DG1Hrs || 0,
@@ -239,7 +239,7 @@ const FuelRequisition = () => {
                     "Site Infra Manager": "Suman Mondal",
                     "DG Capacity": "1010 kVA",
                     "DG load": `${avgSiteRunningKw || 0}kW`,
-                    "OEM Tested CPH": 98,
+                    "OEM Tested CPH": siteConfig.designCph?.["DG-2"],
                     "Last Filling Date": lastFilling?.Date || "N/A",
                     "Last Filling Liters": lastFilling.DG2 || 0,
                     "Dg Run Hour in Last Filling": lastFilling.DG2Hrs || 0,

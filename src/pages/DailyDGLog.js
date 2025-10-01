@@ -13,7 +13,6 @@ import { db } from "../firebase";
 import "../assets/DailyDGLog.css";
 import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
-import { asansolSiteConfig } from "../config/siteConfig"; // 👈 Import the config
 
 
 const getFormattedDate = (d = new Date()) => {
@@ -30,6 +29,8 @@ const DailyDGLog = ({ userData }) => {
   const [form, setForm] = useState({ Date: "" });
   const Navigate = useNavigate();
   const [fuelRate, setFuelRate] = useState(0.00); // default value
+  const [siteConfig, setSiteConfig] = useState({});
+  const siteKey = userData?.site?.toUpperCase();
 
   // Debounce helper (optional)
   let timeout;
@@ -45,6 +46,7 @@ const DailyDGLog = ({ userData }) => {
       }
     }, 500); // wait 500ms after typing stops
   };
+
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().slice(0, 7) // YYYY-MM
   );
@@ -263,6 +265,7 @@ const DailyDGLog = ({ userData }) => {
       setForm({ Date: getFormattedDate() });
     }
 
+    // Fetch fuel rate from Firestore
     const fetchFuelRate = async () => {
       try {
         const docRef = doc(db, "fuelRates", userData?.site);
@@ -277,8 +280,19 @@ const DailyDGLog = ({ userData }) => {
       }
     };
 
+    const fetchConfig = async () => {
+      if (!siteKey) return;
+      const snap = await getDoc(doc(db, "siteConfigs", siteKey));
+      if (snap.exists()) {
+        setSiteConfig(snap.data());
+      }
+    };
+
+    fetchConfig();
+
     fetchFuelRate();
-  }, [logs, userData?.site]);
+
+  }, [logs, userData?.site, siteKey]);
 
 
   const getYesterdayData = () => {
@@ -311,11 +325,24 @@ const DailyDGLog = ({ userData }) => {
           "EB-2 KWH Opening": yesterday["EB-2 KWH Closing"] || "",
         }));
       }
+
+      const totalOnLoadHrs =
+          allValues.reduce(
+            (sum, cl) => sum + (cl["DG-1 ON Load Hour"] || 0) + (cl["DG-2 ON Load Hour"] || 0),
+            0
+          );
+      const totalOnLoadCon =
+          allValues.reduce(
+            (sum, cl) => sum + (cl["DG-1 ON Load Consumption"] || 0) + (cl["DG-2 ON Load Consumption"] || 0),
+            0
+          );
       const availableFuel =
         (parseFloat(form["DG-1 Fuel Closing"]) || 0) +
         (parseFloat(form["DG-2 Fuel Closing"]) || 0);
       const currentFuel = availableFuel - dayFuelCon + dayFuelFill;
-      setFuelAlert(currentFuel < 1600);
+      const currentHrs = currentFuel / (totalOnLoadCon/totalOnLoadHrs)
+      setFuelAlert(currentHrs < 18);
+      if (currentHrs < 18) alert("Give Fuel Request");
 
     }
   }, [logs, form.Date, dayFuelCon, dayFuelFill]);   // ✅ run also when Date changes
@@ -413,6 +440,7 @@ const DailyDGLog = ({ userData }) => {
 
       setDayFuelCon(() => (dg1TotalConsumption + dg2TotalConsumption));
       setDayFuelFill(() => (dg1FuelFill + dg2FuelFill));
+      if (dayFuelFill > 0) alert("View CCMS");
       setDayLogs(runs);
 
     } catch (err) {
@@ -569,13 +597,16 @@ const DailyDGLog = ({ userData }) => {
   // 🔹 Input fields
   const inputFields = [];
 
+  const eb = siteConfig.siteName === userData?.site?.toUpperCase() ? siteConfig.ebCount : 0;
+  const dg = siteConfig.siteName === userData?.site?.toUpperCase() ? siteConfig.dgCount : 0;
+
   // EBs
-  for (let i = 1; i <= 2; i++) {
+  for (let i = 1; i <= eb; i++) {
     inputFields.push(`EB-${i} KWH Opening`, `EB-${i} KWH Closing`);
   }
 
   // DGs
-  for (let i = 1; i <= 2; i++) {
+  for (let i = 1; i <= dg; i++) {
     inputFields.push(
       `DG-${i} KWH Opening`,
       `DG-${i} KWH Closing`,
@@ -739,7 +770,7 @@ const DailyDGLog = ({ userData }) => {
     Navigate("/ccms-copy", {
       state: {
         logData: calculateFields(entry), // Send the fully calculated data
-        siteConfig: asansolSiteConfig,
+        siteConfig: siteConfig,
         fuelRate: fuelRate,
       },
     });
@@ -751,7 +782,7 @@ const DailyDGLog = ({ userData }) => {
     Navigate("/ccms-copy", {
       state: {
         logData: calculateFields(entry), // Send the fully calculated data
-        siteConfig: asansolSiteConfig,
+        siteConfig: siteConfig,
         fuelRate: fuelRate,
       },
     });
@@ -981,8 +1012,18 @@ const DailyDGLog = ({ userData }) => {
               DG-2 Average SEGR – {monthlyAvgDG2SEGR}
             </p>
             <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p>
+            <div style={{display: "flex"}}>
+              <div>
             <p>📡 Avg IT Load – <strong>{monthlyAvgITLoad} kWh</strong></p>
             <p>⛽ Avg DG CPH – <strong>{fmt1(totalOnLoadCon / totalOnLoadHrs)} Ltrs/Hrs</strong></p>
+            </div>
+            <div style={{fontSize:"10px"}}>
+            <p>⛽DG-1 OEM CPH – <strong>{siteConfig.designCph?.["DG-1" || ""]}Ltrs/⏱️</strong></p>
+
+            <p>⛽DG-2 OEM CPH – <strong>{siteConfig.designCph?.["DG-2"] || ""}Ltrs/⏱️</strong></p>
+            </div>
+            </div>
+
             <p style={{ borderTop: "1px solid #eee" }}>⚡ Total DG KW Generation – <strong>{fmt(totalKwh)} kW</strong></p>
             <div style={{ display: "flex" }}>
               <p style={{ marginLeft: "20px" }}>
@@ -1000,7 +1041,7 @@ const DailyDGLog = ({ userData }) => {
                 value={fuelRate}
                 onChange={handleFuelChange}
                 style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-              /><strong>/Ltr. = ₹{fmt(totalFilling * fuelRate)}</strong>
+              /><strong style={{fontSize: "10px"}}>/Ltr. = ₹{fmt(totalFilling * fuelRate)}</strong>
             </p>
             <div style={{ display: "flex" }}>
               <p style={{ marginLeft: "20px" }}>
@@ -1104,7 +1145,7 @@ const DailyDGLog = ({ userData }) => {
           );
 
           const ebAvailHrs = totalHours - onLoadRunHrs;
-          const designCph = asansolSiteConfig?.designCph?.[`DG${dg}`] || 100; // fallback
+          const designCph = siteConfig.designCph?.[`DG-${dg}`] || 100; // fallback
           const idealCon = runHrs * designCph;
           const unrecoDiesel = fuelCon - idealCon;
           const percentVar =
@@ -1193,16 +1234,23 @@ const DailyDGLog = ({ userData }) => {
       >
         🔰 DG Run Logs
       </button>
+      {userData?.name === "Suman Adhikari" && (
+        <button
+          className="segr-manage-btn warning"
+          onClick={() => Navigate('/site-config')}
+        >
+          🔰 Site Settings
+        </button>
+      )}
 
       {fuelAlert === true && (userData?.role === "Super Admin" ||
         userData?.role === "Admin" ||
         userData?.role === "Super User") && (
-
           <button
             className="pm-manage-btn danger"
             onClick={() =>
               Navigate("/fuel-requisition", {
-                state: { logs, siteName, avgSiteRunningKw, fuelRate, userData, form },
+                state: { logs, siteName, avgSiteRunningKw, fuelRate, userData, siteConfig },
               })
             }
           >
@@ -1270,7 +1318,7 @@ const DailyDGLog = ({ userData }) => {
       </div>
 
       <div className="table-container">
-        <table border="1" cellPadding="8" style={{ width: "100%" }}>
+        <table border="1" cellPadding="8" style={{ width: "100%", whiteSpace: "nowrap" }}>
           <thead>
             <tr>
               <th>Date</th>
