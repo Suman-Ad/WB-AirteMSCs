@@ -1085,26 +1085,26 @@ const DailyDGLog = ({ userData }) => {
         return (
           <div className="chart-container" >
             <div className="status-header">
-            <h1 style={fuelHours < 12 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
-            <h1 style={fuelHours < 12 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
+              <h1 style={fuelHours < 12 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
+              <h1 style={fuelHours < 12 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
             </div>
-            
-            <h1 style={{ borderTop: "3px solid #eee", color: "#fefeffff", textAlign:"center"}} className="noticeboard-header"><strong>📊Summery - {allValues.length} Days</strong>
-            {/* 🔹 Last Fuel Filling */}
-            {loadingFilling ? (
-              <p style={{ fontSize: "10px", color: "gray" }}>⏳ Loading last fuel filling...</p>
-            ) : lastFilling ? (
-              <p style={{ color: "#34c0cacb", fontSize: "10px" }}>
-                📅 Last Fuel Filling – <strong>{lastFilling.Date}</strong> :{" "}
-                <strong>
-                   DG–1 {fmt1(lastFilling.DG1)} Ltrs - {lastFilling.DG1Hrs},{" "}
-                   DG–2 {fmt1(lastFilling.DG2)} Ltrs - {lastFilling.DG2Hrs}
-                </strong>
-              </p>
-            ) : (
-              <p style={{ fontSize: "10px", color: "red" }}>⚠️ No fuel filling records found.</p>
-            )}</h1>
-            
+
+            <h1 style={{ borderTop: "3px solid #eee", color: "#fefeffff", textAlign: "center" }} className="noticeboard-header"><strong>📊Summery - {allValues.length} Days</strong>
+              {/* 🔹 Last Fuel Filling */}
+              {loadingFilling ? (
+                <p style={{ fontSize: "10px", color: "gray" }}>⏳ Loading last fuel filling...</p>
+              ) : lastFilling ? (
+                <p style={{ color: "#34c0cacb", fontSize: "10px" }}>
+                  📅 Last Fuel Filling – <strong>{lastFilling.Date}</strong> :{" "}
+                  <strong>
+                    DG–1 {fmt1(lastFilling.DG1)} Ltrs - {lastFilling.DG1Hrs},{" "}
+                    DG–2 {fmt1(lastFilling.DG2)} Ltrs - {lastFilling.DG2Hrs}
+                  </strong>
+                </p>
+              ) : (
+                <p style={{ fontSize: "10px", color: "red" }}>⚠️ No fuel filling records found.</p>
+              )}</h1>
+
             {/* Average PUE */}
             <p className={monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
               Average PUE – <strong>{monthlyAvgPUE}</strong>
@@ -1400,20 +1400,59 @@ const DailyDGLog = ({ userData }) => {
             />
           </label>
 
-          {inputFields.map((field) => (
-            <label key={field}>
-              {field}:
-              <input
-                type="number"
-                step="any"
-                name={field}
-                value={form[field] || 0 || ""}
-                onChange={handleChange}
-                className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
-                disabled={field === "DG-1 Fuel Opening" || field === "DG-2 Fuel Opening" || field === "DG-1 KWH Opening" || field === "DG-2 KWH Opening" || field === "EB-1 KWH Opening" || field === "EB-2 KWH Opening" || field === "DG-1 Hour Opening" || field === "DG-2 Hour Opening" || field === "DG-1 KWH Closing" || field === "DG-2 KWH Closing" || field === "DG-1 Hour Closing" || field === "DG-2 Hour Closing" || field === "DG-1 Off Load Hour" || field === "DG-2 Off Load Hour" || field === "DG-1 Off Load Fuel Consumption" || field === "DG-2 Off Load Fuel Consumption" || field === "DG-1 Fuel Filling" || field === "DG-2 Fuel Filling" || field === "DG-1 Fuel Closing" || field === "DG-2 Fuel Closing"}
-              />
-            </label>
-          ))}
+          {inputFields.map((field) => {
+            // list of always disabled fields
+            const alwaysDisabled = [
+              "DG-1 Fuel Opening",
+              "DG-2 Fuel Opening",
+              "DG-1 KWH Opening",
+              "DG-2 KWH Opening",
+              "EB-1 KWH Opening",
+              "EB-2 KWH Opening",
+              "DG-1 Hour Opening",
+              "DG-2 Hour Opening",
+              "DG-1 Off Load Hour",
+              "DG-2 Off Load Hour",
+              "DG-1 Off Load Fuel Consumption",
+              "DG-2 Off Load Fuel Consumption",
+              "DG-1 Fuel Filling",
+              "DG-2 Fuel Filling",
+            ];
+
+            // list of closing fields (special condition)
+            const closingFields = [
+              "DG-1 KWH Closing",
+              "DG-2 KWH Closing",
+              "DG-1 Hour Closing",
+              "DG-2 Hour Closing",
+              "DG-1 Fuel Closing",
+              "DG-2 Fuel Closing",
+            ];
+
+            let disabled = false;
+
+            if (alwaysDisabled.includes(field)) {
+              disabled = true;
+            } else if (closingFields.includes(field)) {
+              // disable if it already has a value
+              disabled = !!form[field];
+            }
+
+            return (
+              <label key={field}>
+                {field}:
+                <input
+                  type="number"
+                  step="any"
+                  name={field}
+                  value={form[field] || ""}
+                  onChange={handleChange}
+                  className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
+                  disabled={disabled}
+                />
+              </label>
+            );
+          })}
 
           <button className="submit-btn" type="submit">Save Entry</button>
         </form>
