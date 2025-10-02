@@ -216,12 +216,12 @@ const FuelRequisition = () => {
                     for (let i = 0; i < monthsToCheck; i++) {
                         const m = new Date(today.getFullYear(), today.getMonth() - i, 1);
                         const mKey =
-                            m.toLocaleString("en-US", { month: "short" }).toLowerCase() +
+                            m.toLocaleString("en-US", { month: "short" }) +
                             "-" +
                             m.getFullYear();
 
                         try {
-                            const datesSnap = await getDocs(collection(db, "dgLogs", site, mKey));
+                            const datesSnap = await getDocs(collection(db, "dgLogs", site, mKey, ));
                             for (const dateDoc of datesSnap.docs) {
                                 const dateKey = dateDoc.id; // 'YYYY-MM-DD'
                                 const runsSnap = await getDocs(

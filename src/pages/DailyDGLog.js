@@ -20,6 +20,82 @@ const getFormattedDate = (d = new Date()) => {
   return d.toISOString().split("T")[0]; // YYYY-MM-DD
 };
 
+// ✅ helper to extract from DailyDGLogs snapshot
+const findLastFillingInDailyLogs = (logs = []) => {
+  const fillings = [...logs]
+    .map((e) => ({
+      Date: e.Date,
+      DG1: parseFloat(e["DG-1 Fuel Filling"] || 0),
+      DG2: parseFloat(e["DG-2 Fuel Filling"] || 0),
+      DG1Hrs: parseFloat(e["DG-1 Hour Closing"] || 0),
+      DG2Hrs: parseFloat(e["DG-2 Hour Closing"] || 0),
+    }))
+    .filter((e) => e.DG1 > 0 || e.DG2 > 0)
+    .sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+  return fillings.length ? fillings[0] : null;
+};
+
+// ✅ Helper to scan dgLogs runs directly
+const findLastFillingInDGLogs = async (site, monthsToCheck = 3) => {
+  const today = new Date();
+  let runsDG1 = [];
+  let runsDG2 = [];
+
+  for (let i = 0; i < monthsToCheck; i++) {
+    const m = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const mKey =
+      m.toLocaleString("en-US", { month: "short" }) + "-" + m.getFullYear();
+
+    try {
+      const datesSnap = await getDocs(collection(db, "dgLogs", site, mKey));
+      for (const dateDoc of datesSnap.docs) {
+        const dateKey = dateDoc.id; // 'YYYY-MM-DD'
+        const runsSnap = await getDocs(
+          collection(db, "dgLogs", site, mKey, dateKey, "runs")
+        );
+
+        runsSnap.docs.forEach((rd) => {
+          const run = rd.data();
+          const fill = Number(run.fuelFill || 0);
+          if (fill > 0) {
+            const hrMeter = Number(run.hrMeterEnd || run.hrMeterStart || 0);
+            if (run.dgNumber === "DG-1") {
+              runsDG1.push({ Date: dateKey, liters: fill, hrs: hrMeter });
+            } else if (run.dgNumber === "DG-2") {
+              runsDG2.push({ Date: dateKey, liters: fill, hrs: hrMeter });
+            }
+          }
+        });
+      }
+    } catch (err) {
+      console.error(`Error scanning dgLogs for ${mKey}:`, err);
+    }
+  }
+
+  runsDG1.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+  runsDG2.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+  const lastDG1 = runsDG1[0] || null;
+  const lastDG2 = runsDG2[0] || null;
+
+  if (lastDG1 || lastDG2) {
+    const mostRecentDate = [lastDG1?.Date, lastDG2?.Date]
+      .filter(Boolean)
+      .sort((a, b) => new Date(b) - new Date(a))[0];
+
+    return {
+      Date: mostRecentDate,
+      DG1: lastDG1?.liters || 0,
+      DG2: lastDG2?.liters || 0,
+      DG1Hrs: lastDG1?.hrs || 0,
+      DG2Hrs: lastDG2?.hrs || 0,
+    };
+  }
+
+  return null;
+};
+
 const DailyDGLog = ({ userData }) => {
   const [logs, setLogs] = useState([]);
   const [dayLogs, setDayLogs] = useState([]);
@@ -31,6 +107,8 @@ const DailyDGLog = ({ userData }) => {
   const [fuelRate, setFuelRate] = useState(0.00); // default value
   const [siteConfig, setSiteConfig] = useState({});
   const siteKey = userData?.site?.toUpperCase();
+  const [lastFilling, setLastFilling] = useState(null);
+  const [loadingFilling, setLoadingFilling] = useState(true);
 
   // Debounce helper (optional)
   let timeout;
@@ -244,6 +322,7 @@ const DailyDGLog = ({ userData }) => {
     }
   }, []);
 
+
   // After logs are fetched, set last submitted date
   useEffect(() => {
     if (logs.length > 0) {
@@ -288,6 +367,42 @@ const DailyDGLog = ({ userData }) => {
       }
     };
 
+    const fetchLastFilling = async () => {
+      setLoadingFilling(true);
+      let lf = findLastFillingInDailyLogs(logs);
+
+      if (!lf) {
+        try {
+          const today = new Date();
+          const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          const prevMonthKey =
+            prev.toLocaleString("en-US", { month: "short" }).toLowerCase() +
+            "-" +
+            prev.getFullYear();
+
+          const prevSnap = await getDocs(
+            collection(db, "dailyDGLogs", userData.site, prevMonthKey)
+          );
+
+          if (!prevSnap.empty) {
+            const prevLogs = prevSnap.docs.map((d) => d.data());
+            lf = findLastFillingInDailyLogs(prevLogs);
+          }
+        } catch (err) {
+          console.error("Error fetching previous month dailyDGLogs:", err);
+        }
+      }
+
+      if (!lf) {
+        lf = await findLastFillingInDGLogs(userData.site, 3);
+      }
+
+      setLastFilling(lf);
+      setLoadingFilling(false);
+    };
+
+    fetchLastFilling();
+
     fetchConfig();
 
     fetchFuelRate();
@@ -327,23 +442,22 @@ const DailyDGLog = ({ userData }) => {
       }
 
       const totalOnLoadHrs =
-          allValues.reduce(
-            (sum, cl) => sum + (cl["DG-1 ON Load Hour"] || 0) + (cl["DG-2 ON Load Hour"] || 0),
-            0
-          );
+        allValues.reduce(
+          (sum, cl) => sum + (cl["DG-1 ON Load Hour"] || 0) + (cl["DG-2 ON Load Hour"] || 0),
+          0
+        );
       const totalOnLoadCon =
-          allValues.reduce(
-            (sum, cl) => sum + (cl["DG-1 ON Load Consumption"] || 0) + (cl["DG-2 ON Load Consumption"] || 0),
-            0
-          );
+        allValues.reduce(
+          (sum, cl) => sum + (cl["DG-1 ON Load Consumption"] || 0) + (cl["DG-2 ON Load Consumption"] || 0),
+          0
+        );
       const availableFuel =
-        (parseFloat(form["DG-1 Fuel Closing"]) || 0) +
-        (parseFloat(form["DG-2 Fuel Closing"]) || 0);
+        (parseFloat(form["DG-1 Fuel Opening"]) || 0) +
+        (parseFloat(form["DG-2 Fuel Opening"]) || 0);
       const currentFuel = availableFuel - dayFuelCon + dayFuelFill;
-      const currentHrs = currentFuel / (totalOnLoadCon/totalOnLoadHrs)
-      setFuelAlert(currentHrs < 18);
-      // console.log(currentFuel)
-      // if (currentHrs < 10) alert("Give Fuel Request");
+      const currentHrs = currentFuel / (totalOnLoadCon / totalOnLoadHrs)
+      setFuelAlert(currentHrs < 18 && currentFuel > 0);
+      if (currentHrs < 18 && currentFuel > 0) alert("Give Fuel Request");
 
     }
   }, [logs, form.Date, dayFuelCon, dayFuelFill]);   // ✅ run also when Date changes
@@ -974,29 +1088,19 @@ const DailyDGLog = ({ userData }) => {
             <h1 style={fuelHours < 12 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
 
             {/* 🔹 Last Fuel Filling */}
-            {(() => {
-              const lastFilling = [...logs]
-                .map((e) => ({
-                  Date: e.Date,
-                  DG1: parseFloat(e["DG-1 Fuel Filling"] || 0),
-                  DG2: parseFloat(e["DG-2 Fuel Filling"] || 0),
-                  DG1Hrs: parseFloat(e["DG-1 Hour Closing"] || 0),
-                  DG2Hrs: parseFloat(e["DG-2 Hour Closing"] || 0),
-                }))
-                .filter((e) => e.DG1 > 0 || e.DG2 > 0)
-                .sort((a, b) => (a.Date < b.Date ? 1 : -1))[0]; // latest first
-
-              if (!lastFilling) return null;
-
-              return (
-                <p style={{ borderTop: "3px solid #eee", color: "black", fontSize: "10px" }}>
-                  📅 Last Fuel Filling – <strong>{lastFilling.Date}</strong> :{" "}
-                  <strong>
-                    {fmt1(lastFilling.DG1)} Ltrs (DG–1 - {lastFilling.DG1Hrs}), {fmt1(lastFilling.DG2)} Ltrs (DG–2 - {lastFilling.DG2Hrs})
-                  </strong>
-                </p>
-              );
-            })()}
+            {loadingFilling ? (
+              <p style={{ fontSize: "10px", color: "gray" }}>⏳ Loading last fuel filling...</p>
+            ) : lastFilling ? (
+              <p style={{ borderTop: "3px solid #eee", color: "black", fontSize: "10px" }}>
+                📅 Last Fuel Filling – <strong>{lastFilling.Date}</strong> :{" "}
+                <strong>
+                  {fmt1(lastFilling.DG1)} Ltrs (DG–1 - {lastFilling.DG1Hrs}),{" "}
+                  {fmt1(lastFilling.DG2)} Ltrs (DG–2 - {lastFilling.DG2Hrs})
+                </strong>
+              </p>
+            ) : (
+              <p style={{ fontSize: "10px", color: "red" }}>⚠️ No fuel filling records found.</p>
+            )}
             <h1 className="noticeboard-header"><strong>📊Summery - {allValues.length} Days</strong></h1>
             {/* Average PUE */}
             <p className={monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
@@ -1013,16 +1117,16 @@ const DailyDGLog = ({ userData }) => {
               DG-2 Average SEGR – {monthlyAvgDG2SEGR}
             </p>
             <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p>
-            <div style={{display: "flex"}}>
+            <div style={{ display: "flex" }}>
               <div>
-            <p>📡 Avg IT Load – <strong>{monthlyAvgITLoad} kWh</strong></p>
-            <p>⛽ Avg DG CPH – <strong>{fmt1(totalOnLoadCon / totalOnLoadHrs)} Ltrs/Hrs</strong></p>
-            </div>
-            <div style={{fontSize:"10px"}}>
-            <p>⛽DG-1 OEM CPH – <strong>{siteConfig.designCph?.["DG-1" || ""]}Ltrs/⏱️</strong></p>
+                <p>📡 Avg IT Load – <strong>{monthlyAvgITLoad} kWh</strong></p>
+                <p>⛽ Avg DG CPH – <strong>{fmt1(totalOnLoadCon / totalOnLoadHrs)} Ltrs/Hrs</strong></p>
+              </div>
+              <div style={{ fontSize: "10px" }}>
+                <p>⛽DG-1 OEM CPH – <strong>{siteConfig.designCph?.["DG-1" || ""]}Ltrs/⏱️</strong></p>
 
-            <p>⛽DG-2 OEM CPH – <strong>{siteConfig.designCph?.["DG-2"] || ""}Ltrs/⏱️</strong></p>
-            </div>
+                <p>⛽DG-2 OEM CPH – <strong>{siteConfig.designCph?.["DG-2"] || ""}Ltrs/⏱️</strong></p>
+              </div>
             </div>
 
             <p style={{ borderTop: "1px solid #eee" }}>⚡ Total DG KW Generation – <strong>{fmt(totalKwh)} kW</strong></p>
@@ -1042,7 +1146,7 @@ const DailyDGLog = ({ userData }) => {
                 value={fuelRate}
                 onChange={handleFuelChange}
                 style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-              /><strong style={{fontSize: "10px"}}>/Ltr. = ₹{fmt(totalFilling * fuelRate)}</strong>
+              /><strong style={{ fontSize: "10px" }}>/Ltr. = ₹{fmt(totalFilling * fuelRate)}</strong>
             </p>
             <div style={{ display: "flex" }}>
               <p style={{ marginLeft: "20px" }}>
