@@ -1,8 +1,9 @@
 // src/components/DGLogTable.js
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
+import { format, subDays } from "date-fns";
 
 const DGLogTable = ({ userData }) => {
   const [logs, setLogs] = useState([]);
@@ -21,10 +22,16 @@ const DGLogTable = ({ userData }) => {
 
   const siteName = userData?.site;
 
+  // State for DHR Preview Modal
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [dhrDataForPreview, setDhrDataForPreview] = useState(null);
+  const [dhrMessage, setDhrMessage] = useState("");
+
   useEffect(() => {
     if (siteName && selectedDate) {
       fetchLogs();
       fetchMonthlySummary();
+      fetchLogsForSelectedDate();
     }
     // eslint-disable-next-line
   }, [siteName, selectedDate]);
@@ -110,11 +117,11 @@ const DGLogTable = ({ userData }) => {
   };
 
   useEffect(() => {
-  const cached = localStorage.getItem("summary");
-  if (cached) {
-    setSummary(JSON.parse(cached));
-  }
-}, []);
+    const cached = localStorage.getItem("summary");
+    if (cached) {
+      setSummary(JSON.parse(cached));
+    }
+  }, []);
 
 
   const handleSave = async () => {
@@ -150,6 +157,87 @@ const DGLogTable = ({ userData }) => {
       console.error("Error saving log:", err);
     }
   };
+
+  // Fetches logs for the main table view (for the selected date)
+  const fetchLogsForSelectedDate = async () => {
+    try {
+      const dateObj = new Date(selectedDate);
+      const monthKey = format(dateObj, "MMM-yyyy");
+      const runsCollectionRef = collection(db, "dgLogs", siteName, monthKey, selectedDate, "runs");
+      const snapshot = await getDocs(runsCollectionRef);
+      const data = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      setLogs(data);
+    } catch (err) {
+      console.error("Error fetching logs:", err);
+      setLogs([]); // Clear logs on error
+    }
+  };
+
+  // --- DHR Preview Function (Modified) ---
+  const openPreviewModal = async () => {
+    if (!siteName) return;
+    setIsPreviewModalOpen(true);
+    setDhrMessage("Generating live preview...");
+    setDhrDataForPreview(null);
+
+    try {
+      // 1. Determine yesterday's date based on the selected date in the UI
+      const yesterday = subDays(new Date(selectedDate), 1);
+      const monthKey = format(yesterday, "MMM-yyyy");
+      const yesterdayStr = format(yesterday, "yyyy-MM-dd");
+
+      // 2. Fetch DG Run Hours from Yesterday
+      const runsRef = collection(db, "dgLogs", siteName, monthKey, yesterdayStr, "runs");
+      const runsSnap = await getDocs(runsRef);
+      const totalDgRunHours = runsSnap.docs.reduce((sum, doc) => sum + (Number(doc.data().totalRunHours) || 0), 0);
+      const dgRunHrsYesterday = totalDgRunHours.toFixed(2);
+      const ebRunHrsYesterday = (24 - totalDgRunHours > 0 ? 24 - totalDgRunHours : 0).toFixed(2);
+
+      // 3. Fetch Default Statuses from siteConfig
+      const configRef = doc(db, "siteConfigs", siteName?.toUpperCase());
+      const configSnap = await getDoc(configRef);
+      const defaultConfig = configSnap.exists() ? configSnap.data() : {};
+
+      // 4. Construct the preview data object
+      const previewData = {
+        "DHR Date": format(new Date(selectedDate), "dd.MM.yyyy"),
+        "🏙️Region": userData?.region,
+        "🔄Circle": userData?.circle,
+        "📍Site Name": siteName,
+        "⛽Diesel Available": `${defaultConfig.fuelAvailable} Ltrs.` || "N/A",
+        "🕑DG Run Hrs (Yesterday)": `${dgRunHrsYesterday} Hrs` || "N/A",
+        "⚡EB Run Hrs (Yesterday)": `${ebRunHrsYesterday} Hrs` || "N/A",
+        "🔌EB Status": defaultConfig.ebStatus || "N/A",
+        "🔋DG Status": defaultConfig.dgStatus || "N/A",
+        "⚙️SMPS Status": defaultConfig.smpsStatus || "N/A",
+        "🔄UPS Status": defaultConfig.upsStatus || "N/A",
+        "❄️PAC Status": defaultConfig.pacStatus || "N/A",
+        "❄️CRV Status": defaultConfig.crvStatus || "N/A",
+        "📝Major Activity": defaultConfig.majorActivity || "N",
+        "🛠️Inhouse PM": defaultConfig.inHousePm || "N",
+        "🚨Fault Details": defaultConfig.faultDetails || "N",
+      };
+
+      setDhrDataForPreview(previewData);
+      setDhrMessage(""); // Clear loading message
+
+    } catch (error) {
+      console.error("Error generating DHR preview:", error);
+      setDhrMessage("❌ Could not generate preview data.");
+    }
+  };
+
+  const generateShareText = (record) => {
+    if (!record) return "";
+    // Creates a string from the preview data object for sharing
+    return Object.entries(record)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join("\n");
+  };
+
+  const shareWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(generateShareText(dhrDataForPreview))}`, "_blank");
+  const shareTelegram = () => window.open(`https://t.me/share/url?url=${encodeURIComponent(generateShareText(dhrDataForPreview))}`, "_blank");
+
 
   return (
     <div className="daily-log-container">
@@ -188,19 +276,20 @@ const DGLogTable = ({ userData }) => {
               </tr>
             </tbody>
           </table>
-         ) : (
+        ) : (
           <h3><strong>Loading.......</strong></h3>
         )}
       </div>
 
-      {/* Date selector */}
-      <div style={{ marginBottom: "1rem" }}>
-        <label>Select Date: </label>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-        />
+      {/* Date selector & DHR Preview Button */}
+      <div style={{ margin: "1rem 0", display: "flex", alignItems: "center", gap: "15px" }}>
+        <div>
+          <label>Select Date: </label>
+          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+        </div>
+        <button onClick={openPreviewModal} className="segr-manage-btn">
+          👁️ Preview & Share DHR
+        </button>
       </div>
 
       {logs.length === 0 ? (
@@ -346,6 +435,34 @@ const DGLogTable = ({ userData }) => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* DHR Preview Modal */}
+      {isPreviewModalOpen && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <div className="noticeboard-header" style={{display:"flex"}}>
+              <h1 style={{whiteSpace: "nowrap"}}>Live DHR Preview</h1>
+              <button onClick={() => setIsPreviewModalOpen(false)} className="modal-close-btn" style={{marginLeft:"80px"}}>&times;</button>
+            </div>
+
+            {dhrDataForPreview ? (
+              <div>
+                {Object.entries(dhrDataForPreview).map(([key, value]) => (
+                  <div key={key} className="preview-item">
+                    <strong>{key}:</strong> {value}
+                  </div>
+                ))}
+                <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+                  <button onClick={shareWhatsApp}>Share WhatsApp</button>
+                  <button onClick={shareTelegram}>Share Telegram</button>
+                </div>
+              </div>
+            ) : (
+              <p>{dhrMessage}</p>
+            )}
+          </div>
         </div>
       )}
 

@@ -1084,24 +1084,27 @@ const DailyDGLog = ({ userData }) => {
 
         return (
           <div className="chart-container" >
+            <div className="status-header">
             <h1 style={fuelHours < 12 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
             <h1 style={fuelHours < 12 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
-
+            </div>
+            
+            <h1 style={{ borderTop: "3px solid #eee", color: "#fefeffff", textAlign:"center"}} className="noticeboard-header"><strong>📊Summery - {allValues.length} Days</strong>
             {/* 🔹 Last Fuel Filling */}
             {loadingFilling ? (
               <p style={{ fontSize: "10px", color: "gray" }}>⏳ Loading last fuel filling...</p>
             ) : lastFilling ? (
-              <p style={{ borderTop: "3px solid #eee", color: "black", fontSize: "10px" }}>
+              <p style={{ color: "#34c0cacb", fontSize: "10px" }}>
                 📅 Last Fuel Filling – <strong>{lastFilling.Date}</strong> :{" "}
                 <strong>
-                  {fmt1(lastFilling.DG1)} Ltrs (DG–1 - {lastFilling.DG1Hrs}),{" "}
-                  {fmt1(lastFilling.DG2)} Ltrs (DG–2 - {lastFilling.DG2Hrs})
+                   DG–1 {fmt1(lastFilling.DG1)} Ltrs - {lastFilling.DG1Hrs},{" "}
+                   DG–2 {fmt1(lastFilling.DG2)} Ltrs - {lastFilling.DG2Hrs}
                 </strong>
               </p>
             ) : (
               <p style={{ fontSize: "10px", color: "red" }}>⚠️ No fuel filling records found.</p>
-            )}
-            <h1 className="noticeboard-header"><strong>📊Summery - {allValues.length} Days</strong></h1>
+            )}</h1>
+            
             {/* Average PUE */}
             <p className={monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
               Average PUE – <strong>{monthlyAvgPUE}</strong>
