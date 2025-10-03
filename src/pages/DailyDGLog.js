@@ -898,6 +898,10 @@ const DailyDGLog = ({ userData }) => {
   const getFieldClass = (name) => {
     const [prefix, type] = name.split(" "); // ["DG-1", "KWH", "Opening"]
 
+    const openingField = `${prefix} ${type} Opening`;
+    const closingValue = parseFloat(form[name]);
+    const openingValue = parseFloat(form[openingField]);
+
     if (type === "KWH") {
       const open = parseFloat(form[`${prefix} KWH Opening`]);
       const close = parseFloat(form[`${prefix} KWH Closing`]);
@@ -925,6 +929,12 @@ const DailyDGLog = ({ userData }) => {
         if (fill > 0) return close > open ? "field-green" : "field-red";
         return close <= open ? "field-green" : "field-red";
       }
+    }
+    // Default rule: closing must be >= opening
+    if (form[name] === "" || isNaN(closingValue)) return "field-red";
+
+    if (!isNaN(openingValue) && !isNaN(closingValue)) {
+      return closingValue >= openingValue ? "field-green" : "field-red";
     }
 
     return "";
@@ -956,7 +966,7 @@ const DailyDGLog = ({ userData }) => {
 
   return (
     <div className="daily-log-container">
-      <h1 style={{color:"white"}}> {/* dashboard-header */}
+      <h1 style={{ color: "white", textAlign: "center", paddingBottom: "20px" }}> {/* dashboard-header */}
         <strong>☣️ Daily DG Log Book</strong>
       </h1>
       <div className="noticeboard-header">
@@ -1395,7 +1405,7 @@ const DailyDGLog = ({ userData }) => {
         🔰 DG Run Logs
       </button>
 
-      {userData?.name === "Suman Adhikari" && (
+      {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User") && (
         <button
           className="segr-manage-btn"
           onClick={() => Navigate('/site-config')}

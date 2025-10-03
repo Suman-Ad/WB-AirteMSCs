@@ -1,11 +1,71 @@
-// src/pages/EquipmentAudit.js
+// src/pages/RackTrackerForm.js
 import React, { useState } from "react";
+import { db } from "../firebase"; // ✅ make sure firebase.js is configured
+import { doc, setDoc } from "firebase/firestore";
 
-const EquipmentAudit = () => {
+
+// ✅ Helper function for safe numeric conversion
+function toNumber(v) {
+  if (v === null || v === undefined) return 0;
+  const s = String(v).trim().replace(/,/g, "");
+  if (s === "") return 0;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// ✅ Capacity calculation function
+function computeCapacityAnalysis(form) {
+  const A = toNumber(form.runningLoadA);
+  const A1 = toNumber(form.cableSizeA);
+  const A2 = toNumber(form.cableRunA);
+  const AA1 = toNumber(form.dbMcbRatingA);
+
+  const B = toNumber(form.runningLoadB);
+  const B1 = toNumber(form.cableSizeB);
+  const B2 = toNumber(form.cableRunB);
+  const BB1 = toNumber(form.dbMcbRatingB);
+
+  const cableCapacityA = A1 * A2 * 2;
+  const cableCapacityB = B1 * B2 * 2;
+
+  const pctLoadOnCableA = cableCapacityA > 0 ? (A / cableCapacityA) * 100 : 0;
+  const pctLoadOnMcbA = AA1 > 0 ? (A / AA1) * 100 : 0;
+
+  const pctLoadOnCableB = cableCapacityB > 0 ? (B / cableCapacityB) * 100 : 0;
+  const pctLoadOnMcbB = BB1 > 0 ? (B / BB1) * 100 : 0;
+
+  const totalLoadBoth = A + B;
+  const bothCableCapacity = Math.min(cableCapacityA || Infinity, cableCapacityB || Infinity);
+  const bothMcbCapacity = Math.min(AA1 || Infinity, BB1 || Infinity);
+
+  const pctLoadBothOnCable = bothCableCapacity > 0 ? (totalLoadBoth / bothCableCapacity) * 100 : 0;
+  const pctLoadBothOnMcb = bothMcbCapacity > 0 ? (totalLoadBoth / bothMcbCapacity) * 100 : 0;
+
+  return {
+    cableCapacityA,
+    pctLoadOnCableA: pctLoadOnCableA.toFixed(1),
+    pctLoadOnMcbA: pctLoadOnMcbA.toFixed(1),
+
+    cableCapacityB,
+    pctLoadOnCableB: pctLoadOnCableB.toFixed(1),
+    pctLoadOnMcbB: pctLoadOnMcbB.toFixed(1),
+
+    totalLoadBoth,
+    bothCableCapacity,
+    bothPctLoadCable: pctLoadBothOnCable.toFixed(1),
+    bothPctLoadMcb: pctLoadBothOnMcb.toFixed(1),
+    isBothMcbSame: AA1 > 0 && BB1 > 0 && AA1 === BB1 ? "Yes" : "No",
+  };
+}
+
+const RackTrackerForm = ({userData}) => {
   const [formData, setFormData] = useState({
-    circle: "",
-    siteName: "",
-    location: "",
+    // General
+    slNo: "",
+    circle: userData?.circle,
+    siteName: userData?.site,
+    equipmentLocation: "",
+
     // Source A
     smpsRatingA: "",
     smpsNameA: "",
@@ -13,7 +73,23 @@ const EquipmentAudit = () => {
     incomerRatingA: "",
     cableSizeA: "",
     cableRunA: "",
+    equipmentRackNoA: "",
+    rackNameA: "",
+    rackIncomingCableSizeA: "",
+    rackCableRunA: "",
+    dbMcbNumberA: "",
+    dbMcbRatingA: "",
+    tempOnMcbA: "",
     runningLoadA: "",
+    cableCapacityA: "",
+    pctLoadCableA: "",
+    pctLoadMcbA: "",
+    rackEndNoDbA: "",
+    rackEndDcdbNameA: "",
+    rackEndRunningLoadA: "",
+    rackEndMcbRatingA: "",
+    rackEndPctLoadMcbA: "",
+
     // Source B
     smpsRatingB: "",
     smpsNameB: "",
@@ -21,176 +97,179 @@ const EquipmentAudit = () => {
     incomerRatingB: "",
     cableSizeB: "",
     cableRunB: "",
+    equipmentRackNoB: "",
+    rackNameB: "",
+    rackIncomingCableSizeB: "",
+    rackCableRunB: "",
+    dbMcbNumberB: "",
+    dbMcbRatingB: "",
+    tempOnMcbB: "",
     runningLoadB: "",
-    // Analysis
-    remarks: ""
+    cableCapacityB: "",
+    pctLoadCableB: "",
+    pctLoadMcbB: "",
+    rackEndNoDbB: "",
+    rackEndDcdbNameB: "",
+    rackEndRunningLoadB: "",
+    rackEndMcbRatingB: "",
+    rackEndPctLoadMcbB: "",
+
+    // Capacity Gap Analysis
+    totalLoadBoth: "",
+    bothCableCapacity: "",
+    bothPctLoadCable: "",
+    bothPctLoadMcb: "",
+    isBothMcbSame: "",
+    remarksA: "",
+    remarksB: "",
   });
 
+  const [status, setStatus] = useState("");
+
+  // ✅ Update input + auto-calc
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const updated = { ...formData, [e.target.name]: e.target.value };
+    const calc = computeCapacityAnalysis(updated);
+    setFormData({ ...updated, ...calc });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Submitted Data:", formData);
-    // TODO: Save to DB (Firebase/Postgres API)
+
+    if (!formData.siteName) {
+      setStatus("❌ Please enter Site Name before saving");
+      return;
+    }
+
+    try {
+      // 🔹 Site-wise storage: rackTracker/{siteName}
+      const siteKey = formData.siteName.trim().toUpperCase().replace(/\s+/g, "_");
+      await setDoc(
+        doc(db, "acDcRackDetails", siteKey),
+        {
+          ...formData,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true } // ✅ merge so we don’t overwrite completely
+      );
+
+      setStatus(`✅ Data saved for site: ${formData.siteName}`);
+    } catch (err) {
+      console.error("Error saving to Firestore:", err);
+      setStatus("❌ Error saving data");
+    }
   };
 
   return (
     <div className="daily-log-container">
-      <h1 className="text-xl font-bold mb-4">
-        WB-Airtel MSCS – UPS/SMPS Equipment Audit
-      </h1>
+      <h2>UPS / SMPS Equipment Details</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-
-        {/* General Details */}
-        <div className="border p-4 rounded-lg shadow">
-          <h2 className="font-semibold mb-2">General Details</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <input
-              name="circle"
-              placeholder="Circle"
-              value={formData.circle}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="siteName"
-              placeholder="Site Name"
-              value={formData.siteName}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="location"
-              placeholder="Equipment Location"
-              value={formData.location}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-          </div>
+      <form onSubmit={handleSubmit}>
+        {/* General Info */}
+        <div className="form-section">
+          <label>Site Name:</label>
+          <input type="text" name="siteName" value={formData.siteName} onChange={handleChange} />
         </div>
 
         {/* Source A */}
-        <div className="border p-4 rounded-lg shadow">
-          <h2 className="font-semibold mb-2">Source – A</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <input
-              name="smpsRatingA"
-              placeholder="SMPS Rating (A)"
-              value={formData.smpsRatingA}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="smpsNameA"
-              placeholder="SMPS Name"
-              value={formData.smpsNameA}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="dbNumberA"
-              placeholder="DB Number"
-              value={formData.dbNumberA}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="incomerRatingA"
-              placeholder="Incomer Rating (Amps)"
-              value={formData.incomerRatingA}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="cableSizeA"
-              placeholder="DB Cable Size (Sq mm)"
-              value={formData.cableSizeA}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="runningLoadA"
-              placeholder="Running Load (A)"
-              value={formData.runningLoadA}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-          </div>
-        </div>
+      <h3>Source A</h3>
+      <div className="form-section">
+        <label>SMPS Rating (A):</label>
+        <input type="number" name="smpsRatingA" value={formData.smpsRatingA} onChange={handleChange} />
+
+        <label>SMPS Name:</label>
+        <input type="text" name="smpsNameA" value={formData.smpsNameA} onChange={handleChange} />
+
+        <label>DB Number:</label>
+        <input type="text" name="dbNumberA" value={formData.dbNumberA} onChange={handleChange} />
+
+        <label>Incomer DB Rating (Amps):</label>
+        <input type="number" name="incomerRatingA" value={formData.incomerRatingA} onChange={handleChange} />
+
+        <label>Cable Size (Sq mm):</label>
+        <input type="number" name="cableSizeA" value={formData.cableSizeA} onChange={handleChange} />
+
+        <label>Cable Runs (Nos):</label>
+        <input type="number" name="cableRunA" value={formData.cableRunA} onChange={handleChange} />
+
+        <label>DB MCB Number:</label>
+        <input type="text" name="dbMcbNumberA" value={formData.dbMcbNumberA} onChange={handleChange} />
+
+        <label>DB MCB Rating (A):</label>
+        <input type="number" name="dbMcbRatingA" value={formData.dbMcbRatingA} onChange={handleChange} />
+
+        <label>Running Load (A):</label>
+        <input type="number" name="runningLoadA" value={formData.runningLoadA} onChange={handleChange} />
+      </div>
 
         {/* Source B */}
-        <div className="border p-4 rounded-lg shadow">
-          <h2 className="font-semibold mb-2">Source – B</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <input
-              name="smpsRatingB"
-              placeholder="SMPS Rating (A)"
-              value={formData.smpsRatingB}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="smpsNameB"
-              placeholder="SMPS Name"
-              value={formData.smpsNameB}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="dbNumberB"
-              placeholder="DB Number"
-              value={formData.dbNumberB}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="incomerRatingB"
-              placeholder="Incomer Rating (Amps)"
-              value={formData.incomerRatingB}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="cableSizeB"
-              placeholder="DB Cable Size (Sq mm)"
-              value={formData.cableSizeB}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-            <input
-              name="runningLoadB"
-              placeholder="Running Load (A)"
-              value={formData.runningLoadB}
-              onChange={handleChange}
-              className="border p-2 rounded"
-            />
-          </div>
+      <h3>Source B</h3>
+      <div className="form-section">
+        <label>SMPS Rating (A):</label>
+        <input type="number" name="smpsRatingB" value={formData.smpsRatingB} onChange={handleChange} />
+
+        <label>SMPS Name:</label>
+        <input type="text" name="smpsNameB" value={formData.smpsNameB} onChange={handleChange} />
+
+        <label>DB Number:</label>
+        <input type="text" name="dbNumberB" value={formData.dbNumberB} onChange={handleChange} />
+
+        <label>Incomer DB Rating (Amps):</label>
+        <input type="number" name="incomerRatingB" value={formData.incomerRatingB} onChange={handleChange} />
+
+        <label>Cable Size (Sq mm):</label>
+        <input type="number" name="cableSizeB" value={formData.cableSizeB} onChange={handleChange} />
+
+        <label>Cable Runs (Nos):</label>
+        <input type="number" name="cableRunB" value={formData.cableRunB} onChange={handleChange} />
+
+        <label>DB MCB Number:</label>
+        <input type="text" name="dbMcbNumberB" value={formData.dbMcbNumberB} onChange={handleChange} />
+
+        <label>DB MCB Rating (A):</label>
+        <input type="number" name="dbMcbRatingB" value={formData.dbMcbRatingB} onChange={handleChange} />
+
+        <label>Running Load (A):</label>
+        <input type="number" name="runningLoadB" value={formData.runningLoadB} onChange={handleChange} />
+      </div>
+
+        {/* ---- Capacity Analysis (auto-calc later) ---- */}
+        <h3>Capacity Gap Analysis</h3>
+        <div className="form-section">
+          <label>Total Load Both Sources:</label>
+          <input type="number" name="totalLoadBoth" value={formData.totalLoadBoth} readOnly />
+
+          <label>Both Source Cable Capacity:</label>
+          <input type="number" name="bothCableCapacity" value={formData.bothCableCapacity} readOnly />
+
+          <label>% Load on Cable:</label>
+          <input type="number" name="bothPctLoadCable" value={formData.bothPctLoadCable} readOnly />
+
+          <label>% Load on MCB:</label>
+          <input type="number" name="bothPctLoadMcb" value={formData.bothPctLoadMcb} readOnly />
+
+          <label>Both MCB Same?:</label>
+          <input type="text" name="isBothMcbSame" value={formData.isBothMcbSame} readOnly />
+
+          <label>Remarks:</label>
+          <input type="text" name="remarksA" value={formData.remarksA} onChange={handleChange} />
         </div>
 
-        {/* Analysis */}
-        <div className="border p-4 rounded-lg shadow">
-          <h2 className="font-semibold mb-2">Capacity Gap Analysis</h2>
-          <textarea
-            name="remarks"
-            placeholder="Remarks / Observations"
-            value={formData.remarks}
-            onChange={handleChange}
-            className="border p-2 rounded w-full"
-          />
-        </div>
+        {/* Capacity Analysis (auto) */}
+        <h3>Capacity Gap Analysis</h3>
+        <p>Total Load Both Sources: {formData.totalLoadBoth} A</p>
+        <p>Both Cable Capacity: {formData.bothCableCapacity} </p>
+        <p>% Load on Cable: {formData.bothPctLoadCable}%</p>
+        <p>% Load on MCB: {formData.bothPctLoadMcb}%</p>
+        <p>Both MCB Same?: {formData.isBothMcbSame}</p>
 
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded shadow"
-        >
-          Save Data
-        </button>
+        {/* Submit */}
+        <button type="submit">💾 Save</button>
       </form>
+
+      {status && <p>{status}</p>}
     </div>
   );
 };
 
-export default EquipmentAudit;
+export default RackTrackerForm;

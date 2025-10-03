@@ -377,6 +377,7 @@ const DGLogForm = ({ userData }) => {
                 </label>
 
                 <label className="form-label">Select DG:
+                    <span style={{fontSize:"10px", color:"#030a44ff"}}>(e.g.:- DG-1, DG-2, DG-3)</span>
                     <select
                         name="dgNumber"
                         value={dgNumber}
@@ -388,6 +389,20 @@ const DGLogForm = ({ userData }) => {
                     >
                         <option value="DG-1">DG-1</option>
                         <option value="DG-2">DG-2</option>
+                    </select>
+                </label>
+
+                <label className="form-label">Remarks:
+                    <span style={{fontSize:"10px", color:"yellow"}}>(e.g.:- ON/NO Load & Fuel Filling Only)</span>
+                    <select
+                        name="remarks"
+                        value={form.remarks}
+                        onChange={handleChange}
+                        className="w-full p-2 border rounded"
+                    >
+                        <option value="On Load">On Load</option>
+                        <option value="No Load">No Load</option>
+                        <option value="Fuel Filling Only">Fuel Filling Only</option>
                     </select>
                 </label>
 
@@ -417,6 +432,7 @@ const DGLogForm = ({ userData }) => {
 
                 <div className="grid grid-cols-2 gap-2">
                     <label className="form-label">Hr Meter Start:
+                    <span style={{fontSize:"10px", color:"#030a44ff"}}>(e.g.:- '1800.00', It fetch auto only check during fill)</span>
                         <input
                             type="number"
                             step="0.1"
@@ -429,6 +445,7 @@ const DGLogForm = ({ userData }) => {
                         />
                     </label>
                     <label className="form-label">Hr Meter End:
+                    <span style={{fontSize:"10px", color:"yellow"}}>(e.g.:- '1800.1')</span>
                         <input
                             type="number"
                             step="0.1"
@@ -441,18 +458,9 @@ const DGLogForm = ({ userData }) => {
                         />
                     </label>
                 </div>
-                <label className="form-label">Remarks:
-                    <select
-                        name="remarks"
-                        value={form.remarks}
-                        onChange={handleChange}
-                        className="w-full p-2 border rounded"
-                    >
-                        <option value="On Load">On Load</option>
-                        <option value="No Load">No Load</option>
-                    </select>
-                </label>
+                
                 <label className="form-label">Fuel Consumption (Liters):
+                    <span style={{fontSize:"10px", color:"#851010ff"}}>(e.g.:- Opening Fuel - Closing Fuel = Fuel Consumption)</span>
                     <input
                         type="number"
                         step="0.1"
@@ -465,6 +473,7 @@ const DGLogForm = ({ userData }) => {
                     />
                 </label>
                 <label className="form-label">Reading (kWH):
+                    <span style={{fontSize:"10px", color:"#0a4604ff"}}>(e.g.:- Opening kWh - Closing kWh = Reading)</span>
                     <input
                         type="number"
                         step="0.1"
@@ -477,6 +486,7 @@ const DGLogForm = ({ userData }) => {
                     />
                 </label>
                 <label className="form-label">Fuel Filling (Liters):
+                    <span style={{fontSize:"10px", color:"yellow"}}>(e.g.:- Skip it('0') if Fuel not fill)</span>
                     <input
                         type="number"
                         step="0.1"

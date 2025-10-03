@@ -224,13 +224,12 @@ const IncidentDashboard = ({ userData }) => {
 
   return (
     <div className="dhr-dashboard-container">
-      <h1 className="dashboard-header">
+      <h1 style={{textAlign:"center", paddingBottom:"20px"}}>
         <strong>🚨 Incident Dashboard</strong>
       </h1>
 
       {/* Existing Notice Board */}
-      <div className="instruction-tab">
-        {/* ... (keep existing notice board code) ... */}
+      {/* <div className="instruction-tab">
         <h2 className="noticeboard-header">📌 Notice Board </h2>
         {isEditing ? (
           <>
@@ -274,6 +273,51 @@ const IncidentDashboard = ({ userData }) => {
           </>
         )}
         <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @Suman Adhikari</h6>
+      </div> */}
+
+      {/* Universal Search */}
+      <input
+        type="text"
+        placeholder="🔍Search incidents..."
+        value={filters.search}
+        onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+      />
+
+      {/* 🔹 Summary Chart */}
+      <div className="summary-chart-container">
+        <h2 className="noticeboard-header">📊 Incident Status & RCA</h2>
+        <div className="summary-chart-container">
+          <p><strong>Total Incidents:</strong> {textSummary.total}</p>
+          <ul>
+            {Object.keys(textSummary.sites).map(site => (
+              <li key={site}>
+                <strong>{site}:</strong> {textSummary.sites[site]}
+              </li>
+            ))}
+          </ul>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={summaryData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                label
+              >
+                {summaryData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={["#FF6384", "#36A2EB", "#4BC0C0", "#FFCE56"][index % 4]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Filter Button */}
@@ -285,8 +329,6 @@ const IncidentDashboard = ({ userData }) => {
         {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin" || userData.role === "User") && (
           <Link to="/incident-management" className="pm-manage-btn"> ➕ Add <strong>"{userData.site || "All"}"</strong> Incidents</Link>
         )}
-
-
 
       </div>
 
@@ -366,50 +408,7 @@ const IncidentDashboard = ({ userData }) => {
         </div>
       )}
 
-      {/* Universal Search */}
-      <input
-        type="text"
-        placeholder="🔍Search incidents..."
-        value={filters.search}
-        onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-      />
-
-      {/* 🔹 Summary Chart */}
-      <div className="summary-chart-container">
-        <h2 className="noticeboard-header">📊 Incident Status & RCA</h2>
-        <div className="summary-chart-container">
-          <p><strong>Total Incidents:</strong> {textSummary.total}</p>
-          <ul>
-            {Object.keys(textSummary.sites).map(site => (
-              <li key={site}>
-                <strong>{site}:</strong> {textSummary.sites[site]}
-              </li>
-            ))}
-          </ul>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={summaryData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                label
-              >
-                {summaryData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={["#FF6384", "#36A2EB", "#4BC0C0", "#FFCE56"][index % 4]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      
       {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User") && (
         <button className="pm-manage-btn" onClick={downloadExcel}>
           ⬇️ Download Excel
