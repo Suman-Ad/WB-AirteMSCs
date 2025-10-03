@@ -19,6 +19,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
     localStorage.removeItem("assets");
     localStorage.removeItem("pmData");
     localStorage.removeItem("thermalReports");
+    localStorage.removeItem("lastFilling")
     navigate("/login");
   };
 

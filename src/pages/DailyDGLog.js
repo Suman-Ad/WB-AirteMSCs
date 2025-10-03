@@ -323,6 +323,11 @@ const DailyDGLog = ({ userData }) => {
     if (cached) {
       setLogs(JSON.parse(cached));
     }
+
+    const cached1 = localStorage.getItem("lastFilling");
+    if (cached1) {
+      setLastFilling(JSON.parse(cached1));
+    }
   }, []);
 
 
@@ -402,6 +407,7 @@ const DailyDGLog = ({ userData }) => {
 
       setLastFilling(lf);
       setLoadingFilling(false);
+      localStorage.setItem("lastFilling", JSON.stringify(lf))
     };
 
     fetchLastFilling();
@@ -555,6 +561,31 @@ const DailyDGLog = ({ userData }) => {
         // This aggregated value is useful for verification or other logic.
         // For now, we'll focus on populating meter readings.
       }));
+
+      {
+        if (runs.length <= 0)
+          setForm((prevForm) => ({
+            ...prevForm,
+            // Only update if runs were found for that DG
+            "DG-1 Fuel Closing": prevForm["DG-1 Fuel Opening"] + dg1FuelFill,
+            "DG-2 Fuel Closing": prevForm["DG-2 Fuel Opening"] + dg2FuelFill,
+            "DG-1 KWH Closing": prevForm["DG-1 KWH Opening"],
+            "DG-2 KWH Closing": prevForm["DG-2 KWH Opening"],
+            "DG-1 Off Load Fuel Consumption": offLoadDG1Con > 0 ? offLoadDG1Con : 0,
+            "DG-2 Off Load Fuel Consumption": offLoadDG2Con > 0 ? offLoadDG2Con : 0,
+            "DG-1 Off Load Hour": dg1MaxEndkWH < 1 && dg1TotalConsumption > 0 ? dg1TotalRunHours.toFixed(1) : 0,
+            "DG-2 Off Load Hour": dg2MaxEndkWH < 1 && dg2TotalConsumption > 0 ? dg2TotalRunHours.toFixed(1) : 0,
+            "DG-1 Hour Closing": dg1MaxEndMeter > 0 ? dg1MaxEndMeter : prevForm["DG-1 Hour Opening"],
+
+            "DG-2 Hour Closing": dg2MaxEndMeter > 0 ? dg2MaxEndMeter : prevForm["DG-2 Hour Opening"],
+            "DG-1 Fuel Filling": dg1FuelFill > 0 ? dg1FuelFill : (Number(prevForm["DG-1 Fuel Filling"]) || 0),
+            "DG-2 Fuel Filling": dg2FuelFill > 0 ? dg2FuelFill : (Number(prevForm["DG-2 Fuel Filling"]) || 0),
+
+            // Note: The form calculates total consumption from opening/closing fuel.
+            // This aggregated value is useful for verification or other logic.
+            // For now, we'll focus on populating meter readings.
+          }));
+      }
 
       setDayFuelCon(() => (dg1TotalConsumption + dg2TotalConsumption));
       setDayFuelFill(() => (dg1FuelFill + dg2FuelFill));
@@ -925,7 +956,7 @@ const DailyDGLog = ({ userData }) => {
 
   return (
     <div className="daily-log-container">
-      <h1 className="dashboard-header">
+      <h1 style={{color:"white"}}> {/* dashboard-header */}
         <strong>☣️ Daily DG Log Book</strong>
       </h1>
       <div className="noticeboard-header">
@@ -956,6 +987,20 @@ const DailyDGLog = ({ userData }) => {
             />
           </label>
         </h1>
+        {/* 🔹 Last Fuel Filling */}
+        {loadingFilling ? (
+          <p style={{ fontSize: "10px", color: "gray" }}>⏳ Loading last fuel filling...</p>
+        ) : lastFilling ? (
+          <p style={{ color: "#34c0cacb", fontSize: "10px" }}>
+            📅 Last Fuel Filling – <strong>{lastFilling.Date}</strong> :{" "}
+            <strong>
+              DG–1 {fmt1(lastFilling.DG1)} Ltrs - {lastFilling.DG1Hrs},{" "}
+              DG–2 {fmt1(lastFilling.DG2)} Ltrs - {lastFilling.DG2Hrs}
+            </strong>
+          </p>
+        ) : (
+          <p style={{ fontSize: "10px", color: "red" }}>⚠️ No fuel filling records found.</p>
+        )}
       </div>
 
       {/* <div className="chart-container" > */}
@@ -1109,20 +1154,7 @@ const DailyDGLog = ({ userData }) => {
             </div>
 
             <h1 style={{ borderTop: "3px solid #eee", color: "#fefeffff", textAlign: "center" }} className="noticeboard-header"><strong>📊Summery - {allValues.length} Days</strong>
-              {/* 🔹 Last Fuel Filling */}
-              {loadingFilling ? (
-                <p style={{ fontSize: "10px", color: "gray" }}>⏳ Loading last fuel filling...</p>
-              ) : lastFilling ? (
-                <p style={{ color: "#34c0cacb", fontSize: "10px" }}>
-                  📅 Last Fuel Filling – <strong>{lastFilling.Date}</strong> :{" "}
-                  <strong>
-                    DG–1 {fmt1(lastFilling.DG1)} Ltrs - {lastFilling.DG1Hrs},{" "}
-                    DG–2 {fmt1(lastFilling.DG2)} Ltrs - {lastFilling.DG2Hrs}
-                  </strong>
-                </p>
-              ) : (
-                <p style={{ fontSize: "10px", color: "red" }}>⚠️ No fuel filling records found.</p>
-              )}</h1>
+            </h1>
 
             {/* Average PUE */}
             <p className={monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
@@ -1276,7 +1308,7 @@ const DailyDGLog = ({ userData }) => {
           const idealCon = runHrs * designCph;
           const unrecoDiesel = fuelCon - idealCon;
           const percentVar =
-            idealCon > 0 ? ((unrecoDiesel / idealCon) * 100).toFixed(1) + "%" : "0%";
+            idealCon > 0 ? ((unrecoDiesel / fuelCon) * 100).toFixed(1) + "%" : "0%";
           const expectedRunHrs = totalHours - ebAvailHrs;
           const excessRunHr = runHrs > expectedRunHrs
             ? (runHrs - expectedRunHrs).toFixed(2)

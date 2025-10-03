@@ -16,6 +16,18 @@
     gap: 10px;
 }
 
+.status-header {
+    background: linear-gradient(135deg, #dbd170 0%, #67b1c4 100%);
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    /* margin-bottom: 15px; */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* display: flex; */
+    align-items: center;
+    gap: 10px;
+}
+
 .stats-panel {
   background-color: #f3f4f6;
   padding: 16px;
