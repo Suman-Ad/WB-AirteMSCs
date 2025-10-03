@@ -216,14 +216,7 @@ const SiteConfigEdit = ({ userData }) => {
       </div>
 
       <div>
-        <h3>DHR Status</h3>
-        <label>Diesel Available</label>
-        <input
-          type="number"
-          name="fuelAvailable"
-          value={config.fuelAvailable || 0}
-          onChange={handleChange}
-        />
+        <h1>DHR Status</h1>
         <label>EB Status</label>
         <input
           type="text"

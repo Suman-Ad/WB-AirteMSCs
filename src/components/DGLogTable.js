@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { format, subDays } from "date-fns";
 
 const DGLogTable = ({ userData }) => {
+  const { state } = useLocation();
+  const { totalkW, fuelAvalable} = state || {};
   const [logs, setLogs] = useState([]);
   const [summary, setSummary] = useState({
     DG1_OnLoad: 0,
@@ -204,7 +206,7 @@ const DGLogTable = ({ userData }) => {
         "🏙️Region": userData?.region,
         "🔄Circle": userData?.circle,
         "📍Site Name": siteName,
-        "⛽Diesel Available": `${defaultConfig.fuelAvailable} Ltrs.` || "N/A",
+        "⛽Diesel Available": `${fuelAvalable} Ltrs.` || "N/A",
         "🕑DG Run Hrs (Yesterday)": `${dgRunHrsYesterday} Hrs` || "N/A",
         "⚡EB Run Hrs (Yesterday)": `${ebRunHrsYesterday} Hrs` || "N/A",
         "🔌EB Status": defaultConfig.ebStatus || "N/A",
@@ -216,6 +218,7 @@ const DGLogTable = ({ userData }) => {
         "📝Major Activity": defaultConfig.majorActivity || "N",
         "🛠️Inhouse PM": defaultConfig.inHousePm || "N",
         "🚨Fault Details": defaultConfig.faultDetails || "N",
+        "⚡Total kW Unit": `${totalkW} kW` || "N/A",
       };
 
       setDhrDataForPreview(previewData);
@@ -442,9 +445,9 @@ const DGLogTable = ({ userData }) => {
       {isPreviewModalOpen && (
         <div className="modal-backdrop">
           <div className="modal-content">
-            <div className="noticeboard-header" style={{display:"flex"}}>
-              <h1 style={{whiteSpace: "nowrap"}}>Live DHR Preview</h1>
-              <button onClick={() => setIsPreviewModalOpen(false)} className="modal-close-btn" style={{marginLeft:"80px"}}>&times;</button>
+            <div className="noticeboard-header" style={{ display: "flex" }}>
+              <h1 style={{ whiteSpace: "nowrap" }}>Live DHR Preview</h1>
+              <button onClick={() => setIsPreviewModalOpen(false)} className="modal-close-btn" style={{ marginLeft: "80px" }}>&times;</button>
             </div>
 
             {dhrDataForPreview ? (

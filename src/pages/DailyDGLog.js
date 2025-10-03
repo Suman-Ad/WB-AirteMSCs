@@ -8,6 +8,7 @@ import {
   getDoc,
   deleteDoc,
   serverTimestamp,
+  sum,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import "../assets/DailyDGLog.css";
@@ -98,7 +99,7 @@ const findLastFillingInDGLogs = async (site, monthsToCheck = 3) => {
 
 const DailyDGLog = ({ userData }) => {
   const [logs, setLogs] = useState([]);
-  const [dayLogs, setDayLogs] = useState([]);
+  const [totalkW, setTotalkW] = useState([]);
   const [fuelAlert, setFuelAlert] = useState(false);
   const [dayFuelCon, setDayFuelCon] = useState(0);
   const [dayFuelFill, setDayFuelFill] = useState(0);
@@ -109,6 +110,7 @@ const DailyDGLog = ({ userData }) => {
   const siteKey = userData?.site?.toUpperCase();
   const [lastFilling, setLastFilling] = useState(null);
   const [loadingFilling, setLoadingFilling] = useState(true);
+  const [fuelAvalable, setFuelAvalable] = useState()
 
   // Debounce helper (optional)
   let timeout;
@@ -249,6 +251,7 @@ const DailyDGLog = ({ userData }) => {
       (sum, cl) => sum + (cl["DG-1 ON Load Consumption"] || 0),
       0
     );
+
   const monthlyAvgDG1SEGR = (totalDG1Kwh / totalDG1OnLoadCon).toFixed(2);
 
   // DG-2 ***************************
@@ -556,7 +559,7 @@ const DailyDGLog = ({ userData }) => {
       setDayFuelCon(() => (dg1TotalConsumption + dg2TotalConsumption));
       setDayFuelFill(() => (dg1FuelFill + dg2FuelFill));
       if (dayFuelFill > 0) alert("View CCMS");
-      setDayLogs(runs);
+      // setDayLogs(runs);
 
     } catch (err) {
       console.error("Error fetching and aggregating run logs:", err);
@@ -566,7 +569,24 @@ const DailyDGLog = ({ userData }) => {
 
   useEffect(() => {
     fetchLogs();
+
   }, [selectedMonth, siteName]);
+
+  useEffect(() => {
+    {
+      logs.map((entry) => {
+        const calculated = calculateFields(entry);
+        const totalkW = calculated["Total Unit Consumption"];
+        const currentFuel =
+          allValues.reduce(
+            (sum, cl) => (Number(cl["DG-1 Fuel Closing"]) || 0) + (Number(cl["DG-2 Fuel Closing"]) || 0),
+            0
+          );
+        setTotalkW(() => totalkW)
+        setFuelAvalable(() => currentFuel)
+      })
+    }
+  }, [logs, allValues])
 
   // 🔹 Handle input
   const handleChange = (e) => {
@@ -902,7 +922,6 @@ const DailyDGLog = ({ userData }) => {
       },
     });
   };
-
 
   return (
     <div className="daily-log-container">
@@ -1336,12 +1355,14 @@ const DailyDGLog = ({ userData }) => {
           {form.Date}
         </strong>
       </div>
+
       <button
         className="segr-manage-btn warning"
-        onClick={() => Navigate('/dg-log-table')}
+        onClick={() => Navigate('/dg-log-table', { state: { totalkW, fuelAvalable } })}
       >
         🔰 DG Run Logs
       </button>
+
       {userData?.name === "Suman Adhikari" && (
         <button
           className="segr-manage-btn"
@@ -1445,7 +1466,7 @@ const DailyDGLog = ({ userData }) => {
                   type="number"
                   step="any"
                   name={field}
-                  value={form[field] || ""}
+                  value={form[field] > 0 ? form[field] : 0}
                   onChange={handleChange}
                   className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
                   disabled={disabled}
