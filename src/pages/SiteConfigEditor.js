@@ -64,8 +64,8 @@ const SiteConfigEdit = ({ userData }) => {
         <label>Site Name</label>
         <input
           name="siteName"
-          value={userData?.site?.toUpperCase() || ""}
-          // onChange={handleChange}
+          value={config.siteName || userData?.site?.toUpperCase()}
+          onChange={handleChange}
           disabled
         />
 
@@ -139,6 +139,14 @@ const SiteConfigEdit = ({ userData }) => {
           onChange={handleChange}
         />
 
+        <label>Site Infra Manager Name</label>
+        <input
+          type="text"
+          name="sim"
+          value={config.sim || ""}
+          onChange={handleChange}
+        />
+
         <label>Prepared By</label>
         <input
           name="preparedBy"
@@ -194,6 +202,13 @@ const SiteConfigEdit = ({ userData }) => {
             style={{ width: "150px", marginTop: "5px" }}
           />
         )}
+
+        <label>Last TXN Number</label>
+        <input
+          name="txnNumber"
+          value={config.txnNumber || ""}
+          onChange={handleChange}
+        />
       </div>
 
       <div >
@@ -211,6 +226,14 @@ const SiteConfigEdit = ({ userData }) => {
           type="number"
           name="ebCount"
           value={config.ebCount || 0}
+          onChange={handleChange}
+        />
+
+        <label>DG Capacity(kVA)</label>
+        <input
+          type="number"
+          name="dgCapacity"
+          value={config.dgCapacity || 0}
           onChange={handleChange}
         />
       </div>

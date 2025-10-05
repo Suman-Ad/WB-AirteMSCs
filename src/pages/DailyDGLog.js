@@ -543,10 +543,10 @@ const DailyDGLog = ({ userData }) => {
       setForm((prevForm) => ({
         ...prevForm,
         // Only update if runs were found for that DG
-        "DG-1 Fuel Closing": dg1TotalConsumption >= 0 ? prevForm["DG-1 Fuel Opening"] - dg1TotalConsumption + dg1FuelFill : Number(prevForm["DG-1 Fuel Closing"]) + Number(prevForm["DG-1 Fuel Filling"]),
-        "DG-2 Fuel Closing": dg2TotalConsumption >= 0 ? prevForm["DG-2 Fuel Opening"] - dg2TotalConsumption + dg2FuelFill : Number(prevForm["DG-2 Fuel Closing"]) + Number(prevForm["DG-2 Fuel Filling"]),
-        "DG-1 KWH Closing": dg1MaxEndkWH >= 0 ? Number(prevForm["DG-1 KWH Opening"]) + dg1MaxEndkWH : prevForm["DG-1 KWH Opening"],
-        "DG-2 KWH Closing": dg2MaxEndkWH >= 0 ? Number(prevForm["DG-2 KWH Opening"]) + dg2MaxEndkWH : prevForm["DG-2 KWH Opening"],
+        "DG-1 Fuel Closing": dg1TotalConsumption >= 0 ? (prevForm["DG-1 Fuel Opening"] - dg1TotalConsumption + dg1FuelFill).toFixed(2) : (Number(prevForm["DG-1 Fuel Closing"]) + Number(prevForm["DG-1 Fuel Filling"])).toFixed(2),
+        "DG-2 Fuel Closing": dg2TotalConsumption >= 0 ? (prevForm["DG-2 Fuel Opening"] - dg2TotalConsumption + dg2FuelFill).toFixed(2) : (Number(prevForm["DG-2 Fuel Closing"]) + Number(prevForm["DG-2 Fuel Filling"])).toFixed(2),
+        "DG-1 KWH Closing": dg1MaxEndkWH >= 0 ? (Number(prevForm["DG-1 KWH Opening"]) + dg1MaxEndkWH).toFixed(2) : (prevForm["DG-1 KWH Opening"]).toFixed(2),
+        "DG-2 KWH Closing": dg2MaxEndkWH >= 0 ? (Number(prevForm["DG-2 KWH Opening"]) + dg2MaxEndkWH).toFixed(2) : (prevForm["DG-2 KWH Opening"]).toFixed(2),
         "DG-1 Off Load Fuel Consumption": offLoadDG1Con > 0 ? offLoadDG1Con : 0,
         "DG-2 Off Load Fuel Consumption": offLoadDG2Con > 0 ? offLoadDG2Con : 0,
         "DG-1 Off Load Hour": dg1MaxEndkWH < 1 && dg1TotalConsumption > 0 ? dg1TotalRunHours.toFixed(1) : 0,
@@ -679,7 +679,7 @@ const DailyDGLog = ({ userData }) => {
     }
 
     // ✅ validation
-    for (let i = 1; i <= 2; i++) {
+    for (let i = 1; i <= dg; i++) {
       const kwhOpen = parseFloat(form[`DG-${i} KWH Opening`] || 0);
       const kwhClose = parseFloat(form[`DG-${i} KWH Closing`] || 0);
       const hrOpen = parseFloat(form[`DG-${i} Hour Opening`] || 0);
@@ -719,7 +719,7 @@ const DailyDGLog = ({ userData }) => {
     }
 
     // EB validation
-    for (let i = 1; i <= 2; i++) {
+    for (let i = 1; i <= eb; i++) {
       const ebOpen = parseFloat(form[`EB-${i} KWH Opening`] || 0);
       const ebClose = parseFloat(form[`EB-${i} KWH Closing`] || 0);
       if (ebClose < ebOpen) {
@@ -1370,7 +1370,7 @@ const DailyDGLog = ({ userData }) => {
                   <tr key={idx}>
                     <td>{`1-${startDate.toLocaleString("default", { month: "short" })}-${startDate.getFullYear()} to ${endDate.getDate()}-${endDate.toLocaleString("default", { month: "short" })}-${endDate.getFullYear()}`}</td>
                     <td>{row.dg}</td>
-                    <td>{row.type}</td>
+                    <td>{siteConfig.dgCapacity}kVA</td>
                     <td>{row.totalHrs}</td>
                     <td>{row.ebAvailHrs}</td>
                     <td>{row.runHrs}</td>

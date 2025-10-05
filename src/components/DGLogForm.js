@@ -465,7 +465,7 @@ const DGLogForm = ({ userData }) => {
                         type="number"
                         step="0.1"
                         name="fuelConsumption"
-                        value={form.fuelConsumption || 0}
+                        value={form.fuelConsumption}
                         onChange={handleChange}
                         placeholder="Fuel consumption (L)"
                         className="w-full p-2 border rounded"
@@ -478,7 +478,7 @@ const DGLogForm = ({ userData }) => {
                         type="number"
                         step="0.1"
                         name="kWHReading"
-                        value={form.kWHReading || 0}
+                        value={form.kWHReading}
                         onChange={handleChange}
                         placeholder="Generated kWH"
                         className="w-full p-2 border rounded"
@@ -491,7 +491,7 @@ const DGLogForm = ({ userData }) => {
                         type="number"
                         step="0.1"
                         name="fuelFill"
-                        value={form.fuelFill || 0}
+                        value={form.fuelFill}
                         onChange={handleChange}
                         placeholder="Add fuel filling (L)"
                         className="w-full p-2 border rounded"

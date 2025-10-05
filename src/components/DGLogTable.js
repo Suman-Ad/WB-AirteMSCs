@@ -192,8 +192,8 @@ const DGLogTable = ({ userData }) => {
       const runsRef = collection(db, "dgLogs", siteName, monthKey, yesterdayStr, "runs");
       const runsSnap = await getDocs(runsRef);
       const totalDgRunHours = runsSnap.docs.reduce((sum, doc) => sum + (Number(doc.data().totalRunHours) || 0), 0);
-      const dgRunHrsYesterday = totalDgRunHours.toFixed(2);
-      const ebRunHrsYesterday = (24 - totalDgRunHours > 0 ? 24 - totalDgRunHours : 0).toFixed(2);
+      const dgRunHrsYesterday = totalDgRunHours.toFixed(1);
+      const ebRunHrsYesterday = (24 - totalDgRunHours > 0 ? 24 - totalDgRunHours : 0).toFixed(1);
 
       // 3. Fetch Default Statuses from siteConfig
       const configRef = doc(db, "siteConfigs", siteName?.toUpperCase());
@@ -203,22 +203,22 @@ const DGLogTable = ({ userData }) => {
       // 4. Construct the preview data object
       const previewData = {
         "DHR Date": format(new Date(selectedDate), "dd.MM.yyyy"),
-        "🏙️Region": userData?.region,
-        "🔄Circle": userData?.circle,
-        "📍Site Name": siteName,
-        "⛽Diesel Available": `${fuelAvalable} Ltrs.` || "N/A",
-        "🕑DG Run Hrs (Yesterday)": `${dgRunHrsYesterday} Hrs` || "N/A",
-        "⚡EB Run Hrs (Yesterday)": `${ebRunHrsYesterday} Hrs` || "N/A",
-        "🔌EB Status": defaultConfig.ebStatus || "N/A",
-        "🔋DG Status": defaultConfig.dgStatus || "N/A",
-        "⚙️SMPS Status": defaultConfig.smpsStatus || "N/A",
-        "🔄UPS Status": defaultConfig.upsStatus || "N/A",
-        "❄️PAC Status": defaultConfig.pacStatus || "N/A",
-        "❄️CRV Status": defaultConfig.crvStatus || "N/A",
-        "📝Major Activity": defaultConfig.majorActivity || "N",
-        "🛠️Inhouse PM": defaultConfig.inHousePm || "N",
-        "🚨Fault Details": defaultConfig.faultDetails || "N",
-        "⚡Total kW Unit": `${totalkW} kW` || "N/A",
+        "🏙️ Region": userData?.region,
+        "🔄 Circle": userData?.circle,
+        "📍 Site Name": siteName,
+        "⛽ Diesel Available": `${fuelAvalable.toFixed(2)} Ltrs.` || "N/A",
+        "🕑 DG Run Hrs (Yesterday)": `${dgRunHrsYesterday} Hrs` || "N/A",
+        "⚡ EB Run Hrs (Yesterday)": `${ebRunHrsYesterday} Hrs` || "N/A",
+        "🔌 EB Status": defaultConfig.ebStatus || "N/A",
+        "🔋 DG Status": defaultConfig.dgStatus || "N/A",
+        "⚙️ SMPS Status": defaultConfig.smpsStatus || "N/A",
+        "🔄 UPS Status": defaultConfig.upsStatus || "N/A",
+        "❄️ PAC Status": defaultConfig.pacStatus || "N/A",
+        "❄️ CRV Status": defaultConfig.crvStatus || "N/A",
+        "📝 Major Activity": defaultConfig.majorActivity || "N",
+        "🛠️ Inhouse PM": defaultConfig.inHousePm || "N",
+        "🚨 Fault Details": defaultConfig.faultDetails || "N",
+        "⚡ Total kW Unit": `${totalkW.toFixed(3)} kW` || "N/A",
       };
 
       setDhrDataForPreview(previewData);
@@ -368,7 +368,7 @@ const DGLogTable = ({ userData }) => {
                         />
                       </td>
                       <td>
-                        {editForm.hrMeterEnd - editForm.hrMeterStart}
+                        {(editForm.hrMeterEnd - editForm.hrMeterStart).toFixed(1)}
                       </td>
                       <td>
                         <input

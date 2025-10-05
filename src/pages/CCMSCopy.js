@@ -155,6 +155,7 @@ const CCMSCopy = () => {
                         <tr><td>Billing Period End Date</td><td>{formattedDate}</td></tr>
                         <tr><td>Invoice Type</td><td>Diesel</td></tr>
                         <tr><td>DC/MSC</td><td>{siteConfig.department}</td></tr>
+                        <tr><td>TXN Number</td><td>{siteConfig.txnNumber}</td></tr>
                     </tbody>
                 </table>
                 <h3>Fuel Bill Attachments</h3>
