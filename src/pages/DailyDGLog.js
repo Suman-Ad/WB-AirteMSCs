@@ -1418,7 +1418,7 @@ const DailyDGLog = ({ userData }) => {
 
       <button
         className="segr-manage-btn warning"
-        onClick={() => Navigate('/dg-log-table', { state: { totalkW, fuelAvalable } })}
+        onClick={() => Navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig } })}
       >
         🔰 DG Run Logs
       </button>

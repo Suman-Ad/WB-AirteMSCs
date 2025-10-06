@@ -14,7 +14,7 @@ const formatTime = (hours) => {
 
 const DGLogTable = ({ userData }) => {
   const { state } = useLocation();
-  const { totalkW, fuelAvalable} = state || {};
+  const { totalkW, fuelAvalable, siteConfig} = state || {};
   const [logs, setLogs] = useState([]);
   const [summary, setSummary] = useState({
     DG1_OnLoad: 0,
@@ -262,7 +262,7 @@ const DGLogTable = ({ userData }) => {
       </h2>
       <button
         className="segr-manage-btn warning"
-        onClick={() => Navigate("/dg-log-entry")}
+        onClick={() => Navigate("/dg-log-entry", { state: { siteConfig }})}
       >
         ✎ DG Run Log Entry
       </button>
