@@ -5,6 +5,13 @@ import { db } from "../firebase";
 import { useLocation, useNavigate } from "react-router-dom";
 import { format, subDays } from "date-fns";
 
+// Convert decimal hours to HH:MM format
+const formatTime = (hours) => {
+  const h = Math.floor(hours); // integer hours
+  const m = Math.round((hours - h) * 60); // minutes from fraction
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} Min`;
+};
+
 const DGLogTable = ({ userData }) => {
   const { state } = useLocation();
   const { totalkW, fuelAvalable} = state || {};
@@ -182,6 +189,8 @@ const DGLogTable = ({ userData }) => {
     setDhrMessage("Generating live preview...");
     setDhrDataForPreview(null);
 
+    let offLoadDGRun = 0;
+
     try {
       // 1. Determine yesterday's date based on the selected date in the UI
       const yesterday = subDays(new Date(selectedDate), 1);
@@ -191,9 +200,13 @@ const DGLogTable = ({ userData }) => {
       // 2. Fetch DG Run Hours from Yesterday
       const runsRef = collection(db, "dgLogs", siteName, monthKey, yesterdayStr, "runs");
       const runsSnap = await getDocs(runsRef);
+      const runs = runsSnap.docs.map((doc) => doc.data());
+      runs.forEach((run) => {
+        if (run.remarks === "No Load") offLoadDGRun += parseFloat(run.totalRunHours || 0);
+      })
       const totalDgRunHours = runsSnap.docs.reduce((sum, doc) => sum + (Number(doc.data().totalRunHours) || 0), 0);
-      const dgRunHrsYesterday = totalDgRunHours.toFixed(1);
-      const ebRunHrsYesterday = (24 - totalDgRunHours > 0 ? 24 - totalDgRunHours : 0).toFixed(1);
+      const dgRunHrsYesterday = formatTime(totalDgRunHours - offLoadDGRun);
+      const ebRunHrsYesterday = formatTime(24 - totalDgRunHours > 0 ? 24 - (totalDgRunHours - offLoadDGRun) : 0);
 
       // 3. Fetch Default Statuses from siteConfig
       const configRef = doc(db, "siteConfigs", siteName?.toUpperCase());
@@ -202,13 +215,13 @@ const DGLogTable = ({ userData }) => {
 
       // 4. Construct the preview data object
       const previewData = {
-        "DHR Date": format(new Date(selectedDate), "dd.MM.yyyy"),
+        "📊 DHR Date": format(new Date(selectedDate), "dd.MM.yyyy"),
         "🏙️ Region": userData?.region,
         "🔄 Circle": userData?.circle,
         "📍 Site Name": siteName,
         "⛽ Diesel Available": `${fuelAvalable.toFixed(2)} Ltrs.` || "N/A",
-        "🕑 DG Run Hrs (Yesterday)": `${dgRunHrsYesterday} Hrs` || "N/A",
-        "⚡ EB Run Hrs (Yesterday)": `${ebRunHrsYesterday} Hrs` || "N/A",
+        "🕑 DG Run Hrs (Yesterday)": `${dgRunHrsYesterday}` || "N/A",
+        "⚡ EB Run Hrs (Yesterday)": `${ebRunHrsYesterday}` || "N/A",
         "🔌 EB Status": defaultConfig.ebStatus || "N/A",
         "🔋 DG Status": defaultConfig.dgStatus || "N/A",
         "⚙️ SMPS Status": defaultConfig.smpsStatus || "N/A",

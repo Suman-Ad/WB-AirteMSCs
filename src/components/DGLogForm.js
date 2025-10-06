@@ -182,7 +182,7 @@ const DGLogForm = ({ userData }) => {
         } else {
             const rowIndex = findRowDgCapacity(capacity);
             const oDCPH = oemDieselCphData[`${roundedPercent}%`][rowIndex];
-            const totalFuelConsumption = (oDCPH * 1.15) * hmr;
+            const totalFuelConsumption = (oDCPH * 1) * hmr;
             const segr = kw / totalFuelConsumption;
             const cph = totalFuelConsumption / hmr;
 

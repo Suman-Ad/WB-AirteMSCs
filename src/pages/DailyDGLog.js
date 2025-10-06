@@ -152,7 +152,7 @@ const DailyDGLog = ({ userData }) => {
     const result = { ...data };
 
     // DG Calculations
-    for (let i = 1; i <= 2; i++) {
+    for (let i = 1; i <= siteConfig.dgCount; i++) {
       const kwhOpen = parseFloat(result[`DG-${i} KWH Opening`]) || 0;
       const kwhClose = parseFloat(result[`DG-${i} KWH Closing`]) || 0;
       const fuelOpen = parseFloat(result[`DG-${i} Fuel Opening`]) || 0;
@@ -188,7 +188,7 @@ const DailyDGLog = ({ userData }) => {
     }
 
     // EB Calculations
-    for (let i = 1; i <= 2; i++) {
+    for (let i = 1; i <= siteConfig.ebCount; i++) {
       const ebOpen = parseFloat(result[`EB-${i} KWH Opening`]) || 0;
       const ebClose = parseFloat(result[`EB-${i} KWH Closing`]) || 0;
       result[`EB-${i} KWH Generation`] = ebClose - ebOpen;
@@ -208,32 +208,46 @@ const DailyDGLog = ({ userData }) => {
     // Totals
     result["Total DG KWH"] =
       (result["DG-1 KWH Generation"] || 0) +
-      (result["DG-2 KWH Generation"] || 0);
+      (result["DG-2 KWH Generation"] || 0) +
+      (result["DG-3 KWH Generation"] || 0) +
+      (result["DG-4 KWH Generation"] || 0);
 
     result["Total EB KWH"] =
       (result["EB-1 KWH Generation"] || 0) +
-      (result["EB-2 KWH Generation"] || 0);
+      (result["EB-2 KWH Generation"] || 0) +
+      (result["EB-3 KWH Generation"] || 0) +
+      (result["EB-4 KWH Generation"] || 0);
 
     result["Total DG Fuel"] =
       (result["DG-1 Fuel Consumption"] || 0) +
-      (result["DG-2 Fuel Consumption"] || 0);
+      (result["DG-2 Fuel Consumption"] || 0) +
+      (result["DG-3 Fuel Consumption"] || 0) +
+      (result["DG-4 Fuel Consumption"] || 0);
 
     result["Total DG Hours"] =
       (result["DG-1 Running Hrs"] || 0) +
-      (result["DG-2 Running Hrs"] || 0);
+      (result["DG-2 Running Hrs"] || 0) +
+      (result["DG-3 Running Hrs"] || 0) +
+      (result["DG-4 Running Hrs"] || 0);
 
     result["Total Unit Consumption"] =
       (result["DG-1 KWH Generation"] || 0) +
       (result["DG-2 KWH Generation"] || 0) +
+      (result["DG-3 KWH Generation"] || 0) +
+      (result["DG-4 KWH Generation"] || 0) +
       (result["EB-1 KWH Generation"] || 0) +
-      (result["EB-2 KWH Generation"] || 0);
+      (result["EB-2 KWH Generation"] || 0) +
+      (result["EB-3 KWH Generation"] || 0) +
+      (result["EB-4 KWH Generation"] || 0);
 
     result["Site Running kW"] =
       (result["Total Unit Consumption"] || 0) / 24;
 
     result["Total Fuel Filling"] =
       (result["DG-1 Fuel Filling"] || 0) +
-      (result["DG-2 Fuel Filling"] || 0);
+      (result["DG-2 Fuel Filling"] || 0) +
+      (result["DG-3 Fuel Filling"] || 0) +
+      (result["DG-4 Fuel Filling"] || 0);
 
     //PUE Calculation
     result["PUE"] = result["Office kW Consumption"] > 0 ? (((result["Total Unit Consumption"] - result["Office kW Consumption"]) / 24) / result["Total IT Load KWH"]).toFixed(2) : "0.00";
@@ -465,8 +479,8 @@ const DailyDGLog = ({ userData }) => {
         (parseFloat(form["DG-2 Fuel Opening"]) || 0);
       const currentFuel = availableFuel - dayFuelCon + dayFuelFill;
       const currentHrs = currentFuel / (totalOnLoadCon / totalOnLoadHrs)
-      setFuelAlert(currentHrs < 18 && currentFuel > 0);
-      if (currentHrs < 18 && currentFuel > 0) alert("Give Fuel Request");
+      setFuelAlert(currentHrs < 20 && currentFuel > 0);
+      if (currentHrs < 20 && currentFuel > 0) alert("Give Fuel Requisition");
 
     }
   }, [logs, form.Date, dayFuelCon, dayFuelFill]);   // ✅ run also when Date changes
@@ -505,6 +519,7 @@ const DailyDGLog = ({ userData }) => {
       let dg1MaxEndMeter = 0;
       let dg1MaxEndkWH = 0;
       let offLoadDG1Con = 0;
+      let offLoadDG1Run = 0;
       let dg1FuelFill = 0;
 
       let dg2TotalConsumption = 0;
@@ -513,6 +528,7 @@ const DailyDGLog = ({ userData }) => {
       let dg2MaxEndMeter = 0;
       let dg2MaxEndkWH = 0;
       let offLoadDG2Con = 0;
+      let offLoadDG2Run = 0;
       let dg2FuelFill = 0;
 
 
@@ -527,6 +543,7 @@ const DailyDGLog = ({ userData }) => {
           if (startMeter < dg1MinStartMeter) dg1MinStartMeter = startMeter;
           if (endMeter > dg1MaxEndMeter) dg1MaxEndMeter = endMeter;
           if (run.remarks === "No Load") offLoadDG1Con += parseFloat(run.fuelConsumption || 0);
+          if (run.remarks === "No Load") offLoadDG1Run += parseFloat(run.totalRunHours || 0);
           dg1FuelFill += parseFloat(run.fuelFill || 0);
         } else if (run.dgNumber === "DG-2") {
           dg2TotalConsumption += parseFloat(run.fuelConsumption || 0);
@@ -535,6 +552,7 @@ const DailyDGLog = ({ userData }) => {
           if (startMeter < dg2MinStartMeter) dg2MinStartMeter = startMeter;
           if (endMeter > dg2MaxEndMeter) dg2MaxEndMeter = endMeter;
           if (run.remarks === "No Load") offLoadDG2Con += parseFloat(run.fuelConsumption || 0);
+          if (run.remarks === "No Load") offLoadDG2Run += parseFloat(run.totalRunHours || 0);
           dg2FuelFill += parseFloat(run.fuelFill || 0);
         }
       });
@@ -549,8 +567,8 @@ const DailyDGLog = ({ userData }) => {
         "DG-2 KWH Closing": dg2MaxEndkWH >= 0 ? (Number(prevForm["DG-2 KWH Opening"]) + dg2MaxEndkWH).toFixed(2) : (prevForm["DG-2 KWH Opening"]).toFixed(2),
         "DG-1 Off Load Fuel Consumption": offLoadDG1Con > 0 ? offLoadDG1Con : 0,
         "DG-2 Off Load Fuel Consumption": offLoadDG2Con > 0 ? offLoadDG2Con : 0,
-        "DG-1 Off Load Hour": dg1MaxEndkWH < 1 && dg1TotalConsumption > 0 ? dg1TotalRunHours.toFixed(1) : 0,
-        "DG-2 Off Load Hour": dg2MaxEndkWH < 1 && dg2TotalConsumption > 0 ? dg2TotalRunHours.toFixed(1) : 0,
+        "DG-1 Off Load Hour": offLoadDG1Run > 0 ? offLoadDG1Run.toFixed(1) : 0,
+        "DG-2 Off Load Hour": offLoadDG2Run > 0 ? offLoadDG2Run.toFixed(1) : 0,
         "DG-1 Hour Closing": dg1MaxEndMeter > 0 ? dg1MaxEndMeter : prevForm["DG-1 Hour Opening"],
 
         "DG-2 Hour Closing": dg2MaxEndMeter > 0 ? dg2MaxEndMeter : prevForm["DG-2 Hour Opening"],
@@ -1499,6 +1517,8 @@ const DailyDGLog = ({ userData }) => {
             } else if (closingFields.includes(field)) {
               // disable if it already has a value
               disabled = !!form[field];
+            } else if (alwaysDisabled.includes(field) && closingFields.includes(field)) {
+              disabled = !!logs.length
             }
 
             return (
