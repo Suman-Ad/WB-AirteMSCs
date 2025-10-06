@@ -241,7 +241,7 @@ const DGLogForm = ({ userData }) => {
         const missingColumnList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 18, 20, 21, 23, 24, 25, 26, 29, 36];
 
         let result = ``;
-        result += `♋️ DG Run Percentage: ${roundedPercent}%....\n`;
+        result += `♋️ ${dgNumber} Running Percentage: ${roundedPercent}%....\n`;
 
         // If OEM table doesn't exist for this percent, follow adjustableCPH branch
         if (missingColumnList.includes(roundedPercent)) {
@@ -447,87 +447,6 @@ const DGLogForm = ({ userData }) => {
             <h2 className="dashboard-header">
                 <strong>🎯 Daily DG Log Entry - {userData.site}</strong>
             </h2>
-            {/* <button
-                className="segr-manage-btn"
-                onClick={() => setShowFuelModal(true)}
-                style={{ width: "100%" }}
-            >
-                💥 Cummins DG CPH/SEGR Manager
-            </button>
-
-            {showFuelModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '600px' }}>
-                        <h1>Cummins DG CPH/SEGR Monitor</h1>
-                        <h3>WB-AirtelMSCs</h3>
-
-                        <div className="form-group">
-                            <label>Select DG Capacity:</label>
-                            <select
-                                value={selectedCapacity}
-                                onChange={(e) => {
-                                    setSelectedCapacity(e.target.value);
-                                    setDgCapacity(parseFloat(e.target.value));
-                                }}
-                                className="form-control"
-                            >
-                                <option value="">Select Capacity</option>
-                                {dgCapacityOptions.map((option, index) => (
-                                    <option key={index} value={parseFloat(option)}>{option}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <label>Enter DG Generated kW:</label>
-                            <input
-                                type="number"
-                                value={dgKw}
-                                onChange={(e) => setDgKw(e.target.value)}
-                                className="form-control"
-                                placeholder="Enter kW"
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Enter DG Hour Meter Reading:</label>
-                            <input
-                                type="number"
-                                value={dgHmr}
-                                onChange={(e) => setDgHmr(e.target.value)}
-                                className="form-control"
-                                placeholder="Enter hours"
-                                step="0.1"
-                            />
-                        </div>
-
-                        <div className="button-group">
-                            <button
-                                onClick={calculateFuel}
-                                className="btn-primary"
-                            >
-                                Calculate
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowFuelModal(false);
-                                    setCalculationResult("");
-                                }}
-                                className="btn-secondary"
-                            >
-                                Close
-                            </button>
-                        </div>
-
-                        {calculationResult && (
-                            <div className="result-container">
-                                <h4>Calculation Results:</h4>
-                                <pre>{calculationResult}</pre>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )} */}
             <form onSubmit={handleSubmit} className="daily-log-form">
 
                 <label className="form-label">Date:
@@ -625,7 +544,7 @@ const DGLogForm = ({ userData }) => {
                 </div>
 
                 <label className="form-label">Reading (kWH):
-                    <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Opening kWh - Closing kWh = Reading)</span>
+                    <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Closing kWh - Opening kWh = Reading)</span>
                     <input
                         type="number"
                         step="0.1"
@@ -667,8 +586,8 @@ const DGLogForm = ({ userData }) => {
                 </label>
 
                 {calculationResult && (
-                    <div className="result-container child-container">
-                        <h4>CPH/SEGR Calculation Results:</h4>
+                    <div className="child-container">
+                        <h2 style={{fontSize:"20px", borderBottom: "3px solid #eee"}}><strong>🔢 {siteConfig.dgCapacity}kVA</strong> Cummins DG CPH/SEGR Calculation Results:</h2>
                         <pre >{calculationResult}</pre>
                     </div>
                 )}

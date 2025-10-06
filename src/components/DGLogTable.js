@@ -14,7 +14,7 @@ const formatTime = (hours) => {
 
 const DGLogTable = ({ userData }) => {
   const { state } = useLocation();
-  const { totalkW, fuelAvalable, siteConfig} = state || {};
+  const { totalkW, fuelAvalable, siteConfig, dayFuelCon} = state || {};
   const [logs, setLogs] = useState([]);
   const [summary, setSummary] = useState({
     DG1_OnLoad: 0,
@@ -219,7 +219,7 @@ const DGLogTable = ({ userData }) => {
         "🏙️ Region": userData?.region,
         "🔄 Circle": userData?.circle,
         "📍 Site Name": siteName,
-        "⛽ Diesel Available": `${fuelAvalable.toFixed(2)} Ltrs.` || "N/A",
+        "⛽ Diesel Available": `${(fuelAvalable - (dayFuelCon || 0)).toFixed(2)} Ltrs.` || "N/A",
         "🕑 DG Run Hrs (Yesterday)": `${dgRunHrsYesterday}` || "N/A",
         "⚡ EB Run Hrs (Yesterday)": `${ebRunHrsYesterday}` || "N/A",
         "🔌 EB Status": defaultConfig.ebStatus || "N/A",

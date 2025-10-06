@@ -1177,8 +1177,8 @@ const DailyDGLog = ({ userData }) => {
         return (
           <div className="chart-container" >
             <div className="status-header">
-              <h1 style={fuelHours < 12 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
-              <h1 style={fuelHours < 12 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
+              <h1 style={fuelHours < 18 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
+              <h1 style={fuelHours < 18 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
             </div>
 
             <h1 style={{ borderTop: "3px solid #eee", color: "#fefeffff", textAlign: "center" }} className="noticeboard-header"><strong>📊Summery - {allValues.length} Days</strong>
@@ -1418,7 +1418,7 @@ const DailyDGLog = ({ userData }) => {
 
       <button
         className="segr-manage-btn warning"
-        onClick={() => Navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig } })}
+        onClick={() => Navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig, dayFuelCon } })}
       >
         🔰 DG Run Logs
       </button>
