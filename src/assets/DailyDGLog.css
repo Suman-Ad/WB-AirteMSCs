@@ -366,6 +366,27 @@
   text-transform: capitalize;
 }
 
+.status-header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.fuel-bar-container {
+  width: 100%;
+  height: 20px;
+  background: #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 3px;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+}
+
+.fuel-bar {
+  height: 100%;
+  border-radius: 10px 0 0 10px;
+  transition: width 0.5s ease;
+}
+
 
 
 /* Responsive tweaks */

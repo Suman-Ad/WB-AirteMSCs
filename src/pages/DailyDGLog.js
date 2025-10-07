@@ -985,8 +985,12 @@ const DailyDGLog = ({ userData }) => {
   return (
     <div className="daily-log-container">
       <h1 style={{ color: "white", textAlign: "center", paddingBottom: "20px" }}> {/* dashboard-header */}
-        <strong>☣️ Daily DG Log Book</strong>
+        <strong>
+          ☣️ Daily DG Log Book
+        </strong>
+
       </h1>
+
       <div className="noticeboard-header">
         <h1 className={`month ${formatMonthName(selectedMonth)}`}>
           <strong>
@@ -1173,12 +1177,30 @@ const DailyDGLog = ({ userData }) => {
         const totalDG2HrsMin = ((totalDG2OnLoadHrs + totalDG2OffLoadHrs) * 60).toFixed(0);
         const currentFuel = fmt(availableFuel - dayFuelCon + dayFuelFill);
         const fuelHours = fmt1(currentFuel / fmt1(totalOnLoadCon / totalOnLoadHrs));
+        const tankCapacity = Number(siteConfig.dgDayTankCapacity) + Number(siteConfig.dgExtrnlTankCapacity);
 
         return (
           <div className="chart-container" >
             <div className="status-header">
-              <h1 style={fuelHours < 18 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
-              <h1 style={fuelHours < 18 ? { fontSize: "25px", color: "red" } : { fontSize: "25px", color: "green" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
+              <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
+              <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
+              {/* ✅ Fuel Level Bar */}
+              <div style={{ display: "flex", marginTop: "10px", fontSize: "18px" }}>
+                🛢️<div className="fuel-bar-container" >
+                    <div
+                      className="fuel-bar"
+                      style={{
+                        width: `${(currentFuel / tankCapacity) * 100}%`,
+                        background: `linear-gradient(to right, red, yellow, green)`,
+                        color: "black",
+
+                      }}
+                    ></div>
+                  </div>
+                  <strong style={((currentFuel / tankCapacity) * 100) < 60 ? {color:"red"}:{color:"blue"}}>{((currentFuel / tankCapacity) * 100).toFixed(0)}%</strong>
+              </div>
+              <p style={{ fontSize: "10px", textAlign: "left", color: "#5c3c6ece" }}>Total Stock Capacity (Day Tank + External Tank) : <strong>{tankCapacity}Ltrs.</strong></p>
+
             </div>
 
             <h1 style={{ borderTop: "3px solid #eee", color: "#fefeffff", textAlign: "center" }} className="noticeboard-header"><strong>📊Summery - {allValues.length} Days</strong>
@@ -1416,21 +1438,22 @@ const DailyDGLog = ({ userData }) => {
         </strong>
       </div>
 
+      {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor") && (
+        <button
+          className="segr-manage-btn"
+          onClick={() => Navigate('/site-config')}
+        >
+          ⚙️
+        </button>
+      )}
+
+
       <button
         className="segr-manage-btn warning"
         onClick={() => Navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig, dayFuelCon } })}
       >
         🔰 DG Run Logs
       </button>
-
-      {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User") && (
-        <button
-          className="segr-manage-btn"
-          onClick={() => Navigate('/site-config')}
-        >
-          ⚙️ Site Settings
-        </button>
-      )}
 
       {fuelAlert === true && (userData?.role === "Super Admin" ||
         userData?.role === "Admin" ||

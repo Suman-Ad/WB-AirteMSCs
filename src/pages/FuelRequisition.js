@@ -53,6 +53,7 @@ const FuelRequisition = () => {
     const [rows, setRows] = useState([]);
     const [isLoading, setIsLoading] = useState(true);   // ✅ NEW
     const Navigate = useNavigate();
+    const [totalFuelReq, setTotalFuelReq] = useState();
 
     // 🔹 Auto calculations (like Excel)
     const calculateFields = (data) => {
@@ -221,7 +222,7 @@ const FuelRequisition = () => {
                             m.getFullYear();
 
                         try {
-                            const datesSnap = await getDocs(collection(db, "dgLogs", site, mKey, ));
+                            const datesSnap = await getDocs(collection(db, "dgLogs", site, mKey,));
                             for (const dateDoc of datesSnap.docs) {
                                 const dateKey = dateDoc.id; // 'YYYY-MM-DD'
                                 const runsSnap = await getDocs(
@@ -308,6 +309,11 @@ const FuelRequisition = () => {
                 const dg2OpeningStock = Number(latestDaily?.["DG-2 Fuel Closing"] || 0);
                 const dg2PresentStock = dg2OpeningStock - dg2LiveData.totalFuelConsumed;
 
+                const totalCapa = Number(siteConfig.dgDayTankCapacity) + Number(siteConfig.dgExtrnlTankCapacity);
+                const presentStock = dg1PresentStock + dg2PresentStock;
+
+                setTotalFuelReq((totalCapa - presentStock).toFixed(2))
+
                 // Build requisition rows (same structure you already had)
                 const requisitionRows = [
                     {
@@ -319,15 +325,15 @@ const FuelRequisition = () => {
                         "OEM Tested CPH": siteConfig.designCph?.["DG-1"],
                         "Last Filling Date": lastFilling?.Date || "N/A",
                         "Last Filling Liters": lastFilling?.DG1 || 0,
-                        "Dg Run Hour in Last Filling": lastFilling?.DG1Hrs || 0,
+                        "Dg Run Hour in Last Filling": (lastFilling?.DG1Hrs).toFixed(1) || 0.0,
                         "Last CPH Achieved": cph || 0,
-                        "DG Run Hour Reading": dg1LiveData.latestHourMeter || latestDaily?.["DG-1 Hour Closing"],
-                        "Previous DG run Hrs": lastFilling?.DG1Hrs || 0,
-                        "Present DG run Hrs": dg1LiveData.latestHourMeter || latestDaily?.["DG-1 Hour Closing"],
+                        "DG Run Hour Reading": (dg1LiveData.latestHourMeter).toFixed(1) || (latestDaily?.["DG-1 Hour Closing"]).toFixed(1),
+                        "Previous DG run Hrs": (lastFilling?.DG1Hrs).toFixed(1) || 0.0,
+                        "Present DG run Hrs": (dg1LiveData.latestHourMeter).toFixed(1) || (latestDaily?.["DG-1 Hour Closing"]).toFixed(1),
                         "Present Diesel stock": dg1PresentStock.toFixed(2),
                         "Request Date": getFormattedDate(),
-                        "Requested Liters": Math.max(0, 1090 - dg1PresentStock).toFixed(2),
-                        "Requested Amount": ((Math.max(0, 1090 - dg1PresentStock)) * fuelRate).toFixed(2),
+                        "Requested Liters": Math.max(0, (totalCapa / 2) - dg1PresentStock).toFixed(2),
+                        "Requested Amount": ((Math.max(0, (totalCapa / 2) - dg1PresentStock)) * fuelRate).toFixed(2),
                         "Approval by CIH Date": "",
                         "Vehicle No.": "",
                     },
@@ -340,15 +346,15 @@ const FuelRequisition = () => {
                         "OEM Tested CPH": siteConfig.designCph?.["DG-2"],
                         "Last Filling Date": lastFilling?.Date || "N/A",
                         "Last Filling Liters": lastFilling?.DG2 || 0,
-                        "Dg Run Hour in Last Filling": lastFilling?.DG2Hrs || 0,
+                        "Dg Run Hour in Last Filling": (lastFilling?.DG2Hrs).toFixed(1) || 0.0,
                         "Last CPH Achieved": cph || 0,
-                        "DG Run Hour Reading": dg2LiveData.latestHourMeter || latestDaily?.["DG-2 Hour Closing"],
-                        "Previous DG run Hrs": lastFilling?.DG2Hrs || 0,
-                        "Present DG run Hrs": dg2LiveData.latestHourMeter || latestDaily?.["DG-2 Hour Closing"],
+                        "DG Run Hour Reading": (dg2LiveData.latestHourMeter).toFixed(1) || (latestDaily?.["DG-2 Hour Closing"]).toFixed(1),
+                        "Previous DG run Hrs": (lastFilling?.DG2Hrs).toFixed(1) || 0.0,
+                        "Present DG run Hrs": (dg2LiveData.latestHourMeter).toFixed(1) || (latestDaily?.["DG-2 Hour Closing"]).toFixed(1),
                         "Present Diesel stock": dg2PresentStock.toFixed(2),
                         "Request Date": getFormattedDate(),
-                        "Requested Liters": Math.max(0, 1090 - dg2PresentStock).toFixed(2),
-                        "Requested Amount": ((Math.max(0, 1090 - dg2PresentStock)) * fuelRate).toFixed(2),
+                        "Requested Liters": Math.max(0, (totalCapa / 2) - dg2PresentStock).toFixed(2),
+                        "Requested Amount": ((Math.max(0, (totalCapa / 2) - dg2PresentStock)) * fuelRate).toFixed(2),
                         "Approval by CIH Date": "",
                         "Vehicle No.": "",
                     },
@@ -397,7 +403,11 @@ const FuelRequisition = () => {
             <h2>⛽ Fuel Requisition Preview</h2>
             {/* <button onClick={() => Navigate(-1)}>⬅ Back</button> */}
             <button onClick={handleDownloadExcel}>⬇️ Download Excel</button>
-
+            <div className="dashboard-header">
+                <p style={{ fontSize: "15px", fontStyle: "italic" }}>Total Fuel request:- <strong style={{ background: "#d7da21e1" }}>{(totalFuelReq)} ltrs.</strong></p>
+                ||
+                <p style={{ fontSize: "15px", fontStyle: "italic" }}>Amount:- <strong style={{ background: "#30da21ff" }}>₹{(totalFuelReq * fuelRate)} \-</strong></p>
+            </div>
             {isLoading ? (
                 <p>⏳ Loading fuel requisition...</p>
             ) : !rows.length ? (

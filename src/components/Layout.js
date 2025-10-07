@@ -27,8 +27,8 @@ const Layout = ({ userData, children }) => {
           <div style={{ flex: 1, textAlign: "center" }}>
             <header className="main-header">
               <div className="header-top">
-                <h1 className="title" title="Prepared By @Sumen Adhikari">
-                  WB - Airtel - MSC - DBMS
+                <h1 className="title" title="Prepared By @Sumen Adhikari" style={{textAlign:"left",}}>
+                  WB Airtel MSC DBMS
                 </h1>
                 <img
                   src={Vertiv}

@@ -271,7 +271,7 @@ const DGLogTable = ({ userData }) => {
       <div style={{ marginTop: "2rem" }}>
         <h1><strong>📊 Monthly Summary ({selectedDate.slice(0, 7)})</strong></h1>
         {(summary.DG1_OnLoad > 0 || summary.DG1_NoLoad > 0 || summary.DG2_OnLoad > 0 || summary.DG2_NoLoad > 0) ? (
-          <table border="1" cellPadding="8" style={{ width: "60%" }}>
+          <table border="1" cellPadding="8" style={{ width: "100%" }}>
             <thead>
               <tr>
                 <th>DG No</th>

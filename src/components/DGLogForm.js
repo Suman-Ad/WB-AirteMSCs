@@ -314,14 +314,14 @@ const DGLogForm = ({ userData }) => {
                 result += `❓ As per Load % OEM Diesel CPH: OEM Data Missing....\n`;
             }
 
-            result += `✅ Achieve CPH (Actual): ${cph.toFixed(2)} ltrs/Hour....\n`;
-            result += `⛽ Total Fuel Consumption for ${(hmr * 60).toFixed(0)} Minutes DG Running: ${totalFuelConsumption.toFixed(2)} Ltrs....\n`;
+            result += `✅ Achieve CPH (Actual): ${(cph).toFixed(2)} ltrs/Hour....\n`;
+            result += `⛽ Total Fuel Consumption for ${(hmr * 60).toFixed(0)} Minutes DG Running: ${(totalFuelConsumption).toFixed(2)} Ltrs....\n`;
             result += `⚡ SEGR Value: ${segr.toFixed(2)} kW/Ltrs....\n`;
 
             // auto-fill only if system computed the value (i.e., user didn't type it)
             if (!fuelFromForm && totalFuelConsumption > 0) {
                 setForm((prev) => {
-                    const newVal = totalFuelConsumption.toFixed(2);
+                    const newVal = (totalFuelConsumption).toFixed(2);
                     if (prev.fuelConsumption && parseFloat(prev.fuelConsumption) === parseFloat(newVal)) {
                         return prev;
                     }
