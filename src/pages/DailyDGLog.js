@@ -1407,7 +1407,7 @@ const DailyDGLog = ({ userData }) => {
               </div>
               <p style={{ fontSize: "10px", textAlign: "left", color: "#5c3c6ece" }}>Total Stock Capacity (Day Tank + External Tank) : <strong>{tankCapacity}Ltrs.</strong></p>
               <div style={{ display: "flex", marginTop: "0px", fontSize: "10px", maxWidth: "200px", height: "13px" }}>
-                🛢️<div className="fuel-bar-container" style={{ display: "flex" }}>
+                🛢️<p style={{whiteSpace: "nowrap", color: "blue"}}>DG-1:</p><div className="fuel-bar-container" style={{ display: "flex" }}>
                   <p className="fuel-bar"
                     style={{
                       width: `${(form?.["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100}%`,
@@ -1415,7 +1415,7 @@ const DailyDGLog = ({ userData }) => {
                       color: "white",
                       fontSize: "7px"
 
-                    }}>DG-1: {form?.["DG-1 Fuel Closing"]} ltrs.
+                    }}>⛽{form?.["DG-1 Fuel Closing"]} ltrs.
                   </p>
                   <p style={{ textAlign: "right", color: "black", fontSize: "4px" }}><strong>/{tankCapacity / 2}ltrs.</strong></p>
                 </div>
@@ -1424,7 +1424,7 @@ const DailyDGLog = ({ userData }) => {
 
               <div style={{ display: "flex", marginTop: "0px", fontSize: "10px", maxWidth: "200px", height: "13px" }}>
 
-                🛢️<div className="fuel-bar-container" style={{ display: "flex" }}>
+                🛢️<p style={{whiteSpace: "nowrap", color: "blue"}}>DG-2:</p><div className="fuel-bar-container" style={{ display: "flex" }}>
                   <p className="fuel-bar"
                     style={{
                       width: `${(form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100}%`,
@@ -1433,7 +1433,7 @@ const DailyDGLog = ({ userData }) => {
                       fontSize: "7px"
 
 
-                    }}>DG-2: {form?.["DG-2 Fuel Closing"]} ltrs.</p>
+                    }}>⛽{form?.["DG-2 Fuel Closing"]} ltrs.</p>
                   <p style={{ textAlign: "right", color: "black", fontSize: "4px" }}><strong>/{tankCapacity / 2}ltrs.</strong></p>
                 </div>
                 <strong style={((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%</strong>
