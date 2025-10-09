@@ -252,7 +252,11 @@ const DailyDGLog = ({ userData }) => {
       (result["EB-1 KWH Generation"] || 0) +
       (result["EB-2 KWH Generation"] || 0) +
       (result["EB-3 KWH Generation"] || 0) +
-      (result["EB-4 KWH Generation"] || 0);
+      (result["EB-4 KWH Generation"] || 0) +
+      (result["Solar-1 KWH Generation"] || 0) +
+      (result["Solar-2 KWH Generation"] || 0) +
+      (result["Solar-3 KWH Generation"] || 0) +
+      (result["Solar-4 KWH Generation"] || 0);
 
     result["Site Running kW"] =
       (result["Total Unit Consumption"] || 0) / 24;
@@ -1407,7 +1411,7 @@ const DailyDGLog = ({ userData }) => {
               </div>
               <p style={{ fontSize: "10px", textAlign: "left", color: "#5c3c6ece" }}>Total Stock Capacity (Day Tank + External Tank) : <strong>{tankCapacity}Ltrs.</strong></p>
               <div style={{ display: "flex", marginTop: "0px", fontSize: "10px", maxWidth: "200px", height: "13px" }}>
-                🛢️<p style={{whiteSpace: "nowrap", color: "blue"}}>DG-1:</p><div className="fuel-bar-container" style={{ display: "flex" }}>
+                🛢️<p style={{ whiteSpace: "nowrap", color: "blue" }}>DG-1:</p><div className="fuel-bar-container" style={{ display: "flex" }}>
                   <p className="fuel-bar"
                     style={{
                       width: `${(form?.["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100}%`,
@@ -1424,7 +1428,7 @@ const DailyDGLog = ({ userData }) => {
 
               <div style={{ display: "flex", marginTop: "0px", fontSize: "10px", maxWidth: "200px", height: "13px" }}>
 
-                🛢️<p style={{whiteSpace: "nowrap", color: "blue"}}>DG-2:</p><div className="fuel-bar-container" style={{ display: "flex" }}>
+                🛢️<p style={{ whiteSpace: "nowrap", color: "blue" }}>DG-2:</p><div className="fuel-bar-container" style={{ display: "flex" }}>
                   <p className="fuel-bar"
                     style={{
                       width: `${(form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100}%`,
@@ -1718,6 +1722,13 @@ const DailyDGLog = ({ userData }) => {
           </button>
         )}
 
+      <button onClick={() => Navigate("/monthly-data", {
+                state: { logs, siteConfig },
+      })} className="sidepanel-manage-btn" style={{background:"blue"}}>
+        📊 Preview Monthly Data
+      </button>
+
+
       <div className="controls">
 
         <button
@@ -1926,8 +1937,8 @@ const DailyDGLog = ({ userData }) => {
                       </td>
                     </>
                   )}
-      
-                  <td className="sticky-col" style={{ left: 0, zIndex: 2}}>{entry.Date}</td>
+
+                  <td className="sticky-col" style={{ left: 0, zIndex: 2 }}>{entry.Date}</td>
 
                   {/* 🔹 DG KWH Data */}
                   {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (

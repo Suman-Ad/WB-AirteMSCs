@@ -140,7 +140,44 @@ const CCMSCopy = () => {
                 </div>
 
                 <h3 style={{ paddingTop: "20px" }}>Detailed Information:</h3>
+                <div className='ccms-table-container'>
                 <table className="ccms-table detailed-table" style={{ fontSize: "13px" }}>
+                    {/* <thead>
+                        <tr>
+                            <td>Circle Name</td>
+                            <td>Site Name</td>
+                            <td>Supplier Code</td>
+                            <td>Supplier Name</td>
+                            <td>Supplier Site Name</td>
+                            <td>Site ID/ Location ID</td>
+                            <td>Invoice Date</td>
+                            <td>Invoice nos.</td>
+                            <td>Invoice Value(Actual Value)</td>
+                            <td>Billing Period Start Date</td>
+                            <td>Billing Period End Date</td>
+                            <td>Invoice Type</td>
+                            <td>DC/MSC</td>
+                            <td>TXN Number</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{siteConfig.circleName}</td>
+                            <td>{siteConfig.siteName}</td>
+                            <td>{siteConfig.supplierCode}</td>
+                            <td>{siteConfig.supplierName}</td>
+                            <td>{siteConfig.supplierSiteName}</td>
+                            <td>{siteConfig.siteId}</td>
+                            <td>{formattedDate}</td>
+                            <td>{invoiceNumber}</td>
+                            <td>{totalAmount}</td>
+                            <td>{formattedDate}</td>
+                            <td>{formattedDate}</td>
+                            <td>Diesel</td>
+                            <td>{siteConfig.department}</td>
+                            <td>{siteConfig.txnNumber}</td>
+                        </tr>
+                    </tbody> */}
                     <tbody>
                         <tr><td>Circle Name</td><td>{siteConfig.circleName}</td></tr>
                         <tr><td>Site Name</td><td>{siteConfig.siteName}</td></tr>
@@ -158,6 +195,7 @@ const CCMSCopy = () => {
                         <tr><td>TXN Number</td><td>{siteConfig.txnNumber}</td></tr>
                     </tbody>
                 </table>
+                </div>
                 <h3>Fuel Bill Attachments</h3>
                 <div className="ccms-upload">
                     <input

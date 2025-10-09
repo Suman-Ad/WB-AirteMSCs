@@ -38,6 +38,7 @@ import FuelRequisition from "./pages/FuelRequisition";
 import CCMSCopy from "./pages/CCMSCopy";
 import RackTrackerForm from "./pages/RackTrackerForm";
 import SiteConfigEditor from "./pages/SiteConfigEditor";
+import MonthlyData from "./pages/MonthlyData";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -312,14 +313,21 @@ function App() {
         <Route path="/rack-details-form" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
-              <RackTrackerForm userData={userData}/>
+              <RackTrackerForm userData={userData} />
             </Layout>
           </RoleProtectedRoute>} />
 
         <Route path="/site-config" element={
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
-              <SiteConfigEditor userData={userData}/>
+              <SiteConfigEditor userData={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+        <Route path="/monthly-data" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <MonthlyData userData={userData} />
             </Layout>
           </RoleProtectedRoute>} />
 
