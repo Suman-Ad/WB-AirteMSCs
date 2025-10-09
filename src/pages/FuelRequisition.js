@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx-js-style";
 import { db } from "../firebase";
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 
@@ -385,13 +385,59 @@ const FuelRequisition = () => {
         const headerText = `Diesel Request Format-${getFormattedDate()}`;
         const aoa = [
             [headerText],
-            [],
             cols,
             ...rows.map((r) => cols.map((c) => r[c])),
         ];
         const ws = XLSX.utils.aoa_to_sheet(aoa);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Diesel Request");
+
+        // 🔹 Get all headers
+        // const headers = Object.keys(cols[0]);
+
+        cols.forEach((header, i) => {
+            const cellRef = XLSX.utils.encode_cell({ r: 1, c: i });
+            ws[cellRef] = { t: "s", v: header };
+
+            // Choose color group
+            let color = "8298b2"; // DG Blue
+
+            // if (header.startsWith("DG-1")) color = "9D82B2";
+            // if (header.startsWith("DG-2")) color = "8298b2";
+
+            // Apply header style
+            ws[cellRef].s = {
+                fill: { fgColor: { rgb: color } },
+                font: { bold: true, color: { rgb: "000000" }, sz: 11 },
+                alignment: { horizontal: "center", vertical: "center", wrapText: true },
+                border: {
+                    top: { style: "thin", color: { rgb: "000000" } },
+                    bottom: { style: "thin", color: { rgb: "000000" } },
+                    left: { style: "thin", color: { rgb: "000000" } },
+                    right: { style: "thin", color: { rgb: "000000" } },
+                },
+            };
+        });
+
+        // 🔹 Add borders to all data cells
+        const range = XLSX.utils.decode_range(ws["!ref"]);
+        for (let R = 1; R <= range.e.r; ++R) {
+            for (let C = 0; C <= range.e.c; ++C) {
+                const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+                if (!ws[cellRef]) continue; // skip empty
+                if (!ws[cellRef].s) ws[cellRef].s = {};
+                ws[cellRef].s.border = {
+                    top: { style: "thin", color: { rgb: "000000" } },
+                    bottom: { style: "thin", color: { rgb: "000000" } },
+                    left: { style: "thin", color: { rgb: "000000" } },
+                    right: { style: "thin", color: { rgb: "000000" } },
+                };
+                ws[cellRef].s.alignment = { horizontal: "center", vertical: "center" };
+            }
+        }
+
+        // 🔹 Adjust column widths
+        ws["!cols"] = cols.map(() => ({ wch: 12}));
         XLSX.writeFile(
             wb,
             `Diesel_Request_${siteName}_${getFormattedDate()}.xlsx`

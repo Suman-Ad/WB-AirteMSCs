@@ -230,6 +230,14 @@ const SiteConfigEdit = ({ userData }) => {
             onChange={handleChange}
           />
 
+          <label>Solar Unit Count</label>
+          <input
+            type="number"
+            name="solarCount"
+            value={config.solarCount || 0}
+            onChange={handleChange}
+          />
+
           <label>DG Capacity(kVA)</label>
           <input
             type="number"

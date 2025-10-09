@@ -33,6 +33,7 @@
   overflow-Y: auto;
   max-height: 450px;
   height: inherit;
+  position: relative;
 }
 
 table {

@@ -12,8 +12,9 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import "../assets/DailyDGLog.css";
-import * as XLSX from "xlsx";
+// import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
+import XLSX from "xlsx-js-style";
 
 
 const getFormattedDate = (d = new Date()) => {
@@ -194,6 +195,13 @@ const DailyDGLog = ({ userData }) => {
       result[`EB-${i} KWH Generation`] = ebClose - ebOpen;
     }
 
+    //Solar
+    for (let i = 1; i <= siteConfig.solarCount; i++) {
+      const solarOpen = parseFloat(result[`Solar-${i} KWH Opening`]) || 0;
+      const solarClose = parseFloat(result[`Solar-${i} KWH Opening`]) || 0;
+      result[`Solar-${i} KWH Generation`] = solarClose - solarOpen;
+
+    }
     // IT Load Calculations
     const dcpsLoadAmps = parseFloat(result["DCPS Load Amps"]) || 0;
     const upsLoadKwh = parseFloat(result["UPS Load KWH"]) || 0;
@@ -217,6 +225,12 @@ const DailyDGLog = ({ userData }) => {
       (result["EB-2 KWH Generation"] || 0) +
       (result["EB-3 KWH Generation"] || 0) +
       (result["EB-4 KWH Generation"] || 0);
+
+    result["Total Solar KWH"] =
+      (result["Solar-1 KWH Generation"] || 0) +
+      (result["Solar-2 KWH Generation"] || 0) +
+      (result["Solar-3 KWH Generation"] || 0) +
+      (result["Solar-4 KWH Generation"] || 0);
 
     result["Total DG Fuel"] =
       (result["DG-1 Fuel Consumption"] || 0) +
@@ -507,7 +521,23 @@ const DailyDGLog = ({ userData }) => {
       const snapshot = await getDocs(runsCollectionRef);
       if (snapshot.empty) {
         console.log("No DG runs found for this date.");
-        return; // No runs to process
+        return setForm((prevForm) => ({
+          ...prevForm,
+          // Only update if runs were found for that DG
+          "DG-1 Fuel Closing": prevForm["DG-1 Fuel Opening"],
+          "DG-2 Fuel Closing": prevForm["DG-2 Fuel Opening"],
+          "DG-1 KWH Closing": prevForm["DG-1 KWH Opening"],
+          "DG-2 KWH Closing": prevForm["DG-2 KWH Opening"],
+
+          "DG-1 Hour Closing": prevForm["DG-1 Hour Opening"],
+
+          "DG-2 Hour Closing": prevForm["DG-2 Hour Opening"],
+
+
+          // Note: The form calculates total consumption from opening/closing fuel.
+          // This aggregated value is useful for verification or other logic.
+          // For now, we'll focus on populating meter readings.
+        }));; // No runs to process
       }
 
       const runs = snapshot.docs.map((doc) => doc.data());
@@ -579,31 +609,6 @@ const DailyDGLog = ({ userData }) => {
         // This aggregated value is useful for verification or other logic.
         // For now, we'll focus on populating meter readings.
       }));
-
-      {
-        if (runs.length <= 0)
-          setForm((prevForm) => ({
-            ...prevForm,
-            // Only update if runs were found for that DG
-            "DG-1 Fuel Closing": prevForm["DG-1 Fuel Opening"] + dg1FuelFill,
-            "DG-2 Fuel Closing": prevForm["DG-2 Fuel Opening"] + dg2FuelFill,
-            "DG-1 KWH Closing": prevForm["DG-1 KWH Opening"],
-            "DG-2 KWH Closing": prevForm["DG-2 KWH Opening"],
-            "DG-1 Off Load Fuel Consumption": offLoadDG1Con > 0 ? offLoadDG1Con : 0,
-            "DG-2 Off Load Fuel Consumption": offLoadDG2Con > 0 ? offLoadDG2Con : 0,
-            "DG-1 Off Load Hour": dg1MaxEndkWH < 1 && dg1TotalConsumption > 0 ? dg1TotalRunHours.toFixed(1) : 0,
-            "DG-2 Off Load Hour": dg2MaxEndkWH < 1 && dg2TotalConsumption > 0 ? dg2TotalRunHours.toFixed(1) : 0,
-            "DG-1 Hour Closing": dg1MaxEndMeter > 0 ? dg1MaxEndMeter : prevForm["DG-1 Hour Opening"],
-
-            "DG-2 Hour Closing": dg2MaxEndMeter > 0 ? dg2MaxEndMeter : prevForm["DG-2 Hour Opening"],
-            "DG-1 Fuel Filling": dg1FuelFill > 0 ? dg1FuelFill : (Number(prevForm["DG-1 Fuel Filling"]) || 0),
-            "DG-2 Fuel Filling": dg2FuelFill > 0 ? dg2FuelFill : (Number(prevForm["DG-2 Fuel Filling"]) || 0),
-
-            // Note: The form calculates total consumption from opening/closing fuel.
-            // This aggregated value is useful for verification or other logic.
-            // For now, we'll focus on populating meter readings.
-          }));
-      }
 
       setDayFuelCon(() => (dg1TotalConsumption + dg2TotalConsumption));
       setDayFuelFill(() => (dg1FuelFill + dg2FuelFill));
@@ -783,11 +788,18 @@ const DailyDGLog = ({ userData }) => {
 
   const eb = siteConfig.siteName === userData?.site?.toUpperCase() ? siteConfig.ebCount : 0;
   const dg = siteConfig.siteName === userData?.site?.toUpperCase() ? siteConfig.dgCount : 0;
+  const solar = siteConfig.siteName === userData?.site?.toUpperCase() ? siteConfig.solarCount : 0;
 
   // EBs
   for (let i = 1; i <= eb; i++) {
     inputFields.push(`EB-${i} KWH Opening`, `EB-${i} KWH Closing`);
   }
+
+  // Solars
+  for (let i = 1; i <= solar; i++) {
+    inputFields.push(`Solar-${i} KWH Opening`, `Solar-${i} KWH Closing`);
+  }
+
 
   // DGs
   for (let i = 1; i <= dg; i++) {
@@ -809,78 +821,180 @@ const DailyDGLog = ({ userData }) => {
   inputFields.push("UPS Load KWH");
   inputFields.push("Office kW Consumption");
 
-  // 🔹 Download logs as Excel
+  // 🔹 Download logs as Excel (Dynamic as per site config)
   const handleDownloadExcel = () => {
     if (!logs.length) {
       alert("No data available to download");
       return;
     }
 
-    // Map logs with calculations
+    // 🔹 Dynamically map logs based on site configuration
     const exportData = logs.map((entry) => {
       const calculated = calculateFields(entry);
-      return {
-        Date: calculated.Date,
-        "DG-1 KWH Opening": fmt(calculated["DG-1 KWH Opening"]),
-        "DG-1 KWH Closing": fmt(calculated["DG-1 KWH Closing"]),
-        "DG-1 Generation": fmt(calculated["DG-1 KWH Generation"]),
-        "DG-2 KWH Opening": fmt(calculated["DG-2 KWH Opening"]),
-        "DG-2 KWH Closing": fmt(calculated["DG-2 KWH Closing"]),
-        "DG-2 Generation": fmt(calculated["DG-2 KWH Generation"]),
-        "Total DG KWH Generation": fmt(calculated["Total DG KWH"]),
-        "EB-1 KWH Opening": fmt(calculated["EB-1 KWH Opening"]),
-        "EB-1 KWH Closing": fmt(calculated["EB-1 KWH Closing"]),
-        "EB-1 Generation": fmt(calculated["EB-1 KWH Generation"]),
-        "EB-2 KWH Opening": fmt(calculated["EB-2 KWH Opening"]),
-        "EB-2 KWH Closing": fmt(calculated["EB-2 KWH Closing"]),
-        "EB-2 Generation": fmt(calculated["EB-2 KWH Generation"]),
-        "Total EB KWH Generation": fmt(calculated["Total EB KWH"]),
-        "DG-1 Run Min": fmt(calculated["DG-1 Run Min"]),
-        "DG-2 Run Min": fmt(calculated["DG-2 Run Min"]),
-        "DG-1 Fuel Opening": fmt(calculated["DG-1 Fuel Opening"]),
-        "DG-1 Fuel Closing": fmt(calculated["DG-1 Fuel Closing"]),
-        "DG-1 Fuel Filling": fmt(calculated["DG-1 Fuel Filling"]),
-        "DG-1 ON Load Consumption": fmt(calculated["DG-1 ON Load Consumption"]),
-        "DG-1 OFF Load Consumption": fmt(calculated["DG-1 OFF Load Consumption"]),
-        "DG-1 Fuel Consumption": fmt(calculated["DG-1 Fuel Consumption"]),
-        "DG-1 Hour Opening": fmt1(calculated["DG-1 Hour Opening"]),
-        "DG-1 Hour Closing": fmt1(calculated["DG-1 Hour Closing"]),
-        "DG-1 ON Load Hour": fmt1(calculated["DG-1 ON Load Hour"]),
-        "DG-1 OFF Load Hour": fmt1(calculated["DG-1 OFF Load Hour"]),
-        "DG-1 Running Hrs": fmt1(calculated["DG-1 Running Hrs"]),
-        "DG-1 CPH": fmt(calculated["DG-1 CPH"]),
-        "DG-1 SEGR": fmt(calculated["DG-1 SEGR"]),
-        "DG-2 Fuel Opening": fmt(calculated["DG-2 Fuel Opening"]),
-        "DG-2 Fuel Closing": fmt(calculated["DG-2 Fuel Closing"]),
-        "DG-2 Fuel Filling": fmt(calculated["DG-2 Fuel Filling"]),
-        "DG-1 Fuel Filling": fmt(calculated["DG-1 Fuel Filling"]),
-        "DG-2 ON Load Consumption": fmt(calculated["DG-2 ON Load Consumption"]),
-        "DG-2 OFF Load Consumption": fmt(calculated["DG-2 OFF Load Consumption"]),
-        "DG-2 Fuel Consumption": fmt(calculated["DG-2 Fuel Consumption"]),
-        "DG-2 Hour Opening": fmt1(calculated["DG-2 Hour Opening"]),
-        "DG-2 Hour Closing": fmt1(calculated["DG-2 Hour Closing"]),
-        "DG-2 ON Load Hour": fmt1(calculated["DG-2 ON Load Hour"]),
-        "DG-2 OFF Load Hour": fmt1(calculated["DG-2 OFF Load Hour"]),
-        "DG-2 Running Hrs": fmt1(calculated["DG-2 Running Hrs"]),
-        "DG-2 CPH": fmt(calculated["DG-2 CPH"]),
-        "DG-2 SEGR": fmt(calculated["DG-2 SEGR"]),
-        "Total EB Unit": fmt(calculated["Total EB KWH"]),
-        "Total DG Unit": fmt(calculated["Total DG KWH"]),
-        "Total Unit Consumption(EB+DG)": fmt(calculated["Total Unit Consumption"]),
-        "Total Fuel": fmt(calculated["Total DG Fuel"]),
-        "Total DG Hours": fmt1(calculated["Total DG Hours"]),
-        "Site Running kW": fmt(calculated["Total Unit Consumption"] / 24),
-      };
+      const row = { "Location Name": siteConfig.siteName, "Site ID": siteConfig.siteId };
+
+      row[`Date.......${formatMonthName(selectedMonth)}'${formatYear(selectedMonth)}`] = calculated.Date;
+
+      // 🔸 DG Columns (Dynamic) 
+      for (let i = 1; i <= (siteConfig.dgCount || 0); i++) {
+        row[`DG-${i} KWH Opening`] = fmt(calculated[`DG-${i} KWH Opening`]);
+        row[`DG-${i} KWH Closing`] = fmt(calculated[`DG-${i} KWH Closing`]);
+        row[`DG-${i} KWH Generation`] = fmt(calculated[`DG-${i} KWH Generation`]);
+      }
+
+      // 🔸 EB Columns (Dynamic)  
+      for (let i = 1; i <= (siteConfig.ebCount || 0); i++) {
+        row[`EB-${i} KWH Opening`] = fmt(calculated[`EB-${i} KWH Opening`]);
+        row[`EB-${i} KWH Closing`] = fmt(calculated[`EB-${i} KWH Closing`]);
+        row[`EB-${i} KWH Generation`] = fmt(calculated[`EB-${i} KWH Generation`]);
+      }
+
+      // 🔸 Solar Columns (Dynamic)  
+      for (let i = 1; i <= (siteConfig.solarCount || 0); i++) {
+        row[`Solar-${i} KWH Opening`] = fmt(calculated[`Solar-${i} KWH Opening`]);
+        row[`Solar-${i} KWH Closing`] = fmt(calculated[`Solar-${i} KWH Closing`]);
+        row[`Solar-${i} KWH Generation`] = fmt(calculated[`Solar-${i} KWH Generation`]);
+      }
+
+      // 🔸 Both DG Run In Munites
+      for (let i = 1; i <= (siteConfig.dgCount || 0); i++) {
+        row[`DG-${i} Run Min`] = fmt(calculated[`DG-${i} Run Min`]);
+      }
+
+      // 🔸 DG Columns (Dynamic)
+      for (let i = 1; i <= (siteConfig.dgCount || 0); i++) {
+        row[`DG-${i} Fuel Opening`] = fmt(calculated[`DG-${i} Fuel Opening`]);
+        row[`DG-${i} Fuel Closing`] = fmt(calculated[`DG-${i} Fuel Closing`]);
+        row[`DG-${i} Fuel Filling`] = fmt(calculated[`DG-${i} Fuel Filling`]);
+        row[`DG-${i} ON Load Consumption`] = fmt(calculated[`DG-${i} ON Load Consumption`]);
+        row[`DG-${i} OFF Load Consumption`] = fmt(calculated[`DG-${i} OFF Load Consumption`]);
+        row[`DG-${i} Fuel Consumption`] = fmt(calculated[`DG-${i} Fuel Consumption`]);
+        row[`DG-${i} Hour Opening`] = fmt1(calculated[`DG-${i} Hour Opening`]);
+        row[`DG-${i} Hour Closing`] = fmt1(calculated[`DG-${i} Hour Closing`]);
+        row[`DG-${i} ON Load Hour`] = fmt1(calculated[`DG-${i} ON Load Hour`]);
+        row[`DG-${i} OFF Load Hour`] = fmt1(calculated[`DG-${i} OFF Load Hour`]);
+        row[`DG-${i} Running Hrs`] = fmt1(calculated[`DG-${i} Running Hrs`]);
+        row[`DG-${i} CPH`] = fmt(calculated[`DG-${i} CPH`]);
+        row[`DG-${i} SEGR`] = fmt(calculated[`DG-${i} SEGR`]);
+      }
+
+      // 🔸 Totals and Common Site Metrics
+      row["Total DG KWH Generation"] = fmt(calculated["Total DG KWH"]);
+      row["Total EB KWH Reading"] = fmt(calculated["Total EB KWH"]);
+      row["Total Unit Consumption (EB+DG)"] = fmt(calculated["Total Unit Consumption"]);
+      row["Total Fuel Consumption"] = fmt(calculated["Total DG Fuel"]);
+      row["Total DG Run Hours"] = fmt1(calculated["Total DG Hours"]);
+      row["Site Running kW"] = fmt(calculated["Site Running kW"] || (calculated["Total Unit Consumption"] / 24));
+      row["DCPS Load Amps"] = fmt(calculated["DCPS Load Amps"]);
+      row["UPS Load (kWh)"] = fmt(calculated["UPS Load KWH"]);
+      row["Total IT Load (kWh)"] = fmt(calculated["Total IT Load KWH"]);
+      row["Office Load (kW)"] = fmt(calculated["Office kW Consumption"]);
+      row["PUE"] = fmt(calculated["PUE"]);
+
+      return row;
     });
 
-    // Create worksheet + workbook
+    // 🔹 Create worksheet and workbook
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "DailyDGLogs");
 
-    // Export Excel file
-    XLSX.writeFile(wb, `DailyDGLogs_${siteName}_${formatMonthName(selectedMonth)}${formatYear(selectedMonth)}.xlsx`);
+    // 🔹 Get all headers
+    const headers = Object.keys(exportData[0]);
+
+    // 🔹 Style headers (different colors per section)
+    headers.forEach((header, i) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+      ws[cellRef] = { t: "s", v: header };
+
+      // Choose color group
+      let color = "FFFFFF"; // DG Blue
+      if (header.startsWith("EB")) color = "2E7D32"; // EB Green
+      if (header.startsWith("DG-1")) color = "9D82B2";
+      if (header.startsWith("DG-2")) color = "8298b2";
+      if (header.startsWith("DG-1 Run Min")) color = "FFD700"; //DG-1 Run Min
+      if (header.startsWith("DG-2 Run Min")) color = "FFD700"; //DG-1 Run Min
+      if (header.startsWith("DG-1 ON Load Consumption")) color = "F35C48"; //DG-1 Run Min
+      if (header.startsWith("DG-2 ON Load Consumption")) color = "F35C48"; //DG-1 Run Min
+      if (header.startsWith("DG-1 OFF Load Consumption")) color = "F35C48"; //DG-1 Run Min
+      if (header.startsWith("DG-2 OFF Load Consumption")) color = "F35C48"; //DG-1 Run Min
+      if (header.startsWith("DG-1 ON Load Hour")) color = "F35C48"; //DG-1 Run Min
+      if (header.startsWith("DG-2 ON Load Hour")) color = "F35C48"; //DG-1 Run Min
+      if (header.startsWith("DG-1 OFF Load Hour")) color = "F35C48"; //DG-1 Run Min
+      if (header.startsWith("DG-2 OFF Load Hour")) color = "F35C48"; //DG-1 Run Min
+      if (header.startsWith("Total") || header === "PUE" || header === "Site Running kW") color = "F57C00"; // Orange
+
+      // Apply header style
+      ws[cellRef].s = {
+        fill: { fgColor: { rgb: color } },
+        font: { bold: true, color: { rgb: "000000" }, sz: 11 },
+        alignment: { horizontal: "center", vertical: "center", wrapText: false, textRotation: 90 },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } },
+        },
+      };
+    });
+
+    // 🔹 Merge “Location Name” + “Site ID” columns (first two cells)
+    const totalRows = exportData.length;
+    // merge column A (Location Name)
+    ws["!merges"] = [
+      {
+        s: { r: 1, c: 0 }, // start row 1 (2nd row in Excel, below header)
+        e: { r: totalRows, c: 0 }, // end row (last data row), same column
+      },
+      {
+        s: { r: 1, c: 1 }, // start Site ID column
+        e: { r: totalRows, c: 1 },
+      },
+    ];
+
+    // optional: center merged text
+    ["A2", "B2"].forEach((ref) => {
+      if (ws[ref]) {
+        ws[ref].s = {
+          ...ws[ref].s,
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+            textRotation: 90,   // ✅ rotate text upwards
+            wrapText: true
+          },
+          font: { bold: true, color: { rgb: "000000" }, sz: 11 },
+        };
+      }
+    });
+
+    // 🔹 Add borders to all data cells
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    for (let R = 1; R <= range.e.r; ++R) {
+      for (let C = 0; C <= range.e.c; ++C) {
+        const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellRef]) continue; // skip empty
+        if (!ws[cellRef].s) ws[cellRef].s = {};
+        ws[cellRef].s.border = {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } },
+        };
+        ws[cellRef].s.alignment = { horizontal: "center", vertical: "center" };
+      }
+    }
+
+    // 🔹 Adjust column widths
+    ws["!cols"] = headers.map(() => ({ wch: 12 }));
+
+    // 🔹 Export Excel file
+    XLSX.writeFile(
+      wb,
+      `DailyDGLogs_${siteName}_${formatMonthName(selectedMonth)}${formatYear(selectedMonth)}.xlsx`
+    );
   };
+
 
   // 🔹 Download logs as Excel
   const handleDownloadExcelOnlyDGLogs = () => {
@@ -893,6 +1007,8 @@ const DailyDGLog = ({ userData }) => {
     const exportData = logs.map((entry) => {
       const calculated = calculateFields(entry);
       return {
+        "Location Name": siteConfig.siteName,
+        "Site ID": siteConfig.siteId,
         Date: calculated.Date,
         "DG-1 KWH Opening": fmt(calculated["DG-1 KWH Opening"]),
         "DG-1 KWH Closing": fmt(calculated["DG-1 KWH Closing"]),
@@ -906,7 +1022,85 @@ const DailyDGLog = ({ userData }) => {
     // Create worksheet + workbook
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "DailyDGLogs");
+    XLSX.utils.book_append_sheet(wb, ws, "DGLogs");
+
+    // 🔹 Get all headers
+    const headers = Object.keys(exportData[0]);
+
+    headers.forEach((header, i) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+      ws[cellRef] = { t: "s", v: header };
+
+      // Choose color group
+      let color = "FFFFFF"; // DG Blue
+
+      if (header.startsWith("DG-1")) color = "9D82B2";
+      if (header.startsWith("DG-2")) color = "8298b2";
+
+      // Apply header style
+      ws[cellRef].s = {
+        fill: { fgColor: { rgb: color } },
+        font: { bold: true, color: { rgb: "000000" }, sz: 11 },
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } },
+        },
+      };
+    });
+
+    // 🔹 Merge “Location Name” + “Site ID” columns (first two cells)
+    const totalRows = exportData.length;
+    // merge column A (Location Name)
+    ws["!merges"] = [
+      {
+        s: { r: 1, c: 0 }, // start row 1 (2nd row in Excel, below header)
+        e: { r: totalRows, c: 0 }, // end row (last data row), same column
+      },
+      {
+        s: { r: 1, c: 1 }, // start Site ID column
+        e: { r: totalRows, c: 1 },
+      },
+    ];
+
+    // optional: center merged text
+    ["A2", "B2"].forEach((ref) => {
+      if (ws[ref]) {
+        ws[ref].s = {
+          ...ws[ref].s,
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+            textRotation: 90,   // ✅ rotate text upwards
+            wrapText: true
+          },
+          font: { bold: true, color: { rgb: "000000" }, sz: 11 },
+        };
+      }
+    });
+
+
+    // 🔹 Add borders to all data cells
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    for (let R = 1; R <= range.e.r; ++R) {
+      for (let C = 0; C <= range.e.c; ++C) {
+        const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellRef]) continue; // skip empty
+        if (!ws[cellRef].s) ws[cellRef].s = {};
+        ws[cellRef].s.border = {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } },
+        };
+        ws[cellRef].s.alignment = { horizontal: "center", vertical: "center" };
+      }
+    }
+
+    // 🔹 Adjust column widths
+    ws["!cols"] = headers.map(() => ({ wch: 12 }));
 
     // Export Excel file
     XLSX.writeFile(wb, `${siteName}_DGLogs_${formatMonthName(selectedMonth)}${formatYear(selectedMonth)}.xlsx`);
@@ -980,6 +1174,18 @@ const DailyDGLog = ({ userData }) => {
         fuelRate: fuelRate,
       },
     });
+  };
+
+  const getHeaderStyle = (header) => {
+    if (header.startsWith("EB")) return { backgroundColor: "#294985", color: "#fff" };
+    if (header.includes("Run Min")) return { backgroundColor: "#FFD700", color: "#000" };
+    if (header.includes("ON Load")) return { backgroundColor: "#2E7D32", color: "#fff" };
+    if (header.includes("OFF Load")) return { backgroundColor: "#F35C48", color: "#fff" };
+    if (header.startsWith("DG-1")) return { backgroundColor: "#8655ac", color: "#fff" };
+    if (header.startsWith("DG-2")) return { backgroundColor: "#5e87b9", color: "#fff" };
+    if (header.startsWith("DG-2")) return { backgroundColor: "#5e87b9", color: "#fff" };
+    if (header.startsWith("Total") || header === "PUE" || header === "Site Running kW") return { backgroundColor: "#F57C00", color: "#fff" };
+    return { backgroundColor: "#FFFFFF", color: "#000" };
   };
 
   return (
@@ -1187,20 +1393,51 @@ const DailyDGLog = ({ userData }) => {
               {/* ✅ Fuel Level Bar */}
               <div style={{ display: "flex", marginTop: "10px", fontSize: "18px" }}>
                 🛢️<div className="fuel-bar-container" >
-                    <div
-                      className="fuel-bar"
-                      style={{
-                        width: `${(currentFuel / tankCapacity) * 100}%`,
-                        background: `linear-gradient(to right, red, yellow, green)`,
-                        color: "black",
+                  <div
+                    className="fuel-bar"
+                    style={{
+                      width: `${(currentFuel / tankCapacity) * 100}%`,
+                      background: `linear-gradient(to right, red, yellow, green)`,
+                      color: "black",
 
-                      }}
-                    ></div>
-                  </div>
-                  <strong style={((currentFuel / tankCapacity) * 100) < 60 ? {color:"red"}:{color:"blue"}}>{((currentFuel / tankCapacity) * 100).toFixed(0)}%</strong>
+                    }}
+                  ></div>
+                </div>
+                <strong style={((currentFuel / tankCapacity) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((currentFuel / tankCapacity) * 100).toFixed(0)}%</strong>
               </div>
               <p style={{ fontSize: "10px", textAlign: "left", color: "#5c3c6ece" }}>Total Stock Capacity (Day Tank + External Tank) : <strong>{tankCapacity}Ltrs.</strong></p>
+              <div style={{ display: "flex", marginTop: "0px", fontSize: "10px", maxWidth: "200px", height: "13px" }}>
+                🛢️<div className="fuel-bar-container" style={{ display: "flex" }}>
+                  <p className="fuel-bar"
+                    style={{
+                      width: `${(form?.["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100}%`,
+                      background: `linear-gradient(to right, blue)`,
+                      color: "white",
+                      fontSize: "7px"
 
+                    }}>DG-1: {form?.["DG-1 Fuel Closing"]} ltrs.
+                  </p>
+                  <p style={{ textAlign: "right", color: "black", fontSize: "4px" }}><strong>/{tankCapacity / 2}ltrs.</strong></p>
+                </div>
+                <strong style={((form?.["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((form?.["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%</strong>
+              </div>
+
+              <div style={{ display: "flex", marginTop: "0px", fontSize: "10px", maxWidth: "200px", height: "13px" }}>
+
+                🛢️<div className="fuel-bar-container" style={{ display: "flex" }}>
+                  <p className="fuel-bar"
+                    style={{
+                      width: `${(form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100}%`,
+                      background: `linear-gradient(to right, blue)`,
+                      color: "white",
+                      fontSize: "7px"
+
+
+                    }}>DG-2: {form?.["DG-2 Fuel Closing"]} ltrs.</p>
+                  <p style={{ textAlign: "right", color: "black", fontSize: "4px" }}><strong>/{tankCapacity / 2}ltrs.</strong></p>
+                </div>
+                <strong style={((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%</strong>
+              </div>
             </div>
 
             <h1 style={{ borderTop: "3px solid #eee", color: "#fefeffff", textAlign: "center" }} className="noticeboard-header"><strong>📊Summery - {allValues.length} Days</strong>
@@ -1571,156 +1808,219 @@ const DailyDGLog = ({ userData }) => {
       </div>
 
       <div className="table-container">
-        <table border="1" cellPadding="8" style={{ width: "100%", whiteSpace: "nowrap" }}>
+        <table border="1" cellPadding="8" style={{ width: "100%" }}>
           <thead>
             <tr>
-              <th>Date</th>
-              <th>DG-1 OPENING KWH</th>
-              <th>DG-1 CLOSING KWH</th>
-              <th>DG-1 KWH Generation</th>
-              <th>DG-2 OPENING KWH</th>
-              <th>DG-2 CLOSING KWH</th>
-              <th>DG-2 KWH Generation</th>
-              <th>EB-1 OPENING KWH</th>
-              <th>EB-1 CLOSING KWH</th>
-              <th>EB-1 KWH Consumption</th>
-              <th>EB-2 OPENING KWH</th>
-              <th>EB-2 CLOSING KWH</th>
-              <th>EB-2 KWH Consumption</th>
-              <th>DG-1 Run Min</th>
-              <th>DG-2 Run Min</th>
-              <th>DG-1 Fuel Opening</th>
-              <th>DG-1 Fuel Closing</th>
-              <th>DG-1 Fuel Filling</th>
-              <th>DG-1 ON Load Consumption</th>
-              <th>DG-1 OFF Load Consumption</th>
-              <th>DG-1 Fuel Consumption</th>
-              <th>DG-1 Hour Opening</th>
-              <th>DG-1 Hour Closing</th>
-              <th>DG-1 ON Load Hour</th>
-              <th>DG-1 OFF Load Hour</th>
-              <th>DG-1 Running Hrs</th>
-              <th>DG-1 CPH</th>
-              <th>DG-1 SEGR</th>
-              <th>DG-2 Fuel Opening</th>
-              <th>DG-2 Fuel Closing</th>
-              <th>DG-2 Fuel Filling</th>
-              <th>DG-2 ON Load Consumption</th>
-              <th>DG-2 OFF Load Consumption</th>
-              <th>DG-2 Fuel Consumption</th>
-              <th>DG-2 Hour Opening</th>
-              <th>DG-2 Hour Closing</th>
-              <th>DG-2 ON Load Hour</th>
-              <th>DG-2 OFF Load Hour</th>
-              <th>DG-2 Running Hrs</th>
-              <th>DG-2 CPH</th>
-              <th>DG-2 SEGR</th>
-              <th>Total DG KWH Generation</th>
-              <th>Total EB KWH Reading</th>
-              <th>Total KWH Consumption(EB+DG)</th>
-              <th>Total Fuel Consumption</th>
-              <th>Total DG Run Hours</th>
-              <th>Site Running kW</th>
-              <th>DCPS Load Amps</th>
-              <th>UPS Load(kWh)</th>
-              <th>Total IT Load(kWh)</th>
-              <th>Office Load(kW)</th>
-              <th>PUE</th>
-              {userData?.role === "Super Admin" || userData?.role === "Admin" && (
+              <th style={getHeaderStyle(`Location Name`)}>Location Name</th>
+              <th style={getHeaderStyle(`Site ID`)}>Site ID</th>
+              <th className="sticky-col"
+                style={{
+                  ...getHeaderStyle(`Date`),
+                  left: 0,
+                  zIndex: 3,
+                }}>Date {formatMonthName(selectedMonth)}-{formatYear(selectedMonth)}</th>
+
+              {/* 🔹 DG Columns (Dynamic based on siteConfig.dgCount) */}
+              {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (
+                <React.Fragment key={`dg-head-${i + 1}`}>
+                  <th style={getHeaderStyle(`DG-${i + 1} OPENING KWH`)}>{`DG-${i + 1} OPENING KWH`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} CLOSING KWH`)}>{`DG-${i + 1} CLOSING KWH`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} KWH Generation`)}>{`DG-${i + 1} KWH Generation`}</th>
+                </React.Fragment>
+              ))}
+
+              {/* 🔹 EB Columns (Dynamic based on siteConfig.ebCount) */}
+              {[...Array(Number(siteConfig.ebCount) || 0)].map((_, i) => (
+                <React.Fragment key={`eb-head-${i + 1}`}>
+                  <th style={getHeaderStyle(`EB-${i + 1} OPENING KWH`)}>{`EB-${i + 1} OPENING KWH`}</th>
+                  <th style={getHeaderStyle(`EB-${i + 1} CLOSING KWH`)}>{`EB-${i + 1} CLOSING KWH`}</th>
+                  <th style={getHeaderStyle(`EB-${i + 1} KWH Generation`)}>{`EB-${i + 1} KWH Generation`}</th>
+                </React.Fragment>
+              ))}
+
+              {/* 🔹 Solar Columns (Dynamic based on siteConfig.ebCount) */}
+              {[...Array(Number(siteConfig.solarCount) || 0)].map((_, i) => (
+                <React.Fragment key={`solar-head-${i + 1}`}>
+                  <th style={getHeaderStyle(`Solar-${i + 1} OPENING KWH`)}>{`Solar-${i + 1} OPENING KWH`}</th>
+                  <th style={getHeaderStyle(`Solar-${i + 1} CLOSING KWH`)}>{`Solar-${i + 1} CLOSING KWH`}</th>
+                  <th style={getHeaderStyle(`Solar-${i + 1} KWH Generation`)}>{`Solar-${i + 1} KWH Generation`}</th>
+                </React.Fragment>
+              ))}
+
+              {/* 🔹 Common fields (DG fuel, hours, etc.) */}
+              {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (
+                <React.Fragment key={`dg-fuel-${i + 1}`}>
+                  <th style={getHeaderStyle(`DG-${i + 1} Run Min`)}>{`DG-${i + 1} Run Min`}</th>
+                </React.Fragment>
+              ))}
+
+              {/* 🔹 Common fields (DG fuel, hours, etc.) */}
+              {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (
+                <React.Fragment key={`dg-fuel-${i + 1}`}>
+                  {/* <th style={getHeaderStyle(`DG-${i + 1} Run Min`)}>{`DG-${i + 1} Run Min`}</th> */}
+                  <th style={getHeaderStyle(`DG-${i + 1} Fuel Opening`)}>{`DG-${i + 1} Fuel Opening`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} Fuel Closing`)}>{`DG-${i + 1} Fuel Closing`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} Fuel Filling`)}>{`DG-${i + 1} Fuel Filling`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} ON Load Consumption`)}>{`DG-${i + 1} ON Load Consumption`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} OFF Load Consumption`)}>{`DG-${i + 1} OFF Load Consumption`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} Fuel Consumption`)}>{`DG-${i + 1} Fuel Consumption`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} Hour Opening`)}>{`DG-${i + 1} Hour Opening`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} Hour Closing`)}>{`DG-${i + 1} Hour Closing`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} ON Load Hour`)}>{`DG-${i + 1} ON Load Hour`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} OFF Load Hour`)}>{`DG-${i + 1} OFF Load Hour`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} Running Hrs`)}>{`DG-${i + 1} Running Hrs`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} CPH`)}>{`DG-${i + 1} CPH`}</th>
+                  <th style={getHeaderStyle(`DG-${i + 1} SEGR`)}>{`DG-${i + 1} SEGR`}</th>
+                </React.Fragment>
+              ))}
+
+              {/* 🔹 Totals */}
+              <th style={getHeaderStyle(`Total DG KWH Generation`)}>Total DG KWH Generation</th>
+              <th style={getHeaderStyle(`Total EB KWH Reading`)}>Total EB KWH Reading</th>
+              <th style={getHeaderStyle(`Total KWH Consumption (EB+DG)`)}>Total KWH Consumption (EB+DG)</th>
+              <th style={getHeaderStyle(`Total Fuel Consumption`)}>Total Fuel Consumption</th>
+              <th style={getHeaderStyle(`Total DG Run Hours`)}>Total DG Run Hours</th>
+              <th style={getHeaderStyle(`Site Running kW`)}>Site Running kW</th>
+              <th style={getHeaderStyle(`DCPS Load Amps`)}>DCPS Load Amps</th>
+              <th style={getHeaderStyle(`UPS Load (kWh)`)}>UPS Load (kWh)</th>
+              <th style={getHeaderStyle(`Total IT Load (kWh)`)}>Total IT Load (kWh)</th>
+              <th style={getHeaderStyle(`Office Load (kW)`)}>Office Load (kW)</th>
+              <th style={getHeaderStyle(`PUE`)}>PUE</th>
+              {(userData?.role === "Super Admin" || userData?.role === "Admin") && (
                 <th>Actions</th>
               )}
+              <th>ℹ️</th>
             </tr>
           </thead>
-          <tbody>
-            {logs.map((entry) => {
-              const calculated = calculateFields(entry);
 
-              // thresholds
+          <tbody>
+            {logs.map((entry, rowIndex) => {
+              const calculated = calculateFields(entry);
+              // Only show site name and ID for the first row
+              const showSiteInfo = rowIndex === 0;
+
+              // Row color conditions
               let rowClass = "";
-              if ((calculated["DG-1 CPH"] > 100 && calculated["DG-1 CPH"] < 80) || (calculated["DG-2 CPH"] > 100 && calculated["DG-2 CPH"] < 80)) {
-                rowClass = "row-inefficient"; // 🔴 inefficient
-              } else if ((calculated["DG-1 SEGR"] < 3 && calculated["DG-1 SEGR"] > 0) || (calculated["DG-2 SEGR"] < 3 && calculated["DG-2 SEGR"] > 0)) {
-                rowClass = "row-warning"; // ⚠️ investigate
-              } else if ((calculated["DG-1 OFF Load Consumption"] > 0 && calculated["DG-1 OFF Load Hour"] > 0) || (calculated["DG-2 OFF Load Consumption"] > 0 && calculated["DG-2 OFF Load Hour"] > 0)) {
-                rowClass = "row-offload"; // ⚠️ investigate
+              for (let i = 1; i <= (siteConfig.dgCount || 0); i++) {
+                const cph = calculated[`DG-${i} CPH`];
+                const segr = calculated[`DG-${i} SEGR`];
+                const offLoadCon = calculated[`DG-${i} OFF Load Consumption`];
+                const offLoadHr = calculated[`DG-${i} OFF Load Hour`];
+
+                if (cph > 100 || cph < 80) rowClass = "row-inefficient";
+                else if (segr < 3 && segr > 0) rowClass = "row-warning";
+                else if (offLoadCon > 0 && offLoadHr > 0) rowClass = "row-offload";
               }
+
               return (
-                <tr key={entry.id} className={rowClass} onClick={() => { setForm(entry); setShowEditModal(true) }}>
-                  <td>{entry.Date}</td>
-                  <td>{fmt(calculated["DG-1 KWH Opening"])}</td>
-                  <td>{fmt(calculated["DG-1 KWH Closing"])}</td>
-                  <td>{fmt(calculated["DG-1 KWH Generation"])}</td>
-                  <td>{fmt(calculated["DG-2 KWH Opening"])}</td>
-                  <td>{fmt(calculated["DG-2 KWH Closing"])}</td>
-                  <td>{fmt(calculated["DG-2 KWH Generation"])}</td>
-                  <td>{fmt(calculated["EB-1 KWH Opening"])}</td>
-                  <td>{fmt(calculated["EB-1 KWH Closing"])}</td>
-                  <td>{fmt(calculated["EB-1 KWH Generation"])}</td>
-                  <td>{fmt(calculated["EB-2 KWH Opening"])}</td>
-                  <td>{fmt(calculated["EB-2 KWH Closing"])}</td>
-                  <td>{fmt(calculated["EB-2 KWH Generation"])}</td>
-                  <td>{fmt(calculated["DG-1 Run Min"])}</td>
-                  <td>{fmt(calculated["DG-2 Run Min"])}</td>
-                  <td>{fmt(calculated["DG-1 Fuel Opening"])}</td>
-                  <td>{fmt(calculated["DG-1 Fuel Closing"])}</td>
-                  <td>{fmt(calculated["DG-1 Fuel Filling"] || 0)}</td>
-                  <td>{fmt(calculated["DG-1 ON Load Consumption"] || 0)}</td>
-                  <td>{fmt(calculated["DG-1 OFF Load Consumption"] || 0)}</td>
-                  <td>{fmt(calculated["DG-1 Fuel Consumption"])}</td>
-                  <td>{fmt1(calculated["DG-1 Hour Opening"])}</td>
-                  <td>{fmt1(calculated["DG-1 Hour Closing"])}</td>
-                  <td>{fmt1(calculated["DG-1 ON Load Hour"])}</td>
-                  <td>{fmt1(calculated["DG-1 OFF Load Hour"])}</td>
-                  <td>{fmt1(calculated["DG-1 Running Hrs"])}</td>
-                  <td>{fmt(calculated["DG-1 CPH"])}</td>
-                  <td>{fmt(calculated["DG-1 SEGR"])}</td>
-                  <td>{fmt(calculated["DG-2 Fuel Opening"])}</td>
-                  <td>{fmt(calculated["DG-2 Fuel Closing"])}</td>
-                  <td>{fmt(calculated["DG-2 Fuel Filling"] || 0)}</td>
-                  <td>{fmt(calculated["DG-2 ON Load Consumption"] || 0)}</td>
-                  <td>{fmt(calculated["DG-2 OFF Load Consumption"] || 0)}</td>
-                  <td>{fmt(calculated["DG-2 Fuel Consumption"])}</td>
-                  <td>{fmt1(calculated["DG-2 Hour Opening"])}</td>
-                  <td>{fmt1(calculated["DG-2 Hour Closing"])}</td>
-                  <td>{fmt1(calculated["DG-2 ON Load Hour"])}</td>
-                  <td>{fmt1(calculated["DG-2 OFF Load Hour"])}</td>
-                  <td>{fmt1(calculated["DG-2 Running Hrs"])}</td>
-                  <td>{fmt(calculated["DG-2 CPH"])}</td>
-                  <td>{fmt(calculated["DG-2 SEGR"])}</td>
+                <tr key={entry.id} className={rowClass} onClick={() => { setForm(entry); setShowEditModal(true); }}>
+
+                  {/* Merge Site Name and ID for all rows */}
+                  {showSiteInfo && (
+                    <>
+                      <td rowSpan={logs.length} style={{ textAlign: "center", verticalAlign: "middle", fontWeight: "bold", transform: "rotate(270deg)" }}>
+                        {siteConfig.siteName}
+                      </td>
+                      <td rowSpan={logs.length} style={{ textAlign: "center", verticalAlign: "middle", fontWeight: "bold", transform: "rotate(270deg)", whiteSpace: "nowrap" }}>
+                        {siteConfig.siteId}
+                      </td>
+                    </>
+                  )}
+      
+                  <td className="sticky-col" style={{ left: 0, zIndex: 2}}>{entry.Date}</td>
+
+                  {/* 🔹 DG KWH Data */}
+                  {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (
+                    <React.Fragment key={`dg-kwh-${i + 1}`}>
+                      <td>{fmt(calculated[`DG-${i + 1} KWH Opening`])}</td>
+                      <td>{fmt(calculated[`DG-${i + 1} KWH Closing`])}</td>
+                      <td>{fmt(calculated[`DG-${i + 1} KWH Generation`])}</td>
+                    </React.Fragment>
+                  ))}
+
+                  {/* 🔹 EB Data */}
+                  {[...Array(Number(siteConfig.ebCount) || 0)].map((_, i) => (
+                    <React.Fragment key={`eb-kwh-${i + 1}`}>
+                      <td>{fmt(calculated[`EB-${i + 1} KWH Opening`])}</td>
+                      <td>{fmt(calculated[`EB-${i + 1} KWH Closing`])}</td>
+                      <td>{fmt(calculated[`EB-${i + 1} KWH Generation`])}</td>
+                    </React.Fragment>
+                  ))}
+
+                  {/* 🔹 Solar Data */}
+                  {[...Array(Number(siteConfig.solarCount) || 0)].map((_, i) => (
+                    <React.Fragment key={`solar-kwh-${i + 1}`}>
+                      <td>{fmt(calculated[`Solar-${i + 1} KWH Opening`])}</td>
+                      <td>{fmt(calculated[`Solar-${i + 1} KWH Closing`])}</td>
+                      <td>{fmt(calculated[`Solar-${i + 1} KWH Generation`])}</td>
+                    </React.Fragment>
+                  ))}
+
+                  {/* 🔹 DG Details (Fuel / Hours) */}
+                  {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (
+                    <React.Fragment key={`dg-detail-${i + 1}`}>
+                      <td>{fmt(calculated[`DG-${i + 1} Run Min`])}</td>
+                    </React.Fragment>
+                  ))}
+
+                  {/* 🔹 DG Details (Fuel / Hours) */}
+                  {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (
+                    <React.Fragment key={`dg-detail-${i + 1}`}>
+                      {/* <td>{fmt(calculated[`DG-${i + 1} Run Min`])}</td> */}
+                      <td>{fmt(calculated[`DG-${i + 1} Fuel Opening`])}</td>
+                      <td>{fmt(calculated[`DG-${i + 1} Fuel Closing`])}</td>
+                      <td>{fmt(calculated[`DG-${i + 1} Fuel Filling`])}</td>
+                      <td>{fmt(calculated[`DG-${i + 1} ON Load Consumption`])}</td>
+                      <td>{fmt(calculated[`DG-${i + 1} OFF Load Consumption`])}</td>
+                      <td>{fmt(calculated[`DG-${i + 1} Fuel Consumption`])}</td>
+                      <td>{fmt1(calculated[`DG-${i + 1} Hour Opening`])}</td>
+                      <td>{fmt1(calculated[`DG-${i + 1} Hour Closing`])}</td>
+                      <td>{fmt1(calculated[`DG-${i + 1} ON Load Hour`])}</td>
+                      <td>{fmt1(calculated[`DG-${i + 1} OFF Load Hour`])}</td>
+                      <td>{fmt1(calculated[`DG-${i + 1} Running Hrs`])}</td>
+                      <td>{fmt(calculated[`DG-${i + 1} CPH`])}</td>
+                      <td>{fmt(calculated[`DG-${i + 1} SEGR`])}</td>
+                    </React.Fragment>
+                  ))}
+
+                  {/* 🔹 Totals */}
                   <td>{fmt(calculated["Total DG KWH"])}</td>
                   <td>{fmt(calculated["Total EB KWH"])}</td>
                   <td>{fmt(calculated["Total Unit Consumption"])}</td>
                   <td>{fmt(calculated["Total DG Fuel"])}</td>
                   <td>{fmt1(calculated["Total DG Hours"])}</td>
-                  <td>{fmt(calculated["Total Unit Consumption"] / 24)}</td>
+                  <td>{fmt(calculated["Site Running kW"])}</td>
                   <td>{fmt(calculated["DCPS Load Amps"])}</td>
                   <td>{fmt(calculated["UPS Load KWH"])}</td>
                   <td>{fmt(calculated["Total IT Load KWH"])}</td>
                   <td>{fmt(calculated["Office kW Consumption"])}</td>
                   <td>{fmt(calculated["PUE"])}</td>
 
-                  <td>
-                    {/* 👇 Add the button here */}
-                    {calculated['Total Fuel Filling'] > 0 && (
+                  {/* 🔹 Actions */}
+                  {(userData?.role === "Super Admin" || userData?.role === "Admin") && (
+                    <td>
+                      {calculated["Total Fuel Filling"] > 0 && (
+                        <button
+                          className="download-btn"
+                          onClick={(e) => { e.stopPropagation(); handleGenerateCCMS(entry); }}
+                        >
+                          CCMS
+                        </button>
+                      )}
                       <button
-                        className="download-btn"
-                        onClick={() => handleGenerateCCMS(entry)}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
                       >
-                        CCMS
-                      </button>
-                    )}
-                    {userData?.role === "Super Admin" || userData?.role === "Admin" && (
-                      <button onClick={() => handleDelete(entry.id)}>
                         Delete
                       </button>
-                    )}
-                  </td>
+                    </td>
+                  )}
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
     </div>
   );
 };
