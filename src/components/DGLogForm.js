@@ -29,6 +29,8 @@ const DGLogForm = ({ userData }) => {
         fuelFill: "",
     });
 
+    const navigate = useNavigate();
+
     // const handleChange = (e) => {
     //     setForm({ ...form, [e.target.name]: e.target.value });
     // };
@@ -121,6 +123,7 @@ const DGLogForm = ({ userData }) => {
                 kWHReading: "",
                 fuelFill: "",
             });
+            navigate("/dg-log-table")
         } catch (err) {
             console.error("Error saving log: ", err);
         }
