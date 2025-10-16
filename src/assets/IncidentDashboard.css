@@ -31,7 +31,7 @@
 .table-container {
   overflow-x: auto;
   overflow-Y: auto;
-  max-height: 450px;
+  max-height: 400px;
   height: inherit;
   position: relative;
 }
@@ -87,7 +87,7 @@ th {
   .table-container {
     overflow-x: auto;
     overflow-Y: auto;
-    max-height: 510px;
+    max-height: 450px;
     height: inherit;
   }
 }

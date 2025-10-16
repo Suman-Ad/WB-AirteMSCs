@@ -68,6 +68,9 @@ const Layout = ({ userData, children }) => {
         <div className="main-content" onClick={() => setCollapsed(true)}>
           {children}
         </div>
+        <div style={{ background:"#55b3ab"}}>
+          <h4>© 2025 Crash Algo. All rights reserved.</h4>
+        </div>
       </div>
     </div>
   );
