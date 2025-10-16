@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import "../assets/Layout.css";
-import Vertiv from "../assets/vertiv.png";
+import Vertiv from "../assets/Vertiv1.png";
 import { FaArrowLeft } from "react-icons/fa"; // Using react-icons for the arrow
 
 const Layout = ({ userData, children }) => {

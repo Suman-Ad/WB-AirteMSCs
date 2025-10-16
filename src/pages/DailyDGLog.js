@@ -2015,7 +2015,7 @@ const DailyDGLog = ({ userData }) => {
                   <td>{fmt(calculated["PUE"])}</td>
 
                   {/* 🔹 Actions */}
-                  {(userData?.role === "Super Admin" || userData?.role === "Admin") && (
+                  {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor" ) && (
                     <td>
                       {calculated["Total Fuel Filling"] > 0 && (
                         <button

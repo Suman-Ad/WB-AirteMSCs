@@ -39,6 +39,8 @@ import CCMSCopy from "./pages/CCMSCopy";
 import RackTrackerForm from "./pages/RackTrackerForm";
 import SiteConfigEditor from "./pages/SiteConfigEditor";
 import MonthlyData from "./pages/MonthlyData";
+import AutoLogout from "./config/AutoLogout";
+
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -62,6 +64,7 @@ function App() {
 
   return (
     <Router>
+      <AutoLogout timeoutMs={2 * 60 * 60 * 1000} />
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login setUserData={setUserData} />} />
@@ -334,6 +337,8 @@ function App() {
         {/* Fallback */}
         <Route path="/" element={<Navigate to="/daily-dg-log-editor" />} />
         <Route path="*" element={<Navigate to="/daily-dg-log-editor" />} />
+
+        {/* {DashboardWrapper()} */}
       </Routes>
     </Router>
   );
