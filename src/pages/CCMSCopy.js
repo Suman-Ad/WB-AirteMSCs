@@ -38,6 +38,17 @@ const CCMSCopy = () => {
         setBillImages((prev) => prev.filter(img => img.id !== id));
     };
 
+    // ✅ new: handle document download
+    const handleDownloadDoc = () => {
+        const element = document.createElement("a");
+        const content = document.documentElement.outerHTML;
+        const file = new Blob([content], { type: 'text/html' });
+        element.href = URL.createObjectURL(file);
+        element.download = `CCMS_${siteConfig?.siteName || "Document"}.doc`;
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+    };
 
 
     const totalAmount = (logData['Total Fuel Filling'] * fuelRate).toFixed(2);
@@ -60,6 +71,9 @@ const CCMSCopy = () => {
             <div className="ccms-controls">
                 <button onClick={() => navigate(-1)}>⬅️ Back</button>
                 <button onClick={() => window.print()}>🖨️ Print / Save as PDF</button>
+                {/* <button onClick={downloadCCMSDoc} className="btn btn-primary">
+  📄 Download as DOC
+</button> */}
             </div>
 
             <div className="ccms-sheet">

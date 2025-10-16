@@ -1,14 +1,20 @@
 /* ===== GENERAL RESET & BASE STYLES ===== */
 :root {
-  --sidebar-bg: linear-gradient(135deg, #4b502cf3 0%, #4cafa7 100%);        /* Dark Gray */
-  --sidebar-hover: #374151;     /* Hover BG */
+  --sidebar-bg: linear-gradient(135deg, #4b502cf3 0%, #4cafa7 100%);
+  /* Dark Gray */
+  --sidebar-hover: #374151;
+  /* Hover BG */
   --sidebar-text: #f3f3f3;
   --sidebar-text-muted: #9ca3af;
-  --navbar-bg: linear-gradient(135deg, #4cafa7 0%, #4b502c 100%);         /* White */
+  --navbar-bg: linear-gradient(135deg, #4cafa7 0%, #4b502c 100%);
+  /* White */
   --navbar-border: #fcc309;
-  --content-bg: #0d0d0e1c;        /* Light Gray */
-  --primary-color: #3b82f6;     /* Blue-500 */
-  --danger-color: #ef4444;      /* Red-500 */
+  --content-bg: #0d0d0e1c;
+  /* Light Gray */
+  --primary-color: #3b82f6;
+  /* Blue-500 */
+  --danger-color: #ef4444;
+  /* Red-500 */
   --transition-speed: 0.3s;
 }
 
@@ -29,31 +35,29 @@ body {
 .layout {
   display: flex;
   min-height: 100vh;
-  overflow: hidden;
+  /* overflow-x: auto; */
   /* background: linear-gradient(135deg, #4cafa7 0%, #4b502c 100%); */
 }
 
 /* Back button styles */
 .back-button {
-  /* position: absolute; */
-  left: 20px;
-  top: 20px;
-  padding: 8px 16px;
-  background-color: #f0f0f0;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
+  margin-left: auto;           /* Push to the right */
   display: flex;
   align-items: center;
   gap: 8px;
+  background-color: var(--navbar-bg);
+  border: 1px solid #dddddd17;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
   font-size: 14px;
-  margin-top: 110px;
-  /* position: fixed; */
+  transition: background-color 0.3s ease;
 }
 
 .back-button:hover {
-  background-color: #e0e0e0;
+  background-color: #dddddd17;
 }
+
 
 /* ===== SIDEBAR (ENHANCED) ===== */
 .sidebar {
@@ -76,6 +80,7 @@ body {
   width: 0px;
   padding: 20px 0px;
 }
+
 
 /* Sidebar Header */
 .sidebar-header {
@@ -120,7 +125,7 @@ body {
   transition: all var(--transition-speed);
 }
 
-.sidebar a:hover, 
+.sidebar a:hover,
 .sidebar a.active {
   background: var(--sidebar-hover);
   color: white;
@@ -156,24 +161,32 @@ body {
 /* ===== MAIN CONTENT AREA ===== */
 .main {
   flex: 1;
+  top: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  transition: margin-left 0.3s ease;
+  /* overflow-x: auto; */
+  max-width: 100%;
 }
 
-/* Navbar */  
+.main-content {
+  flex: 1;
+  overflow: auto;
+}
+
+/* Navbar */
 .navbar {
   /* height: 100px; */
+  position: sticky;
+  top: 0;
+  z-index: 100;
   background: var(--navbar-bg);
   display: flex;
-  align-items: center;
+  /* align-items: center; */
   padding: 0 25px;
   border-bottom: 1px solid var(--navbar-border);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  position: fixed;
   width: 100%;
-  z-index: 1000;
-
 }
 
 .navbar h1 {
@@ -190,7 +203,6 @@ body {
   padding: 10px;
   overflow-y: auto;
   background: var(--content-bg);
-  /* margin-top: 120px; */
 }
 
 .contentback {
@@ -198,86 +210,9 @@ body {
   padding: 5px;
   overflow-y: auto;
   background: var(--content-bg);
-  margin-top: 125px;
 }
 
-/* ===== MOBILE RESPONSIVENESS ===== */
-@media (max-width: 768px) {
-  .layout {
-    flex-direction: column;
-  }
 
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100%;
-    transform: translateX(-100%);
-    z-index: 1000;
-    overflow-y: auto;
-  }
-
-  .sidebar.expanded {
-    transform: translateX(0);
-    width: 300px;
-  }
-
-  .sidebar.collapsed {
-    width: 0;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  .main {
-    margin-left: 0;
-    padding-top: 70px; /* Offset for navbar */
-  }
-
-  .navbar {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 1000;
-  }
-
-  .navbar h1 {
-    font-size: 1.1rem;
-    padding: 0 20px;
-  }
-
-  /* Mobile Menu Toggle (Add this button to your Navbar in Layout.js) */
-  .mobile-menu-toggle {
-    display: block;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: #4b5563;
-    cursor: pointer;
-    margin-right: 15px;
-  }
-
-  /* Back button styles */
-  .back-button {
-    /* position: absolute; */
-    left: 20px;
-    top: 20px;
-    padding: 8px 16px;
-    background-color: #f0f0f0;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    margin-top: 5px;
-  }
-
-  .back-button:hover {
-    background-color: #e0e0e0;
-
-  }
-}
 
 /* ===== ANIMATIONS & MICRO-INTERACTIONS ===== */
 .sidebar a {
@@ -286,11 +221,6 @@ body {
 
 .sidebar.expanded a {
   animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateX(-10px); }
-  to { opacity: 1; transform: translateX(0); }
 }
 
 /* For the header */
@@ -307,10 +237,8 @@ body {
   vertical-align: middle;
 }
 
-
-
 .header-top {
-  position: relative;
+  position: sticky;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -321,8 +249,10 @@ body {
   display: inline-block;
   padding: 8px 16px;
   /* background-color:#4b502c; */
-  color: rgb(255, 255, 255) !important; /* Force white text regardless of link state */
-  text-decoration: none !important; /* Remove underline */
+  color: rgb(255, 255, 255) !important;
+  /* Force white text regardless of link state */
+  text-decoration: none !important;
+  /* Remove underline */
   border-radius: 4px;
   font-weight: 500;
   font-size: 14px;
@@ -344,7 +274,7 @@ body {
 /* Active/focus state */
 .sidepanel-manage-btn:active,
 .sidepanel-manage-btn:focus {
-  background-color:#3c7397;
+  background-color: #3c7397;
   transform: translateY(0);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   outline: none;
@@ -396,9 +326,11 @@ body {
 .profile-manage-btn {
   display: inline-block;
   padding: 8px 16px;
-  background-color:#4b502c00;
-  color: rgb(255, 255, 255) !important; /* Force white text regardless of link state */
-  text-decoration: none !important; /* Remove underline */
+  background-color: #4b502c00;
+  color: rgb(255, 255, 255) !important;
+  /* Force white text regardless of link state */
+  text-decoration: none !important;
+  /* Remove underline */
   border-radius: 4px;
   font-weight: 500;
   font-size: 14px;
@@ -420,7 +352,7 @@ body {
 /* Active/focus state */
 .profile-manage-btn:active,
 .profile-manage-btn:focus {
-  background-color:#3c7397;
+  background-color: #3c7397;
   transform: translateY(0);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   outline: none;
@@ -473,9 +405,11 @@ body {
 .logout-manage-btn {
   display: inline-block;
   padding: 8px 16px;
-  background-color:#6b6b6a00;
-  color: rgb(255, 255, 255) !important; /* Force white text regardless of link state */
-  text-decoration: none !important; /* Remove underline */
+  background-color: #6b6b6a00;
+  color: rgb(255, 255, 255) !important;
+  /* Force white text regardless of link state */
+  text-decoration: none !important;
+  /* Remove underline */
   border-radius: 4px;
   font-weight: 500;
   font-size: 14px;
@@ -497,7 +431,7 @@ body {
 /* Active/focus state */
 .logout-manage-btn:active,
 .logout-manage-btn:focus {
-  background-color:#3c7397;
+  background-color: #3c7397;
   transform: translateY(0);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   outline: none;
@@ -550,9 +484,11 @@ body {
 .segr-manage-btn {
   display: inline-block;
   padding: 8px 16px;
-  background-color:#4b502c;
-  color: rgb(255, 255, 255) !important; /* Force white text regardless of link state */
-  text-decoration: none !important; /* Remove underline */
+  background-color: #4b502c;
+  color: rgb(255, 255, 255) !important;
+  /* Force white text regardless of link state */
+  text-decoration: none !important;
+  /* Remove underline */
   border-radius: 4px;
   font-weight: 500;
   font-size: 14px;
@@ -574,7 +510,7 @@ body {
 /* Active/focus state */
 .segr-manage-btn:active,
 .segr-manage-btn:focus {
-  background-color:#3c7397;
+  background-color: #3c7397;
   transform: translateY(0);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   outline: none;
@@ -627,8 +563,94 @@ body {
 /* ===== FORM ELEMENTS ===== */
 .child-container {
   /* margin: 20px 0 40px; */
-  background: linear-gradient(135deg, #55b3ab 0%, #a3a360 100% );
+  background: linear-gradient(135deg, #55b3ab 0%, #a3a360 100%);
   padding: 15px 20px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+
+/* ===== MOBILE RESPONSIVENESS ===== */
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    transform: translateX(-100%);
+    z-index: 1000;
+    overflow-y: auto;
+  }
+
+  .sidebar.expanded {
+    transform: translateX(0);
+    width: 300px;
+  }
+
+  .sidebar.collapsed {
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .main-content {
+    flex: 1;
+    overflow: auto;
+  }
+
+  .navbar {
+    position: sticky;
+    background: var(--navbar-bg);
+    top: 0;
+    width: 100%;
+    z-index: 100;
+  }
+
+  .navbar h1 {
+    font-size: 1.1rem;
+    padding: 0 20px;
+  }
+
+  /* Mobile Menu Toggle (Add this button to your Navbar in Layout.js) */
+  .mobile-menu-toggle {
+    /* display: block; */
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #4b5563;
+    cursor: pointer;
+    margin-right: 15px;
+  }
+
+  /* Back button styles */
+  .back-button {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .back-button span {
+    display: none; /* hide “Back” text, keep icon only */
+  }
 }

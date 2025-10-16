@@ -1723,8 +1723,8 @@ const DailyDGLog = ({ userData }) => {
         )}
 
       <button onClick={() => Navigate("/monthly-data", {
-                state: { logs, siteConfig },
-      })} className="sidepanel-manage-btn" style={{background:"blue"}}>
+        state: { logs, siteConfig },
+      })} className="sidepanel-manage-btn" style={{ background: "blue" }}>
         📊 Preview Monthly Data
       </button>
 
@@ -1740,76 +1740,83 @@ const DailyDGLog = ({ userData }) => {
       </div>
 
       {showEditModal && (
-        <form className="daily-log-form" onSubmit={handleSubmit}>
-          <label>
-            Date:
-            <input
-              type="date"
-              name="Date"
-              value={form.Date || ""}
-              onChange={(e) => handleDateChange(e.target.value)}
-              required
-            />
-          </label>
+        <div className="modal-overlay" style={{ overflowY: "auto", width: "inherit" }}>
+          <div className="modal-content">
+            <h1 onClick={(() => setShowEditModal(false))} className="pm-manage-btn" style={{position: "sticky", top:"0", zIndex:"2"}}>X</h1>
+            <p>View & Edit</p>
 
-          {inputFields.map((field) => {
-            // list of always disabled fields
-            const alwaysDisabled = [
-              "DG-1 Fuel Opening",
-              "DG-2 Fuel Opening",
-              "DG-1 KWH Opening",
-              "DG-2 KWH Opening",
-              "EB-1 KWH Opening",
-              "EB-2 KWH Opening",
-              "DG-1 Hour Opening",
-              "DG-2 Hour Opening",
-              "DG-1 Off Load Hour",
-              "DG-2 Off Load Hour",
-              "DG-1 Off Load Fuel Consumption",
-              "DG-2 Off Load Fuel Consumption",
-              "DG-1 Fuel Filling",
-              "DG-2 Fuel Filling",
-            ];
-
-            // list of closing fields (special condition)
-            const closingFields = [
-              "DG-1 KWH Closing",
-              "DG-2 KWH Closing",
-              "DG-1 Hour Closing",
-              "DG-2 Hour Closing",
-              "DG-1 Fuel Closing",
-              "DG-2 Fuel Closing",
-            ];
-
-            let disabled = false;
-
-            if (alwaysDisabled.includes(field)) {
-              disabled = true;
-            } else if (closingFields.includes(field)) {
-              // disable if it already has a value
-              disabled = !!form[field];
-            } else if (alwaysDisabled.includes(field) && closingFields.includes(field)) {
-              disabled = !!logs.length
-            }
-
-            return (
-              <label key={field}>
-                {field}:
+            <form className="daily-log-form" onSubmit={handleSubmit}>
+              <label>
+                Date:
                 <input
-                  type="number"
-                  step="any"
-                  name={field}
-                  value={form[field] > 0 ? form[field] : 0}
-                  onChange={handleChange}
-                  className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
-                  disabled={disabled}
+                  type="date"
+                  name="Date"
+                  value={form.Date || ""}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  required
                 />
               </label>
-            );
-          })}
 
-          <button className="submit-btn" type="submit">Save Entry</button>
-        </form>
+              {inputFields.map((field) => {
+                // list of always disabled fields
+                const alwaysDisabled = [
+                  "DG-1 Fuel Opening",
+                  "DG-2 Fuel Opening",
+                  "DG-1 KWH Opening",
+                  "DG-2 KWH Opening",
+                  "EB-1 KWH Opening",
+                  "EB-2 KWH Opening",
+                  "DG-1 Hour Opening",
+                  "DG-2 Hour Opening",
+                  "DG-1 Off Load Hour",
+                  "DG-2 Off Load Hour",
+                  "DG-1 Off Load Fuel Consumption",
+                  "DG-2 Off Load Fuel Consumption",
+                  "DG-1 Fuel Filling",
+                  "DG-2 Fuel Filling",
+                ];
+
+                // list of closing fields (special condition)
+                const closingFields = [
+                  "DG-1 KWH Closing",
+                  "DG-2 KWH Closing",
+                  "DG-1 Hour Closing",
+                  "DG-2 Hour Closing",
+                  "DG-1 Fuel Closing",
+                  "DG-2 Fuel Closing",
+                ];
+
+                let disabled = false;
+
+                if (alwaysDisabled.includes(field)) {
+                  disabled = true;
+                } else if (closingFields.includes(field)) {
+                  // disable if it already has a value
+                  disabled = !!form[field];
+                } else if (alwaysDisabled.includes(field) && closingFields.includes(field)) {
+                  disabled = !!logs.length
+                }
+
+                return (
+                  <label key={field}>
+                    {field}:
+                    <input
+                      type="number"
+                      step="any"
+                      name={field}
+                      value={form[field] > 0 ? form[field] : 0}
+                      onChange={handleChange}
+                      className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
+                      disabled={disabled}
+                    />
+                  </label>
+                );
+              })}
+
+              <button className="submit-btn" type="submit">Save Entry</button>
+            </form>
+          </div>
+        </div>
       )}
 
       <div>
@@ -1938,7 +1945,7 @@ const DailyDGLog = ({ userData }) => {
                     </>
                   )}
 
-                  <td className="sticky-col" style={{ left: 0, zIndex: 2 }}>{entry.Date}</td>
+                  <td className="sticky-col" style={{ left: 0, zIndex: 2, background:"linear-gradient(to right, lightgray)" }}>{entry.Date}</td>
 
                   {/* 🔹 DG KWH Data */}
                   {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (
