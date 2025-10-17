@@ -421,7 +421,7 @@ export default function MonthlyData({ userData }) {
                 <button onClick={handleDownloadExcel} style={{ marginLeft: 8 }}>
                     Download Excel (Styled)
                 </button>
-                <button onClick={() => navigate(-1)} style={{ marginLeft: 8 }}>← Back</button>
+                {/* <button onClick={() => navigate(-1)} style={{ marginLeft: 8 }}>← Back</button> */}
             </div>
 
             {previewGrid?.summaryRows && (

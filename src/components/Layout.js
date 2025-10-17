@@ -9,9 +9,9 @@ import { FaArrowLeft } from "react-icons/fa"; // Using react-icons for the arrow
 const Layout = ({ userData, children }) => {
   const [collapsed, setCollapsed] = useState(true);
   const navigate = useNavigate();
-  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1000);
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 512);
   useEffect(() => {
-    const handleResize = () => setIsLargeScreen(window.innerWidth > 1000);
+    const handleResize = () => setIsLargeScreen(window.innerWidth > 512);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
