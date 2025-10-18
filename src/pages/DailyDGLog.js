@@ -782,9 +782,23 @@ const DailyDGLog = ({ userData }) => {
 
   // 🔹 Delete log
   const handleDelete = async (id) => {
-    const monthKey = selectedMonth;
-    await deleteDoc(doc(db, "dailyDGLogs", siteName, monthKey, id));
-    fetchLogs();
+    // Show a confirmation dialog and wait for user's choice
+    const isConfirmed = window.confirm("Are you sure you want to delete this log? This action cannot be undone.");
+
+    // Proceed only if the user clicks "OK" (confirm)
+    if (isConfirmed) {
+      try {
+        const monthKey = selectedMonth;
+        await deleteDoc(doc(db, "dailyDGLogs", siteName, monthKey, id));
+        fetchLogs(); // Refresh the logs list after successful deletion
+        console.log("Log successfully deleted!"); // Optional: for feedback
+      } catch (error) {
+        console.error("Error deleting log:", error); // Optional: for error handling
+      }
+    } else {
+      // Optional: Log cancellation to the console if the user clicks "Cancel"
+      console.log("Deletion cancelled by user.");
+    }
   };
 
   // 🔹 Input fields
@@ -1742,7 +1756,7 @@ const DailyDGLog = ({ userData }) => {
       {showEditModal && (
         <div className="modal-overlay" style={{ overflowY: "auto", width: "inherit" }}>
           <div className="modal-content">
-            <h1 onClick={(() => setShowEditModal(false))} className="pm-manage-btn" style={{position: "sticky", top:"0", zIndex:"2"}}>X</h1>
+            <h1 onClick={(() => setShowEditModal(false))} className="pm-manage-btn" style={{ position: "sticky", top: "0", zIndex: "2" }}>X</h1>
             <p>View & Edit</p>
 
             <form className="daily-log-form" onSubmit={handleSubmit}>
@@ -1824,7 +1838,6 @@ const DailyDGLog = ({ userData }) => {
         <button className="download-btn" style={{ padding: "5px", margin: "5px" }} onClick={handleDownloadExcel}>⬇️ Full Excel</button>
         <button className="download-btn" style={{ padding: "5px", margin: "5px" }} onClick={handleDownloadExcelOnlyDGLogs}>⬇️ DG Log Excel</button>
       </div>
-
       <div className="table-container">
         <table border="1" cellPadding="8" style={{ width: "100%" }}>
           <thead>
@@ -1904,7 +1917,7 @@ const DailyDGLog = ({ userData }) => {
               <th style={getHeaderStyle(`Total IT Load (kWh)`)}>Total IT Load (kWh)</th>
               <th style={getHeaderStyle(`Office Load (kW)`)}>Office Load (kW)</th>
               <th style={getHeaderStyle(`PUE`)}>PUE</th>
-              {(userData?.role === "Super Admin" || userData?.role === "Admin") && (
+              {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM") && (
                 <th>Actions</th>
               )}
               <th>ℹ️</th>
@@ -1945,7 +1958,7 @@ const DailyDGLog = ({ userData }) => {
                     </>
                   )}
 
-                  <td className="sticky-col" style={{ left: 0, zIndex: 2, background:"linear-gradient(to right, lightgray)" }}>{entry.Date}</td>
+                  <td className="sticky-col" style={{ left: 0, zIndex: 2, background: "linear-gradient(to right, lightgray)" }}>{entry.Date}</td>
 
                   {/* 🔹 DG KWH Data */}
                   {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (
@@ -2015,20 +2028,21 @@ const DailyDGLog = ({ userData }) => {
                   <td>{fmt(calculated["PUE"])}</td>
 
                   {/* 🔹 Actions */}
-                  {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor" ) && (
-                    <td>
+                  {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM") && (
+                    <td style={{whiteSpace:"nowrap"}}>
                       {calculated["Total Fuel Filling"] > 0 && (
                         <button
-                          className="download-btn"
                           onClick={(e) => { e.stopPropagation(); handleGenerateCCMS(entry); }}
+                          style={{background: "#3f5c4193", color:"#49e60bb9"}}
                         >
                           CCMS
                         </button>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
+                        style={{background: "#5c3f3f93", color:"#e60b0bef"}}
                       >
-                        Delete
+                        X
                       </button>
                     </td>
                   )}
@@ -2038,7 +2052,7 @@ const DailyDGLog = ({ userData }) => {
           </tbody>
         </table>
       </div>
-
+      <p style={{fontSize:"12px"}}><strong>ℹ️</strong> <strong>🔴</strong>Check <strong>"CPH"</strong> | <strong>⚠️</strong>Check <strong>"SEGR"</strong> | <strong style={{background:"red"}}>"ROW"</strong> For Test Run</p>
     </div>
   );
 };

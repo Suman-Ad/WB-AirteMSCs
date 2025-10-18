@@ -40,6 +40,7 @@ import RackTrackerForm from "./pages/RackTrackerForm";
 import SiteConfigEditor from "./pages/SiteConfigEditor";
 import MonthlyData from "./pages/MonthlyData";
 import AutoLogout from "./config/AutoLogout";
+import AcDcRackDashboard from "./pages/AcDcRackDashboard";
 
 
 function App() {
@@ -310,6 +311,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <CCMSCopy />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+        <Route path="/acdc-rack-details" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <AcDcRackDashboard userData={userData} />
             </Layout>
           </RoleProtectedRoute>} />
 

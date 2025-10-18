@@ -58,13 +58,15 @@ function computeCapacityAnalysis(form) {
   };
 }
 
-const RackTrackerForm = ({userData}) => {
+const RackTrackerForm = ({ userData }) => {
   const [formData, setFormData] = useState({
     // General
     slNo: "",
     circle: userData?.circle,
     siteName: userData?.site,
     equipmentLocation: "",
+    equipmentRackNo: "",
+    rackName: "",
 
     // Source A
     smpsRatingA: "",
@@ -125,6 +127,7 @@ const RackTrackerForm = ({userData}) => {
   });
 
   const [status, setStatus] = useState("");
+  const floorList = ["Ground Floor", "1st Floor", "2nd Floor", "3rd Floor", "4th Floor", "5th Floor"] 
 
   // ✅ Update input + auto-calc
   const handleChange = (e) => {
@@ -144,8 +147,9 @@ const RackTrackerForm = ({userData}) => {
     try {
       // 🔹 Site-wise storage: rackTracker/{siteName}
       const siteKey = formData.siteName.trim().toUpperCase().replace(/\s+/g, "_");
+      const rackKey = `${formData.equipmentRackNo || "A0"}-${formData.rackName || "UNKNOWN RACK"}`.replace(/\s+/g, "_");
       await setDoc(
-        doc(db, "acDcRackDetails", siteKey),
+        doc(db, "acDcRackDetails", siteKey, "racks", rackKey),
         {
           ...formData,
           updatedAt: new Date().toISOString(),
@@ -170,168 +174,246 @@ const RackTrackerForm = ({userData}) => {
           <label>Site Name:</label>
           <input type="text" name="siteName" value={formData.siteName} onChange={handleChange} />
         </div>
+        <div className="form-section">
+          <label>Equipment Location:</label>
+          <select name="equipmentLocation" onChange={handleChange}>
+            
+            <option value="" > Select Location </option>
+            {floorList.map(q => (
+              <option key={q} value={q}>{q}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+              <label>Rack/Equipment Number</label>
+              <input type="text" name="equipmentRackNo" value={formData.equipmentRackNo} onChange={handleChange} />
+              <label>Rack Name/Equipment Name</label>
+              <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} />
+            </div>
 
         {/* Source A */}
-      <h3>Source A</h3>
-      <div className="form-section">
-        <label>SMPS Rating (A):</label>
-        <input type="number" name="smpsRatingA" value={formData.smpsRatingA} onChange={handleChange} />
+        <h3>Source A</h3>
+        <div className="form-section">
+          <div className="child-container" style={{ display: "normal" }}>
+            <div style={{borderColor:"black", borderWidth:"5px"}}>
+              <label>SMPS Rating (Amps):</label>
+              <input type="number" name="smpsRatingA" value={formData.smpsRatingA} onChange={handleChange} />
+            </div>
+            <div>
+              <label>SMPS Name:</label>
+              <input type="text" name="smpsNameA" value={formData.smpsNameA} onChange={handleChange} />
+            </div>
+            <div>
+              <label>A Source DB Number:</label>
+              <input type="text" name="dbNumberA" value={formData.dbNumberA} onChange={handleChange} />
+            </div>
+            <div>
+              <label>Incomer DB Rating (Amps):</label>
+              <input type="number" name="incomerRatingA" value={formData.incomerRatingA} onChange={handleChange} />
+            </div>
+            <div>
+              <label>Incomer DB Cable Size (Sq mm):</label>
+              <input type="number" name="cableSizeA" value={formData.cableSizeA} onChange={handleChange} />
+            </div>
 
-        <label>SMPS Name:</label>
-        <input type="text" name="smpsNameA" value={formData.smpsNameA} onChange={handleChange} />
+            <div>
+              <label>PP - DB Cable Runs (Nos):</label>
+              <input type="number" name="cableRunA" value={formData.cableRunA} onChange={handleChange} />
+            </div>
 
-        <label>DB Number:</label>
-        <input type="text" name="dbNumberA" value={formData.dbNumberA} onChange={handleChange} />
+            <div>
+              <label>Equipment Rack No</label>
+              <input type="text" name="equipmentRackNoA" value={formData.equipmentRackNo} onChange={handleChange} />
+            </div>
 
-        <label>Incomer DB Rating (Amps):</label>
-        <input type="number" name="incomerRatingA" value={formData.incomerRatingA} onChange={handleChange} />
+            <div>
+              <label>Rack Name/Equipment Name</label>
+              <input type="text" name="rackNameA" value={formData.rackName} onChange={handleChange} />
+            </div>
 
-        <label>Cable Size (Sq mm):</label>
-        <input type="number" name="cableSizeA" value={formData.cableSizeA} onChange={handleChange} />
+            <div>
+              <label>Rack Incoming Power Cable Size (Sq mm)</label>
+              <input type="text" name="rackIncomingCableSizeA" value={formData.rackIncomingCableSizeA} onChange={handleChange} />
+            </div>
 
-        <label>Cable Runs (Nos):</label>
-        <input type="number" name="cableRunA" value={formData.cableRunA} onChange={handleChange} />
+            <div>
+              <label>DB - RackDB Cable Run (Nos)</label>
+              <input type="text" name="rackCableRunA" value={formData.rackCableRunA} onChange={handleChange} />
+            </div>
 
-        <lebel>Equipment Rack No (A)</lebel>
-        <input type="text" name="equipmentRackNoA" value={formData.equipmentRackNoA} onChange={handleChange} />
+            <div>
+              <label>DB MCB Number:</label>
+              <input type="text" name="dbMcbNumberA" value={formData.dbMcbNumberA} onChange={handleChange} />
+            </div>
 
-        <lebel>Rack Name (A)</lebel>
-        <input type="text" name="rackNameA" value={formData.rackNameA} onChange={handleChange} />
+            <div>
+              <label>DB MCB Rating (Amps):</label>
+              <input type="number" name="dbMcbRatingA" value={formData.dbMcbRatingA} onChange={handleChange} />
+            </div>
 
-        <lebel>Rack Incoming Cable Size (A)</lebel>
-        <input type="text" name="rackIncomingCableSizeA" value={formData.rackIncomingCableSizeA} onChange={handleChange} />
+            <div>
+              <label>Temp On Mcb/Fuse (°C)</label>
+              <input type="text" name="tempOnMcbA" value={formData.tempOnMcbA} onChange={handleChange} />
+            </div>
 
-        <lebel>Rack Cable Run (A)</lebel>
-        <input type="text" name="rackCableRunA" value={formData.rackCableRunA} onChange={handleChange} />
+            <div>
+              <label>A Source Running Load (Amps):</label>
+              <input type="number" name="runningLoadA" value={formData.runningLoadA} onChange={handleChange} />
+            </div>
 
-        <label>DB MCB Number:</label>
-        <input type="text" name="dbMcbNumberA" value={formData.dbMcbNumberA} onChange={handleChange} />
+            <div>
+              <label>Cable Capacity (Amps)</label>
+              <input type="number" name="cableCapacityA" value={formData.cableCapacityA} onChange={handleChange} />
+            </div>
 
-        <label>DB MCB Rating (A):</label>
-        <input type="number" name="dbMcbRatingA" value={formData.dbMcbRatingA} onChange={handleChange} />
+            <div>
+              <label><strong>%</strong> Load Cable</label>
+              <input type="number" name="pctLoadCableA" value={formData.pctLoadCableA} onChange={handleChange} />
+            </div>
 
-        <lebel>Temp On Mcb (A)</lebel>
-        <input type="text" name="tempOnMcbA" value={formData.tempOnMcbA} onChange={handleChange} />
+            <div>
+              <label><strong>%</strong> PCT Load MCB (Amps)</label>
+              <input type="number" name="pctLoadMcbA" value={formData.pctLoadMcbA} onChange={handleChange} />
+            </div>
 
-        <label>Running Load (A):</label>
-        <input type="number" name="runningLoadA" value={formData.runningLoadA} onChange={handleChange} />
+            <div>
+              <label>Rack End No of DB / Power Strip (nos.)</label>
+              <input type="number" name="rackEndNoDbA" value={formData.rackEndNoDbA} onChange={handleChange} />
+            </div>
 
-        <lebel>Cable Capacity (A)</lebel>
-        <input type="number" name="cableCapacityA" value={formData.cableCapacityA} onChange={handleChange} />
+            <div>
+              <label>Rack End DCDB / Power Strip Name</label>
+              <input type="number" name="rackEndDcdbNameA" value={formData.rackEndDcdbNameA} onChange={handleChange} />
+            </div>
 
-        <lebel>PCT Load Cable (A)</lebel>
-        <input type="number" name="pctLoadCableA" value={formData.pctLoadCableA} onChange={handleChange} />
+            <div>
+              <label>Rack End DB Running Load (Amps)</label>
+              <input type="number" name="rackEndRunningLoadA" value={formData.rackEndRunningLoadA} onChange={handleChange} />
+            </div>
 
-        <lebel>PCT Load MCB (A)</lebel>
-        <input type="number" name="pctLoadMcbA" value={formData.pctLoadMcbA} onChange={handleChange} />
+            <div>
+              <label>Rack End DB MCB Rating (Amps)</label>
+              <input type="number" name="rackEndMcbRatingA" value={formData.rackEndMcbRatingA} onChange={handleChange} />
+            </div>
 
-        <lebel>Rack End No DB (A)</lebel>
-        <input type="number" name="rackEndNoDbA" value={formData.rackEndNoDbA} onChange={handleChange} />
-
-        <lebel>Rack End DCDB Name (A)</lebel>
-        <input type="number" name="rackEndDcdbNameA" value={formData.rackEndDcdbNameA} onChange={handleChange} />
-
-        <lebel>Rack End Running Load (A)</lebel>
-        <input type="number" name="rackEndRunningLoadA" value={formData.rackEndRunningLoadA} onChange={handleChange} />
-
-        <lebel>Rack End MCB Rating (A)</lebel>
-        <input type="number" name="rackEndMcbRatingA" value={formData.rackEndMcbRatingA} onChange={handleChange} />
-
-        <lebel>Rack End PCT Load MCB (A)</lebel>
-        <input type="number" name="rackEndPctLoadMcbA" value={formData.rackEndPctLoadMcbA} onChange={handleChange} />
-
-      </div>
+            <div>
+              <label>Rack End <strong>%</strong> Load MCB</label>
+              <input type="number" name="rackEndPctLoadMcbA" value={formData.rackEndPctLoadMcbA} onChange={handleChange} />
+            </div>
+          </div>
+        </div>
 
         {/* Source B */}
-      <h3>Source B</h3>
-      <div className="form-section">
-        <label>SMPS Rating (B):</label>
-        <input type="number" name="smpsRatingB" value={formData.smpsRatingB} onChange={handleChange} />
-
-        <label>SMPS Name:</label>
-        <input type="text" name="smpsNameB" value={formData.smpsNameB} onChange={handleChange} />
-
-        <label>DB Number:</label>
-        <input type="text" name="dbNumberB" value={formData.dbNumberB} onChange={handleChange} />
-
-        <label>Incomer DB Rating (Amps):</label>
-        <input type="number" name="incomerRatingB" value={formData.incomerRatingB} onChange={handleChange} />
-
-        <label>Cable Size (Sq mm):</label>
-        <input type="number" name="cableSizeB" value={formData.cableSizeB} onChange={handleChange} />
-
-        <label>Cable Runs (Nos):</label>
-        <input type="number" name="cableRunB" value={formData.cableRunB} onChange={handleChange} />
-
-        <lebel>Equipment Rack No (A)</lebel>
-        <input type="text" name="equipmentRackNoB" value={formData.equipmentRackNoB} onChange={handleChange} />
-
-        <lebel>Rack Name (B)</lebel>
-        <input type="text" name="rackNameB" value={formData.rackNameB} onChange={handleChange} />
-
-        <lebel>Rack Incoming Cable Size (B)</lebel>
-        <input type="text" name="rackIncomingCableSizeB" value={formData.rackIncomingCableSizeB} onChange={handleChange} />
-
-        <lebel>Rack Cable Run (B)</lebel>
-        <input type="text" name="rackCableRunB" value={formData.rackCableRunB} onChange={handleChange} />
-
-        <label>DB MCB Number:</label>
-        <input type="text" name="dbMcbNumberB" value={formData.dbMcbNumberB} onChange={handleChange} />
-
-        <label>DB MCB Rating (B):</label>
-        <input type="number" name="dbMcbRatingB" value={formData.dbMcbRatingB} onChange={handleChange} />
-
-        <lebel>Temp On Mcb (B)</lebel>
-        <input type="text" name="tempOnMcbB" value={formData.tempOnMcbB} onChange={handleChange} />
-
-        <label>Running Load (B):</label>
-        <input type="number" name="runningLoadB" value={formData.runningLoadB} onChange={handleChange} />
-
-        <lebel>Cable Capacity (B)</lebel>
-        <input type="number" name="cableCapacityB" value={formData.cableCapacityB} onChange={handleChange} />
-
-        <lebel>PCT Load Cable (B)</lebel>
-        <input type="number" name="pctLoadCableB" value={formData.pctLoadCableB} onChange={handleChange} />
-
-        <lebel>PCT Load MCB (B)</lebel>
-        <input type="number" name="pctLoadMcbB" value={formData.pctLoadMcbB} onChange={handleChange} />
-
-        <lebel>Rack End No DB (B)</lebel>
-        <input type="number" name="rackEndNoDbB" value={formData.rackEndNoDbB} onChange={handleChange} />
-
-        <lebel>Rack End DCDB Name (B)</lebel>
-        <input type="number" name="rackEndDcdbNameB" value={formData.rackEndDcdbNameB} onChange={handleChange} />
-
-        <lebel>Rack End Running Load (B)</lebel>
-        <input type="number" name="rackEndRunningLoadB" value={formData.rackEndRunningLoadB} onChange={handleChange} />
-
-        <lebel>Rack End MCB Rating (B)</lebel>
-        <input type="number" name="rackEndMcbRatingB" value={formData.rackEndMcbRatingB} onChange={handleChange} />
-
-        <lebel>Rack End PCT Load MCB (B)</lebel>
-        <input type="number" name="rackEndPctLoadMcbB" value={formData.rackEndPctLoadMcbB} onChange={handleChange} />
-      </div>
-
-        {/* ---- Capacity Analysis (auto-calc later) ---- */}
-        <h3>Capacity Gap Analysis</h3>
+        <h3>Source B</h3>
         <div className="form-section">
-          <label>Total Load Both Sources:</label>
-          <input type="number" name="totalLoadBoth" value={formData.totalLoadBoth} readOnly />
+          <div className="child-container" style={{ display: "normal" }}>
+            <div style={{borderColor:"black", borderWidth:"5px"}}>
+              <label>SMPS Rating (Amps):</label>
+              <input type="number" name="smpsRatingB" value={formData.smpsRatingB} onChange={handleChange} />
+            </div>
+            <div>
+              <label>SMPS Name:</label>
+              <input type="text" name="smpsNameB" value={formData.smpsNameB} onChange={handleChange} />
+            </div>
+            <div>
+              <label>B Source DB Number:</label>
+              <input type="text" name="dbNumberB" value={formData.dbNumberB} onChange={handleChange} />
+            </div>
+            <div>
+              <label>Incomer DB Rating (Amps):</label>
+              <input type="number" name="incomerRatingB" value={formData.incomerRatingB} onChange={handleChange} />
+            </div>
+            <div>
+              <label>Incomer DB Cable Size (Sq mm):</label>
+              <input type="number" name="cableSizeB" value={formData.cableSizeB} onChange={handleChange} />
+            </div>
 
-          <label>Both Source Cable Capacity:</label>
-          <input type="number" name="bothCableCapacity" value={formData.bothCableCapacity} readOnly />
+            <div>
+              <label>PP - DB Cable Runs (Nos):</label>
+              <input type="number" name="cableRunB" value={formData.cableRunB} onChange={handleChange} />
+            </div>
 
-          <label>% Load on Cable:</label>
-          <input type="number" name="bothPctLoadCable" value={formData.bothPctLoadCable} readOnly />
+            <div>
+              <label>Equipment Rack No</label>
+              <input type="text" name="equipmentRackNoB" value={formData.equipmentRackNo} onChange={handleChange} />
+            </div>
 
-          <label>% Load on MCB:</label>
-          <input type="number" name="bothPctLoadMcb" value={formData.bothPctLoadMcb} readOnly />
+            <div>
+              <label>Rack Name/Equipment Name</label>
+              <input type="text" name="rackNameB" value={formData.rackName} onChange={handleChange} />
+            </div>
 
-          <label>Both MCB Same?:</label>
-          <input type="text" name="isBothMcbSame" value={formData.isBothMcbSame} readOnly />
+            <div>
+              <label>Rack Incoming Power Cable Size (Sq mm)</label>
+              <input type="text" name="rackIncomingCableSizeB" value={formData.rackIncomingCableSizeB} onChange={handleChange} />
+            </div>
 
-          <label>Remarks:</label>
-          <input type="text" name="remarksA" value={formData.remarksA} onChange={handleChange} />
+            <div>
+              <label>DB - RackDB Cable Run (Nos)</label>
+              <input type="text" name="rackCableRunB" value={formData.rackCableRunB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label>DB MCB Number:</label>
+              <input type="text" name="dbMcbNumberB" value={formData.dbMcbNumberB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label>DB MCB Rating (Amps):</label>
+              <input type="number" name="dbMcbRatingB" value={formData.dbMcbRatingB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label>Temp On Mcb/Fuse (°C)</label>
+              <input type="text" name="tempOnMcbB" value={formData.tempOnMcbB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label>B Source Running Load (Amps):</label>
+              <input type="number" name="runningLoadB" value={formData.runningLoadB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label>Cable Capacity (Amps)</label>
+              <input type="number" name="cableCapacityB" value={formData.cableCapacityB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label><strong>%</strong> Load Cable</label>
+              <input type="number" name="pctLoadCableB" value={formData.pctLoadCableB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label><strong>%</strong> PCT Load MCB (Amps)</label>
+              <input type="number" name="pctLoadMcbB" value={formData.pctLoadMcbB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label>Rack End No of DB / Power Strip (nos.)</label>
+              <input type="number" name="rackEndNoDbB" value={formData.rackEndNoDbB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label>Rack End DCDB / Power Strip Name</label>
+              <input type="number" name="rackEndDcdbNameB" value={formData.rackEndDcdbNameB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label>Rack End DB Running Load (Amps)</label>
+              <input type="number" name="rackEndRunningLoadB" value={formData.rackEndRunningLoadB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label>Rack End DB MCB Rating (Amps)</label>
+              <input type="number" name="rackEndMcbRatingB" value={formData.rackEndMcbRatingB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label>Rack End <strong>%</strong> Load MCB</label>
+              <input type="number" name="rackEndPctLoadMcbB" value={formData.rackEndPctLoadMcbB} onChange={handleChange} />
+            </div>
+          </div>
         </div>
 
         {/* Capacity Analysis (auto) */}

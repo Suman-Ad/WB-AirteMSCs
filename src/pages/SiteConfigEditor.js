@@ -54,7 +54,7 @@ const SiteConfigEdit = ({ userData }) => {
       <h2>Edit Site Config – {siteKey}</h2>
       <div style={{ display: "flex" }}>
         <div className="chart-container">
-          <h1>CCMS Details</h1>
+          <h1>CCMS/HSD Details</h1>
           <label>Circle Name</label>
           <input
             name="circleName"
@@ -148,6 +148,20 @@ const SiteConfigEdit = ({ userData }) => {
             onChange={handleChange}
           />
 
+          <label>Upload SIM Sign</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileUpload(e, "managerSign")}
+          />
+          {config.managerSign && (
+            <img
+              src={config.managerSign}
+              alt="Prepared By Sign"
+              style={{ width: "150px", marginTop: "5px" }}
+            />
+          )}
+
           <label>Prepared By</label>
           <input
             name="preparedBy"
@@ -210,6 +224,30 @@ const SiteConfigEdit = ({ userData }) => {
             value={config.txnNumber || ""}
             onChange={handleChange}
           />
+
+          <label>O&M Name</label>
+          <input
+            type="text"
+            name="omName"
+            value={config.omName || ""}
+            onChange={handleChange}
+          />
+
+          <label>Upload O&M Sign</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleFileUpload(e, "omSign")}
+          />
+          {config.omSign && (
+            <img
+              src={config.omSign}
+              alt="Prepared By Sign"
+              style={{ width: "150px", marginTop: "5px" }}
+            />
+          )}
+
+
         </div>
 
         <div >
