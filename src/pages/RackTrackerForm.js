@@ -127,7 +127,7 @@ const RackTrackerForm = ({ userData }) => {
   });
 
   const [status, setStatus] = useState("");
-  const floorList = ["Ground Floor", "1st Floor", "2nd Floor", "3rd Floor", "4th Floor", "5th Floor"] 
+  const floorList = ["Ground Floor", "1st Floor", "2nd Floor", "3rd Floor", "4th Floor", "5th Floor"]
 
   // ✅ Update input + auto-calc
   const handleChange = (e) => {
@@ -148,13 +148,12 @@ const RackTrackerForm = ({ userData }) => {
       // 🔹 Site-wise storage: rackTracker/{siteName}
       const siteKey = formData.siteName.trim().toUpperCase().replace(/\s+/g, "_");
       const rackKey = `${formData.equipmentRackNo || "A0"}-${formData.rackName || "UNKNOWN RACK"}`.replace(/\s+/g, "_");
+      const siteRef = doc(db, "acDcRackDetails", siteKey);
+      await setDoc(siteRef, { createdAt: new Date().toISOString() }, { merge: true });
       await setDoc(
-        doc(db, "acDcRackDetails", siteKey, "racks", rackKey),
-        {
-          ...formData,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true } // ✅ merge so we don’t overwrite completely
+        doc(siteRef, "racks", rackKey),
+        { ...formData, updatedAt: new Date().toISOString() },
+        { merge: true }
       );
 
       setStatus(`✅ Data saved for site: ${formData.siteName}`);
@@ -166,7 +165,9 @@ const RackTrackerForm = ({ userData }) => {
 
   return (
     <div className="daily-log-container">
-      <h2>UPS / SMPS Equipment Details</h2>
+      <h1 style={{ color: "white", textAlign: "center", paddingBottom: "20px" }}>
+        <strong>🗄️UPS / SMPS Equipment Details</strong>
+      </h1>
 
       <form onSubmit={handleSubmit}>
         {/* General Info */}
@@ -177,7 +178,7 @@ const RackTrackerForm = ({ userData }) => {
         <div className="form-section">
           <label>Equipment Location:</label>
           <select name="equipmentLocation" onChange={handleChange}>
-            
+
             <option value="" > Select Location </option>
             {floorList.map(q => (
               <option key={q} value={q}>{q}</option>
@@ -186,17 +187,17 @@ const RackTrackerForm = ({ userData }) => {
         </div>
 
         <div>
-              <label>Rack/Equipment Number</label>
-              <input type="text" name="equipmentRackNo" value={formData.equipmentRackNo} onChange={handleChange} />
-              <label>Rack Name/Equipment Name</label>
-              <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} />
-            </div>
+          <label>Rack/Equipment Number</label>
+          <input type="text" name="equipmentRackNo" value={formData.equipmentRackNo} onChange={handleChange} />
+          <label>Rack Name/Equipment Name</label>
+          <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} />
+        </div>
 
         {/* Source A */}
         <h3>Source A</h3>
         <div className="form-section">
           <div className="child-container" style={{ display: "normal" }}>
-            <div style={{borderColor:"black", borderWidth:"5px"}}>
+            <div style={{ borderColor: "black", borderWidth: "5px" }}>
               <label>SMPS Rating (Amps):</label>
               <input type="number" name="smpsRatingA" value={formData.smpsRatingA} onChange={handleChange} />
             </div>
@@ -301,6 +302,11 @@ const RackTrackerForm = ({ userData }) => {
               <label>Rack End <strong>%</strong> Load MCB</label>
               <input type="number" name="rackEndPctLoadMcbA" value={formData.rackEndPctLoadMcbA} onChange={handleChange} />
             </div>
+
+            <div>
+              <label>Remarks A</label>
+              <input type="number" name="remarksA" value={formData.remarksA} onChange={handleChange} />
+            </div>
           </div>
         </div>
 
@@ -308,7 +314,7 @@ const RackTrackerForm = ({ userData }) => {
         <h3>Source B</h3>
         <div className="form-section">
           <div className="child-container" style={{ display: "normal" }}>
-            <div style={{borderColor:"black", borderWidth:"5px"}}>
+            <div style={{ borderColor: "black", borderWidth: "5px" }}>
               <label>SMPS Rating (Amps):</label>
               <input type="number" name="smpsRatingB" value={formData.smpsRatingB} onChange={handleChange} />
             </div>
@@ -412,6 +418,11 @@ const RackTrackerForm = ({ userData }) => {
             <div>
               <label>Rack End <strong>%</strong> Load MCB</label>
               <input type="number" name="rackEndPctLoadMcbB" value={formData.rackEndPctLoadMcbB} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label>Remarks B</label>
+              <input type="number" name="remarksB" value={formData.remarksB} onChange={handleChange} />
             </div>
           </div>
         </div>

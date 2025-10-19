@@ -39,7 +39,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
           {collapsed ? "☰" : "X"}
         </button>
         {collapsed ? "" :
-          <button onClick={goProfile} className="profile-manage-btn" title="Profile">
+          <button onClick={() => {goProfile(); setCollapsed(true);}} className="profile-manage-btn" title="Profile" >
             {userData?.role === "Super Admin" && <span>👑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super Admin*</div></span>}
             {userData?.role === "Admin" && <span>🔑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Admin*</div></span>}
             {userData?.role === "Super User" && <span>🦸 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super User*</div></span>}

@@ -65,7 +65,7 @@ function App() {
 
   return (
     <Router>
-      <AutoLogout timeoutMs={2 * 60 * 60 * 1000} />
+      <AutoLogout timeoutMs={12 * 60 * 60 * 1000} />
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login setUserData={setUserData} />} />
