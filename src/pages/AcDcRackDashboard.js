@@ -229,7 +229,7 @@ const AcDcRackDashboard = ({ userData }) => {
                 <button className="download-btn" onClick={handleDownloadExcel}>📥 Download Excel</button>
             </div>
             
-            <div className="table-container">
+            <div className="table-container" style={{ maxHeight: "600px"}}>
                 <table border="1" cellPadding="6" style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead style={{ background: "#e8e8e8" }}>
                         <tr>
@@ -854,6 +854,18 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>
                                     {editIndex === index ? (
                                         <input
+                                            name="remarksB"
+                                            value={item.remarksB || ""}
+                                            onChange={(e) => handleChange(e, index)}
+                                        />
+                                    ) : (
+                                        item.remarksB
+                                    )}
+                                </td>
+
+                                <td>
+                                    {editIndex === index ? (
+                                        <input
                                             name="totalLoadBoth"
                                             value={item.totalLoadBoth || ""}
                                             onChange={(e) => handleChange(e, index)}
@@ -911,32 +923,18 @@ const AcDcRackDashboard = ({ userData }) => {
                                     )}
                                 </td>
 
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="remarksB"
-                                            value={item.remarksB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.remarksB
-                                    )}
-                                </td>
-
-
-                                <td>
+                                <td style={{ display: "flex", gap: "8px" }}>
                                     {editIndex === index ? (
                                         <>
-                                            <button onClick={() => handleUpdate(index)}>💾 Save</button>
-                                            <button onClick={() => setEditIndex(null)}>❌ Cancel</button>
+                                            <button onClick={() => handleUpdate(index)}>💾</button>
+                                            <button onClick={() => setEditIndex(null)}>❌</button>
                                         </>
                                     ) : (
                                         <>
                                             {(userData?.site?.toLowerCase() === item.siteName?.toLowerCase()) && (userData?.designation == "Vertiv Site Infra Engineer" || userData?.designation == "Vertiv CIH" || userData?.designation == "Vertiv ZM" || userData?.designation == "Vertiv Supervisor" || userData?.role == "Super User" || userData?.role == "Super Admin" || userData?.role == "Admin") && (
                                                 <>
-                                                    <button onClick={() => handleEdit(index)}>✏️ Edit</button>
-                                                    <button onClick={() => handleDelete(item.id)}>🗑️ Delete</button>
+                                                    <button onClick={() => handleEdit(index)}>✏️</button>
+                                                    <button onClick={() => handleDelete(item.id)}>🗑️</button>
                                                 </>
                                             )}
                                         </>
