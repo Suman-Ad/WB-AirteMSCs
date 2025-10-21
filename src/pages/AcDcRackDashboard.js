@@ -46,7 +46,7 @@ const AcDcRackDashboard = ({ userData }) => {
 
                 // ✅ Normal user — only see their own site
                 else if (userData?.site) {
-                    const siteKey = userData.site.trim().toUpperCase().replace(/\s+/g, "_");
+                    const siteKey = userData.site.trim().toUpperCase().replace(/[\/\s]+/g, "_");
                     const racksRef = collection(db, "acDcRackDetails", siteKey, "racks");
                     const racksSnapshot = await getDocs(racksRef);
 
@@ -76,7 +76,7 @@ const AcDcRackDashboard = ({ userData }) => {
     const handleDelete = async (siteName) => {
         if (!window.confirm(`Delete record for ${siteName}?`)) return;
         try {
-            await deleteDoc(doc(db, "acDcRackDetails", siteName));
+            await deleteDoc(doc(db, "acDcRackDetails", userData?.site?.toUpperCase(), "racks", siteName));
             setRackData((prev) => prev.filter((d) => d.id !== siteName));
             setStatus(`🗑️ Deleted record for ${siteName}`);
         } catch (error) {
@@ -102,7 +102,7 @@ const AcDcRackDashboard = ({ userData }) => {
     const handleUpdate = async (index) => {
         const item = rackData[index];
         try {
-            await updateDoc(doc(db, "acDcRackDetails", item.id), {
+            await updateDoc(doc(db, "acDcRackDetails", userData?.site?.toUpperCase(), "racks", item.id), {
                 ...item,
                 updatedAt: new Date().toISOString(),
             });
@@ -128,23 +128,61 @@ const AcDcRackDashboard = ({ userData }) => {
 
         // Map Firestore data to a flat table
         const exportData = filteredData.map((item) => ({
-            "Site Name": item.siteName,
+            "Sl. No": filteredData.indexOf(item) + 1,
             "Circle": item.circle,
+            "Site Name": item.siteName,
+            "Equipment Location": item.equipmentLocation,
+            "SMPS Rating A (Amps)": item.smpsRatingA,
+            "SMPS Name A": item.smpsNameA,
+            "DB Number A": item.dbNumberA,
+            "Incomer Rating A (Amps)": item.incomerRatingA,
+            "Incomer DB Cable Size A (Sq mm)": item.cableSizeA,
+            "Cable Runs A (Nos)": item.cableRunA,
+            "Equipment Rack No A": item.equipmentRackNoA,
             "Rack Name A": item.rackNameA,
-            "Rack Name B": item.rackNameB,
-            "Running Load A (Amps)": item.runningLoadA,
-            "Running Load B (Amps)": item.runningLoadB,
+            "Rack Incoming Power Cable Size A (Sq mm)": item.rackIncomingCableSizeA,
+            "Rack Cable Run A (Nos)": item.rackCableRunA,
+            "DB MCB Number A": item.dbMcbNumberA,
+            "DB MCB Rating A (Amps)": item.dbMcbRatingA,
+            "Temp On Mcb/Fuse A (°C)": item.tempOnMcbA,
+            "Source Running Load A (Amps)": item.runningLoadA,
+            "Cable Load Capacity A": item.cableCapacityA,
             "% Load Cable A": item.pctLoadCableA,
-            "% Load Cable B": item.pctLoadCableB,
-            "DB MCB Rating A": item.dbMcbRatingA,
-            "DB MCB Rating B": item.dbMcbRatingB,
-            "Cable Size A (Sqmm)": item.cableSizeA,
-            "Cable Size B (Sqmm)": item.cableSizeB,
-            "Total Load Both": item.totalLoadBoth,
-            "% Both Load Cable": item.bothPctLoadCable,
-            "% Both Load MCB": item.bothPctLoadMcb,
+            "% PCT Load MCB A (Amps)": item.pctLoadMcbA,
+            "Rack End No of DB / Power Strip A (nos.)": item.rackEndNoDbA,
+            "Rack End DCDB / Power Strip Name A": item.rackEndDcdbNameA,
+            "Rack End DB Running Load A (Amps)": item.rackEndRunningLoadA,
+            "Rack End DB MCB Rating A (Amps)": item.rackEndMcbRatingA,
+            "Rack End % Load MCB A": item.rackEndPctLoadMcbA,
             "Remarks A": item.remarksA,
+            "SMPS Rating B (Amps)": item.smpsRatingB,
+            "SMPS Name B": item.smpsNameB,
+            "DB Number B": item.dbNumberB,
+            "Incomer Rating B (Amps)": item.incomerRatingB,
+            "Incomer DB Cable Size B (Sq mm)": item.cableSizeB,
+            "Cable Runs B (Nos)": item.cableRunB,
+            "Equipment Rack No B": item.equipmentRackNoB,
+            "Rack Name B": item.rackNameB,
+            "Rack Incoming Power Cable Size B (Sq mm)": item.rackIncomingCableSizeB,
+            "Rack Cable Run B (Nos)": item.rackCableRunB,
+            "DB MCB Number B": item.dbMcbNumberB,
+            "DB MCB Rating B (Amps)": item.dbMcbRatingB,
+            "Temp On Mcb/Fuse B (°C)": item.tempOnMcbB,
+            "Running Load B (Amps)": item.runningLoadB,
+            "Cable Load Capacity B": item.cableCapacityB,
+            "% Load Cable B": item.pctLoadCableB,
+            "% PCT Load MCB B (Amps)": item.pctLoadMcbB,
+            "Rack End No of DB / Power Strip B (nos.)": item.rackEndNoDbB,
+            "Rack End DCDB / Power Strip Name B": item.rackEndDcdbNameB,
+            "Rack End DB Running Load B (Amps)": item.rackEndRunningLoadB,
+            "Rack End DB MCB Rating B (Amps)": item.rackEndMcbRatingB,
+            "Rack End % Load MCB B": item.rackEndPctLoadMcbB,
             "Remarks B": item.remarksB,
+            "Total Load Both Sources: A": item.totalLoadBoth,
+            "Both Cable Capacity": item.bothCableCapacity,
+            "% Load on Cable": item.bothPctLoadCable,
+            "% Load on MCB": item.bothPctLoadMcb,
+            "Both MCB Same": item.bothMcbSame,
             "Last Updated": item.updatedAt,
         }));
 
@@ -157,88 +195,99 @@ const AcDcRackDashboard = ({ userData }) => {
         saveAs(blob, `ACDC_RackData_${new Date().toISOString().split("T")[0]}.xlsx`);
     };
 
+    const getHeaderStyle = (header) => {
+        if (header.startsWith("(A)")) return { backgroundColor: "#F2DCDB", color: "#020202ff" };
+        if (header.startsWith("(B)")) return { backgroundColor: "#C5D9F1", color: "#000" };
+        if (header.includes("Cable Load Capacity") || header.startsWith("%")) return { backgroundColor: "#FFD700", color: "#000" };
+        if (header.includes("Rack End")) return { backgroundColor: "#FFC000", color: "#000" };
+        if (header.includes("Total")) return { backgroundColor: "#C4D79B", color: "#000" };
+        if (header.includes("gen")) return { backgroundColor: "#F2F2F2", color: "#000" };
+        // if (header.startsWith("%") || header === "PUE" || header === "Site Running kW") return { backgroundColor: "#F57C00", color: "#fff" };
+        return { backgroundColor: "#FFFFFF", color: "#000" };
+    };
+
     return (
         <div className="daily-log-container">
             <h1 style={{ color: "white", textAlign: "center", paddingBottom: "20px" }}>
                 <strong>🗄️AC/DC Rack Dashboard</strong>
             </h1>
-            <div style={{ marginBottom: "10px" }}>
-                <button
-                    className="segr-manage-btn"
-                    onClick={() => navigate('/rack-details-form')}
-                >
-                    🗄️ Edit Rack Details
-                </button>
+            <div style={{ color: "green", marginBottom: "10px", width: "100%", textAlign: "center", display:"flex" }}>
                 <input
                     type="text"
                     placeholder="🔍 Search by Site Name"
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
-                    style={{ padding: "6px", marginBottom: "10px", width: "250px" }}
                 />
-                <button onClick={handleDownloadExcel}>📥 Download Excel</button>
             </div>
+            <div style={{ marginBottom: "10px" }}>
+                <button
+                    className="segr-manage-btn"
+                    onClick={() => navigate('/rack-details-form')}
+                >
+                    🗄️...✏️
+                </button>
+                <button className="download-btn" onClick={handleDownloadExcel}>📥 Download Excel</button>
+            </div>
+            
             <div className="table-container">
                 <table border="1" cellPadding="6" style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead style={{ background: "#e8e8e8" }}>
                         <tr>
-                            <th>Sl. No</th>
-                            <th>Circle</th>
-                            <th>Site Name</th>
-                            <th>Equipment Location</th>
-                            <th>Rack No</th>
-                            <th>Rack Name</th>
-                            <th>(A) SMPS Rating (Amps)</th>
-                            <th>(A) SMPS Name</th>
-                            <th>(A) DB Number</th>
-                            <th>(A) Incomer DB Rating (Amps):</th>
-                            <th>(A) Incomer DB Cable Size (Sq mm)</th>
-                            <th>(A) PP - DB Cable Runs (Nos)</th>
-                            <th>(A) Equipment Rack No</th>
-                            <th>(A) Rack Name A</th>
-                            <th>(A) Rack Incoming Power Cable Size (Sq mm)</th>
-                            <th>(A) DB - RackDB Cable Run (Nos)</th>
-                            <th>(A) DB MCB Number</th>
-                            <th>(A) DB MCB Rating (Amps)</th>
-                            <th>(A) Temp On Mcb/Fuse (°C)</th>
-                            <th>(A) Running Load (Amps):</th>
-                            <th>(A) Cable Capacity (Amps)</th>
-                            <th>(A) % Load Cable</th>
-                            <th>(A) % PCT Load MCB (Amps)</th>
-                            <th>(A) Rack End No of DB / Power Strip (nos.)</th>
-                            <th>(A) Rack End DCDB / Power Strip Name</th>
-                            <th>(A) Rack End DB Running Load (Amps)</th>
-                            <th>(A) Rack End DB MCB Rating (Amps)</th>
-                            <th>(A) Rack End % Load MCB</th>
-                            <th>(A) Remarks</th>
-                            <th>(B) SMPS Rating (Amps)</th>
-                            <th>(B) SMPS Name</th>
-                            <th>(B) DB Number</th>
-                            <th>(B) Incomer DB Rating (Amps):</th>
-                            <th>(B) Incomer DB Cable Size (Sq mm)</th>
-                            <th>(B) PP - DB Cable Runs (Nos)</th>
-                            <th>(B) Equipment Rack No</th>
-                            <th>(B) Rack Name A</th>
-                            <th>(B) Rack Incoming Power Cable Size (Sq mm)</th>
-                            <th>(B) DB - RackDB Cable Run (Nos)</th>
-                            <th>(B) DB MCB Number</th>
-                            <th>(B) DB MCB Rating (Amps)</th>
-                            <th>(B) Temp On Mcb/Fuse (°C)</th>
-                            <th>(B) Running Load (Amps):</th>
-                            <th>(B) Cable Capacity (Amps)</th>
-                            <th>(B) % Load Cable</th>
-                            <th>(B) % PCT Load MCB (Amps)</th>
-                            <th>(B) Rack End No of DB / Power Strip (nos.)</th>
-                            <th>(B) Rack End DCDB / Power Strip Name</th>
-                            <th>(B) Rack End DB Running Load (Amps)</th>
-                            <th>(B) Rack End DB MCB Rating (Amps)</th>
-                            <th>(B) Rack End % Load MCB</th>
-                            <th>(B) Remarks</th>
-                            <th>Total Load Both Sources: A</th>
-                            <th>Both Cable Capacity</th>
-                            <th>% Load on Cable</th>
-                            <th>% Load on MCB</th>
-                            <th>Both MCB Same</th>
+                            <th style={getHeaderStyle(`gen`)}>Sl. No</th>
+                            <th style={getHeaderStyle(`gen`)}>Circle</th>
+                            <th style={getHeaderStyle(`gen`)}>Site Name</th>
+                            <th style={getHeaderStyle(`gen`)}>Equipment Location</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) SMPS Rating (Amps)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) SMPS Name</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Source DB Number</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Incomer rating of DB (Amps):</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Incomer DB Cable Size (Sq mm)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Cable Runs (Nos)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Equipment Rack No</th>
+                            <th style={{ ...getHeaderStyle(`(A)`), position: "sticky", left: 0, zIndex: 10 }} >(A) Rack Name/Equipment Name</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Rack/Node Incoming Power Cable Size (Sq mm)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Cable Run (Nos)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Number</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Rating (Amps)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Temp On Mcb/Fuse (°C)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Source Running Load (Amps):</th>
+                            <th style={getHeaderStyle(`Cable Load Capacity`)}>(A) Cable Load Capacity</th>
+                            <th style={getHeaderStyle(`%`)}>(A) % Load Cable</th>
+                            <th style={getHeaderStyle(`%`)}>(A) % PCT Load MCB (Amps)</th>
+                            <th style={getHeaderStyle(`Rack End`)}>(A) Rack End No of DB / Power Strip (nos.)</th>
+                            <th style={getHeaderStyle(`Rack End`)}>(A) Rack End DCDB / Power Strip Name</th>
+                            <th style={getHeaderStyle(`Rack End`)}>(A) Rack End DB Running Load (Amps)</th>
+                            <th style={getHeaderStyle(`Rack End`)}>(A) Rack End DB MCB Rating (Amps)</th>
+                            <th style={getHeaderStyle(`%`)}>(A) Rack End % Load MCB</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Remarks</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) SMPS Rating (Amps)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) SMPS Name</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) DB Number</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Rating (Amps):</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Cable Size (Sq mm)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Cable Runs (Nos)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Equipment Rack No</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Rack Name A</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Rack Incoming Power Cable Size (Sq mm)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Run (Nos)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Number</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Rating (Amps)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Temp On Mcb/Fuse (°C)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Running Load (Amps):</th>
+                            <th style={getHeaderStyle(`Cable Load Capacity`)}>(B) Cable Load Capacity</th>
+                            <th style={getHeaderStyle(`%`)}>(B) % Load Cable</th>
+                            <th style={getHeaderStyle(`%`)}>(B) % PCT Load MCB (Amps)</th>
+                            <th style={getHeaderStyle(`Rack End`)}>(B) Rack End No of DB / Power Strip (nos.)</th>
+                            <th style={getHeaderStyle(`Rack End`)}>(B) Rack End DCDB / Power Strip Name</th>
+                            <th style={getHeaderStyle(`Rack End`)}>(B) Rack End DB Running Load (Amps)</th>
+                            <th style={getHeaderStyle(`Rack End`)}>(B) Rack End DB MCB Rating (Amps)</th>
+                            <th style={getHeaderStyle(`%`)}>(B) Rack End % Load MCB</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Remarks</th>
+                            <th style={getHeaderStyle(`Total`)}>Total Load Both Sources: A</th>
+                            <th style={getHeaderStyle(`Total`)}>Both Cable Capacity</th>
+                            <th style={getHeaderStyle(`Total`)}>% Load on Cable</th>
+                            <th style={getHeaderStyle(`Total`)}>% Load on MCB</th>
+                            <th style={getHeaderStyle(`Total`)}>Both MCB Same</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -258,8 +307,6 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.circle}</td>
                                 <td>{item.siteName}</td>
                                 <td>{item.equipmentLocation}</td>
-                                <td>{item.equipmentRackNo}</td>
-                                <td>{item.rackName}</td>
 
                                 {/* A Source */}
                                 <td>
@@ -346,7 +393,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                     )}
                                 </td>
 
-                                <td>
+                                <td className="sticky-col">
                                     {editIndex === index ? (
                                         <input
                                             name="rackNameA"
@@ -864,7 +911,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                     )}
                                 </td>
 
-                    
+
                                 <td>
                                     {editIndex === index ? (
                                         <input
@@ -876,7 +923,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                         item.remarksB
                                     )}
                                 </td>
-                                
+
 
                                 <td>
                                     {editIndex === index ? (
