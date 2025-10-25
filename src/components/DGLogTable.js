@@ -1,6 +1,6 @@
 // src/components/DGLogTable.js
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useLocation, useNavigate } from "react-router-dom";
 import { format, subDays } from "date-fns";
@@ -14,7 +14,7 @@ const formatTime = (hours) => {
 
 const DGLogTable = ({ userData }) => {
   const { state } = useLocation();
-  const { totalkW, fuelAvalable, siteConfig, dayFuelCon} = state || {};
+  const { totalkW, fuelAvalable, siteConfig, dayFuelCon } = state || {};
   const [logs, setLogs] = useState([]);
   const [summary, setSummary] = useState({
     DG1_OnLoad: 0,
@@ -124,6 +124,37 @@ const DGLogTable = ({ userData }) => {
     setEditingId(log.id);
     setEditForm(log);
   };
+
+  const handleDelete = async (logId) => {
+    if (!window.confirm("Are you sure you want to delete this log?")) return;
+
+    try {
+      const dateObj = new Date(selectedDate);
+      const monthKey =
+        dateObj.toLocaleString("en-US", { month: "short" }) +
+        "-" +
+        dateObj.getFullYear();
+
+      const logRef = doc(
+        db,
+        "dgLogs",
+        siteName,
+        monthKey,
+        selectedDate,
+        "runs",
+        logId
+      );
+
+      await deleteDoc(logRef);
+      alert("Log deleted successfully ❌");
+      fetchLogs();
+      fetchMonthlySummary();
+    } catch (err) {
+      console.error("Error deleting log:", err);
+      alert("Failed to delete log. Check console for details.");
+    }
+  };
+
 
   useEffect(() => {
     const cached = localStorage.getItem("summary");
@@ -262,7 +293,7 @@ const DGLogTable = ({ userData }) => {
       </h2>
       <button
         className="segr-manage-btn warning"
-        onClick={() => Navigate("/dg-log-entry", { state: { siteConfig }})}
+        onClick={() => Navigate("/dg-log-entry", { state: { siteConfig } })}
       >
         ✎ DG Run Log Entry
       </button>
@@ -442,8 +473,14 @@ const DGLogTable = ({ userData }) => {
                       <td>{log.kWHReading || 0}</td>
                       <td>{log.remarks}</td>
                       <td>{log.fuelFill}</td>
-                      <td>
+                      <td style={{display:"flex"}}>
                         <button onClick={() => handleEdit(log)}>Edit</button>
+                        <button
+                          style={{ marginLeft: "8px", color: "red" }}
+                          onClick={() => handleDelete(log.id)}
+                        >
+                          Delete
+                        </button>
                       </td>
                     </>
                   )}

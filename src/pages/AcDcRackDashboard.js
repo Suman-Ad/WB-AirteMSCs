@@ -11,13 +11,24 @@ import {
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
+
 
 const AcDcRackDashboard = ({ userData }) => {
     const [rackData, setRackData] = useState([]);
     const [editIndex, setEditIndex] = useState(null);
-    const [filter, setFilter] = useState("");
+    // 🔹 Filter popup states
+    const [showFilterPopup, setShowFilterPopup] = useState(false);
+    const [siteFilter, setSiteFilter] = useState("");
+    const [locationFilter, setLocationFilter] = useState("");
+    const [equipNoFilter, setEquipNoFilter] = useState("");
+    const [rackNameFilter, setRackNameFilter] = useState("");
     const [status, setStatus] = useState("");
     const navigate = useNavigate();
+    const [previewOpen, setPreviewOpen] = useState(false);
+    const [previewData, setPreviewData] = useState(null);
 
     // 🔹 Fetch site data based on user role
     useEffect(() => {
@@ -87,8 +98,10 @@ const AcDcRackDashboard = ({ userData }) => {
 
     // 🔹 Handle edit
     const handleEdit = (index) => {
-        setEditIndex(index);
+        const record = filteredData[index];
+        navigate("/rack-details-form", { state: { editData: record } });
     };
+
 
     // 🔹 Handle input changes during edit
     const handleChange = (e, index) => {
@@ -102,7 +115,7 @@ const AcDcRackDashboard = ({ userData }) => {
     const handleUpdate = async (index) => {
         const item = rackData[index];
         try {
-            await updateDoc(doc(db, "acDcRackDetails", userData?.site?.toUpperCase(), "racks", item.id), {
+            await updateDoc(doc(db, "acDcRackDetails", item.siteName?.toUpperCase(), "racks", item.id), {
                 ...item,
                 updatedAt: new Date().toISOString(),
             });
@@ -114,10 +127,67 @@ const AcDcRackDashboard = ({ userData }) => {
         }
     };
 
-    // 🔹 Filter by site name
-    const filteredData = rackData.filter((d) =>
-        d.siteName?.toLowerCase().includes(filter.toLowerCase())
-    );
+
+    // 🔹 Prepare Chart Data (by Equipment Location)
+    const chartDataMap = {};
+
+    // 🔹 Advanced Filter Logic
+    // 🔹 Multi-field filter logic
+    const filteredData = rackData.filter((d) => {
+        const isPrivileged =
+            userData?.role === "Admin" ||
+            userData?.role === "Super Admin" ||
+            userData?.designation === "Vertiv CIH" ||
+            userData?.designation === "Vertiv ZM";
+
+        // Basic matches for each field
+        const siteMatch = siteFilter
+            ? d.siteName?.toLowerCase().includes(siteFilter.toLowerCase())
+            : true;
+        const locationMatch = locationFilter
+            ? d.equipmentLocation?.toLowerCase().includes(locationFilter.toLowerCase())
+            : true;
+        const equipMatch = equipNoFilter
+            ? d.equipmentRackNo?.toLowerCase().includes(equipNoFilter.toLowerCase())
+            : true;
+        const rackMatch = rackNameFilter
+            ? d.rackName?.toLowerCase().includes(rackNameFilter.toLowerCase())
+            : true;
+
+        const matchesAll = siteMatch && locationMatch && equipMatch && rackMatch;
+
+        const location = d.equipmentLocation || "Unknown";
+
+        if (!chartDataMap[location]) {
+            chartDataMap[location] = {
+                equipmentLocation: location,
+                totalLoad: 0,
+                rackCount: 0,
+            };
+        }
+
+        // Convert totalLoadBoth to number safely
+        const loadValue = parseFloat(d.totalLoadBoth) || 0;
+
+        chartDataMap[location].totalLoad += loadValue;
+        chartDataMap[location].rackCount += 1;
+
+        // Apply role-based restriction
+        if (isPrivileged) {
+            return matchesAll;
+        } else {
+            return (
+                d.siteName?.toLowerCase() === userData?.site?.toLowerCase() &&
+                matchesAll
+            );
+        }
+
+
+    });
+
+    // Convert map to array for Recharts
+    const chartData = Object.values(chartDataMap);
+
 
     // 🔹 Download Excel
     const handleDownloadExcel = () => {
@@ -178,7 +248,7 @@ const AcDcRackDashboard = ({ userData }) => {
             "Rack End DB MCB Rating B (Amps)": item.rackEndMcbRatingB,
             "Rack End % Load MCB B": item.rackEndPctLoadMcbB,
             "Remarks B": item.remarksB,
-            "Total Load Both Sources: A": item.totalLoadBoth,
+            "Total Load Both Sources": item.totalLoadBoth,
             "Both Cable Capacity": item.bothCableCapacity,
             "% Load on Cable": item.bothPctLoadCable,
             "% Load on MCB": item.bothPctLoadMcb,
@@ -206,19 +276,62 @@ const AcDcRackDashboard = ({ userData }) => {
         return { backgroundColor: "#FFFFFF", color: "#000" };
     };
 
+    const preview = (index) => {
+        const record = filteredData[index];
+        setPreviewData(record);
+        setPreviewOpen(true);
+    };
+
+
     return (
         <div className="daily-log-container">
             <h1 style={{ color: "white", textAlign: "center", paddingBottom: "20px" }}>
                 <strong>🗄️AC/DC Rack Dashboard</strong>
             </h1>
-            <div style={{ color: "green", marginBottom: "10px", width: "100%", textAlign: "center", display:"flex" }}>
-                <input
-                    type="text"
-                    placeholder="🔍 Search by Site Name"
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                />
+
+
+            {/* 🔹 Summary Chart Section */}
+            <div
+                style={{
+                    background: "#1e293b",
+                    padding: "15px",
+                    borderRadius: "10px",
+                    marginBottom: "25px",
+                    color: "white",
+                }}
+            >
+                <h2 style={{ textAlign: "center", marginBottom: "10px" }}>📊 Equipment Location Summary</h2>
+
+                {chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart
+                            data={chartData}
+                            margin={{ top: 10, right: 20, left: 0, bottom: 30 }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="equipmentLocation" angle={-25} textAnchor="end" interval={0} height={60} />
+                            <YAxis />
+                            <Tooltip
+                                contentStyle={{ backgroundColor: "#1f6dbbff", borderRadius: "6px" }}
+                                formatter={(value, name) =>
+                                    name === "Total Running Load (A)"
+                                        ? [`${value.toFixed(2)} A`, "Total Load (Amps)"]
+                                        : [value, "Rack Count"]
+                                }
+                            />
+                            <Legend />
+                            <Bar dataKey="totalLoad" fill="#22c55e" name="Total Running Load (A)" />
+                            <Bar dataKey="rackCount" fill="#3b82f6" name="Rack Count" />
+                        </BarChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <p style={{ textAlign: "center", color: "#cbd5e1" }}>
+                        No data available for chart
+                    </p>
+                )}
             </div>
+
+
             <div style={{ marginBottom: "10px" }}>
                 <button
                     className="segr-manage-btn"
@@ -227,24 +340,177 @@ const AcDcRackDashboard = ({ userData }) => {
                     🗄️...✏️
                 </button>
                 <button className="download-btn" onClick={handleDownloadExcel}>📥 Download Excel</button>
+
+                <button
+                    style={{
+                        backgroundColor: "#2563eb",
+                        color: "white",
+                        padding: "8px 18px",
+                        border: "none",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                    }}
+                    onClick={() => setShowFilterPopup(true)}
+                >
+                    🔍 Filter
+                </button>
             </div>
-            
-            <div className="table-container" style={{ maxHeight: "600px"}}>
+
+            {/* 🔹 Filter Popup Modal */}
+            {showFilterPopup && (
+                <div
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        background: "rgba(0,0,0,0.6)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        zIndex: 999,
+                    }}
+                >
+                    <div
+                        style={{
+                            background: "white",
+                            padding: "25px",
+                            borderRadius: "10px",
+                            width: "90%",
+                            maxWidth: "450px",
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                        }}
+                    >
+                        <h2 style={{ textAlign: "center", marginBottom: "20px" }}>🔍 Filter Rack Data</h2>
+
+                        {/* Input Fields */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                            {(userData?.role === "Admin" ||
+                                userData?.role === "Super Admin" ||
+                                userData?.designation === "Vertiv CIH" ||
+                                userData?.designation === "Vertiv ZM") && (
+                                    <input
+                                        type="text"
+                                        placeholder="🏢 Site Name"
+                                        value={siteFilter}
+                                        onChange={(e) => setSiteFilter(e.target.value)}
+                                        style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                                    />
+                                )}
+
+                            <input
+                                type="text"
+                                placeholder="📍 Equipment Location"
+                                value={locationFilter}
+                                onChange={(e) => setLocationFilter(e.target.value)}
+                                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                            />
+
+                            <input
+                                type="text"
+                                placeholder="🔢 Equipment No"
+                                value={equipNoFilter}
+                                onChange={(e) => setEquipNoFilter(e.target.value)}
+                                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                            />
+
+                            <input
+                                type="text"
+                                placeholder="🗄️ Rack Name (optional)"
+                                value={rackNameFilter}
+                                onChange={(e) => setRackNameFilter(e.target.value)}
+                                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                            />
+                        </div>
+
+                        {/* Buttons */}
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                marginTop: "20px",
+                            }}
+                        >
+                            <button
+                                onClick={() => setShowFilterPopup(false)}
+                                style={{
+                                    padding: "8px 15px",
+                                    background: "#9ca3af",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    color: "white",
+                                    cursor: "pointer",
+                                }}
+                            >
+                                ❌ Close
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setSiteFilter("");
+                                    setLocationFilter("");
+                                    setEquipNoFilter("");
+                                    setRackNameFilter("");
+                                }}
+                                style={{
+                                    padding: "8px 15px",
+                                    background: "#f59e0b",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    color: "white",
+                                    cursor: "pointer",
+                                }}
+                            >
+                                🔄 Clear
+                            </button>
+
+                            <button
+                                onClick={() => setShowFilterPopup(false)}
+                                style={{
+                                    padding: "8px 15px",
+                                    background: "#10b981",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    color: "white",
+                                    cursor: "pointer",
+                                }}
+                            >
+                                ✅ Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div style={{ display: "flex", marginBottom: "10px", fontWeight: "bold", fontSize: "12px", color: "#333" }}>
+                <div style={{ justifyContent: "left" }}>🔢 <strong>Total Racks:</strong> {filteredData.length}nos.</div>
+                <div style={{ marginLeft: "auto" }}>
+                    ⚡ <strong>Total Running Load:</strong>{" "}
+                    {filteredData.reduce((sum, d) => sum + (parseFloat(d.totalLoadBoth) || 0), 0).toFixed(2)} A
+                </div>
+            </div>
+
+            <div className="table-container" style={{ maxHeight: "600px" }}>
                 <table border="1" cellPadding="6" style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead style={{ background: "#e8e8e8" }}>
                         <tr>
                             <th style={getHeaderStyle(`gen`)}>Sl. No</th>
                             <th style={getHeaderStyle(`gen`)}>Circle</th>
                             <th style={getHeaderStyle(`gen`)}>Site Name</th>
-                            <th style={getHeaderStyle(`gen`)}>Equipment Location</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) SMPS Rating (Amps)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) SMPS Name</th>
+                            <th style={getHeaderStyle(`gen`)}>Equipment Location(Switch Room)</th>
+                            <th style={getHeaderStyle(`gen`)}>Rack Owner Name</th>
+                            <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 5 }}>Equipment/Rack No</th>
+                            <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 4 }}>Equipment/Rack Name</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Rating (Amps/kVA)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Name</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Source DB Number</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Incomer rating of DB (Amps):</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Incomer DB Cable Size (Sq mm)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Cable Runs (Nos)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Equipment Rack No</th>
-                            <th style={{ ...getHeaderStyle(`(A)`), position: "sticky", left: 0, zIndex: 10 }} >(A) Rack Name/Equipment Name</th>
+                            <th style={getHeaderStyle(`(A)`)} >(A) Rack Name/Equipment Name</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Rack/Node Incoming Power Cable Size (Sq mm)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Cable Run (Nos)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Number</th>
@@ -260,8 +526,8 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`Rack End`)}>(A) Rack End DB MCB Rating (Amps)</th>
                             <th style={getHeaderStyle(`%`)}>(A) Rack End % Load MCB</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Remarks</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) SMPS Rating (Amps)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) SMPS Name</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) SMPS/UPS Rating (Amps/kVA)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) SMPS/UPS Name</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB Number</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Rating (Amps):</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Cable Size (Sq mm)</th>
@@ -288,7 +554,6 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`Total`)}>% Load on Cable</th>
                             <th style={getHeaderStyle(`Total`)}>% Load on MCB</th>
                             <th style={getHeaderStyle(`Total`)}>Both MCB Same</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
 
@@ -302,23 +567,31 @@ const AcDcRackDashboard = ({ userData }) => {
                         )}
 
                         {filteredData.map((item, index) => (
-                            <tr key={item.id}>
+                            <tr
+                                key={item.id}
+                                onClick={() => preview(index)}
+                                style={{ cursor: "pointer", transition: "background 0.2s" }}
+                            // onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+                            // onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                            >
+
                                 <td>{index + 1}</td>
                                 <td>{item.circle}</td>
                                 <td>{item.siteName}</td>
                                 <td>{item.equipmentLocation}</td>
+                                <td>{item.rackOwnerName}</td>
+                                <td className="sticky-col" style={{ position: "sticky", left: 0, zIndex: 3 }}>
+                                    {item.equipmentRackNo}
+                                </td>
+                                <td className="sticky-col">
+                                    {item.rackName}
+                                </td>
 
                                 {/* A Source */}
                                 <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="smpsRatingA"
-                                            value={item.smpsRatingA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
+                                    {
                                         item.smpsRatingA
-                                    )}
+                                    }
                                 </td>
 
                                 <td>
@@ -393,7 +666,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                     )}
                                 </td>
 
-                                <td className="sticky-col">
+                                <td>
                                     {editIndex === index ? (
                                         <input
                                             name="rackNameA"
@@ -922,24 +1195,6 @@ const AcDcRackDashboard = ({ userData }) => {
                                         item.isBothMcbSame
                                     )}
                                 </td>
-
-                                <td style={{ display: "flex", gap: "8px" }}>
-                                    {editIndex === index ? (
-                                        <>
-                                            <button onClick={() => handleUpdate(index)}>💾</button>
-                                            <button onClick={() => setEditIndex(null)}>❌</button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            {(userData?.site?.toLowerCase() === item.siteName?.toLowerCase()) && (userData?.designation == "Vertiv Site Infra Engineer" || userData?.designation == "Vertiv CIH" || userData?.designation == "Vertiv ZM" || userData?.designation == "Vertiv Supervisor" || userData?.role == "Super User" || userData?.role == "Super Admin" || userData?.role == "Admin") && (
-                                                <>
-                                                    <button onClick={() => handleEdit(index)}>✏️</button>
-                                                    <button onClick={() => handleDelete(item.id)}>🗑️</button>
-                                                </>
-                                            )}
-                                        </>
-                                    )}
-                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -947,7 +1202,246 @@ const AcDcRackDashboard = ({ userData }) => {
             </div>
 
             {status && <p style={{ marginTop: "10px" }}>{status}</p>}
+            {previewOpen && previewData && (
+                <div
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        background: "rgba(0,0,0,0.6)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        zIndex: 1000,
+                    }}
+                >
+                    <div
+                        className="child-container"
+
+                        style={{
+                            // background: "white",
+                            padding: "20px",
+                            borderRadius: "10px",
+                            width: "90%",
+                            maxWidth: "700px",
+                            maxHeight: "90%",
+                            overflowY: "auto",
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                        }}
+                    >
+                        <button
+                            onClick={() => setPreviewOpen(false)}
+                            style={{
+                                background: "#ef44442d",
+                                color: "white",
+                                padding: "8px 15px",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                marginRight: "10px",
+                                position: "sticky",
+                                top: 0,
+                                zIndex: 1,
+                                float: "right",
+                            }}
+                        >
+                            ❌
+                        </button>
+                        <h2 style={{ textAlign: "center", borderBottom: "2px solid #2083a1ff", paddingBottom: "10px" }}>
+                            🗄️ Rack Details Preview
+                        </h2>
+
+                        <table style={{ width: "100%", marginTop: "10px" }}>
+                            {/* ---- Preview table body with explicit ordering & grouping ---- */}
+                            <tbody>
+                                {/* define ordered keys in the exact sequence you want */}
+                                {(() => {
+                                    const formatLabel = (k) =>
+                                        k
+                                            .replace(/([A-Z])/g, " $1")      // split camelCase / camelCaps
+                                            .replace(/[_\-]+/g, " ")         // replace underscores/hyphens
+                                            .replace(/\s+/g, " ")            // normalize spaces
+                                            .trim()
+                                            .replace(/\b\w/g, (c) => c.toUpperCase()); // Title Case
+
+                                    // Grouped and ordered keys (customize this list to your full fields)
+                                    const generalKeys = [
+                                        "circle",
+                                        "siteName",
+                                        "equipmentLocation",
+                                        "equipmentRackNo",
+                                        "rackName",
+                                        "rackOwnerName",
+                                    ];
+
+                                    const sourceAKeys = [
+                                        "smpsRatingA",
+                                        "smpsNameA",
+                                        "dbNumberA",
+                                        "incomerRatingA",
+                                        "cableSizeA",
+                                        "cableRunA",
+                                        "equipmentRackNoA",
+                                        "rackNameA",
+                                        "rackIncomingCableSizeA",
+                                        "rackCableRunA",
+                                        "dbMcbNumberA",
+                                        "dbMcbRatingA",
+                                        "tempOnMcbA",
+                                        "runningLoadA",
+                                        "cableCapacityA",
+                                        "pctLoadCableA",
+                                        "pctLoadMcbA",
+                                        "rackEndNoDbA",
+                                        "rackEndDcdbNameA",
+                                        "rackEndRunningLoadA",
+                                        "rackEndMcbRatingA",
+                                        "rackEndPctLoadMcbA",
+                                        "remarksA",
+                                    ];
+
+                                    const sourceBKeys = [
+                                        "smpsRatingB",
+                                        "smpsNameB",
+                                        "dbNumberB",
+                                        "incomerRatingB",
+                                        "cableSizeB",
+                                        "cableRunB",
+                                        "equipmentRackNoB",
+                                        "rackNameB",
+                                        "rackIncomingCableSizeB",
+                                        "rackCableRunB",
+                                        "dbMcbNumberB",
+                                        "dbMcbRatingB",
+                                        "tempOnMcbB",
+                                        "runningLoadB",
+                                        "cableCapacityB",
+                                        "pctLoadCableB",
+                                        "pctLoadMcbB",
+                                        "rackEndNoDbB",
+                                        "rackEndDcdbNameB",
+                                        "rackEndRunningLoadB",
+                                        "rackEndMcbRatingB",
+                                        "rackEndPctLoadMcbB",
+                                        "remarksB",
+                                    ];
+
+                                    const analysisKeys = [
+                                        "totalLoadBoth",
+                                        "bothCableCapacity",
+                                        "bothPctLoadCable",
+                                        "bothPctLoadMcb",
+                                        "isBothMcbSame",
+                                        "updatedAt",
+                                    ];
+
+                                    // Merge everything in order; you can rearrange groups or items above
+                                    const orderedKeys = [
+                                        ...generalKeys,
+                                        ...sourceAKeys,
+                                        ...sourceBKeys,
+                                        ...analysisKeys,
+                                    ];
+
+                                    // Helper to safely get display value
+                                    const display = (v) =>
+                                        v === null || v === undefined || String(v).trim() === "" ? "-" : String(v);
+
+                                    // Build rows: render section headers when a new group starts
+                                    const rows = [];
+                                    const pushSectionHeader = (title) =>
+                                        rows.push(
+                                            <tr key={`hdr-${title}`}>
+                                                <td colSpan="2" style={{ background: "#f3f4f6", fontWeight: "700", padding: "8px 10px", borderBottom: "1px solid #ddd" }}>
+                                                    {title}
+                                                </td>
+                                            </tr>
+                                        );
+
+                                    // Add General header
+                                    pushSectionHeader("General");
+
+                                    orderedKeys.forEach((key) => {
+                                        // insert section headers where appropriate
+                                        if (sourceAKeys.includes(key) && !rows.some(r => r.key === "hdr-Source A")) pushSectionHeader("Source A");
+                                        if (sourceBKeys.includes(key) && !rows.some(r => r.key === "hdr-Source B")) pushSectionHeader("Source B");
+                                        if (analysisKeys.includes(key) && !rows.some(r => r.key === "hdr-Capacity Analysis")) pushSectionHeader("Capacity Analysis");
+
+                                        rows.push(
+                                            <tr key={key}>
+                                                <td style={{ fontWeight: "bold", textTransform: "none", padding: "6px 10px", borderBottom: "1px solid #eee", width: "45%" }}>
+                                                    {formatLabel(key)}
+                                                </td>
+                                                <td style={{ padding: "6px 10px", borderBottom: "1px solid #eee", width: "55%" }}>
+                                                    {display(previewData[key])}
+                                                </td>
+                                            </tr>
+                                        );
+                                    });
+
+                                    // If there are any extra keys in previewData not listed in orderedKeys, show them at the end
+                                    const extraKeys = Object.keys(previewData || {}).filter((k) => !orderedKeys.includes(k));
+                                    if (extraKeys.length > 0) {
+                                        pushSectionHeader("Other Fields");
+                                        extraKeys.forEach((k) =>
+                                            rows.push(
+                                                <tr key={`extra-${k}`}>
+                                                    <td style={{ fontWeight: "bold", padding: "6px 10px", borderBottom: "1px solid #eee" }}>{formatLabel(k)}</td>
+                                                    <td style={{ padding: "6px 10px", borderBottom: "1px solid #eee" }}>{display(previewData[k])}</td>
+                                                </tr>
+                                            )
+                                        );
+                                    }
+
+                                    return rows;
+                                })()}
+                            </tbody>
+
+                        </table>
+
+                        <div style={{ marginTop: "15px", textAlign: "center" }}>
+                            {(userData?.site?.toLowerCase() === previewData.siteName?.toLowerCase()) && (userData?.designation == "Vertiv Site Infra Engineer" || userData?.designation == "Vertiv CIH" || userData?.designation == "Vertiv ZM" || userData?.designation == "Vertiv Supervisor" || userData?.role == "Super User" || userData?.role == "Super Admin" || userData?.role == "Admin") && (
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            setPreviewOpen(false);
+                                            navigate("/rack-details-form", { state: { editData: previewData } });
+                                        }}
+                                        style={{
+                                            background: "#10b981",
+                                            color: "white",
+                                            padding: "8px 15px",
+                                            border: "none",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        ✏️ Edit
+                                    </button>
+
+                                    <>&nbsp;&nbsp;</>
+
+                                    <button onClick={() => handleDelete(previewData.id)}
+                                        style={{
+                                            background: "#b91010ff",
+                                            color: "white",
+                                            padding: "8px 15px",
+                                            border: "none",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                        }}
+                                    >🗑️</button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
+
     );
 };
 

@@ -1,7 +1,8 @@
 // src/pages/RackTrackerForm.js
 import React, { useState } from "react";
 import { db } from "../firebase"; // ✅ make sure firebase.js is configured
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, updateDoc } from "firebase/firestore";
+import { useNavigate, useLocation } from "react-router-dom";
 
 
 // ✅ Helper function for safe numeric conversion
@@ -86,72 +87,79 @@ function computeCapacityAnalysis(form) {
 }
 
 const RackTrackerForm = ({ userData }) => {
-  const [formData, setFormData] = useState({
-    // General
-    slNo: "",
-    circle: userData?.circle,
-    siteName: userData?.site,
-    equipmentLocation: "",
-    equipmentRackNo: "",
-    rackName: "",
+  const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state?.editData || null;
+  const [formData, setFormData] = useState(
+    editData
+      ? { ...editData } // Prefill all fields from the record
+      : {
+        // General default empty form for new entries
+        slNo: "",
+        circle: userData?.circle,
+        siteName: userData?.site,
+        equipmentLocation: "",
+        equipmentRackNo: "",
+        rackName: "",
+        rackOwnerName: "",
 
-    // Source A
-    smpsRatingA: "",
-    smpsNameA: "",
-    dbNumberA: "",
-    incomerRatingA: "",
-    cableSizeA: "",
-    cableRunA: "",
-    equipmentRackNoA: "",
-    rackNameA: "",
-    rackIncomingCableSizeA: "",
-    rackCableRunA: "",
-    dbMcbNumberA: "",
-    dbMcbRatingA: "",
-    tempOnMcbA: "",
-    runningLoadA: "",
-    cableCapacityA: "",
-    pctLoadCableA: "",
-    pctLoadMcbA: "",
-    rackEndNoDbA: "",
-    rackEndDcdbNameA: "",
-    rackEndRunningLoadA: "",
-    rackEndMcbRatingA: "",
-    rackEndPctLoadMcbA: "",
+        // Source A
+        smpsRatingA: "",
+        smpsNameA: "",
+        dbNumberA: "",
+        incomerRatingA: "",
+        cableSizeA: "",
+        cableRunA: "",
+        equipmentRackNoA: "",
+        rackNameA: "",
+        rackIncomingCableSizeA: "",
+        rackCableRunA: "",
+        dbMcbNumberA: "",
+        dbMcbRatingA: "",
+        tempOnMcbA: "",
+        runningLoadA: "",
+        cableCapacityA: "",
+        pctLoadCableA: "",
+        pctLoadMcbA: "",
+        rackEndNoDbA: "",
+        rackEndDcdbNameA: "",
+        rackEndRunningLoadA: "",
+        rackEndMcbRatingA: "",
+        rackEndPctLoadMcbA: "",
 
-    // Source B
-    smpsRatingB: "",
-    smpsNameB: "",
-    dbNumberB: "",
-    incomerRatingB: "",
-    cableSizeB: "",
-    cableRunB: "",
-    equipmentRackNoB: "",
-    rackNameB: "",
-    rackIncomingCableSizeB: "",
-    rackCableRunB: "",
-    dbMcbNumberB: "",
-    dbMcbRatingB: "",
-    tempOnMcbB: "",
-    runningLoadB: "",
-    cableCapacityB: "",
-    pctLoadCableB: "",
-    pctLoadMcbB: "",
-    rackEndNoDbB: "",
-    rackEndDcdbNameB: "",
-    rackEndRunningLoadB: "",
-    rackEndMcbRatingB: "",
-    rackEndPctLoadMcbB: "",
+        // Source B
+        smpsRatingB: "",
+        smpsNameB: "",
+        dbNumberB: "",
+        incomerRatingB: "",
+        cableSizeB: "",
+        cableRunB: "",
+        equipmentRackNoB: "",
+        rackNameB: "",
+        rackIncomingCableSizeB: "",
+        rackCableRunB: "",
+        dbMcbNumberB: "",
+        dbMcbRatingB: "",
+        tempOnMcbB: "",
+        runningLoadB: "",
+        cableCapacityB: "",
+        pctLoadCableB: "",
+        pctLoadMcbB: "",
+        rackEndNoDbB: "",
+        rackEndDcdbNameB: "",
+        rackEndRunningLoadB: "",
+        rackEndMcbRatingB: "",
+        rackEndPctLoadMcbB: "",
 
-    // Capacity Gap Analysis
-    totalLoadBoth: "",
-    bothCableCapacity: "",
-    bothPctLoadCable: "",
-    bothPctLoadMcb: "",
-    isBothMcbSame: "",
-    remarksA: "",
-    remarksB: "",
-  });
+        // Capacity Gap Analysis
+        totalLoadBoth: "",
+        bothCableCapacity: "",
+        bothPctLoadCable: "",
+        bothPctLoadMcb: "",
+        isBothMcbSame: "",
+        remarksA: "",
+        remarksB: "",
+      });
 
   const [status, setStatus] = useState("");
   const floorList = ["Ground Floor", "1st Floor", "2nd Floor", "3rd Floor", "4th Floor", "5th Floor"]
@@ -173,21 +181,30 @@ const RackTrackerForm = ({ userData }) => {
 
     try {
       // 🔹 Site-wise storage: rackTracker/{siteName}
+      const isEditMode = !!editData;
       const siteKey = formData.siteName.trim().toUpperCase().replace(/[\/\s]+/g, "_");
       const rackKey = `${formData.equipmentRackNo || "A0"}-${formData.rackName || "UNKNOWN RACK"}`.replace(/[\/\s]+/g, "_");
       const siteRef = doc(db, "acDcRackDetails", siteKey);
-      await setDoc(siteRef, { createdAt: new Date().toISOString() }, { merge: true });
-      await setDoc(
-        doc(siteRef, "racks", rackKey),
-        { ...formData, updatedAt: new Date().toISOString() },
-        { merge: true }
-      );
+      if (isEditMode) {
+        // Update existing record
+        const rackRef = doc(siteRef, "racks", rackKey);
+        await updateDoc(rackRef, { ...formData, updatedAt: new Date().toISOString() });
+      } else {
+        // New record
+        await setDoc(siteRef, { createdAt: new Date().toISOString() }, { merge: true });
+        await setDoc(
+          doc(siteRef, "racks", rackKey),
+          { ...formData, updatedAt: new Date().toISOString() },
+          { merge: true }
+        );
+      }
 
-      setStatus(`✅ Data saved for site: ${formData.siteName}`);
+      setStatus(isEditMode ? `✅ Updated record for ${formData.rackName}` : `✅ Data saved for site: ${formData.siteName}`);
     } catch (err) {
       console.error("Error saving to Firestore:", err);
       setStatus("❌ Error saving data");
     }
+    setTimeout(() => navigate("/acdc-rack-details"), 800);
   };
 
   return (
@@ -205,63 +222,65 @@ const RackTrackerForm = ({ userData }) => {
             <input type="text" name="siteName" value={formData.siteName} onChange={handleChange} disabled />
           </div>
           <div className="form-section">
-            <label>Equipment Location:</label>
+            <label>Equipment Switch Room Location:</label>
             <select name="equipmentLocation" onChange={handleChange}>
 
-              <option value="" > Select Location </option>
+              <option value={formData.equipmentLocation} >{formData.equipmentLocation || "Select Location"}</option>
               {floorList.map(q => (
-                <option key={q} value={q}>{q} Switch Room</option>
+                <option key={q} value={q}>{q}</option>
               ))}
             </select>
           </div>
 
           <div>
             <label>Rack/Equipment Number</label>
-            <input type="text" name="equipmentRackNo" value={formData.equipmentRackNo} onChange={handleChange} />
+            <input type="text" name="equipmentRackNo" value={formData.equipmentRackNo} onChange={handleChange} disabled={!!editData} />
             <label>Rack Name/Equipment Name</label>
-            <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} />
+            <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} disabled={!!editData}/>
+            <label>Rack Owner Name</label>
+            <input type="text" name="rackOwnerName" value={formData.rackOwnerName} onChange={handleChange} />
           </div>
         </div>
 
         {/* Source A */}
-        <div className="form-section" style={{display:"flex", gap:"2px", justifyContent:"space-between"}}>
+        <div className="form-section" style={{ display: "flex", gap: "2px", justifyContent: "space-between" }}>
           <div className="chart-container" style={{ paddingBottom: "10px", display: "normal", border: "2px solid #2083a1ff", marginTop: "20px" }}>
             <h2 style={{ borderBottom: "2px solid #2083a1ff", padding: "5px" }}><strong>Source A</strong></h2>
             <div>
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>SMPS Rating (Amps):</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>SMPS/UPS Rating (Amps/kVA):</label>
               <input type="number" name="smpsRatingA" value={formData.smpsRatingA} onChange={handleChange} />
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>SMPS Name:</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>SMPS/UPS Name:</label>
               <input type="text" name="smpsNameA" value={formData.smpsNameA} onChange={handleChange} />
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>A Source DB Number:</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>A Source DB Number:</label>
               <input type="text" name="dbNumberA" value={formData.dbNumberA} onChange={handleChange} />
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>Incomer DB Rating (Amps):</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Rating (Amps):</label>
               <input type="number" name="incomerRatingA" value={formData.incomerRatingA} onChange={handleChange} />
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>Incomer DB Cable Size (Sq mm):</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Cable Size (Sq mm):</label>
               <input type="any" name="cableSizeA" value={formData.cableSizeA} onChange={handleChange} />
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>PP - DB Cable Runs (Nos):</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>PP - DB Cable Runs (Nos):</label>
               <input type="any" name="cableRunA" value={formData.cableRunA} onChange={handleChange} />
             </div>
 
             <div style={{ borderTop: "2px solid #4b8b25f3", padding: "5px" }}>
-              <label style={{color:"#4b8b25f3", fontWeight:"bold"}}>Equipment Rack No</label>
+              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Equipment Rack No</label>
               <input type="text" name="equipmentRackNoA" value={formData.equipmentRackNo} onChange={handleChange} />
 
-              <label style={{color:"#4b8b25f3", fontWeight:"bold"}}>Rack Name/Equipment Name</label>
+              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Rack Name/Equipment Name</label>
               <input type="text" name="rackNameA" value={formData.rackName} onChange={handleChange} />
             </div>
 
             <div style={{ borderTop: "2px solid #888013ff", padding: "5px" }}>
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>Rack/Node Incoming Power Cable Size (Sq mm)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack/Node Incoming Power Cable Size (Sq mm)</label>
               <input type="number" name="rackIncomingCableSizeA" value={formData.rackIncomingCableSizeA} onChange={handleChange} />
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>DB - RackDB Cable Run (Nos)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB - RackDB Cable Run (Nos)</label>
               <input type="number" name="rackCableRunA" value={formData.rackCableRunA} onChange={handleChange} />
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>DB MCB Number:</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Number:</label>
               <input type="text" name="dbMcbNumberA" value={formData.dbMcbNumberA} onChange={handleChange} />
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>DB MCB Rating (Amps):</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Rating (Amps):</label>
               <input type="number" name="dbMcbRatingA" value={formData.dbMcbRatingA} onChange={handleChange} />
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>Temp On Mcb/Fuse (°C)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Temp On Mcb/Fuse (°C)</label>
               <input type="text" name="tempOnMcbA" value={formData.tempOnMcbA} onChange={handleChange} />
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>A Source Running Load (Amps):</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>A Source Running Load (Amps):</label>
               <input type="number" name="runningLoadA" value={formData.runningLoadA} onChange={handleChange} />
             </div>
 
@@ -286,47 +305,47 @@ const RackTrackerForm = ({ userData }) => {
               <input type="text" name="remarksA" value={formData.remarksA} onChange={handleChange} />
             </div>
           </div>
-        
 
-        {/* Source B */}
-        
+
+          {/* Source B */}
+
           <div className="chart-container" style={{ paddingBottom: "10px", display: "normal", border: "2px solid #2083a1ff", marginTop: "20px" }}>
             <h2 style={{ borderBottom: "2px solid #2083a1ff", padding: "5px" }}><strong>Source B</strong></h2>
 
             <div>
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>SMPS Rating (Amps):</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>SMPS/UPS Rating (Amps/kVA):</label>
               <input type="number" name="smpsRatingB" value={formData.smpsRatingB} onChange={handleChange} />
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>SMPS Name:</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>SMPS/UPS Name:</label>
               <input type="text" name="smpsNameB" value={formData.smpsNameB} onChange={handleChange} />
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>B Source DB Number:</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>B Source DB Number:</label>
               <input type="text" name="dbNumberB" value={formData.dbNumberB} onChange={handleChange} />
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>Incomer DB Rating (Amps):</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Rating (Amps):</label>
               <input type="number" name="incomerRatingB" value={formData.incomerRatingB} onChange={handleChange} />
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>Incomer DB Cable Size (Sq mm):</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Cable Size (Sq mm):</label>
               <input type="any" name="cableSizeB" value={formData.cableSizeB} onChange={handleChange} />
-              <label style={{color:"#2083a1ff", fontWeight:"bold"}}>PP - DB Cable Runs (Nos):</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>PP - DB Cable Runs (Nos):</label>
               <input type="any" name="cableRunB" value={formData.cableRunB} onChange={handleChange} />
             </div>
 
             <div style={{ borderTop: "2px solid #4b8b25f3", padding: "5px" }}>
-              <label style={{color:"#4b8b25f3", fontWeight:"bold"}}>Equipment Rack No</label>
+              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Equipment Rack No</label>
               <input type="text" name="equipmentRackNoB" value={formData.equipmentRackNo} onChange={handleChange} />
-              <label style={{color:"#4b8b25f3", fontWeight:"bold"}}>Rack Name/Equipment Name</label>
+              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Rack Name/Equipment Name</label>
               <input type="text" name="rackNameB" value={formData.rackName} onChange={handleChange} />
             </div>
 
             <div style={{ borderTop: "2px solid #888013ff", padding: "5px" }}>
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>Rack Incoming Power Cable Size (Sq mm)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack Incoming Power Cable Size (Sq mm)</label>
               <input type="number" name="rackIncomingCableSizeB" value={formData.rackIncomingCableSizeB} onChange={handleChange} />
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>DB - RackDB Cable Run (Nos)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB - RackDB Cable Run (Nos)</label>
               <input type="number" name="rackCableRunB" value={formData.rackCableRunB} onChange={handleChange} />
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>DB MCB Number:</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Number:</label>
               <input type="text" name="dbMcbNumberB" value={formData.dbMcbNumberB} onChange={handleChange} />
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>DB MCB Rating (Amps):</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Rating (Amps):</label>
               <input type="number" name="dbMcbRatingB" value={formData.dbMcbRatingB} onChange={handleChange} />
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>Temp On Mcb/Fuse (°C)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Temp On Mcb/Fuse (°C)</label>
               <input type="text" name="tempOnMcbB" value={formData.tempOnMcbB} onChange={handleChange} />
-              <label style={{color:"#888013ff", fontWeight:"bold"}}>B Source Running Load (Amps):</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>B Source Running Load (Amps):</label>
               <input type="number" name="runningLoadB" value={formData.runningLoadB} onChange={handleChange} />
             </div>
 
@@ -355,7 +374,7 @@ const RackTrackerForm = ({ userData }) => {
 
         {/* Capacity Analysis (auto) */}
         <div className="chart-container" style={{ marginTop: "20px", padding: "10px", border: "2px solid #2083a1ff" }}>
-          <h2 style={{ borderBottom: "2px solid #2083a1ff", padding: "5px"}}><strong>Capacity Gap Analysis</strong></h2>
+          <h2 style={{ borderBottom: "2px solid #2083a1ff", padding: "5px" }}><strong>Capacity Gap Analysis</strong></h2>
           <p><strong>Total Load on Both Sources:</strong> {formData.totalLoadBoth} A</p>
           <p><strong>Both Source Cable Load Capacity:</strong> {formData.bothCableCapacity} </p>
           <p><strong>Both Source % Load Single O/P Cable:</strong> {formData.bothPctLoadCable}%</p>
