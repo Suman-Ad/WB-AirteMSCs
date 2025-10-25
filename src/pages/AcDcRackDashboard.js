@@ -300,7 +300,7 @@ const AcDcRackDashboard = ({ userData }) => {
                     color: "white",
                 }}
             >
-                <h2 style={{ textAlign: "center", marginBottom: "10px" }}>📊 Equipment Location Summary</h2>
+                <h2 style={{ textAlign: "center", marginBottom: "10px" }}>📊 Rack/Load Summary</h2>
 
                 {chartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
