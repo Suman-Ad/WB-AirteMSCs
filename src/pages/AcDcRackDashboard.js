@@ -18,13 +18,15 @@ import {
 
 const AcDcRackDashboard = ({ userData }) => {
     const [rackData, setRackData] = useState([]);
-    const [editIndex, setEditIndex] = useState(null);
     // 🔹 Filter popup states
     const [showFilterPopup, setShowFilterPopup] = useState(false);
     const [siteFilter, setSiteFilter] = useState("");
     const [locationFilter, setLocationFilter] = useState("");
     const [equipNoFilter, setEquipNoFilter] = useState("");
     const [rackNameFilter, setRackNameFilter] = useState("");
+    const [powerTypeFilter, setPowerTypeFilter] = useState("");
+    const [sourceTypeFilter, setSourceTypeFilter] = useState("");
+
     const [status, setStatus] = useState("");
     const navigate = useNavigate();
     const [previewOpen, setPreviewOpen] = useState(false);
@@ -96,38 +98,6 @@ const AcDcRackDashboard = ({ userData }) => {
         }
     };
 
-    // 🔹 Handle edit
-    const handleEdit = (index) => {
-        const record = filteredData[index];
-        navigate("/rack-details-form", { state: { editData: record } });
-    };
-
-
-    // 🔹 Handle input changes during edit
-    const handleChange = (e, index) => {
-        const { name, value } = e.target;
-        const updated = [...rackData];
-        updated[index][name] = value;
-        setRackData(updated);
-    };
-
-    // 🔹 Handle update/save
-    const handleUpdate = async (index) => {
-        const item = rackData[index];
-        try {
-            await updateDoc(doc(db, "acDcRackDetails", item.siteName?.toUpperCase(), "racks", item.id), {
-                ...item,
-                updatedAt: new Date().toISOString(),
-            });
-            setEditIndex(null);
-            setStatus(`✅ Updated record for ${item.id}`);
-        } catch (error) {
-            console.error("Error updating:", error);
-            setStatus("❌ Update failed");
-        }
-    };
-
-
     // 🔹 Prepare Chart Data (by Equipment Location)
     const chartDataMap = {};
 
@@ -154,7 +124,15 @@ const AcDcRackDashboard = ({ userData }) => {
             ? d.rackName?.toLowerCase().includes(rackNameFilter.toLowerCase())
             : true;
 
-        const matchesAll = siteMatch && locationMatch && equipMatch && rackMatch;
+        const powerMatch = powerTypeFilter
+            ? d.powerType?.toLowerCase().includes(powerTypeFilter.toLowerCase())
+            : true;
+
+        const sourceMatch = sourceTypeFilter
+            ? d.sourceType?.toLowerCase().includes(sourceTypeFilter.toLowerCase())
+            : true;
+
+        const matchesAll = siteMatch && locationMatch && equipMatch && rackMatch && powerMatch && sourceMatch;
 
         const location = d.equipmentLocation || "Unknown";
 
@@ -374,8 +352,8 @@ const AcDcRackDashboard = ({ userData }) => {
                     }}
                 >
                     <div
+                        className="chart-container"
                         style={{
-                            background: "white",
                             padding: "25px",
                             borderRadius: "10px",
                             width: "90%",
@@ -423,6 +401,30 @@ const AcDcRackDashboard = ({ userData }) => {
                                 onChange={(e) => setRackNameFilter(e.target.value)}
                                 style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
                             />
+
+                            <select
+                                type="text"
+                                placeholder="⚡ Power Type"
+                                value={powerTypeFilter}
+                                onChange={(e) => setPowerTypeFilter(e.target.value)}
+                                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                            >
+                                <option value="">⇨⚡ Select Power Type</option>
+                                <option value="AC">AC</option>
+                                <option value="DC">DC</option>
+                            </select>
+
+                            <select
+                                type="text"
+                                placeholder="⇨○ Source Type"
+                                value={sourceTypeFilter}
+                                onChange={(e) => setSourceTypeFilter(e.target.value)}
+                                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                            >
+                                <option value="">⇨○ Select Source Type</option>
+                                <option value="Dual Source">Dual Source</option>
+                                <option value="Single Source">Single Source</option>
+                            </select>
                         </div>
 
                         {/* Buttons */}
@@ -453,6 +455,8 @@ const AcDcRackDashboard = ({ userData }) => {
                                     setLocationFilter("");
                                     setEquipNoFilter("");
                                     setRackNameFilter("");
+                                    setPowerTypeFilter("");
+                                    setSourceTypeFilter("");
                                 }}
                                 style={{
                                     padding: "8px 15px",
@@ -500,7 +504,10 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`gen`)}>Circle</th>
                             <th style={getHeaderStyle(`gen`)}>Site Name</th>
                             <th style={getHeaderStyle(`gen`)}>Equipment Location(Switch Room)</th>
-                            <th style={getHeaderStyle(`gen`)}>Rack Owner Name</th>
+                            <th style={getHeaderStyle(`gen`)}>Power Type</th>
+                            <th style={getHeaderStyle(`gen`)}>Rack Size (HxWxD in mm)</th>
+                            <th style={getHeaderStyle(`gen`)}>Rack Description</th>
+                            <th style={getHeaderStyle(`gen`)}>Rack Owner Details</th>
                             <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 5 }}>Equipment/Rack No</th>
                             <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 4 }}>Equipment/Rack Name</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Rating (Amps/kVA)</th>
@@ -554,6 +561,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`Total`)}>% Load on Cable</th>
                             <th style={getHeaderStyle(`Total`)}>% Load on MCB</th>
                             <th style={getHeaderStyle(`Total`)}>Both MCB Same</th>
+                            <th style={getHeaderStyle(`Total`)}>Source Type</th>
                         </tr>
                     </thead>
 
@@ -579,622 +587,68 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.circle}</td>
                                 <td>{item.siteName}</td>
                                 <td>{item.equipmentLocation}</td>
+                                <td>{item.powerType}</td>
+                                <td>{item.rackSize}</td>
+                                <td>{item.rackDescription}</td>
                                 <td>{item.rackOwnerName}</td>
-                                <td className="sticky-col" style={{ position: "sticky", left: 0, zIndex: 3 }}>
-                                    {item.equipmentRackNo}
-                                </td>
-                                <td className="sticky-col">
-                                    {item.rackName}
-                                </td>
+                                <td className="sticky-col" style={{ position: "sticky", left: 0, zIndex: 3 }}>{item.equipmentRackNo}</td>
+                                <td className="sticky-col">{item.rackName}</td>
 
                                 {/* A Source */}
-                                <td>
-                                    {
-                                        item.smpsRatingA
-                                    }
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="smpsNameA"
-                                            value={item.smpsNameA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.smpsNameA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="dbNumberA"
-                                            value={item.dbNumberA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.dbNumberA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="incomerRatingA"
-                                            value={item.incomerRatingA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.incomerRatingA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="cableSizeA"
-                                            value={item.cableSizeA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.cableSizeA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="cableRunA"
-                                            value={item.cableRunA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.cableRunA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="equipmentRackNoA"
-                                            value={item.equipmentRackNoA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.equipmentRackNoA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackNameA"
-                                            value={item.rackNameA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackNameA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackIncomingCableSizeA"
-                                            value={item.rackIncomingCableSizeA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackIncomingCableSizeA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackCableRunA"
-                                            value={item.rackCableRunA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackCableRunA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="dbMcbNumberA"
-                                            value={item.dbMcbNumberA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.dbMcbNumberA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="dbMcbRatingA"
-                                            value={item.dbMcbRatingA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.dbMcbRatingA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="tempOnMcbA"
-                                            value={item.tempOnMcbA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.tempOnMcbA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="runningLoadA"
-                                            value={item.runningLoadA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.runningLoadA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="cableCapacityA"
-                                            value={item.cableCapacityA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.cableCapacityA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="pctLoadCableA"
-                                            value={item.pctLoadCableA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.pctLoadCableA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="pctLoadMcbA"
-                                            value={item.pctLoadMcbA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.pctLoadMcbA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackEndNoDbA"
-                                            value={item.rackEndNoDbA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackEndNoDbA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackEndDcdbNameA"
-                                            value={item.rackEndDcdbNameA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackEndDcdbNameA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackEndRunningLoadA"
-                                            value={item.rackEndRunningLoadA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackEndRunningLoadA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackEndMcbRatingA"
-                                            value={item.rackEndMcbRatingA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackEndMcbRatingA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackEndPctLoadMcbA"
-                                            value={item.rackEndPctLoadMcbA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackEndPctLoadMcbA
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="remarksA"
-                                            value={item.remarksA || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.remarksA
-                                    )}
-                                </td>
-
+                                <td>{item.smpsRatingA}</td>
+                                <td>{item.smpsNameA}</td>
+                                <td>{item.dbNumberA}</td>
+                                <td>{item.incomerRatingA}</td>
+                                <td>{item.cableSizeA}</td>
+                                <td>{item.cableRunA}</td>
+                                <td>{item.equipmentRackNoA}</td>
+                                <td>{item.rackNameA}</td>
+                                <td>{item.rackIncomingCableSizeA}</td>
+                                <td>{item.rackCableRunA}</td>
+                                <td>{item.dbMcbNumberA}</td>
+                                <td>{item.dbMcbRatingA}</td>
+                                <td>{item.tempOnMcbA}</td>
+                                <td>{item.runningLoadA}</td>
+                                <td>{item.cableCapacityA}</td>
+                                <td>{item.pctLoadCableA}</td>
+                                <td>{item.pctLoadMcbA}</td>
+                                <td>{item.rackEndNoDbA}</td>
+                                <td>{item.rackEndDcdbNameA}</td>
+                                <td>{item.rackEndRunningLoadA}</td>
+                                <td>{item.rackEndMcbRatingA}</td>
+                                <td>{item.rackEndPctLoadMcbA}</td>
+                                <td>{item.remarksA}</td>
 
                                 {/* B Source */}
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="smpsRatingB"
-                                            value={item.smpsRatingB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.smpsRatingB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="smpsNameB"
-                                            value={item.smpsNameB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.smpsNameB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="dbNumberB"
-                                            value={item.dbNumberB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.dbNumberB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="incomerRatingB"
-                                            value={item.incomerRatingB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.incomerRatingB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="cableSizeB"
-                                            value={item.cableSizeB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.cableSizeB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="cableRunB"
-                                            value={item.cableRunB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.cableRunB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="equipmentRackNoB"
-                                            value={item.equipmentRackNoB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.equipmentRackNoB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackNameB"
-                                            value={item.rackNameB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackNameB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackIncomingCableSizeB"
-                                            value={item.rackIncomingCableSizeB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackIncomingCableSizeB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackCableRunB"
-                                            value={item.rackCableRunB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackCableRunB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="dbMcbNumberB"
-                                            value={item.dbMcbNumberB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.dbMcbNumberB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="dbMcbRatingB"
-                                            value={item.dbMcbRatingB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.dbMcbRatingB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="tempOnMcbB"
-                                            value={item.tempOnMcbB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.tempOnMcbB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="runningLoadB"
-                                            value={item.runningLoadB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.runningLoadB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="cableCapacityB"
-                                            value={item.cableCapacityB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.cableCapacityB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="pctLoadCableB"
-                                            value={item.pctLoadCableB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.pctLoadCableB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="pctLoadMcbB"
-                                            value={item.pctLoadMcbB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.pctLoadMcbB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackEndNoDbB"
-                                            value={item.rackEndNoDbB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackEndNoDbB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackEndDcdbNameB"
-                                            value={item.rackEndDcdbNameB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackEndDcdbNameB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackEndRunningLoadB"
-                                            value={item.rackEndRunningLoadB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackEndRunningLoadB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackEndMcbRatingB"
-                                            value={item.rackEndMcbRatingB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackEndMcbRatingB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="rackEndPctLoadMcbB"
-                                            value={item.rackEndPctLoadMcbB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.rackEndPctLoadMcbB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="remarksB"
-                                            value={item.remarksB || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.remarksB
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="totalLoadBoth"
-                                            value={item.totalLoadBoth || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.totalLoadBoth
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="bothCableCapacity"
-                                            value={item.bothCableCapacity || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.bothCableCapacity
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="bothPctLoadCable"
-                                            value={item.bothPctLoadCable || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.bothPctLoadCable
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="bothPctLoadMcb"
-                                            value={item.bothPctLoadMcb || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.bothPctLoadMcb
-                                    )}
-                                </td>
-
-                                <td>
-                                    {editIndex === index ? (
-                                        <input
-                                            name="isBothMcbSame"
-                                            value={item.isBothMcbSame || ""}
-                                            onChange={(e) => handleChange(e, index)}
-                                        />
-                                    ) : (
-                                        item.isBothMcbSame
-                                    )}
-                                </td>
+                                <td>{item.smpsRatingB}</td>
+                                <td>{item.smpsNameB}</td>
+                                <td>{item.dbNumberB}</td>
+                                <td>{item.incomerRatingB}</td>
+                                <td>{item.cableSizeB}</td>
+                                <td>{item.cableRunB}</td>
+                                <td>{item.equipmentRackNoB}</td>
+                                <td>{item.rackNameB}</td>
+                                <td>{item.rackIncomingCableSizeB}</td>
+                                <td>{item.rackCableRunB}</td>
+                                <td>{item.dbMcbNumberB}</td>
+                                <td>{item.dbMcbRatingB}</td>
+                                <td>{item.tempOnMcbB}</td>
+                                <td>{item.runningLoadB}</td>
+                                <td>{item.cableCapacityB}</td>
+                                <td>{item.pctLoadCableB}</td>
+                                <td>{item.pctLoadMcbB}</td>
+                                <td>{item.rackEndNoDbB}</td>
+                                <td>{item.rackEndDcdbNameB}</td>
+                                <td>{item.rackEndRunningLoadB}</td>
+                                <td>{item.rackEndMcbRatingB}</td>
+                                <td>{item.rackEndPctLoadMcbB}</td>
+                                <td>{item.remarksB}</td>
+                                <td>{item.totalLoadBoth}</td>
+                                <td>{item.bothCableCapacity}</td>
+                                <td>{item.bothPctLoadCable}</td>
+                                <td>{item.bothPctLoadMcb}</td>
+                                <td>{item.isBothMcbSame}</td>
+                                <td>{item.sourceType}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -1267,12 +721,17 @@ const AcDcRackDashboard = ({ userData }) => {
                                             .replace(/\b\w/g, (c) => c.toUpperCase()); // Title Case
 
                                     // Grouped and ordered keys (customize this list to your full fields)
+                    
                                     const generalKeys = [
                                         "circle",
                                         "siteName",
                                         "equipmentLocation",
                                         "equipmentRackNo",
                                         "rackName",
+                                        "powerType",
+                                        "sourceType",
+                                        "rackSize",
+                                        "rackDescription",
                                         "rackOwnerName",
                                     ];
 
@@ -1334,7 +793,6 @@ const AcDcRackDashboard = ({ userData }) => {
                                         "bothPctLoadCable",
                                         "bothPctLoadMcb",
                                         "isBothMcbSame",
-                                        "updatedAt",
                                     ];
 
                                     // Merge everything in order; you can rearrange groups or items above

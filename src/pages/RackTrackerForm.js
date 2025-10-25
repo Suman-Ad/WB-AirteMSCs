@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { db } from "../firebase"; // ✅ make sure firebase.js is configured
 import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { useNavigate, useLocation } from "react-router-dom";
+import { XAxis, YAxis, ZAxis } from "recharts";
 
 
 // ✅ Helper function for safe numeric conversion
@@ -83,6 +84,8 @@ function computeCapacityAnalysis(form) {
 
     rackEndRunningLoadA,
     rackEndRunningLoadB,
+
+    sourceType: A > 0 && B > 0 ? "Dual Source" : "Single Source",
   };
 }
 
@@ -90,6 +93,7 @@ const RackTrackerForm = ({ userData }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const editData = location.state?.editData || null;
+  const powerType = ["AC", "DC", "AC+DC"];
   const [formData, setFormData] = useState(
     editData
       ? { ...editData } // Prefill all fields from the record
@@ -101,6 +105,9 @@ const RackTrackerForm = ({ userData }) => {
         equipmentLocation: "",
         equipmentRackNo: "",
         rackName: "",
+        powerType: powerType[0],
+        rackSize: "",
+        rackDescription: "",
         rackOwnerName: "",
 
         // Source A
@@ -159,6 +166,7 @@ const RackTrackerForm = ({ userData }) => {
         isBothMcbSame: "",
         remarksA: "",
         remarksB: "",
+        sourceType: "",
       });
 
   const [status, setStatus] = useState("");
@@ -233,11 +241,22 @@ const RackTrackerForm = ({ userData }) => {
           </div>
 
           <div>
-            <label>Rack/Equipment Number</label>
+            <label>Rack/Equipment Number:</label>
             <input type="text" name="equipmentRackNo" value={formData.equipmentRackNo} onChange={handleChange} disabled={!!editData} />
-            <label>Rack Name/Equipment Name</label>
+            <label>Rack Name/Equipment Name:</label>
             <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} disabled={!!editData}/>
-            <label>Rack Owner Name</label>
+            <label>Power Type:</label>
+            <select type="text" name="powerType" value={formData.powerType} onChange={handleChange}>
+              <option value={formData.powerType} >{formData.powerType || "Select Source Type"}</option>
+              {powerType.map(q => (
+                <option key={q} value={q}>{q}</option>
+              ))}
+            </select>
+            <label>Rack Size (HxWxD in mm):</label>
+            <input type="text" name="rackSize" value={formData.rackSize} onChange={handleChange} placeholder="e.g., 2000x600x800" />
+            <label>Rack Description:</label>
+            <textarea type="text" name="rackDescription" value={formData.rackDescription} onChange={handleChange} />
+            <label>Rack Owner Details (Name-Ph.):</label>
             <input type="text" name="rackOwnerName" value={formData.rackOwnerName} onChange={handleChange} />
           </div>
         </div>
@@ -247,9 +266,9 @@ const RackTrackerForm = ({ userData }) => {
           <div className="chart-container" style={{ paddingBottom: "10px", display: "normal", border: "2px solid #2083a1ff", marginTop: "20px" }}>
             <h2 style={{ borderBottom: "2px solid #2083a1ff", padding: "5px" }}><strong>Source A</strong></h2>
             <div>
-              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>SMPS/UPS Rating (Amps/kVA):</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>{formData.powerType === "AC" ? "UPS Rating (kVA):" : formData.powerType === "DC" ? "SMPS Rating (kW/Amps):" : "SMPS/UPS Rating (Amps/kVA):"}</label>
               <input type="number" name="smpsRatingA" value={formData.smpsRatingA} onChange={handleChange} />
-              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>SMPS/UPS Name:</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>{formData.powerType === "AC" ? "UPS Name:" : formData.powerType === "DC" ? "SMPS Name:" : "SMPS/UPS Name:"}</label>
               <input type="text" name="smpsNameA" value={formData.smpsNameA} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>A Source DB Number:</label>
               <input type="text" name="dbNumberA" value={formData.dbNumberA} onChange={handleChange} />
@@ -262,46 +281,46 @@ const RackTrackerForm = ({ userData }) => {
             </div>
 
             <div style={{ borderTop: "2px solid #4b8b25f3", padding: "5px" }}>
-              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Equipment Rack No</label>
+              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Equipment Rack No:</label>
               <input type="text" name="equipmentRackNoA" value={formData.equipmentRackNo} onChange={handleChange} />
 
-              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Rack Name/Equipment Name</label>
+              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Rack Name/Equipment Name:</label>
               <input type="text" name="rackNameA" value={formData.rackName} onChange={handleChange} />
             </div>
 
             <div style={{ borderTop: "2px solid #888013ff", padding: "5px" }}>
-              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack/Node Incoming Power Cable Size (Sq mm)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack/Node Incoming Power Cable Size (Sq mm):</label>
               <input type="number" name="rackIncomingCableSizeA" value={formData.rackIncomingCableSizeA} onChange={handleChange} />
-              <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB - RackDB Cable Run (Nos)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB - RackDB Cable Run (Nos):</label>
               <input type="number" name="rackCableRunA" value={formData.rackCableRunA} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Number:</label>
               <input type="text" name="dbMcbNumberA" value={formData.dbMcbNumberA} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Rating (Amps):</label>
               <input type="number" name="dbMcbRatingA" value={formData.dbMcbRatingA} onChange={handleChange} />
-              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Temp On Mcb/Fuse (°C)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Temp On Mcb/Fuse (°C):</label>
               <input type="text" name="tempOnMcbA" value={formData.tempOnMcbA} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>A Source Running Load (Amps):</label>
               <input type="number" name="runningLoadA" value={formData.runningLoadA} onChange={handleChange} />
             </div>
 
             <div style={{ borderTop: "2px solid #fffffff3", padding: "5px" }}>
-              <label>Cable Load Capacity</label>
+              <label>Cable Load Capacity:</label>
               <input type="number" name="cableCapacityA" value={formData.cableCapacityA} onChange={handleChange} disabled />
-              <label>% Load on O/P Cable</label>
+              <label>% Load on O/P Cable:</label>
               <input type="number" name="pctLoadCableA" value={formData.pctLoadCableA} onChange={handleChange} disabled />
-              <label>% Load on O/P MCB</label>
+              <label>% Load on O/P MCB:</label>
               <input type="number" name="pctLoadMcbA" value={formData.pctLoadMcbA} onChange={handleChange} disabled />
-              <label>Rack End No of DB / Power Strip No.</label>
+              <label>Rack End No of DB / Power Strip No.:</label>
               <input type="number" name="rackEndNoDbA" value={formData.rackEndNoDbA} onChange={handleChange} />
-              <label>Rack End DCDB / Power Strip Name</label>
+              <label>Rack End DCDB / Power Strip Name:</label>
               <input type="text" name="rackEndDcdbNameA" value={formData.rackEndDcdbNameA} onChange={handleChange} />
-              <label>Rack End DB Running Load (Amps)</label>
+              <label>Rack End DB Running Load (Amps):</label>
               <input type="number" name="rackEndRunningLoadA" value={formData.rackEndRunningLoadA} onChange={handleChange} />
-              <label>Rack End DB MCB Rating (Amps)</label>
+              <label>Rack End DB MCB Rating (Amps):</label>
               <input type="number" name="rackEndMcbRatingA" value={formData.rackEndMcbRatingA} onChange={handleChange} />
-              <label>% Load on I/P MCB</label>
+              <label>% Load on I/P MCB:</label>
               <input type="number" name="rackEndPctLoadMcbA" value={formData.rackEndPctLoadMcbA} onChange={handleChange} disabled />
-              <label>Remarks A</label>
+              <label>Remarks A:</label>
               <input type="text" name="remarksA" value={formData.remarksA} onChange={handleChange} />
             </div>
           </div>
@@ -313,9 +332,9 @@ const RackTrackerForm = ({ userData }) => {
             <h2 style={{ borderBottom: "2px solid #2083a1ff", padding: "5px" }}><strong>Source B</strong></h2>
 
             <div>
-              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>SMPS/UPS Rating (Amps/kVA):</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>{formData.powerType === "AC" ? "UPS Rating (kVA):" : formData.powerType === "DC" ? "SMPS Rating (kW/Amps):" : "SMPS/UPS Rating (Amps/kVA):"}</label>
               <input type="number" name="smpsRatingB" value={formData.smpsRatingB} onChange={handleChange} />
-              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>SMPS/UPS Name:</label>
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>{formData.powerType === "AC" ? "UPS Name:" : formData.powerType === "DC" ? "SMPS Name:" : "SMPS/UPS Name:"}</label>
               <input type="text" name="smpsNameB" value={formData.smpsNameB} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>B Source DB Number:</label>
               <input type="text" name="dbNumberB" value={formData.dbNumberB} onChange={handleChange} />
@@ -328,45 +347,45 @@ const RackTrackerForm = ({ userData }) => {
             </div>
 
             <div style={{ borderTop: "2px solid #4b8b25f3", padding: "5px" }}>
-              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Equipment Rack No</label>
+              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Equipment Rack No:</label>
               <input type="text" name="equipmentRackNoB" value={formData.equipmentRackNo} onChange={handleChange} />
-              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Rack Name/Equipment Name</label>
+              <label style={{ color: "#4b8b25f3", fontWeight: "bold" }}>Rack Name/Equipment Name:</label>
               <input type="text" name="rackNameB" value={formData.rackName} onChange={handleChange} />
             </div>
 
             <div style={{ borderTop: "2px solid #888013ff", padding: "5px" }}>
-              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack Incoming Power Cable Size (Sq mm)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack Incoming Power Cable Size (Sq mm):</label>
               <input type="number" name="rackIncomingCableSizeB" value={formData.rackIncomingCableSizeB} onChange={handleChange} />
-              <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB - RackDB Cable Run (Nos)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB - RackDB Cable Run (Nos):</label>
               <input type="number" name="rackCableRunB" value={formData.rackCableRunB} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Number:</label>
               <input type="text" name="dbMcbNumberB" value={formData.dbMcbNumberB} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Rating (Amps):</label>
               <input type="number" name="dbMcbRatingB" value={formData.dbMcbRatingB} onChange={handleChange} />
-              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Temp On Mcb/Fuse (°C)</label>
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Temp On Mcb/Fuse (°C):</label>
               <input type="text" name="tempOnMcbB" value={formData.tempOnMcbB} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>B Source Running Load (Amps):</label>
               <input type="number" name="runningLoadB" value={formData.runningLoadB} onChange={handleChange} />
             </div>
 
             <div style={{ borderTop: "2px solid #fffffff3", padding: "5px" }}>
-              <label>Cable Load Capacity</label>
+              <label>Cable Load Capacity:</label>
               <input type="number" name="cableCapacityB" value={formData.cableCapacityB} onChange={handleChange} disabled />
-              <label>% Load on O/P Cable</label>
+              <label>% Load on O/P Cable:</label>
               <input type="number" name="pctLoadCableB" value={formData.pctLoadCableB} onChange={handleChange} disabled />
-              <label>% Load on O/P MCB</label>
+              <label>% Load on O/P MCB:</label>
               <input type="number" name="pctLoadMcbB" value={formData.pctLoadMcbB} onChange={handleChange} disabled />
-              <label>Rack End No of DB / Power Strip No.</label>
+              <label>Rack End No of DB / Power Strip No.:</label>
               <input type="number" name="rackEndNoDbB" value={formData.rackEndNoDbB} onChange={handleChange} />
-              <label>Rack End DCDB / Power Strip Name</label>
+              <label>Rack End DCDB / Power Strip Name:</label>
               <input type="text" name="rackEndDcdbNameB" value={formData.rackEndDcdbNameB} onChange={handleChange} />
-              <label>Rack End DB Running Load (Amps)</label>
+              <label>Rack End DB Running Load (Amps):</label>
               <input type="number" name="rackEndRunningLoadB" value={formData.rackEndRunningLoadB} onChange={handleChange} />
-              <label>Rack End DB MCB Rating (Amps)</label>
+              <label>Rack End DB MCB Rating (Amps):</label>
               <input type="number" name="rackEndMcbRatingB" value={formData.rackEndMcbRatingB} onChange={handleChange} />
-              <label>% Load I/P MCB</label>
+              <label>% Load I/P MCB:</label>
               <input type="number" name="rackEndPctLoadMcbB" value={formData.rackEndPctLoadMcbB} onChange={handleChange} disabled />
-              <label>Remarks B</label>
+              <label>Remarks B:</label>
               <input type="text" name="remarksB" value={formData.remarksB} onChange={handleChange} />
             </div>
           </div>
@@ -380,6 +399,7 @@ const RackTrackerForm = ({ userData }) => {
           <p><strong>Both Source % Load Single O/P Cable:</strong> {formData.bothPctLoadCable}%</p>
           <p><strong>Both Source% Load Single O/P MCB:</strong> {formData.bothPctLoadMcb}%</p>
           <p><strong>Is Both Source MCB Rating Same?:</strong> {formData.isBothMcbSame}</p>
+          <p><strong>Source Type:</strong> {formData.sourceType}</p>
         </div>
 
         {/* Submit */}
