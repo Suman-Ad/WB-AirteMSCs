@@ -474,8 +474,13 @@ const DGLogForm = ({ userData }) => {
                         }}
                         className="w-full p-2 border rounded"
                     >
-                        <option value="DG-1">DG-1</option>
-                        <option value="DG-2">DG-2</option>
+
+                        <option value="">Select DG</option>;
+                        {Array.from({ length: siteConfig.dgCount || 0 }, (_, i) => (
+                            <option key={`DG-${i + 1}`} value={`DG-${i + 1}`}>
+                                DG-{i + 1}
+                            </option>
+                        ))}
                     </select>
                 </label>
 
@@ -590,7 +595,7 @@ const DGLogForm = ({ userData }) => {
 
                 {calculationResult && (
                     <div className="child-container">
-                        <h2 style={{fontSize:"20px", borderBottom: "3px solid #eee"}}><strong>🔢 {siteConfig.dgCapacity}kVA</strong> Cummins DG CPH/SEGR Calculation Results:</h2>
+                        <h2 style={{ fontSize: "20px", borderBottom: "3px solid #eee" }}><strong>🔢 {siteConfig.dgCapacity}kVA</strong> Cummins DG CPH/SEGR Calculation Results:</h2>
                         <pre >{calculationResult}</pre>
                     </div>
                 )}

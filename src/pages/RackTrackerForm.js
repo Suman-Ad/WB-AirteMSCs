@@ -59,6 +59,10 @@ function computeCapacityAnalysis(form) {
   const rackEndRunningLoadA = A;
   const rackEndRunningLoadB = B;
 
+  const pctRackOccupied = (toNumber(form.usedRackUSpace) > 0 && toNumber(form.totalRackUSpace) > 0)
+    ? (toNumber(form.usedRackUSpace) / toNumber(form.totalRackUSpace)) * 100
+    : 0;
+
   return {
     cableCapacityA,
     pctLoadCableA: pctLoadOnCableA.toFixed(1),
@@ -86,6 +90,8 @@ function computeCapacityAnalysis(form) {
     rackEndRunningLoadB,
 
     sourceType: A > 0 && B > 0 ? "Dual Source" : "Single Source",
+    freeRackUSpace: toNumber(form.totalRackUSpace) - toNumber(form.usedRackUSpace),
+    pctRackOccupied: pctRackOccupied.toFixed(1),
   };
 }
 
@@ -93,7 +99,7 @@ const RackTrackerForm = ({ userData }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const editData = location.state?.editData || null;
-  const powerType = ["AC", "DC", "AC+DC"];
+  const powerType = ["AC", "DC", "AC+DC", "None"];
   const [formData, setFormData] = useState(
     editData
       ? { ...editData } // Prefill all fields from the record
@@ -108,6 +114,9 @@ const RackTrackerForm = ({ userData }) => {
         powerType: powerType[0],
         rackSize: "",
         rackDescription: "",
+        totalRackUSpace: "",
+        usedRackUSpace: "",
+        freeRackUSpace: "",
         rackOwnerName: "",
 
         // Source A
@@ -164,6 +173,7 @@ const RackTrackerForm = ({ userData }) => {
         bothPctLoadCable: "",
         bothPctLoadMcb: "",
         isBothMcbSame: "",
+        pctRackOccupied: "",
         remarksA: "",
         remarksB: "",
         sourceType: "",
@@ -191,7 +201,7 @@ const RackTrackerForm = ({ userData }) => {
       // 🔹 Site-wise storage: rackTracker/{siteName}
       const isEditMode = !!editData;
       const siteKey = formData.siteName.trim().toUpperCase().replace(/[\/\s]+/g, "_");
-      const rackKey = `${formData.equipmentLocation || "LOCATION NOT DEFIEND"}_${formData.equipmentRackNo || "A0"}-${formData.rackName || "UNKNOWN RACK"}`.replace(/[\/\s]+/g, "_");
+      const rackKey = `${formData.equipmentLocation || "#UNKNOWN FLOOR"}_${formData.equipmentRackNo || "#A0"}-${formData.rackName || "#UNKNOWN RACK NAME"}`.replace(/[\/\s]+/g, "_");
       const siteRef = doc(db, "acDcRackDetails", siteKey);
       if (isEditMode) {
         // Update existing record
@@ -240,11 +250,13 @@ const RackTrackerForm = ({ userData }) => {
             </select>
           </div>
 
-          <div>
+          <div className="form-section">
             <label>Rack/Equipment Number:</label>
             <input type="text" name="equipmentRackNo" value={formData.equipmentRackNo} onChange={handleChange} disabled={!!editData} />
             <label>Rack Name/Equipment Name:</label>
             <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} disabled={!!editData}/>
+          </div>
+          <div className="form-section">
             <label>Power Type:</label>
             <select type="text" name="powerType" value={formData.powerType} onChange={handleChange}>
               <option value={formData.powerType} >{formData.powerType || "Select Source Type"}</option>
@@ -252,10 +264,20 @@ const RackTrackerForm = ({ userData }) => {
                 <option key={q} value={q}>{q}</option>
               ))}
             </select>
+          </div>
+          <div className="form-section">
             <label>Rack Size (HxWxD in mm):</label>
             <input type="text" name="rackSize" value={formData.rackSize} onChange={handleChange} placeholder="e.g., 2000x600x800" />
             <label>Rack Description:</label>
             <textarea type="text" name="rackDescription" value={formData.rackDescription} onChange={handleChange} />
+            <label>Total Rack U Space:</label>
+            <input type="number" name="totalRackUSpace" value={formData.totalRackUSpace} onChange={handleChange} />
+            <label>Used Rack U Space:</label>
+            <input type="number" name="usedRackUSpace" value={formData.usedRackUSpace} onChange={handleChange} />
+            <label>Free Rack U Space:</label>
+            <input type="number" name="freeRackUSpace" value={formData.freeRackUSpace} onChange={handleChange} disabled />
+          </div>
+          <div className="form-section">
             <label>Rack Owner Details (Name-Ph.):</label>
             <input type="text" name="rackOwnerName" value={formData.rackOwnerName} onChange={handleChange} />
           </div>
@@ -400,6 +422,7 @@ const RackTrackerForm = ({ userData }) => {
           <p><strong>Both Source% Load Single O/P MCB:</strong> {formData.bothPctLoadMcb}%</p>
           <p><strong>Is Both Source MCB Rating Same?:</strong> {formData.isBothMcbSame}</p>
           <p><strong>Source Type:</strong> {formData.sourceType}</p>
+          <p><strong>% Rack Occupied:</strong> {formData.pctRackOccupied}</p>
         </div>
 
         {/* Submit */}
