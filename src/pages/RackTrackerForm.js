@@ -99,7 +99,8 @@ const RackTrackerForm = ({ userData }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const editData = location.state?.editData || null;
-  const powerType = ["AC", "DC", "AC+DC", "None"];
+  const powerType = ["AC", "DC", "AC+DC"];
+  const rackType = ["Active", "Passive"];
   const [formData, setFormData] = useState(
     editData
       ? { ...editData } // Prefill all fields from the record
@@ -111,6 +112,7 @@ const RackTrackerForm = ({ userData }) => {
         equipmentLocation: "",
         equipmentRackNo: "",
         rackName: "",
+        rackType: rackType[0],
         powerType: powerType[0],
         rackSize: "",
         rackDescription: "",
@@ -257,9 +259,16 @@ const RackTrackerForm = ({ userData }) => {
             <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} disabled={!!editData}/>
           </div>
           <div className="form-section">
+            <label>Rack Type:</label>
+            <select type="text" name="rackType" value={formData.rackType} onChange={handleChange}>
+              <option value={formData.rackType} >{formData.rackType || "Select Rack Type"}</option>
+              {rackType.map(q => (
+                <option key={q} value={q}>{q}</option>
+              ))}
+            </select>
             <label>Power Type:</label>
             <select type="text" name="powerType" value={formData.powerType} onChange={handleChange}>
-              <option value={formData.powerType} >{formData.powerType || "Select Source Type"}</option>
+              <option value={formData.powerType} >{formData.rackType === "Passive" ? "None" : (formData.powerType || "Select Source Type")}</option>
               {powerType.map(q => (
                 <option key={q} value={q}>{q}</option>
               ))}
