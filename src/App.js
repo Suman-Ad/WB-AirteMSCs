@@ -41,6 +41,7 @@ import SiteConfigEditor from "./pages/SiteConfigEditor";
 import MonthlyData from "./pages/MonthlyData";
 import AutoLogout from "./config/AutoLogout";
 import AcDcRackDashboard from "./pages/AcDcRackDashboard";
+import ActivityDashboard from "./pages/ActivityDashboard";
 
 
 function App() {
@@ -339,6 +340,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <MonthlyData userData={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+        <Route path="/activity-dashboard" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <ActivityDashboard userData={userData} />
             </Layout>
           </RoleProtectedRoute>} />
 

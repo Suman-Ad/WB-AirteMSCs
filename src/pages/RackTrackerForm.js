@@ -191,7 +191,7 @@ const RackTrackerForm = ({ userData }) => {
       // 🔹 Site-wise storage: rackTracker/{siteName}
       const isEditMode = !!editData;
       const siteKey = formData.siteName.trim().toUpperCase().replace(/[\/\s]+/g, "_");
-      const rackKey = `${formData.equipmentRackNo || "A0"}-${formData.rackName || "UNKNOWN RACK"}`.replace(/[\/\s]+/g, "_");
+      const rackKey = `${formData.equipmentLocation || "LOCATION NOT DEFIEND"}_${formData.equipmentRackNo || "A0"}-${formData.rackName || "UNKNOWN RACK"}`.replace(/[\/\s]+/g, "_");
       const siteRef = doc(db, "acDcRackDetails", siteKey);
       if (isEditMode) {
         // Update existing record

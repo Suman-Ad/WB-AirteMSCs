@@ -1692,17 +1692,7 @@ const DailyDGLog = ({ userData }) => {
           {form.Date}
         </strong>
       </div>
-
-      {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor") && (
-        <button
-          className="segr-manage-btn"
-          onClick={() => Navigate('/site-config')}
-        >
-          ⚙️
-        </button>
-      )}
-
-
+ 
       <button
         className="segr-manage-btn warning"
         onClick={() => Navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig, dayFuelCon } })}

@@ -57,6 +57,15 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
             </button>
           }
         </span>
+        {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor") && (
+        <button
+          title="Site Settings"
+          className="logout-manage-btn"
+          onClick={() => navigate('/site-config') & setCollapsed(true)}
+        >
+          ⚙️
+        </button>
+      )}
       </div>
 
       {/* Navigation Links */}

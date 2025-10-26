@@ -241,6 +241,8 @@ const AcDcRackDashboard = ({ userData }) => {
         const wbout = XLSX.write(wb, { type: "array", bookType: "xlsx" });
         const blob = new Blob([wbout], { type: "application/octet-stream" });
         saveAs(blob, `ACDC_RackData_${new Date().toISOString().split("T")[0]}.xlsx`);
+        // XLSX.writeFile(wb, `ACDC_RackData_${new Date().toISOString().split("T")[0]}.xlsx`);
+
     };
 
     const getHeaderStyle = (header) => {

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "../firebase";
 import { collection, getDocs, getDoc, updateDoc, doc , setDoc} from "firebase/firestore";
 import * as XLSX from "xlsx";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto"; // auto-registers needed controllers
 import "../assets/daily-activity.css";
 
@@ -79,6 +79,8 @@ export default function DailyActivityDashboard({ userData }) {
     userData?.role === "Super Admin" ||
     userData?.role === "Admin" ||
     !!userData?.isAdminAssigned;
+
+  const navigate = useNavigate();
 
   /** raw rows and filtered rows */
   const [rows, setRows] = useState([]);
@@ -439,11 +441,11 @@ export default function DailyActivityDashboard({ userData }) {
         <h1 className="dashboard-header">
           <strong>🏗️ Daily Activity Dashboard</strong>
         </h1>
-
         
         <div className="daily-activity-subtitle">
           {isAdmin ? "Admin view: all sites" : "User view: your site only"}
         </div>
+        <p onClick={() => navigate("/activity-dashboard")} style={{cursor:"pointer"}}>Activity Matrix</p>
         {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.role === "User") && (
           <Link to="/daily-activity-management"><span className="pm-manage-btn">🚧🛠️ Manage Daily {userData?.site} Activity</span></Link>
         )}
