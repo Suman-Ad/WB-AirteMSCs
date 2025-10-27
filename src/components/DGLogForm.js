@@ -1,9 +1,14 @@
 // src/components/DGLogForm.js
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { collection, doc, setDoc, serverTimestamp, getDocs, query, orderBy, limit, where } from "firebase/firestore";
+import { collection, doc, setDoc, serverTimestamp, getDocs, query, orderBy, limit, where, getDoc } from "firebase/firestore";
 import { oemDieselCphData } from "../config/oemDieselCphData";
 import { useLocation, useNavigate } from "react-router-dom";
+import PizZip from "pizzip";
+import Docxtemplater from "docxtemplater";
+import { saveAs } from "file-saver";
+import HSDPrintTemplate from "../components/HSDPrintTemplate";
+
 
 
 // Helper to format today as YYYY-MM-DD
@@ -14,7 +19,8 @@ const getTodayDate = () => {
 
 const DGLogForm = ({ userData }) => {
     const { state } = useLocation();
-    const { siteConfig } = state || {};
+    const [siteConfig, setSiteConfig ] = useState({});
+    const siteKey = userData?.site?.toUpperCase();
     const [dgNumber, setDgNumber] = useState("DG-1");
     const [form, setForm] = useState({
         date: getTodayDate(),
@@ -29,11 +35,26 @@ const DGLogForm = ({ userData }) => {
         fuelFill: "",
     });
 
+    const [hsdForm, setHsdForm] = useState({
+        inTime: "",
+        informTime: "",
+        parkingTime: "",
+        fillingStartTime: "",
+        outTime: "",
+        securityName: "",
+        density: "",
+        temperature: "",
+        ltrs: "",
+        dillerInvoice: "",
+        securitySign: null,
+        omSign: null,
+        managerSign: null
+    });
+    const [previewOpen, setPreviewOpen] = useState(false);
+
+
     const navigate = useNavigate();
 
-    // const handleChange = (e) => {
-    //     setForm({ ...form, [e.target.name]: e.target.value });
-    // };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -51,6 +72,15 @@ const DGLogForm = ({ userData }) => {
                 : value,
         });
     };
+
+    // Site Config fetch
+    const fetchConfig = async () => {
+          if (!siteKey) return;
+          const snap = await getDoc(doc(db, "siteConfigs", siteKey));
+          if (snap.exists()) {
+            setSiteConfig(snap.data());
+          }
+        };
 
 
     const handleSubmit = async (e) => {
@@ -153,72 +183,6 @@ const DGLogForm = ({ userData }) => {
         }
         return -1;
     };
-
-    const calculateFuel = () => {
-        if (!dgCapacity || !dgKw || !dgHmr) {
-            setCalculationResult("Please fill all fields");
-            return;
-        }
-
-        const capacity = parseFloat(dgCapacity);
-        const kw = parseFloat(dgKw);
-        const hmr = parseFloat(dgHmr);
-
-        // Calculating kWh
-        const dgKwh = kw / hmr;
-
-        // Calculating percentage of DG running
-        const runPercent = (dgKwh / (capacity * 0.8)) * 100;
-        const roundedPercent = Math.round(runPercent);
-
-        // List of missing percentage columns
-        const missingColumnList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 18, 20, 21, 23, 24, 25, 26, 29, 36];
-
-        let result = `\n*********This Is For You*********\n\n`;
-        result += `🖋 DG Run Percentage: ${roundedPercent}%....\n`;
-
-        if (missingColumnList.includes(roundedPercent)) {
-            const adjustableCPH = hmr * 80;
-            const segr = kw / adjustableCPH;
-            const reqSegr = 3;
-
-            if (segr < reqSegr) {
-                let x;
-                for (x = 1; x < adjustableCPH; x++) {
-                    const adjusFuel = 3 * x;
-                    if (adjusFuel >= kw) {
-                        break;
-                    }
-                }
-                const finalSegr = kw / x;
-
-                result += `🖋 As per Load % OEM Diesel CPH: OEM CPH Data Not Available for ${roundedPercent}% Load....\n`;
-                result += `🖋 Achieve CPH as per Physical Inspection: 80.00 ltrs/Hour....\n`;
-                result += `🖋 Total Fuel Consumption for ${hmr * 60} Minutes DG Running: ${adjustableCPH.toFixed(2)} Ltrs....\n`;
-                result += `🖋 On Load/Off Load Consumption Details: On Load ${x} ltrs / Off Load ${(adjustableCPH - x).toFixed(2)} ltrs\n`;
-                result += `🖋 SEGR Value: ${finalSegr.toFixed(2)} kW/Ltrs.... as per On Load Consumption\n`;
-            } else {
-                result += `🖋 As per Load % OEM Diesel CPH: OEM CPH Data Not Available for ${roundedPercent}% Load....\n`;
-                result += `🖋 Achieve CPH as per Physical Inspection: 80.00 ltrs/Hour....\n`;
-                result += `🖋 Total Fuel Consumption for ${hmr * 60} Minutes DG Running: ${adjustableCPH.toFixed(2)} Ltrs....\n`;
-                result += `🖋 SEGR Value: ${segr.toFixed(2)} kW/Ltrs....\n`;
-            }
-        } else {
-            const rowIndex = findRowDgCapacity(capacity);
-            const oDCPH = oemDieselCphData[`${roundedPercent}%`][rowIndex];
-            const totalFuelConsumption = (oDCPH * 1) * hmr;
-            const segr = kw / totalFuelConsumption;
-            const cph = totalFuelConsumption / hmr;
-
-            result += `🖋 As per Load % OEM Diesel CPH: ${oDCPH.toFixed(2)} ltrs/Hour....\n`;
-            result += `🖋 Achieve CPH as per Physical Inspection: ${cph.toFixed(2)} ltrs/Hour....\n`;
-            result += `🖋 Total Fuel Consumption for ${hmr * 60} Minutes DG Running: ${totalFuelConsumption.toFixed(2)} Ltrs....\n`;
-            result += `🖋 SEGR Value: ${segr.toFixed(2)} kW/Ltrs....\n`;
-        }
-
-        setCalculationResult(result);
-    };
-
 
     const calculateSEGR = () => {
         const start = parseFloat(form.hrMeterStart) || 0;
@@ -336,8 +300,6 @@ const DGLogForm = ({ userData }) => {
         setCalculationResult(result);
     };
 
-
-
     useEffect(() => {
         const fetchPrevHrMeter = async () => {
             try {
@@ -417,6 +379,7 @@ const DGLogForm = ({ userData }) => {
         };
 
         fetchPrevHrMeter();
+        fetchConfig();
     }, [dgNumber, userData.site]);
 
 
@@ -442,6 +405,69 @@ const DGLogForm = ({ userData }) => {
         form.fuelConsumption, // include fuelConsumption to trigger SEGR/CPH on manual change
     ]);
 
+    const generateHSDReport = async () => {
+        try {
+            // ✅ Fetch template correctly (must be inside /public/)
+            const response = await fetch(`${process.env.PUBLIC_URL}/templates/HSD_Receiving_Template.docx`);
+            if (!response.ok) throw new Error("❌ Template not found or inaccessible");
+            const content = await response.arrayBuffer();
+
+            const zip = new PizZip(content);
+            const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+
+            // ✅ Extract proper fields
+            const formattedDate = new Date(form.date).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            });
+
+            // ✅ Prepare dynamic replacements matching your .docx placeholders
+            const data = {
+                siteName: siteConfig?.siteName || "-",
+                date: formattedDate,
+                inTime: hsdForm.inTime || "",
+                outTime: hsdForm.outTime || "",
+                securityName: hsdForm.securityName || "Security Team",
+                density: hsdForm.density || "-",
+                temperature: hsdForm.temperature || "-",
+                ltrs: hsdForm.ltrs || "-",
+                dillerInvoice: hsdForm.dillerInvoice || "",
+                actualReceived: form.fuelFill ? `${form.fuelFill} Ltr` : "-",
+                omName: siteConfig?.preparedBy || "O&M Team",
+                securitySign: hsdForm.securitySign,
+                omSign: hsdForm.omSign,
+                managerSign: hsdForm.managerSign,
+            };
+
+            // ✅ Render and handle potential template errors
+            try {
+                doc.setData(data);
+                doc.render();
+            } catch (renderErr) {
+                console.error("Docxtemplater render error:", renderErr);
+                throw renderErr;
+            }
+
+            // ✅ Save final file
+            const output = doc.getZip().generate({ type: "blob" });
+            saveAs(output, `HSD_Receiving_${data.siteName}_${formattedDate}.docx`);
+        } catch (error) {
+            console.error("❌ Error generating HSD report:", error);
+            alert("Failed to generate HSD Receiving Report. Check console for details.");
+        }
+    };
+
+    const handleSignUpload = (e, field) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                setHsdForm((prev) => ({ ...prev, [field]: reader.result }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
 
 
@@ -498,7 +524,8 @@ const DGLogForm = ({ userData }) => {
                     </select>
                 </label>
 
-                <div className="grid grid-cols-2 gap-2">
+                {(form.remarks === "On Load" || form.remarks === "No Load") && (
+                    <div className="grid grid-cols-2 gap-2">
                     <label className="form-label">Start Time:
                         <input
                             type="time"
@@ -521,6 +548,8 @@ const DGLogForm = ({ userData }) => {
                         />
                     </label>
                 </div>
+                )}
+                
 
                 <div className="grid grid-cols-2 gap-2">
                     <label className="form-label">Hr Meter Start:
@@ -542,7 +571,7 @@ const DGLogForm = ({ userData }) => {
                             type="number"
                             step="0.1"
                             name="hrMeterEnd"
-                            value={form.hrMeterEnd}
+                            value={form.remarks === "Fuel Filling Only" ? form.hrMeterStart : form.hrMeterEnd}
                             onChange={handleChange}
                             placeholder="Hr meter end"
                             className="p-2 border rounded"
@@ -551,33 +580,37 @@ const DGLogForm = ({ userData }) => {
                     </label>
                 </div>
 
+                {(form.remarks === "On Load" || form.remarks === "No Load") && (
                 <label className="form-label">Reading (kWH):
                     <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Closing kWh - Opening kWh = Reading)</span>
                     <input
                         type="number"
                         step="0.1"
                         name="kWHReading"
-                        value={form.kWHReading}
+                        value={form.remarks === "Fuel Filling Only" ? 0 : form.kWHReading}
                         onChange={handleChange}
                         placeholder="Generated kWH"
                         className="w-full p-2 border rounded"
                         required
                     />
                 </label>
+                )}
 
+                {(form.remarks === "On Load" || form.remarks === "No Load") && (
                 <label className="form-label">Fuel Consumption (Liters):
                     <span style={{ fontSize: "10px", color: "#851010ff" }}>(e.g.:- Opening Fuel - Closing Fuel = Fuel Consumption)</span>
                     <input
                         type="number"
                         step="0.1"
                         name="fuelConsumption"
-                        value={form.fuelConsumption}
+                        value={form.remarks === "Fuel Filling Only" ? 0 : form.fuelConsumption}
                         onChange={handleChange}
                         placeholder="Fuel consumption (L)"
                         className="w-full p-2 border rounded"
                         required
                     />
                 </label>
+            )}
 
                 <label className="form-label">Fuel Filling (Liters):
                     <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- Skip it('0') if Fuel not fill)</span>
@@ -606,6 +639,105 @@ const DGLogForm = ({ userData }) => {
                     Save Log
                 </button>
             </form>
+
+            {form.remarks === "Fuel Filling Only" && (
+                <div className="child-container" style={{ padding: "10px", border: "1px solid #ccc", borderRadius: "10px", marginBottom: "10px" }}>
+                    <h3>🛢️ HSD Receiving Info</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+                        <div>
+                            <label>Diesel Tanker (In time HH:MM)</label>
+                            <input type="time" name="inTime" value={hsdForm.inTime} onChange={(e) => setHsdForm({ ...hsdForm, inTime: e.target.value })} required />
+                        </div>
+                        <div>
+                            <label>Time: Informed to O&M team of arrival of HSD tanker by Security Team</label>
+                            <input type="time" name="informTime" value={hsdForm.informTime} onChange={(e) => setHsdForm({ ...hsdForm, informTime: e.target.value })} required />
+                        </div>
+
+                        <div>
+                            <label>HSD parking and ignition off time at HSD yard (HH:MM)</label>
+                            <input type="time" name="parkingTime" value={hsdForm.parkingTime} onChange={(e) => setHsdForm({ ...hsdForm, parkingTime: e.target.value })} required />
+                        </div>
+
+                        <div>
+                            <label>HSD Tanker settling time (HH:MM)</label>
+                            <input type="time" name="fillingStartTime" value={hsdForm.fillingStartTime} onChange={(e) => setHsdForm({ ...hsdForm, fillingStartTime: e.target.value })} required />
+                        </div>
+                        <div>
+                            <label>HSD tanker (Out time) (HH:MM)</label>
+                            <input type="time" name="outTime" value={hsdForm.outTime} onChange={(e) => setHsdForm({ ...hsdForm, outTime: e.target.value })} required />
+                        </div>
+                        <div>
+                            <label>HSD Ltrs.</label>
+                            <input type="number" name="ltrs" value={hsdForm.ltrs || form.fuelFill} onChange={(e) => setHsdForm({ ...hsdForm, ltrs: e.target.value })} required />
+                        </div>
+                        <div>
+                            <label>HSD Density</label>
+                            <input type="number" name="density" value={hsdForm.density} onChange={(e) => setHsdForm({ ...hsdForm, density: e.target.value })} required />
+                        </div>
+                        <div>
+                            <label>HSD Temperature °C</label>
+                            <input type="number" name="temperature" value={hsdForm.temperature} onChange={(e) => setHsdForm({ ...hsdForm, temperature: e.target.value })} required />
+                        </div>
+                        <div>
+                            <label>Security Name</label>
+                            <input type="text" name="securityName" value={hsdForm.securityName} onChange={(e) => setHsdForm({ ...hsdForm, securityName: e.target.value })} required />
+                        </div>
+                        <div>
+                            <label>Accepted Invoice/Delivery challan number</label>
+                            <input type="text" name="dillerInvoice" value={hsdForm.dillerInvoice} onChange={(e) => setHsdForm({ ...hsdForm, dillerInvoice: e.target.value })} required />
+                        </div>
+                    </div>
+
+                    <h4 style={{ marginTop: "15px" }}>Upload Signatures</h4>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
+                        <div>
+                            <label>Security Signature</label><br />
+                            <input type="file" accept="image/*" onChange={(e) => handleSignUpload(e, "securitySign")} />
+                            {hsdForm.securitySign && <img src={hsdForm.securitySign} alt="Security Sign" width={80} />}
+                        </div>
+                        <div>
+                            <label>O&M Signature</label><br />
+                            {/* <input type="file" accept="image/*" onChange={(e) => handleSignUpload(e, "omSign")} /> */}
+                            {siteConfig.omSign && <img src={siteConfig.omSign} alt="OM Sign" width={80} />}
+                        </div>
+                        <div>
+                            <label>Manager Signature</label><br />
+                            {/* <input type="file" accept="image/*" onChange={(e) => handleSignUpload(e, "managerSign")} /> */}
+                            {siteConfig.managerSign && <img src={siteConfig.managerSign} alt="Manager Sign" width={80} />}
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: "15px" }}>
+                        <button type="button" onClick={() => setPreviewOpen(true)}>👁️ Preview</button>
+                        <button type="button" style={{ marginLeft: "10px" }} onClick={() => generateHSDReport()}>📄 Generate HSD Report</button>
+                    </div>
+                </div>
+            )}
+
+            {previewOpen && (
+                <div
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        background: "rgba(0,0,0,0.6)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        zIndex: 1000,
+                    }}
+                >
+                    <HSDPrintTemplate
+                        form={form}
+                        hsdForm={hsdForm}
+                        siteConfig={siteConfig}
+                        setPreviewOpen={setPreviewOpen}
+                    />
+                </div>
+            )}
+
         </div>
     );
 };

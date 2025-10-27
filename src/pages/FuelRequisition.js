@@ -302,6 +302,21 @@ const FuelRequisition = () => {
                 const dg1LiveData = await fetchLiveDGData(userData.site, monthKey, todayKey, "DG-1");
                 const dg2LiveData = await fetchLiveDGData(userData.site, monthKey, todayKey, "DG-2");
 
+                // Also fetch yesterday's data to handle no-run-today scenario
+                const dayToCheck = 3; // Check up to last 3 days
+                let yesterdayKeyd = "";
+                for (let i = 0; i < dayToCheck; i++) {
+                    const yesterday = new Date(todayKey);
+                    yesterday.setDate(yesterday.getDate() - i);
+
+                // Format yesterday's date into the "YYYY-MM-DD" string format
+                const yesterdayKey = yesterday.toISOString().split("T")[0];
+                yesterdayKeyd = yesterdayKey;}
+
+                const dg1YesterdayLogSnap = await fetchLiveDGData(userData.site, monthKey, yesterdayKeyd, "DG-1");
+                const dg2YesterdayLogSnap = await fetchLiveDGData(userData.site, monthKey, yesterdayKeyd, "DG-2");
+                
+
                 // Use latestDaily closing values as opening stock baseline (if present)
                 const dg1OpeningStock = Number(latestDaily?.["DG-1 Fuel Closing"] || 0);
                 const dg1PresentStock = dg1OpeningStock - dg1LiveData.totalFuelConsumed;
@@ -327,9 +342,9 @@ const FuelRequisition = () => {
                         "Last Filling Liters": lastFilling?.DG1 || 0,
                         "Dg Run Hour in Last Filling": (lastFilling?.DG1Hrs).toFixed(1) || 0.0,
                         "Last CPH Achieved": cph || 0,
-                        "DG Run Hour Reading": (dg1LiveData.latestHourMeter).toFixed(1) || (latestDaily?.["DG-1 Hour Closing"]).toFixed(1),
+                        "DG Run Hour Reading": (dg1LiveData.latestHourMeter).toFixed(1) > 0 ? (dg1LiveData.latestHourMeter).toFixed(1) : (dg1YesterdayLogSnap.latestHourMeter).toFixed(1),
                         "Previous DG run Hrs": (lastFilling?.DG1Hrs).toFixed(1) || 0.0,
-                        "Present DG run Hrs": (dg1LiveData.latestHourMeter).toFixed(1) || (latestDaily?.["DG-1 Hour Closing"]).toFixed(1),
+                        "Present DG run Hrs": (dg1LiveData.latestHourMeter).toFixed(1) > 0 ? (dg1LiveData.latestHourMeter).toFixed(1) : (dg1YesterdayLogSnap.latestHourMeter).toFixed(1),
                         "Present Diesel stock": dg1PresentStock.toFixed(2),
                         "Request Date": getFormattedDate(),
                         "Requested Liters": Math.max(0, (totalCapa / 2) - dg1PresentStock).toFixed(2),
@@ -348,9 +363,9 @@ const FuelRequisition = () => {
                         "Last Filling Liters": lastFilling?.DG2 || 0,
                         "Dg Run Hour in Last Filling": (lastFilling?.DG2Hrs).toFixed(1) || 0.0,
                         "Last CPH Achieved": cph || 0,
-                        "DG Run Hour Reading": (dg2LiveData.latestHourMeter).toFixed(1) || (latestDaily?.["DG-2 Hour Closing"]).toFixed(1),
+                        "DG Run Hour Reading": (dg2LiveData.latestHourMeter).toFixed(1) > 0 ? (dg2LiveData.latestHourMeter).toFixed(1) : (dg2YesterdayLogSnap.latestHourMeter).toFixed(1),
                         "Previous DG run Hrs": (lastFilling?.DG2Hrs).toFixed(1) || 0.0,
-                        "Present DG run Hrs": (dg2LiveData.latestHourMeter).toFixed(1) || (latestDaily?.["DG-2 Hour Closing"]).toFixed(1),
+                        "Present DG run Hrs": (dg2LiveData.latestHourMeter).toFixed(1) > 0 ? (dg2LiveData.latestHourMeter).toFixed(1) : (dg2YesterdayLogSnap.latestHourMeter).toFixed(1),
                         "Present Diesel stock": dg2PresentStock.toFixed(2),
                         "Request Date": getFormattedDate(),
                         "Requested Liters": Math.max(0, (totalCapa / 2) - dg2PresentStock).toFixed(2),
@@ -437,7 +452,7 @@ const FuelRequisition = () => {
         }
 
         // 🔹 Adjust column widths
-        ws["!cols"] = cols.map(() => ({ wch: 12}));
+        ws["!cols"] = cols.map(() => ({ wch: 12 }));
         XLSX.writeFile(
             wb,
             `Diesel_Request_${siteName}_${getFormattedDate()}.xlsx`

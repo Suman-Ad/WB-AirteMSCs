@@ -1,0 +1,183 @@
+/* ==========================================================
+   Nxtra Official HSD RECEIVING FORMAT Print Styling (Landscape)
+   Author: Suman Adhikari
+   ========================================================== */
+
+/* ===== Base Styles ===== */
+#printArea {
+  width: 297mm;               /* Landscape width */
+  min-height: 180mm;          /* Landscape height */
+  margin: auto;
+  background: #fff;
+  color: #000;
+  padding: 15mm 12mm;
+  font-family: "Arial", sans-serif;
+  line-height: 1.5;
+  font-size: 12.5px;
+  box-sizing: border-box;
+  border: 1px solid #000;
+  border-radius: 5px;
+  overflow-x: auto;
+}
+
+/* ===== Header ===== */
+#printArea h2 {
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+  text-decoration: underline;
+  color: #000;
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+/* ===== General Text Layout ===== */
+#printArea p {
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== Tables ===== */
+#printArea table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #000;
+  margin-bottom: 12px;
+  table-layout: fixed;
+}
+
+#printArea th,
+#printArea td {
+  border: 1px solid #000;
+  padding: 4px 6px;
+  vertical-align: middle;
+  text-align: center;
+  word-wrap: break-word;
+}
+
+#printArea th {
+  background-color: #f1f1f1;
+  font-weight: bold;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ===== Section Dividers ===== */
+#printArea .section-border {
+  border: 2px solid #000;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* ===== Signatures Section ===== */
+#printArea .signatures {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  margin-top: 10px;
+  gap: 10px;
+}
+
+#printArea .signatures div {
+  text-align: center;
+  width: 30%;
+}
+
+#printArea .signatures img {
+  border: 1px solid #000;
+  width: 100px;
+  height: auto;
+  display: block;
+  margin: 5px auto;
+}
+
+/* ===== Buttons ===== */
+#printArea .action-buttons {
+  text-align: center;
+  margin-top: 30px;
+}
+
+#printArea .action-buttons button {
+  font-size: 14px;
+  margin: 5px;
+  border-radius: 5px;
+  border: none;
+  padding: 8px 20px;
+  cursor: pointer;
+}
+
+#printArea .action-buttons button:first-of-type {
+  background-color: #333;
+  color: #fff;
+}
+
+#printArea .action-buttons button:last-of-type {
+  background-color: #007bff;
+  color: #fff;
+}
+
+/* ===== PRINT MODE ===== */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #printArea,
+  #printArea * {
+    visibility: visible !important;
+  }
+
+  #printArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 10mm;
+    border: none;
+    background: #fff !important;
+    box-shadow: none;
+  }
+
+  /* Remove overlay background */
+  [style*="rgba(0,0,0,0.6)"] {
+    display: none !important;
+  }
+
+  /* Hide all buttons during print */
+  .action-buttons,
+  #printArea button {
+    display: none !important;
+  }
+
+  table {
+    page-break-inside: avoid;
+  }
+
+  .signatures {
+    page-break-inside: avoid;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+}
+
+/* ===== Optional Scrollbar Hide ===== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 100, 100, 0.5);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
