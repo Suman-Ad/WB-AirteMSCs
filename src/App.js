@@ -42,6 +42,7 @@ import MonthlyData from "./pages/MonthlyData";
 import AutoLogout from "./config/AutoLogout";
 import AcDcRackDashboard from "./pages/AcDcRackDashboard";
 import ActivityDashboard from "./pages/ActivityDashboard";
+import HSDPrintTemplate from "./components/HSDPrintTemplate";
 
 
 function App() {
@@ -312,6 +313,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <CCMSCopy />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+        <Route path="/hsd-copy" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <HSDPrintTemplate />
             </Layout>
           </RoleProtectedRoute>} />
 

@@ -62,7 +62,7 @@ const CCMSCopy = () => {
                 <button onClick={() => window.print()}>🖨️ Print / Save as PDF</button>
             </div>
 
-            <div className="ccms-sheet">
+            <div id="ccmsSheet" className="ccms-sheet">
                 <h2 className="ccms-header" style={{ fontSize: "20px" }}>BILL FORWARDING SHEET</h2>
                 <p style={{ textAlign: "center", padding: "6px", fontSize: "13px" }}>EXPENSE OF (PLEASE TICK AS APPLICABLE)</p>
                 <p style={{ textAlign: "center", padding: "7px", fontSize: "13px" }}>FOR EXPENSE TO BE DEBITED TO OTHER CIRCLE/BUSINESS, PLEASE ATTACH A MAIL CONFIRMATION FROM YOUR FUNCTIONAL COUNTER PART ACCEPTING THE DEBIT TO AVOID INTER UNIT RECO ISSUE ON THE MONTH END.</p>

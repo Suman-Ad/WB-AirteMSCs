@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
 import { collection, doc, setDoc, serverTimestamp, getDocs, query, orderBy, limit, where, getDoc } from "firebase/firestore";
 import { oemDieselCphData } from "../config/oemDieselCphData";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { saveAs } from "file-saver";
@@ -18,7 +18,6 @@ const getTodayDate = () => {
 };
 
 const DGLogForm = ({ userData }) => {
-    const { state } = useLocation();
     const [siteConfig, setSiteConfig ] = useState({});
     const siteKey = userData?.site?.toUpperCase();
     const [dgNumber, setDgNumber] = useState("DG-1");

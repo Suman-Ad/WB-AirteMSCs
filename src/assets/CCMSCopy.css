@@ -67,20 +67,6 @@
 }
 
 
-/* @media print {
-  .ccms-controls, .daily-log-container {
-    display: none;
-  }
-  .ccms-container {
-    padding: 0;
-    background-color: white;
-  }
-  .ccms-sheet {
-    border: none;
-    box-shadow: none;
-  }
-} */
-
 /* Ensure only CCMS sheet prints */
 @media print {
   /* Hide everything by default */
@@ -89,11 +75,11 @@
   }
 
   /* Show only the CCMS sheet */
-  .ccms-sheet, 
-  .ccms-sheet * {
-    visibility: visible;
+  #ccmsSheet, 
+  #ccmsSheet * {
+    visibility: visible !important;
   }
-
+  
   /* Ensure CCMS sheet takes full page */
   .ccms-sheet {
     position: absolute;
@@ -107,6 +93,7 @@
   .remove-btn {
     display: none !important;
   }
+
 }
 
 
