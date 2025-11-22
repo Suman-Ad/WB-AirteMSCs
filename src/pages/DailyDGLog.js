@@ -213,6 +213,8 @@ const DailyDGLog = ({ userData }) => {
     const officeLoad = parseFloat(result["Office kW Consumption"]) || 0;
     result["Office kW Consumption"] = officeLoad;
 
+    
+
     // Totals
     result["Total DG KWH"] =
       (result["DG-1 KWH Generation"] || 0) +
@@ -269,6 +271,10 @@ const DailyDGLog = ({ userData }) => {
 
     //PUE Calculation
     result["PUE"] = result["Office kW Consumption"] > 0 ? (((result["Total Unit Consumption"] - result["Office kW Consumption"]) / 24) / result["Total IT Load KWH"]).toFixed(2) : "0.00";
+
+    // Cooling Load Calculations
+    const coolingLoad = result["Site Running kW"] - (result["Total IT Load KWH"] + (result["Office kW Consumption"] / 24)) || 0;
+    result["Cooling kW Consumption"] = coolingLoad;
 
     return result;
   };
@@ -1285,6 +1291,25 @@ const DailyDGLog = ({ userData }) => {
             ? (itLoad.reduce((a, b) => a + b, 0) / itLoad.length).toFixed(2)
             : 0;
 
+        // Average Cooling Load
+        const coolingLoad = calculatedLogs.flatMap((cl) => [
+          cl["Cooling kW Consumption"],
+        ]).filter((v) => v > 0);
+        const monthlyAvgCoolingLoad =
+          coolingLoad.length > 0
+            ? (coolingLoad.reduce((a, b) => a + b, 0) / coolingLoad.length).toFixed(2)
+            : 0;
+
+        // Average Office Load
+        const officeLoad = calculatedLogs.flatMap((cl) => [
+          cl["Office kW Consumption"],
+        ]).filter((v) => v > 0);
+        const monthlyAvgOfficeLoad =
+          officeLoad.length > 0
+            ? ((officeLoad.reduce((a, b) => a + b, 0) / officeLoad.length) / 24).toFixed(2)
+            : 0;
+        
+
         // Totals
         const totalKwh = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG KWH"] || 0), 0);
         const totalFuel = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Fuel"] || 0), 0);
@@ -1479,6 +1504,8 @@ const DailyDGLog = ({ userData }) => {
             <div style={{ display: "flex" }}>
               <div>
                 <p>📡 Avg IT Load – <strong>{monthlyAvgITLoad} kWh</strong></p>
+                <p>❄️ Avg Cooling Load – <strong>{monthlyAvgCoolingLoad} kWh</strong></p>
+                <p>🏢 Avg Office Load – <strong>{monthlyAvgOfficeLoad} kWh</strong></p>
                 <p>⛽ Avg DG CPH – <strong>{fmt1(totalOnLoadCon / totalOnLoadHrs)} Ltrs/Hrs</strong></p>
               </div>
               <div style={{ fontSize: "10px" }}>
@@ -1901,8 +1928,9 @@ const DailyDGLog = ({ userData }) => {
               <th style={getHeaderStyle(`Total KWH Consumption (EB+DG)`)}>Total KWH Consumption (EB+DG)</th>
               <th style={getHeaderStyle(`Total Fuel Consumption`)}>Total Fuel Consumption</th>
               <th style={getHeaderStyle(`Total DG Run Hours`)}>Total DG Run Hours</th>
-              <th style={getHeaderStyle(`Site Running kW`)}>Site Running kW</th>
-              <th style={getHeaderStyle(`DCPS Load Amps`)}>DCPS Load Amps</th>
+              <th style={getHeaderStyle(`Site Running kW`)}>Site Running (kWh)</th>
+              <th style={getHeaderStyle(`Site Running kW`)}>Cooling Load (kWh)</th>
+              <th style={getHeaderStyle(`DCPS Load Amps`)}>DCPS Load (Amps)</th>
               <th style={getHeaderStyle(`UPS Load (kWh)`)}>UPS Load (kWh)</th>
               <th style={getHeaderStyle(`Total IT Load (kWh)`)}>Total IT Load (kWh)</th>
               <th style={getHeaderStyle(`Office Load (kW)`)}>Office Load (kW)</th>
@@ -2011,6 +2039,7 @@ const DailyDGLog = ({ userData }) => {
                   <td>{fmt(calculated["Total DG Fuel"])}</td>
                   <td>{fmt1(calculated["Total DG Hours"])}</td>
                   <td>{fmt(calculated["Site Running kW"])}</td>
+                  <td>{fmt(calculated["Cooling kW Consumption"])}</td>
                   <td>{fmt(calculated["DCPS Load Amps"])}</td>
                   <td>{fmt(calculated["UPS Load KWH"])}</td>
                   <td>{fmt(calculated["Total IT Load KWH"])}</td>

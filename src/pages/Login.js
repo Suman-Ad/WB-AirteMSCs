@@ -1,16 +1,17 @@
-// src/pages/Login.js
 import React, { useState } from "react";
 import { auth, db } from "../firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; // <-- CHANGE: import sendPasswordResetEmail
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import "../assets/Login.css";
 import Vertiv from "../assets/vertiv.png";
 
-
 const Login = ({ setUserData }) => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [resetMsg, setResetMsg] = useState(""); // <-- CHANGE: For feedback after reset
+  const [showReset, setShowReset] = useState(false); // <-- CHANGE: control visibility
+  const [resetEmail, setResetEmail] = useState(""); // <-- CHANGE: separate state
   const navigate = useNavigate();
 
   const handleChange = (e) =>
@@ -19,7 +20,7 @@ const Login = ({ setUserData }) => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
-
+    setResetMsg("");
     try {
       const { user } = await signInWithEmailAndPassword(
         auth,
@@ -48,16 +49,26 @@ const Login = ({ setUserData }) => {
           designation: data.designation,
           photoURL: data.photoURL || "",
         };
-        console.log("User data:", userData);
         localStorage.setItem("userData", JSON.stringify(userData));
-        setUserData(userData); // <-- very important for App.js routing
+        setUserData(userData);
         navigate("/");
       } else {
         setError("User data not found in Firestore.");
       }
     } catch (err) {
-      console.error("Login error:", err);
       setError("Login failed: " + err.message);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setResetMsg("");
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setResetMsg("✅ Password reset email sent! Please check your inbox.");
+    } catch (err) {
+      setError("Failed to send reset email: " + err.message);
     }
   };
 
@@ -65,23 +76,22 @@ const Login = ({ setUserData }) => {
     <div className="auth-container"
       style={{
         background: `url(${require("../assets/loginbg0.png")}) no-repeat center center fixed`,
-        position: 'absolute',
+        // position: 'absolute',
         top: 0,
         left: 0,
         width: '100%',
         height: '100%',
-        objectFit: 'cover', /* or 'contain' */
+        objectFit: 'cover',
         zIndex: -1,
       }}>
-      
       <form onSubmit={handleLogin} className="auth-form" style={{
-          background: "rgba(255, 255, 255, 0.1)",
-          backdropFilter: "blur(8px)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-          borderRadius: "10px",
-          padding: "2rem",
-          maxWidth: "400px",
-        }}>
+        background: "rgba(255, 255, 255, 0.1)",
+        backdropFilter: "blur(8px)",
+        border: "1px solid rgba(255, 255, 255, 0.2)",
+        borderRadius: "10px",
+        padding: "2rem",
+        maxWidth: "400px",
+      }}>
         <h2 className="title">
           <img 
             src={Vertiv} 
@@ -97,7 +107,9 @@ const Login = ({ setUserData }) => {
 
         <h2 style={{color: "white"}}>Employee Login</h2>
         {error && <p className="auth-error">{error}</p>}
+        {resetMsg && <p className="auth-success">{resetMsg}</p>} {/* SUCCESS MESSAGE */}
 
+        {!showReset && (<>
         <input
           type="email"
           name="email"
@@ -123,15 +135,46 @@ const Login = ({ setUserData }) => {
         >
           Login
         </button>
-        {/* <p>**Click on Register Button For Create A New Account**</p> */}
+        </>
+        )}
+
+        {/* FORGOT PASSWORD */}
+        <p style={{ marginTop: '1em', textAlign: 'center', color: 'white', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setShowReset(!showReset)}>
+          {!showReset ? "Forgot Password?" : "Back to Login"}
+        </p>
+        {showReset && (
+          <form onSubmit={handleResetPassword} style={{ marginTop: '1em' }}>
+            <input
+              type="email"
+              name="resetEmail"
+              placeholder="Enter your email"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              required
+              className="w-full p-2 mb-2 border rounded"
+            />
+            <button type="submit" className="auth-button" style={{ marginBottom: '1em' }}>
+              Send Reset Email
+            </button>
+          </form>
+        )}
+
+        {/* REGISTER */}
+        {!showReset && (
         <Link to={"/register"}>
-        <button
-          className="auth-button"
-        >
-          Create New Account
-        </button>
+          <button
+            className="auth-button"
+          >
+            Create New Account
+          </button>
         </Link>
+        )}
       </form>
+      <div style={{position: "absolute", width: "100%", bottom: "1em"}}>
+        <footer className="auth-footer" style={{color: "white", marginTop: "1em", bottom: 0, textAlign: "center", backdropFilter: "blur(8px)"}}>
+          &copy; {new Date().getFullYear()} Vertiv Corporation. All rights reserved. Prepared By <strong style={{fontSize:"12px"}}>@ Crash Algo Corporation</strong>
+        </footer>
+      </div>
     </div>
   );
 };
