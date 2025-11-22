@@ -93,9 +93,9 @@ const Login = ({ setUserData }) => {
         maxWidth: "400px",
       }}>
         <h2 className="title">
-          <img 
-            src={Vertiv} 
-            alt="Vertiv Logo" 
+          <img
+            src={Vertiv}
+            alt="Vertiv Logo"
             className="logo"
             style={{
               height: '2.5em',
@@ -105,43 +105,45 @@ const Login = ({ setUserData }) => {
           />
         </h2>
 
-        <h2 style={{color: "white"}}>Employee Login</h2>
+        <h2 style={{ color: "white" }}>Employee Login</h2>
         {error && <p className="auth-error">{error}</p>}
         {resetMsg && <p className="auth-success">{resetMsg}</p>} {/* SUCCESS MESSAGE */}
 
         {!showReset && (<>
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-          className="w-full p-2 mb-2 border rounded"
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={handleChange}
-          required
-          className="w-full p-2 mb-4 border rounded"
-        />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            className="w-full p-2 mb-2 border rounded"
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            className="w-full p-2 mb-4 border rounded"
+          />
 
-        <button
-          type="submit"
-          className="auth-button"
-        >
-          Login
-        </button>
+          <button
+            type="submit"
+            className="auth-button"
+          >
+            Login
+          </button>
         </>
         )}
 
         {/* FORGOT PASSWORD */}
-        <p style={{ marginTop: '1em', textAlign: 'center', color: 'white', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setShowReset(!showReset)}>
-          {!showReset ? "Forgot Password?" : "Back to Login"}
-        </p>
+        {!showReset && (
+          <p style={{ marginTop: '1em', textAlign: 'center', color: 'white', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setShowReset(!showReset)}>
+            Forgot Password
+          </p>
+        )}
         {showReset && (
           <form onSubmit={handleResetPassword} style={{ marginTop: '1em' }}>
             <input
@@ -156,23 +158,27 @@ const Login = ({ setUserData }) => {
             <button type="submit" className="auth-button" style={{ marginBottom: '1em' }}>
               Send Reset Email
             </button>
+
+            <p style={{ marginTop: '1em', textAlign: 'center', color: 'white', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setShowReset(!showReset)}>
+              Back to Login
+            </p>
           </form>
         )}
 
         {/* REGISTER */}
         {!showReset && (
-        <Link to={"/register"}>
-          <button
-            className="auth-button"
-          >
-            Create New Account
-          </button>
-        </Link>
+          <Link to={"/register"}>
+            <button
+              className="auth-button"
+            >
+              Create New Account
+            </button>
+          </Link>
         )}
       </form>
-      <div style={{position: "absolute", width: "100%", bottom: "1em"}}>
-        <footer className="auth-footer" style={{color: "white", marginTop: "1em", bottom: 0, textAlign: "center", backdropFilter: "blur(8px)"}}>
-          &copy; {new Date().getFullYear()} Vertiv Corporation. All rights reserved. Prepared By <strong style={{fontSize:"12px"}}>@ Crash Algo Corporation</strong>
+      <div style={{ position: "absolute", width: "100%", bottom: "1em" }}>
+        <footer className="auth-footer" style={{ color: "white", marginTop: "1em", bottom: 0, textAlign: "center", backdropFilter: "blur(8px)" }}>
+          &copy; {new Date().getFullYear()} Vertiv Corporation. All rights reserved. Prepared By <strong style={{ fontSize: "12px" }}>@ Crash Algo Corporation</strong>
         </footer>
       </div>
     </div>
