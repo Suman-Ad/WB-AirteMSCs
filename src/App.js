@@ -43,7 +43,7 @@ import AutoLogout from "./config/AutoLogout";
 import AcDcRackDashboard from "./pages/AcDcRackDashboard";
 import ActivityDashboard from "./pages/ActivityDashboard";
 import HSDPrintTemplate from "./components/HSDPrintTemplate";
-
+import AllSitesDGLogs from "./pages/AllSitesDGLogs";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -355,6 +355,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <ActivityDashboard userData={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+          <Route path="/all-sites-dg-logs" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
+            <Layout userData={userData}>
+              <AllSitesDGLogs userData={userData} />
             </Layout>
           </RoleProtectedRoute>} />
 

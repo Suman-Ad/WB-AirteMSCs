@@ -213,7 +213,7 @@ const DailyDGLog = ({ userData }) => {
     const officeLoad = parseFloat(result["Office kW Consumption"]) || 0;
     result["Office kW Consumption"] = officeLoad;
 
-    
+
 
     // Totals
     result["Total DG KWH"] =
@@ -1221,6 +1221,10 @@ const DailyDGLog = ({ userData }) => {
 
       </h1>
 
+      {(userData.role === 'Admin' || userData.role === 'Super Admin') && (
+        <button onClick={() => Navigate("/all-sites-dg-logs", { state: {monthKey: selectedMonth, totalKwh:fmt(avgSiteRunningKw), siteConfig: siteConfig}})}>View All Sites Logs</button>
+      )}
+
       <div className="noticeboard-header">
         <h1 className={`month ${formatMonthName(selectedMonth)}`}>
           <strong>
@@ -1308,7 +1312,7 @@ const DailyDGLog = ({ userData }) => {
           officeLoad.length > 0
             ? ((officeLoad.reduce((a, b) => a + b, 0) / officeLoad.length) / 24).toFixed(2)
             : 0;
-        
+
 
         // Totals
         const totalKwh = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG KWH"] || 0), 0);
@@ -1719,7 +1723,7 @@ const DailyDGLog = ({ userData }) => {
           {form.Date}
         </strong>
       </div>
- 
+
       <button
         className="segr-manage-btn warning"
         onClick={() => Navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig, dayFuelCon } })}
@@ -2048,18 +2052,18 @@ const DailyDGLog = ({ userData }) => {
 
                   {/* 🔹 Actions */}
                   {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM") && (
-                    <td style={{whiteSpace:"nowrap"}}>
+                    <td style={{ whiteSpace: "nowrap" }}>
                       {calculated["Total Fuel Filling"] > 0 && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleGenerateCCMS(entry); }}
-                          style={{background: "#3f5c4193", color:"#49e60bb9"}}
+                          style={{ background: "#3f5c4193", color: "#49e60bb9" }}
                         >
                           CCMS
                         </button>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
-                        style={{background: "#5c3f3f93", color:"#e60b0bef"}}
+                        style={{ background: "#5c3f3f93", color: "#e60b0bef" }}
                       >
                         X
                       </button>
@@ -2071,7 +2075,7 @@ const DailyDGLog = ({ userData }) => {
           </tbody>
         </table>
       </div>
-      <p style={{fontSize:"12px"}}><strong>ℹ️</strong> <strong>🔴</strong>Check <strong>"CPH"</strong> | <strong>⚠️</strong>Check <strong>"SEGR"</strong> | <strong style={{background:"red"}}>"ROW"</strong> For Test Run</p>
+      <p style={{ fontSize: "12px" }}><strong>ℹ️</strong> <strong>🔴</strong>Check <strong>"CPH"</strong> | <strong>⚠️</strong>Check <strong>"SEGR"</strong> | <strong style={{ background: "red" }}>"ROW"</strong> For Test Run</p>
     </div>
   );
 };
