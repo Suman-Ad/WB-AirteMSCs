@@ -105,7 +105,7 @@ const DailyDGLog = ({ userData }) => {
   const [dayFuelCon, setDayFuelCon] = useState(0);
   const [dayFuelFill, setDayFuelFill] = useState(0);
   const [form, setForm] = useState({ Date: "" });
-  const Navigate = useNavigate();
+  const navigate = useNavigate();
   const [fuelRate, setFuelRate] = useState(0.00); // default value
   const [siteConfig, setSiteConfig] = useState({});
   const siteKey = userData?.site?.toUpperCase();
@@ -1179,7 +1179,7 @@ const DailyDGLog = ({ userData }) => {
   // 👇 Add this handler function inside the component
   const handleGenerateCCMS = (entry) => {
     // We pass the specific log entry, the site config, and the current fuel rate
-    Navigate("/ccms-copy", {
+    navigate("/ccms-copy", {
       state: {
         logData: calculateFields(entry), // Send the fully calculated data
         siteConfig: siteConfig,
@@ -1191,7 +1191,7 @@ const DailyDGLog = ({ userData }) => {
   // 👇 Add this handler function inside the component
   const handleGenerateDayCCMS = (entry) => {
     // We pass the specific log entry, the site config, and the current fuel rate
-    Navigate("/ccms-copy", {
+    navigate("/ccms-copy", {
       state: {
         logData: calculateFields(entry), // Send the fully calculated data
         siteConfig: siteConfig,
@@ -1221,16 +1221,13 @@ const DailyDGLog = ({ userData }) => {
 
       </h1>
 
-      {(userData.role === 'Admin' || userData.role === 'Super Admin') && (
-        <button onClick={() => Navigate("/all-sites-dg-logs", { state: {monthKey: selectedMonth, totalKwh:fmt(avgSiteRunningKw), siteConfig: siteConfig}})}>View All Sites Logs</button>
-      )}
-
       <div className="noticeboard-header">
         <h1 className={`month ${formatMonthName(selectedMonth)}`}>
           <strong>
             {formatMonthName(selectedMonth)}
           </strong>
         </h1>
+        
         <h1 style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <label>
             Select Month:
@@ -1253,6 +1250,9 @@ const DailyDGLog = ({ userData }) => {
             />
           </label>
         </h1>
+        {(userData.role === 'Admin' || userData.role === 'Super Admin') && (
+          <p className={`month ${formatMonthName(selectedMonth)}`} style={{cursor:"pointer", textAlign:"center"}} onClick={() => navigate("/all-sites-dg-logs", { state: { monthKey: selectedMonth } })}>🖥️ All Sites DG Logs ⭆</p>
+        )}
         {/* 🔹 Last Fuel Filling */}
         {loadingFilling ? (
           <p style={{ fontSize: "10px", color: "gray" }}>⏳ Loading last fuel filling...</p>
@@ -1726,7 +1726,7 @@ const DailyDGLog = ({ userData }) => {
 
       <button
         className="segr-manage-btn warning"
-        onClick={() => Navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig, dayFuelCon } })}
+        onClick={() => navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig, dayFuelCon } })}
       >
         🔰 DG Run Logs
       </button>
@@ -1737,7 +1737,7 @@ const DailyDGLog = ({ userData }) => {
           <button
             className="pm-manage-btn danger"
             onClick={() =>
-              Navigate("/fuel-requisition", {
+              navigate("/fuel-requisition", {
                 state: { logs, siteName, avgSiteRunningKw, fuelRate, userData, siteConfig },
               })
             }
@@ -1757,7 +1757,7 @@ const DailyDGLog = ({ userData }) => {
           </button>
         )}
 
-      <button onClick={() => Navigate("/monthly-data", {
+      <button onClick={() => navigate("/monthly-data", {
         state: { logs, siteConfig },
       })} className="sidepanel-manage-btn" style={{ background: "blue" }}>
         📊 Preview Monthly Data
