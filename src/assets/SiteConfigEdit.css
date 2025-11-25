@@ -138,6 +138,74 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+.config-layout {
+  display: flex;
+  gap: 1.5rem;
+}
+
+/* LEFT DRAWER MENU */
+.side-menu {
+  width: 240px;
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: inherit;
+  overflow-y: auto;
+}
+
+.menu-item {
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 6px;
+  text-align: left;
+  background-color: #ecf0f1;
+  cursor: pointer;
+  font-weight: 600;
+  color: #34495e;
+  transition: background 0.3s ease-in-out;
+}
+
+.menu-item:hover {
+  background-color: #d6eaf8;
+}
+
+.menu-item.active {
+  background-color: #3498db;
+  color: #fff;
+}
+
+/* RIGHT CONTENT AREA */
+.config-content {
+  flex: 1;
+  background: #ffffff;
+  padding: 1.5rem 2rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow-y: auto;
+  max-height: 345px;
+}
+
+.config-btn {
+  margin-left: auto;
+  height: 40px;
+  background: #1037a096;
+  color: #fff;
+  padding: 0 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.config-btn:hover {
+  background: #1aac6fc4;
+}
+
 /* --- Responsive Adjustments --- */
 @media (max-width: 768px) {
   /* Stack columns vertically on smaller screens */
@@ -151,5 +219,12 @@
 
   .site-config-container h2 {
     font-size: 1.75em;
+  }
+
+  .config-layout {
+    flex-direction: column;
+  }
+  .side-menu {
+    width: 100%;
   }
 }

@@ -18,7 +18,7 @@ const getTodayDate = () => {
 };
 
 const DGLogForm = ({ userData }) => {
-    const [siteConfig, setSiteConfig ] = useState({});
+    const [siteConfig, setSiteConfig] = useState({});
     const siteKey = userData?.site?.toUpperCase();
     const [dgNumber, setDgNumber] = useState("DG-1");
     const [form, setForm] = useState({
@@ -74,12 +74,12 @@ const DGLogForm = ({ userData }) => {
 
     // Site Config fetch
     const fetchConfig = async () => {
-          if (!siteKey) return;
-          const snap = await getDoc(doc(db, "siteConfigs", siteKey));
-          if (snap.exists()) {
+        if (!siteKey) return;
+        const snap = await getDoc(doc(db, "siteConfigs", siteKey));
+        if (snap.exists()) {
             setSiteConfig(snap.data());
-          }
-        };
+        }
+    };
 
 
     const handleSubmit = async (e) => {
@@ -139,6 +139,7 @@ const DGLogForm = ({ userData }) => {
             }, { merge: true }); // Use merge:true to avoid overwriting other fields if you add them later
 
             alert("Run log saved ✅");
+            window.location.reload(); // Reload to reflect changes
 
             setForm({
                 date: "",
@@ -525,30 +526,30 @@ const DGLogForm = ({ userData }) => {
 
                 {(form.remarks === "On Load" || form.remarks === "No Load") && (
                     <div className="grid grid-cols-2 gap-2">
-                    <label className="form-label">Start Time:
-                        <input
-                            type="time"
-                            name="startTime"
-                            value={form.startTime}
-                            onChange={handleChange}
-                            className="p-2 border rounded"
-                        // required
-                        />
-                    </label>
+                        <label className="form-label">Start Time:
+                            <input
+                                type="time"
+                                name="startTime"
+                                value={form.startTime}
+                                onChange={handleChange}
+                                className="p-2 border rounded"
+                            // required
+                            />
+                        </label>
 
-                    <label className="form-label">Stop Time:
-                        <input
-                            type="time"
-                            name="stopTime"
-                            value={form.stopTime}
-                            onChange={handleChange}
-                            className="p-2 border rounded"
-                        // required
-                        />
-                    </label>
-                </div>
+                        <label className="form-label">Stop Time:
+                            <input
+                                type="time"
+                                name="stopTime"
+                                value={form.stopTime}
+                                onChange={handleChange}
+                                className="p-2 border rounded"
+                            // required
+                            />
+                        </label>
+                    </div>
                 )}
-                
+
 
                 <div className="grid grid-cols-2 gap-2">
                     <label className="form-label">Hr Meter Start:
@@ -580,36 +581,36 @@ const DGLogForm = ({ userData }) => {
                 </div>
 
                 {(form.remarks === "On Load" || form.remarks === "No Load") && (
-                <label className="form-label">Reading (kWH):
-                    <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Closing kWh - Opening kWh = Reading)</span>
-                    <input
-                        type="number"
-                        step="0.1"
-                        name="kWHReading"
-                        value={form.remarks === "Fuel Filling Only" ? 0 : form.kWHReading}
-                        onChange={handleChange}
-                        placeholder="Generated kWH"
-                        className="w-full p-2 border rounded"
-                        required
-                    />
-                </label>
+                    <label className="form-label">Reading (kWH):
+                        <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Closing kWh - Opening kWh = Reading)</span>
+                        <input
+                            type="number"
+                            step="0.1"
+                            name="kWHReading"
+                            value={form.remarks === "Fuel Filling Only" ? 0 : form.kWHReading}
+                            onChange={handleChange}
+                            placeholder="Generated kWH"
+                            className="w-full p-2 border rounded"
+                            required
+                        />
+                    </label>
                 )}
 
                 {(form.remarks === "On Load" || form.remarks === "No Load") && (
-                <label className="form-label">Fuel Consumption (Liters):
-                    <span style={{ fontSize: "10px", color: "#851010ff" }}>(e.g.:- Opening Fuel - Closing Fuel = Fuel Consumption)</span>
-                    <input
-                        type="number"
-                        step="0.1"
-                        name="fuelConsumption"
-                        value={form.remarks === "Fuel Filling Only" ? 0 : form.fuelConsumption}
-                        onChange={handleChange}
-                        placeholder="Fuel consumption (L)"
-                        className="w-full p-2 border rounded"
-                        required
-                    />
-                </label>
-            )}
+                    <label className="form-label">Fuel Consumption (Liters):
+                        <span style={{ fontSize: "10px", color: "#851010ff" }}>(e.g.:- Opening Fuel - Closing Fuel = Fuel Consumption)</span>
+                        <input
+                            type="number"
+                            step="0.1"
+                            name="fuelConsumption"
+                            value={form.remarks === "Fuel Filling Only" ? 0 : form.fuelConsumption}
+                            onChange={handleChange}
+                            placeholder="Fuel consumption (L)"
+                            className="w-full p-2 border rounded"
+                            required
+                        />
+                    </label>
+                )}
 
                 <label className="form-label">Fuel Filling (Liters):
                     <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- Skip it('0') if Fuel not fill)</span>
