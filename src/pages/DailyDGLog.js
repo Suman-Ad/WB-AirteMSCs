@@ -104,6 +104,8 @@ const DailyDGLog = ({ userData }) => {
   const [fuelAlert, setFuelAlert] = useState(false);
   const [dayFuelCon, setDayFuelCon] = useState(0);
   const [dayFuelFill, setDayFuelFill] = useState(0);
+  const [dayRunningHrs, setDayRunningHrs] = useState(0);
+  const [dayonLoadRunHrs, setDayOnLoadRunHrs] = useState(0);
   const [form, setForm] = useState({ Date: "" });
   const navigate = useNavigate();
   const [fuelRate, setFuelRate] = useState(0.00); // default value
@@ -622,6 +624,8 @@ const DailyDGLog = ({ userData }) => {
 
       setDayFuelCon(() => (dg1TotalConsumption + dg2TotalConsumption));
       setDayFuelFill(() => (dg1FuelFill + dg2FuelFill));
+      setDayRunningHrs(() => (dg1TotalRunHours + dg2TotalRunHours));
+      setDayOnLoadRunHrs(() => (dg1TotalRunHours + dg2TotalRunHours - offLoadDG1Run - offLoadDG2Run));
       if (dayFuelFill > 0) alert("View CCMS");
       // setDayLogs(runs);
 
@@ -1227,7 +1231,7 @@ const DailyDGLog = ({ userData }) => {
             {formatMonthName(selectedMonth)}
           </strong>
         </h1>
-        
+
         <h1 style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <label>
             Select Month:
@@ -1251,7 +1255,7 @@ const DailyDGLog = ({ userData }) => {
           </label>
         </h1>
         {(userData.role === 'Admin' || userData.role === 'Super Admin') && (
-          <p className={`month ${formatMonthName(selectedMonth)}`} style={{cursor:"pointer", textAlign:"center"}} onClick={() => navigate("/all-sites-dg-logs", { state: { monthKey: selectedMonth } })}>🖥️ All Sites DG Logs ⭆</p>
+          <p className={`month ${formatMonthName(selectedMonth)}`} style={{ cursor: "pointer", textAlign: "center" }} onClick={() => navigate("/all-sites-dg-logs", { state: { monthKey: selectedMonth } })}>🖥️ All Sites DG Logs ⭆</p>
         )}
         {/* 🔹 Last Fuel Filling */}
         {loadingFilling ? (
@@ -1435,6 +1439,7 @@ const DailyDGLog = ({ userData }) => {
         return (
           <div className="chart-container" >
             <div className="status-header">
+              <h1 style={{background:"#6ce9e35d", borderBottom:"3px solid #fff", borderTop:"3px solid #fff", borderRadius:"10px", color:"#746212ff"}}>🔄 Current Status</h1>
               <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
               <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
               {/* ✅ Fuel Level Bar */}
@@ -1484,6 +1489,12 @@ const DailyDGLog = ({ userData }) => {
                   <p style={{ textAlign: "right", color: "black", fontSize: "4px" }}><strong>/{tankCapacity / 2}ltrs.</strong></p>
                 </div>
                 <strong style={((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%</strong>
+              </div>
+              <div style={{display:"flex", gap:"5px", marginTop:"10px"}}>
+                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight:"bold", border:"1px solid #fff", borderRadius:"10px", background:"#6ce9e35d"}} ><p>Today Consumption </p> <span> <strong>{dayFuelCon} ltrs.</strong></span></p>
+                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight:"bold", border:"1px solid #fff", borderRadius:"10px", background:"#6ce9e35d"}} ><p>Today DG Run</p> <span> <strong>{(dayRunningHrs).toFixed(1)} Hrs.</strong> <p style={{fontSize:"8px"}}>({(dayRunningHrs * 60).toFixed(2)} Min.)</p></span></p>
+                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight:"bold", border:"1px solid #fff", borderRadius:"10px", background:"#6ce9e35d"}} ><p>Total Power</p> <span> <strong>{(dayonLoadRunHrs).toFixed(1)} Hrs.</strong> <p style={{fontSize:"8px"}}>({(dayonLoadRunHrs * 60).toFixed(2)} Min.)</p></span></p>
+                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight:"bold", border:"1px solid #fff", borderRadius:"10px", background:"#6ce9e35d"}} ><p>Total Fuel Filled</p> <span><strong>{dayFuelFill} ltrs.</strong></span></p>
               </div>
             </div>
 
