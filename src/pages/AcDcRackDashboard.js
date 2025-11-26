@@ -723,7 +723,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                             .replace(/\b\w/g, (c) => c.toUpperCase()); // Title Case
 
                                     // Grouped and ordered keys (customize this list to your full fields)
-                    
+
                                     const generalKeys = [
                                         "circle",
                                         "siteName",

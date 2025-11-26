@@ -113,7 +113,7 @@ const RackTrackerForm = ({ userData }) => {
         equipmentRackNo: "",
         rackName: "",
         rackType: rackType[0],
-        powerType: powerType[0],
+        powerType: "",
         rackSize: "",
         rackDescription: "",
         totalRackUSpace: "",
@@ -187,6 +187,15 @@ const RackTrackerForm = ({ userData }) => {
   // ✅ Update input + auto-calc
   const handleChange = (e) => {
     const updated = { ...formData, [e.target.name]: e.target.value };
+    // ✅ If Rack Type = Passive → Force Power Type = None
+    if (e.target.name === "rackType" && e.target.value === "Passive") {
+      updated.powerType = "None";
+    }
+
+    // ✅ If Rack Type changes from Passive to Active → clear old "None"
+    if (e.target.name === "rackType" && e.target.value === "Active") {
+      updated.powerType = "";
+    }
     const calc = computeCapacityAnalysis(updated);
     setFormData({ ...updated, ...calc });
   };
@@ -256,7 +265,7 @@ const RackTrackerForm = ({ userData }) => {
             <label>Rack/Equipment Number:</label>
             <input type="text" name="equipmentRackNo" value={formData.equipmentRackNo} onChange={handleChange} disabled={!!editData} />
             <label>Rack Name/Equipment Name:</label>
-            <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} disabled={!!editData}/>
+            <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} disabled={!!editData} />
           </div>
           <div className="form-section">
             <label>Rack Type:</label>
@@ -267,11 +276,22 @@ const RackTrackerForm = ({ userData }) => {
               ))}
             </select>
             <label>Power Type:</label>
-            <select type="text" name="powerType" value={formData.powerType} onChange={handleChange}>
-              <option value={formData.powerType} >{formData.rackType === "Passive" ? "None" : (formData.powerType || "Select Source Type")}</option>
-              {powerType.map(q => (
-                <option key={q} value={q}>{q}</option>
-              ))}
+            <select
+              name="powerType"
+              value={formData.rackType === "Passive" ? "None" : formData.powerType}
+              onChange={handleChange}
+              disabled={formData.rackType === "Passive"}   // 🔒 disable if Passive
+            >
+              {formData.rackType === "Passive" ? (
+                <option value="None">None</option>
+              ) : (
+                <>
+                  <option value="">Select Source Type</option>
+                  {powerType.map((q) => (
+                    <option key={q} value={q}>{q}</option>
+                  ))}
+                </>
+              )}
             </select>
           </div>
           <div className="form-section">
