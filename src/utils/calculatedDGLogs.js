@@ -136,7 +136,7 @@ export const calculateFields = (data, siteConfig) => {
       ? (((result["Total Unit Consumption"] - result["Office kW Consumption"]) / 24) /
         result["Total IT Load KWH"]
         ).toFixed(2)
-      : "0.00";
+      : 0;
 
   // Cooling Load Calculations
   const coolingLoad =

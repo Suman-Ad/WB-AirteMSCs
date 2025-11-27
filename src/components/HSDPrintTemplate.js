@@ -197,7 +197,7 @@ const HSDPrintTemplate = ({ form, hsdForm, siteConfig, setPreviewOpen }) => {
                                 ) : (
                                     <div style={{ width: 100, height: 50, border: "1px solid #000"}}></div>
                                 )}
-                                <p>Sign:</p>
+                                <p>Signature:</p>
                             </div>
                         </td>
                         <td colSpan={2}><strong>Name: Mr. {siteConfig?.omName || "O&M Team"}</strong>
@@ -213,7 +213,7 @@ const HSDPrintTemplate = ({ form, hsdForm, siteConfig, setPreviewOpen }) => {
                                 ) : (
                                     <div style={{ width: 100, height: 50, border: "1px solid #000" }}></div>
                                 )}
-                                <p>Sign:</p>
+                                <p>Signature:</p>
                             </div>
                         </td>
                         <td colSpan={2}><strong>Name: Mr. {siteConfig?.sim || "SIM"}</strong>
@@ -229,7 +229,7 @@ const HSDPrintTemplate = ({ form, hsdForm, siteConfig, setPreviewOpen }) => {
                                 ) : (
                                     <div style={{ width: 100, height: 50, border: "1px solid #000" }}></div>
                                 )}
-                                <p>Sign:</p>
+                                <p>Signature:</p>
                             </div>
                         </td>
                     </tr>

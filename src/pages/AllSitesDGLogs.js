@@ -15,6 +15,7 @@ const AllSitesDGLogs = ({ userData }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [siteConfigs, setSiteConfigs] = useState({});
+    const [fuelRates, setFuelRates] = useState({});
     const { monthKey } = location.state; // default month
     // You need to provide correct siteConfig for each site (dgCount, ebCount, solarCount)
     const calculatedLogs = logs.map(log => calculateFields(log, siteConfigs[log.site.toUpperCase()] || {}));
@@ -36,19 +37,34 @@ const AllSitesDGLogs = ({ userData }) => {
 
         // Averages
         const cphValues = calculatedLogs.flatMap(cl => [cl["DG-1 CPH"], cl["DG-2 CPH"]]).filter(v => v > 0);
-        const monthlyAvgCPH = cphValues.length ? (cphValues.reduce((a, b) => a + b, 0) / cphValues.length) : 0;
+        const monthlyAvgCPH = cphValues.length ? (cphValues.reduce((a, b) => a + b, 0) / cphValues.length).toFixed(2) : 0;
 
-        const pueValues = calculatedLogs.flatMap(cl => cl["PUE"]).filter(v => v > 0);
-        const monthlyAvgPUE = pueValues.length ? (pueValues.reduce((a, b) => a + b, 0) / pueValues.length) : 0;
+        const pueValues = calculatedLogs.flatMap(cl => Number(cl["PUE"])).filter(v => v > 0);
+        const monthlyAvgPUE = pueValues.length ? (pueValues.reduce((a, b) => a + b, 0) / pueValues.length).toFixed(2) : 0;
 
+        // SEGR Averages
+        const segrValues = calculatedLogs.flatMap(cl => [Number(cl["DG-1 SEGR"]), Number(cl["DG-2 SEGR"])]).filter(v => v > 0);
+        const monthlyAvgSEGR = segrValues.length ? (segrValues.reduce((a, b) => a + b, 0) / segrValues.length).toFixed(2) : 0;
+
+        const segrValuesDG1 = calculatedLogs.flatMap(cl => Number(cl["DG-1 SEGR"])).filter(v => v > 0);
+        const monthlyAvgDG1SEGR = segrValuesDG1.length ? (segrValuesDG1.reduce((a, b) => a + b, 0) / segrValuesDG1.length).toFixed(2) : 0;
+
+        const segrValuesDG2 = calculatedLogs.flatMap(cl => Number(cl["DG-2 SEGR"])).filter(v => v > 0);
+        const monthlyAvgDG2SEGR = segrValuesDG2.length ? (segrValuesDG2.reduce((a, b) => a + b, 0) / segrValuesDG2.length).toFixed(2) : 0;
+
+        // IT Load and Cooling Load Averages
         const itLoadValues = calculatedLogs.map(cl => cl["Total IT Load KWH"]).filter(v => v > 0);
-        const monthlyAvgITLoad = itLoadValues.length ? (itLoadValues.reduce((a, b) => a + b, 0) / itLoadValues.length) : 0;
+        const monthlyAvgITLoad = itLoadValues.length ? (itLoadValues.reduce((a, b) => a + b, 0) / itLoadValues.length).toFixed(2) : 0;
 
         const coolingLoadValues = calculatedLogs.map(cl => cl["Cooling kW Consumption"]).filter(v => v > 0);
-        const monthlyAvgCoolingLoad = coolingLoadValues.length ? (coolingLoadValues.reduce((a, b) => a + b, 0) / coolingLoadValues.length) : 0;
+        const monthlyAvgCoolingLoad = coolingLoadValues.length ? (coolingLoadValues.reduce((a, b) => a + b, 0) / coolingLoadValues.length).toFixed(2) : 0;
 
         const officeLoadValues = calculatedLogs.map(cl => cl["Office kW Consumption"]).filter(v => v > 0);
-        const monthlyAvgOfficeLoad = officeLoadValues.length ? ((officeLoadValues.reduce((a, b) => a + b, 0) / officeLoadValues.length) / 24) : 0;
+        const monthlyAvgOfficeLoad = officeLoadValues.length ? ((officeLoadValues.reduce((a, b) => a + b, 0) / officeLoadValues.length) / 24).toFixed(2) : 0;
+
+        // Site Running Load Average
+        const avgSiteRunningKw = calculatedLogs.map(cl => cl["Site Running kW"]).filter(v => v > 0);
+        const totalSiteRuningLoad = avgSiteRunningKw.length ? (avgSiteRunningKw.reduce((a, b) => a + b, 0) / avgSiteRunningKw.length).toFixed(2) : 0;
 
         // Totals
         const totalKwh = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG KWH"] || 0), 0);
@@ -105,15 +121,9 @@ const AllSitesDGLogs = ({ userData }) => {
             monthlyAvgCoolingLoad,
             monthlyAvgOfficeLoad,
             monthlyAvgPUE,
-            monthlyAvgSEGR: calculatedLogs.length
-                ? (calculatedLogs.reduce((a, cl) => a + ((cl["DG-1 SEGR"] || 0) + (cl["DG-2 SEGR"] || 0)), 0) / (2 * calculatedLogs.length)).toFixed(2)
-                : 0,
-            monthlyAvgDG1SEGR: calculatedLogs.length
-                ? (calculatedLogs.reduce((a, cl) => a + (cl["DG-1 SEGR"] || 0), 0) / calculatedLogs.length).toFixed(2)
-                : 0,
-            monthlyAvgDG2SEGR: calculatedLogs.length
-                ? (calculatedLogs.reduce((a, cl) => a + (cl["DG-2 SEGR"] || 0), 0) / calculatedLogs.length).toFixed(2)
-                : 0,
+            monthlyAvgSEGR,
+            monthlyAvgDG1SEGR,
+            monthlyAvgDG2SEGR,
             totalKwh,
             totalFuel,
             totalHrs,
@@ -141,7 +151,8 @@ const AllSitesDGLogs = ({ userData }) => {
             totalDG2OnLoadHrsMin,
             totalDG1OffLoadHrsMin,
             totalDG2OffLoadHrsMin,
-            tankCapacity
+            tankCapacity,
+            totalSiteRuningLoad,
         };
     }
 
@@ -329,6 +340,27 @@ const AllSitesDGLogs = ({ userData }) => {
                 }
             }
         });
+
+        const fetchFuelRate = async () => {
+            const siteKeys = [...new Set(logs.map(log => (log.site || "Unknown Site")))];
+            if (!siteKeys.length) return;
+
+            siteKeys.forEach(async (siteKey) => {
+                try {
+                    const docRef = doc(db, "fuelRates", siteKey);
+                    const docSnap = await getDoc(docRef);
+                    const key = siteKey.toUpperCase();
+                    if (docSnap.exists()) {
+                        setFuelRates(prev => ({ ...prev, [key]: docSnap.data().rate || 90 }));
+                    } else {
+                        setFuelRates(prev => ({ ...prev, [key]: 90 })); // default if no rate stored
+                    }
+                } catch (err) {
+                    console.error("Error fetching fuel rate", err);
+                }
+            });
+        };
+        fetchFuelRate();
     }, [logs]);
 
 
@@ -364,6 +396,15 @@ const AllSitesDGLogs = ({ userData }) => {
                 // Last log for DG fuel bars (today's last log)
                 const form = siteLogs[siteLogs.length - 1] || {};
 
+                // Get site-specific fuel rate (default to 90 if not found)
+                const currentFuelRate = fuelRates[site] || 90;
+
+                // Handler for this specific site's fuel rate
+                const handleFuelChange = (e) => {
+                    const newRate = Number(e.target.value);
+                    setFuelRates(prev => ({ ...prev, [site]: newRate }));
+                };
+
                 // For DG bar
                 const availableFuel = (parseFloat(form["DG-1 Fuel Closing"] || 0) + parseFloat(form["DG-2 Fuel Closing"] || 0));
                 const tankCapacity = summary.tankCapacity || 0;
@@ -372,7 +413,7 @@ const AllSitesDGLogs = ({ userData }) => {
                 const totalHrsMin = ((summary.totalHrs || 0) * 60).toFixed(0);
 
                 return (
-                    <div className="chart-container" key={site} onClick={() => setPopupSite(site.toUpperCase())}>
+                    <div className="chart-container" key={site}>
                         {/* Fuel, load, backups */}
                         <h2>{site} MSC</h2>
                         <h1 style={{ fontSize: "20px", color: "green", textAlign: "left" }}>
@@ -442,22 +483,23 @@ const AllSitesDGLogs = ({ userData }) => {
                             📊 Summary – {summary.totalDays} Days
                         </h4>
                         {/* Average PUE */}
-                        <p className={summary.monthlyAvgCPH > 1.6 ? "avg-segr low" : "avg-segr high"}>
+                        <p className={summary.monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
                             Average PUE – <strong>{summary.monthlyAvgPUE}</strong>
                         </p>
                         {/* Average SEGR */}
-                        <p className={summary.monthlyAvgSEGR < 3 ? "avg-segr low" : "avg-segr high"}>
-                            Average SEGR – <strong>{summary.monthlyAvgSEGR}</strong>
+                        <p className={(summary.totalKwh / summary.totalOnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"}>
+                            Average SEGR – <strong>{(summary.totalKwh / summary.totalOnLoadCon).toFixed(2)}</strong>
                         </p>
-                        <p className={summary.monthlyAvgDG1SEGR < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
-                            DG-1 Average SEGR – {summary.monthlyAvgDG1SEGR}
+                        <p className={(summary.totalDG1Kw / summary.totalDG1OnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
+                            DG-1 Average SEGR – {(summary.totalDG1Kw / summary.totalDG1OnLoadCon).toFixed(2)}
                         </p>
-                        <p className={summary.monthlyAvgDG2SEGR < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
-                            DG-2 Average SEGR – {summary.monthlyAvgDG2SEGR}
+                        <p className={(summary.totalDG2Kw / summary.totalDG2OnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
+                            DG-2 Average SEGR – {(summary.totalDG2Kw / summary.totalDG2OnLoadCon).toFixed(2)}
                         </p>
                         {/* <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p> */}
                         <div style={{ display: "flex" }}>
                             <div>
+                                <p>⚡ Site Running Load – <strong>{summary.totalSiteRuningLoad} kWh</strong></p>
                                 <p>📡 Avg IT Load – <strong>{summary.monthlyAvgITLoad} kWh</strong></p>
                                 <p>❄️ Avg Cooling Load – <strong>{summary.monthlyAvgCoolingLoad} kWh</strong></p>
                                 <p>🏢 Avg Office Load – <strong>{summary.monthlyAvgOfficeLoad} kWh</strong></p>
@@ -484,10 +526,10 @@ const AllSitesDGLogs = ({ userData }) => {
                             ₹<input
                                 type="number"
                                 step="0.01"
-                                value={summary.fuelRate}
-                                // onChange={handleFuelChange}
+                                value={currentFuelRate}
+                                onChange={handleFuelChange}
                                 style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-                            /><strong style={{ fontSize: "10px" }}>/Ltr. = ₹{fmt(summary.totalFilling * summary.fuelRate)}</strong>
+                            /><strong style={{ fontSize: "10px" }}>/Ltr. = ₹{fmt(summary.totalFilling * currentFuelRate)}</strong>
                         </p>
                         <div style={{ display: "flex" }}>
                             <p style={{ marginLeft: "20px" }}>
@@ -545,6 +587,9 @@ const AllSitesDGLogs = ({ userData }) => {
                             </p>
                         </div>
                         {/* Add more breakdowns, load, filling, DG-1/2 metrics, etc. from your summary if desired */}
+                        <div>
+                            <p style={{ textAlign: "right", color: "gray", textSizeAdjust: "10px", cursor: "pointer" }} onClick={() => setPopupSite(siteKey)}>View Day-wise Details 📄</p>
+                        </div>
                     </div>
                 );
             })}
@@ -568,8 +613,8 @@ const AllSitesDGLogs = ({ userData }) => {
                             <table border="1" cellPadding="8" style={{ width: "100%" }}>
                                 <thead>
                                     <tr>
-                                        <th style={getHeaderStyle(`Location Name`)}>{thisConfig.siteName}</th>
-                                        <th style={getHeaderStyle(`Site ID`)}>{thisConfig.siteId}</th>
+                                        <th style={getHeaderStyle(`Location Name`)}>Site Name</th>
+                                        <th style={getHeaderStyle(`Site ID`)}>Site ID</th>
                                         <th className="sticky-col"
                                             style={{
                                                 ...getHeaderStyle(`Date`),
