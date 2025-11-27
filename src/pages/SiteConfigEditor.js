@@ -7,7 +7,9 @@ import "../assets/SiteConfigEdit.css"
 
 const SiteConfigEdit = ({ userData }) => {
   const siteKey = userData?.site?.toUpperCase();
-  const [config, setConfig] = useState({});
+  const [config, setConfig] = useState({
+    securityTeam: []  // NEW
+  });
   const storage = getStorage();
   const [activeSection, setActiveSection] = useState("ccms");
   const [saving, setSaving] = useState(false);
@@ -61,11 +63,55 @@ const SiteConfigEdit = ({ userData }) => {
     { key: "oem", label: "Quarterly OEM CPH" },
   ];
 
+  // ADD NEW SECURITY ENTRY
+  const addSecurity = () => {
+    setConfig(prev => ({
+      ...prev,
+      securityTeam: [
+        ...(prev.securityTeam || []),
+        { id: Date.now(), name: "", role: "", signUrl: "" }
+      ]
+    }));
+  };
+
+  // UPDATE SECURITY FIELD
+  const updateSecurity = (id, field, value) => {
+    setConfig(prev => ({
+      ...prev,
+      securityTeam: prev.securityTeam.map(sec =>
+        sec.id === id ? { ...sec, [field]: value } : sec
+      )
+    }));
+  };
+
+  // DELETE SECURITY ENTRY
+  const deleteSecurity = (id) => {
+    setConfig(prev => ({
+      ...prev,
+      securityTeam: prev.securityTeam.filter(sec => sec.id !== id)
+    }));
+  };
+
+  // SIGNATURE UPLOAD FOR SECURITY
+  const uploadSecuritySign = async (e, id) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const storageRef = ref(storage, `signatures/${siteKey}/security/${id}`);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+
+    updateSecurity(id, "signUrl", url);
+
+    alert("Security Signature Uploaded!");
+  };
+
+
 
   return (
     <div className="daily-log-container">
-      <div style={{display:"flex"}}>
-        <h2 style={{textAlign:"center"}}>⚙️ Site Settlings – {siteKey}</h2>
+      <div style={{ display: "flex" }}>
+        <h2 style={{ textAlign: "center" }}>⚙️ Site Settlings – {siteKey}</h2>
         <button onClick={saveConfig} className="config-btn">{saving ? "Saving...." : "Save Config"}</button>
       </div>
       <div className="config-layout">
@@ -279,6 +325,85 @@ const SiteConfigEdit = ({ userData }) => {
                   style={{ width: "150px", marginTop: "5px" }}
                 />
               )}
+
+              <h2 style={{ marginTop: "30px" }}>Security Team Details</h2>
+
+              {/* Add Button */}
+              <button
+                onClick={addSecurity}
+                style={{
+                  marginBottom: "15px",
+                  background: "#1abc9c",
+                  color: "white",
+                  padding: "8px 14px",
+                  border: "none",
+                  borderRadius: "5px",
+                  cursor: "pointer"
+                }}
+              >
+                + Add Security Person
+              </button>
+
+              {/* List of Security Rows */}
+              {(config.securityTeam || []).map((sec) => (
+                <div
+                  key={sec.id}
+                  style={{
+                    border: "1px solid #ddd",
+                    padding: "15px",
+                    borderRadius: "8px",
+                    marginBottom: "15px",
+                    background: "#fafafa"
+                  }}
+                >
+                  <label>Security Name</label>
+                  <input
+                    value={sec.name}
+                    onChange={(e) => updateSecurity(sec.id, "name", e.target.value)}
+                    placeholder="Enter Security Name"
+                  />
+
+                  <label>Security Role</label>
+                  <input
+                    value={sec.role}
+                    onChange={(e) => updateSecurity(sec.id, "role", e.target.value)}
+                    placeholder="Security Role / Guard / Supervisor"
+                  />
+
+                  <label>Upload Signature</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => uploadSecuritySign(e, sec.id)}
+                  />
+
+                  {sec.signUrl && (
+                    <img
+                      src={sec.signUrl}
+                      alt="Security Sign"
+                      style={{ width: "150px", marginTop: "8px" }}
+                    />
+                  )}
+
+                  {/* Edit & Delete Buttons */}
+                  <div style={{ marginTop: "10px", display: "flex", gap: "10px" }}>
+
+                    <button
+                      onClick={() => deleteSecurity(sec.id)}
+                      style={{
+                        background: "#e74c3c",
+                        color: "#fff",
+                        padding: "6px 12px",
+                        border: "none",
+                        borderRadius: "5px",
+                        cursor: "pointer"
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 

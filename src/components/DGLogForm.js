@@ -405,71 +405,15 @@ const DGLogForm = ({ userData }) => {
         form.fuelConsumption, // include fuelConsumption to trigger SEGR/CPH on manual change
     ]);
 
-    const generateHSDReport = async () => {
-        try {
-            // ✅ Fetch template correctly (must be inside /public/)
-            const response = await fetch(`${process.env.PUBLIC_URL}/templates/HSD_Receiving_Template.docx`);
-            if (!response.ok) throw new Error("❌ Template not found or inaccessible");
-            const content = await response.arrayBuffer();
+    const handleSecuritySelect = (securityId) => {
+        const selected = siteConfig.securityTeam?.find(s => s.id == securityId);
 
-            const zip = new PizZip(content);
-            const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
-
-            // ✅ Extract proper fields
-            const formattedDate = new Date(form.date).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric"
-            });
-
-            // ✅ Prepare dynamic replacements matching your .docx placeholders
-            const data = {
-                siteName: siteConfig?.siteName || "-",
-                date: formattedDate,
-                inTime: hsdForm.inTime || "",
-                outTime: hsdForm.outTime || "",
-                securityName: hsdForm.securityName || "Security Team",
-                density: hsdForm.density || "-",
-                temperature: hsdForm.temperature || "-",
-                ltrs: hsdForm.ltrs || "-",
-                dillerInvoice: hsdForm.dillerInvoice || "",
-                actualReceived: form.fuelFill ? `${form.fuelFill} Ltr` : "-",
-                omName: siteConfig?.preparedBy || "O&M Team",
-                securitySign: hsdForm.securitySign,
-                omSign: hsdForm.omSign,
-                managerSign: hsdForm.managerSign,
-            };
-
-            // ✅ Render and handle potential template errors
-            try {
-                doc.setData(data);
-                doc.render();
-            } catch (renderErr) {
-                console.error("Docxtemplater render error:", renderErr);
-                throw renderErr;
-            }
-
-            // ✅ Save final file
-            const output = doc.getZip().generate({ type: "blob" });
-            saveAs(output, `HSD_Receiving_${data.siteName}_${formattedDate}.docx`);
-        } catch (error) {
-            console.error("❌ Error generating HSD report:", error);
-            alert("Failed to generate HSD Receiving Report. Check console for details.");
-        }
+        setHsdForm(prev => ({
+            ...prev,
+            securityName: selected?.name || "",
+            securitySign: selected?.signUrl || null
+        }));
     };
-
-    const handleSignUpload = (e, field) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = () => {
-                setHsdForm((prev) => ({ ...prev, [field]: reader.result }));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-
 
     return (
         <div className="daily-log-container">
@@ -680,7 +624,20 @@ const DGLogForm = ({ userData }) => {
                         </div>
                         <div>
                             <label>Security Name</label>
-                            <input type="text" name="securityName" value={hsdForm.securityName} onChange={(e) => setHsdForm({ ...hsdForm, securityName: e.target.value })} required />
+                            <select
+                                name="securityName"
+                                value={hsdForm.securityName}
+                                onChange={(e) => handleSecuritySelect(e.target.value)}
+                                required
+                                style={{ padding: "6px", borderRadius: "6px", border: "1px solid #ccc" }}
+                            >
+                                <option value="">Select Security</option>
+                                {siteConfig.securityTeam?.map(sec => (
+                                    <option key={sec.id} value={sec.id}>
+                                        {sec.name} ({sec.role})
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label>Accepted Invoice/Delivery challan number</label>
@@ -692,8 +649,11 @@ const DGLogForm = ({ userData }) => {
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
                         <div>
                             <label>Security Signature</label><br />
-                            <input type="file" accept="image/*" onChange={(e) => handleSignUpload(e, "securitySign")} />
-                            {hsdForm.securitySign && <img src={hsdForm.securitySign} alt="Security Sign" width={80} />}
+                            {hsdForm.securitySign ? (
+                                <img src={hsdForm.securitySign} alt="Security Sign" width={80} />
+                            ) : (
+                                <p style={{ fontSize: "12px", color: "#777" }}>No signature selected</p>
+                            )}
                         </div>
                         <div>
                             <label>O&M Signature</label><br />
@@ -708,8 +668,8 @@ const DGLogForm = ({ userData }) => {
                     </div>
 
                     <div style={{ marginTop: "15px" }}>
-                        <button type="button" onClick={() => setPreviewOpen(true)}>👁️ Preview</button>
-                        <button type="button" style={{ marginLeft: "10px" }} onClick={() => generateHSDReport()}>📄 Generate HSD Report</button>
+                        <button type="button" onClick={() => setPreviewOpen(true)}>👁️ Preview & Save PDF</button>
+                        {/* <button type="button" style={{ marginLeft: "10px" }} onClick={() => generateHSDReport()}>📄 Generate HSD Report</button> */}
                     </div>
                 </div>
             )}
