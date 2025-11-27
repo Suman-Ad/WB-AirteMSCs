@@ -86,8 +86,9 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
           <Link to="/acdc-rack-details" className="sidepanel-manage-btn" title={collapsed ? "Rack Dashboard" : ""} onClick={() => setCollapsed(true)}>🗄️ <span className="label">AC DC Rack Details</span></Link>
         )}
 
+        {(role === "Admin" || role === "Super Admin") && (
         <Link to="/dhr-dashboard" className="sidepanel-manage-btn" title={collapsed ? "DHR Dashboard" : ""} onClick={() => setCollapsed(true)}>⚡<span className="label">DHR Dashboard</span></Link>
-
+          )}
         {(role === "Admin" || role === "Super Admin") && (
           <Link to="/daily-activity-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Daily Activity Dashboard" : ""} onClick={() => setCollapsed(true)}>🏗️ <span className="label">Daily Activity Dashboard</span></Link>
         )}
