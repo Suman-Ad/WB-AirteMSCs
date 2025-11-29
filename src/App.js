@@ -44,6 +44,7 @@ import AcDcRackDashboard from "./pages/AcDcRackDashboard";
 import ActivityDashboard from "./pages/ActivityDashboard";
 import HSDPrintTemplate from "./components/HSDPrintTemplate";
 import AllSitesDGLogs from "./pages/AllSitesDGLogs";
+import DutyTrackerPage from "./pages/DutyTracker";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -362,6 +363,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
             <Layout userData={userData}>
               <AllSitesDGLogs userData={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+          <Route path="/duty-tracker" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "User", "Super User"]}>
+            <Layout userData={userData}>
+              <DutyTrackerPage currentUser={userData} />
             </Layout>
           </RoleProtectedRoute>} />
 

@@ -436,7 +436,8 @@ const IncidentDashboard = ({ userData }) => {
                 <th>Clouser Date</th>
                 <th>MTTR (Days)</th>
                 <th>Status</th>
-                <th>RCA</th>
+                <th>RCA Status</th>
+                <th>RCA File</th>
               </tr>
             </thead>
             <tbody>
@@ -455,12 +456,12 @@ const IncidentDashboard = ({ userData }) => {
                   <td>{incident.closureDate || "--/--/--"}</td>
                   <td>{incident.mttr}</td>
                   <td>{incident.status}</td>
-
+                  <td>{incident.rcaStatus}</td>
                   <td>
-                    {incident.rcaFileUrl ?
+                    {incident.rcaFileUrl?
                       <Link to={incident.rcaFileUrl}>
                         👁️‍🗨️
-                      </Link> : "N"}
+                      </Link> : "N/A"}
                   </td>
                 </tr>
               ))}

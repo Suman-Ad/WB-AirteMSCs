@@ -92,6 +92,7 @@ const AcDcRackDashboard = ({ userData }) => {
             await deleteDoc(doc(db, "acDcRackDetails", userData?.site?.toUpperCase(), "racks", siteName));
             setRackData((prev) => prev.filter((d) => d.id !== siteName));
             setStatus(`🗑️ Deleted record for ${siteName}`);
+            setPreviewOpen(false);
         } catch (error) {
             console.error("Error deleting:", error);
             setStatus("❌ Failed to delete record");
