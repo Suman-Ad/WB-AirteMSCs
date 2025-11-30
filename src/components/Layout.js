@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import "../assets/Layout.css";
 import Vertiv from "../assets/Vertiv1.png";
 import { FaArrowLeft } from "react-icons/fa"; // Using react-icons for the arrow
+import NotificationBell from "./NotificationBell";
 
 const Layout = ({ userData, children }) => {
   const [collapsed, setCollapsed] = useState(true);
@@ -66,6 +67,7 @@ const Layout = ({ userData, children }) => {
 
         {/* Page Content */}
         <div className="main-content" onClick={() => setCollapsed(true)}>
+          <NotificationBell user={userData} />
           {children}
         </div>
         <div style={{ background:"#55b3ab"}}>
