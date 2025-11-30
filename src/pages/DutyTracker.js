@@ -22,7 +22,9 @@ import {
   addDoc
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { useNavigate } from "react-router-dom";
 import "../assets/DutyTracker.css"; // optional
+
 
 // ---------- Helper utils ----------
 const SITE_DOC_ID = (siteId, date) => `${siteId}_${date}`; // use siteId slug + 2025-11-30
@@ -119,6 +121,7 @@ export default function DutyTrackerPage({ currentUser }) {
   const [regionList, setRegionList] = useState([]);
   const [circleList, setCircleList] = useState([]);
   const [siteList, setSiteList] = useState([]);
+  const navigate = useNavigate();
 
   const [selectedRegion, setSelectedRegion] = useState(currentUser?.region || "");
   const [selectedCircle, setSelectedCircle] = useState(currentUser?.circle || "");
@@ -484,6 +487,10 @@ export default function DutyTrackerPage({ currentUser }) {
               );
             })}
           </div>
+          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b" }} onClick={() => navigate("/cl-approve")}>Check <strong>"CL"</strong> Status</p>
+          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b" }} onClick={() => navigate("/cl-calendar")}>CL Calendar</p>
+          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b" }} onClick={() => navigate("/my-leave")}>My Leave</p>
+          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b" }} onClick={() => navigate("/monthly-cl-summary")}>Monthly CL Summary</p>
         </div>
 
         {/* Right side panel: date editor */}

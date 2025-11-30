@@ -45,6 +45,12 @@ import ActivityDashboard from "./pages/ActivityDashboard";
 import HSDPrintTemplate from "./components/HSDPrintTemplate";
 import AllSitesDGLogs from "./pages/AllSitesDGLogs";
 import DutyTrackerPage from "./pages/DutyTracker";
+import CLApplicationPage from "./pages/CLApplicationPage";
+import CLApprovalPage from "./pages/CLApprovalPage";
+import BackupDutyPage from "./pages/BackupDutyPage";
+import CLCalendar from "./pages/CLCalendar";
+import MyLeaveStatus from "./pages/MyLeaveStatus";
+import MonthlyCLSummary from "./pages/MonthlyCLSummary";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -370,6 +376,48 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "User", "Super User"]}>
             <Layout userData={userData}>
               <DutyTrackerPage currentUser={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+          <Route path="/cl-application" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "User", "Super User"]}>
+            <Layout userData={userData}>
+              <CLApplicationPage currentUser={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+          <Route path="/cl-approve" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
+            <Layout userData={userData}>
+              <CLApprovalPage currentUser={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+          <Route path="/backup-approvals" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <BackupDutyPage currentUser={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+          <Route path="/cl-calendar" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <CLCalendar currentUser={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+          <Route path="/my-leave" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <MyLeaveStatus currentUser={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+          <Route path="/monthly-cl-summary" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <MonthlyCLSummary currentUser={userData} />
             </Layout>
           </RoleProtectedRoute>} />
 
