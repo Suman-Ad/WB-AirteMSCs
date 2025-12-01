@@ -152,18 +152,7 @@ export default function NotificationBell({ user }) {
             {/* Bell icon */}
             <button
                 onClick={() => setOpen(!open)}
-                style={{
-                    position: 'fixed',
-                    padding: '0.5rem',
-                    borderRadius: '0.375rem',
-                    transition: 'background-color 0.2s ease-in-out'
-                }}
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f3f4f6';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '';
-                }}
+                className="back-button"
             >
                 🔔
 
@@ -204,15 +193,25 @@ export default function NotificationBell({ user }) {
                     <div style={{
                         padding: '0.75rem',
                         borderBottom: '1px solid #e5e7eb',
-                        fontWeight: '600'
-                    }}>Notifications</div>
+                        fontWeight: '600',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky',
+                        top: '0',
+                        backgroundColor: 'white'
+                    }}>Notifications
+                        <p onClick={() => setOpen(!open)} style={{ cursor: "pointer" }} onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#cc5353b7';
+                        }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '';
+                            }}>X</p>
+                    </div>
 
                     {items.length === 0 && (
                         <div style={{
                             padding: '0.75rem',
                             fontSize: '0.875rem',
                             color: '#6b7280',
-                            textAlign: 'center'
+                            textAlign: 'center',
                         }}>No notifications
                             <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-application")}>Apply For CL</p>
 
@@ -234,12 +233,13 @@ export default function NotificationBell({ user }) {
                             <div style={{
                                 fontWeight: '500',
                                 fontSize: '0.875rem'
-                            }}>{n.title}</div>
+                            }}
+                                onClick={() => n.title === "Backup Duty Request" ? navigate("/backup-approvals") : (user.role === "Admin" || user.role === "Sumer Admin") && n.title === "New CL Request" ? navigate("/cl-approve") : (user.role === "Admin" || user.role === "Sumer Admin") && n.title === "Backup Accepted" ? navigate("/cl-approve") : null}
+                            >{n.title}</div>
                             <div style={{
                                 fontSize: '0.75rem',
                                 color: '#4b5563'
                             }}
-                                onClick={() => n.title === "Backup Duty Request" ? navigate("/backup-approvals") : null}
                             >{n.message}</div>
                             <div style={{
                                 fontSize: '10px',

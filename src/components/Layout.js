@@ -54,23 +54,26 @@ const Layout = ({ userData, children }) => {
               </div>
               <p className="dashboard-subinfo">
                 <strong>🏢{userData?.site || "All"}</strong>|&nbsp;<strong>🆔{userData.siteId || "All"}</strong>
-                <p style={{ marginLeft: "auto" }}><button
-                  onClick={() => navigate(-1)}
-                  className="back-button"
-                >
-                  <FaArrowLeft />
-                </button></p>
+                <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+                  <NotificationBell user={userData} />
+
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="back-button"
+                  >
+                    <FaArrowLeft />
+                  </button></p>
               </p>
             </header>
+
           </div>
         </div>
 
         {/* Page Content */}
         <div className="main-content" onClick={() => setCollapsed(true)}>
-          <NotificationBell user={userData} />
           {children}
         </div>
-        <div style={{ background:"#55b3ab"}}>
+        <div style={{ background: "#55b3ab" }}>
           <h4>© 2025 Crash Algo. All rights reserved.</h4>
         </div>
       </div>
