@@ -1835,7 +1835,7 @@ const DailyDGLog = ({ userData }) => {
                 let disabled = false;
 
                 if (alwaysDisabled.includes(field)) {
-                  disabled = true;
+                  disabled = !!form[field];
                 } else if (closingFields.includes(field)) {
                   // disable if it already has a value
                   disabled = !!form[field];

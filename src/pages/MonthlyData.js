@@ -255,6 +255,8 @@ export default function MonthlyData({ userData }) {
                 }
             });
 
+            setMonthDate(logs.length ? new Date(logs[0].Date) : new Date());
+
             return { metric: metricLabel, values };
         });
 
@@ -288,7 +290,7 @@ export default function MonthlyData({ userData }) {
                 ...gridRows.find((r) => r.metric === "Total Facility Load (KW)")?.values.map(Number) || [0]
             )
         );
-        summary["PUE"] = fmt1(
+        summary["PUE"] = fmt(
             average(gridRows.find((r) => r.metric === "PUE")?.values)
         );
 
