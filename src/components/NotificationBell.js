@@ -10,10 +10,12 @@ export default function NotificationBell({ user }) {
     const [acrejBtn, setAcrejBtn] = useState(true); // Show accept/reject buttons for backup_request notifications
     const navigate = useNavigate();
 
-    const notifySound = new Audio("/sounds/notify.mp3");
-    notifySound.volume = 0.6; // adjust volume if needed
+    const soundRef = React.useRef(null);
 
-
+    useEffect(() => {
+        soundRef.current = new Audio("/notify.mp3");
+        soundRef.current.volume = 0.6;
+    }, []);
 
 
     useEffect(() => {
@@ -29,24 +31,12 @@ export default function NotificationBell({ user }) {
             snap.forEach((d) => arr.push({ id: d.id, ...d.data() }));
 
             // Detect NEW notifications
-            if (items.length > 0 && arr.length > items.length) {
-                // Play sound
-                notifySound.play().catch(() => {
-                    // Some browsers block autoplay, ignore error
-                });
+            const newUnread = arr.filter(n => !n.read).length;
+            const oldUnread = items.filter(n => !n.read).length;
 
-                const newUnread = arr.filter(n => !n.read).length;
-                const oldUnread = items.filter(n => !n.read).length;
-                if (newUnread > oldUnread) {
-                    notifySound.play().catch(() => { });
-                }
-                if (!open && newUnread > oldUnread) {
-                    notifySound.play();
-                }
+            if (!open && newUnread > oldUnread) {
+                soundRef.current?.play().catch(() => { });
             }
-
-
-
             setItems(arr);
         });
 
@@ -150,6 +140,8 @@ export default function NotificationBell({ user }) {
                 backupStatus: "rejected",
                 backupResponseAt: serverTimestamp()
             });
+
+            setAcrejBtn(false);
 
             await updateDoc(doc(db, "notifications", user.uid, "items", notification.id), { read: true });
 
@@ -360,19 +352,21 @@ export default function NotificationBell({ user }) {
                                             Accept</button>
                                     )}
 
-                                    <button style={{
-                                        paddingLeft: '0.5rem',
-                                        paddingRight: '0.5rem',
-                                        paddingTop: '0.25rem',
-                                        paddingBottom: '0.25rem',
-                                        backgroundColor: '#a31616ff',
-                                        color: 'white',
-                                        fontSize: '0.75rem',
-                                        borderRadius: '0.375rem'
-                                    }} onClick={() => rejectBackup(n)}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0285c7ff"}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#a31616ff"}
-                                    >Reject</button>
+                                    {!!acrejBtn && (
+                                        <button style={{
+                                            paddingLeft: '0.5rem',
+                                            paddingRight: '0.5rem',
+                                            paddingTop: '0.25rem',
+                                            paddingBottom: '0.25rem',
+                                            backgroundColor: '#a31616ff',
+                                            color: 'white',
+                                            fontSize: '0.75rem',
+                                            borderRadius: '0.375rem'
+                                        }} onClick={() => rejectBackup(n)}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0285c7ff"}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#a31616ff"}
+                                        >Reject</button>
+                                    )}
                                 </div>
                             )}
                             {/* 🗑 Delete one notification */}

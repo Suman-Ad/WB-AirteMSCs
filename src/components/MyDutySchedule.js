@@ -61,7 +61,7 @@ export default function MyDutySchedule({ currentUser }) {
             }}
           >
             <span>{d.date}</span>
-            <strong>{d.shift === "M" ? "Morning" : d.shift === "E" ? "Evening" : "Night"} Shift</strong>
+            <strong>{d.shift === "M" ? "Morning Shift" : d.shift === "E" ? "Evening Shift" : d.shift === "N" ? "Night Shift" : d.shift === "G" ? "General Shift" : "Weekly Off"}</strong>
           </div>
         ))}
       </div>
