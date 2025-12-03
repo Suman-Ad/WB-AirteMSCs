@@ -5,6 +5,7 @@ import { collection, getDocs, query, where, doc, updateDoc } from "firebase/fire
 export default function BackupDutyPage({ currentUser }) {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [acrejBtn, setAcrejBtn] = useState(true); // Show accept/reject buttons for backup duty requests
 
     useEffect(() => {
         async function loadBackupRequests() {
@@ -55,7 +56,7 @@ export default function BackupDutyPage({ currentUser }) {
             backupStatus: "accepted",
             backupResponseAt: new Date(),
         });
-
+        setAcrejBtn(false);
         alert("Backup accepted!");
         window.location.reload();
     }
@@ -66,7 +67,7 @@ export default function BackupDutyPage({ currentUser }) {
             backupStatus: "rejected",
             backupResponseAt: new Date(),
         });
-
+        setAcrejBtn(false);
         alert("Backup rejected!");
         window.location.reload();
     }
@@ -98,35 +99,42 @@ export default function BackupDutyPage({ currentUser }) {
                             <div className="mt-3 flex gap-3">
                                 {req.backupStatus === "pending" && (
                                     <>
-                                        <button
-                                            style={{
-                                                paddingLeft: '0.75rem',
-                                                paddingRight: '0.75rem',
-                                                paddingTop: '0.25rem',
-                                                paddingBottom: '0.25rem',
-                                                backgroundColor: '#16a34a',
-                                                color: 'white',
-                                                borderRadius: '0.375rem'
-                                            }}
-                                            onClick={() => acceptBackup(req)}
-                                        >
-                                            Accept
-                                        </button>
+                                        {!!acrejBtn && (
+                                            <button
+                                                style={{
+                                                    paddingLeft: '0.75rem',
+                                                    paddingRight: '0.75rem',
+                                                    paddingTop: '0.25rem',
+                                                    paddingBottom: '0.25rem',
+                                                    backgroundColor: '#16a34a',
+                                                    color: 'white',
+                                                    borderRadius: '0.375rem'
+                                                }}
+                                                onClick={() => acceptBackup(req)}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0285c7ff"}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#16a34a"}
+                                            >
+                                                Accept
+                                            </button>
+                                        )}
 
-                                        <button
-                                            style={{
-                                                paddingLeft: '0.75rem',
-                                                paddingRight: '0.75rem',
-                                                paddingTop: '0.25rem',
-                                                paddingBottom: '0.25rem',
-                                                backgroundColor: '#dc2626',
-                                                color: 'white',
-                                                borderRadius: '0.375rem'
-                                            }}
-                                            onClick={() => rejectBackup(req)}
-                                        >
-                                            Reject
-                                        </button>
+                                        {!!acrejBtn && (
+                                            <button
+                                                style={{
+                                                    paddingLeft: '0.75rem',
+                                                    paddingRight: '0.75rem',
+                                                    paddingTop: '0.25rem',
+                                                    paddingBottom: '0.25rem',
+                                                    backgroundColor: '#a31616ff',
+                                                    color: 'white',
+                                                    borderRadius: '0.375rem'
+                                                }}
+                                                onClick={() => rejectBackup(req)}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0285c7ff"}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#a31616ff"}
+                                            >Reject
+                                            </button>
+                                        )}
                                     </>
                                 )}
 

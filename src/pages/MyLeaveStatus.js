@@ -16,7 +16,7 @@ export default function MyLeaveStatus({ currentUser }) {
       const arr = [];
       snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
       // sort latest first
-      arr.sort((a,b) => b.id.localeCompare(a.id));
+      arr.sort((a, b) => b.id.localeCompare(a.id));
       setList(arr);
       setLoading(false);
     })();
@@ -31,22 +31,41 @@ export default function MyLeaveStatus({ currentUser }) {
   }
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-semibold mb-4">My Leave Status</h2>
+    <div className="daily-log-container">
+      <h2 style={{
+        fontSize: '1.5rem',
+        fontWeight: '600',
+        marginBottom: '1rem'
+      }}>My Leave Status</h2>
       {loading ? <div>Loading...</div> : null}
       {list.length === 0 && !loading && <div>No leave requests found.</div>}
 
       <div className="space-y-2">
         {list.map(it => (
-          <div key={it.id} className="border p-3 rounded bg-white flex justify-between">
+          <div key={it.id} style={{
+            border: '1px solid #e5e7eb',
+            padding: '0.75rem',
+            borderRadius: '0.375rem',
+            backgroundColor: 'white',
+            display: 'flex',
+            justifyContent: 'space-between'
+          }}>
             <div>
-              <div className="font-medium">{it.date}</div>
-              <div className="text-sm">{it.reason}</div>
-              <div className="text-xs text-slate-600">Status: {it.status}</div>
+              <div style={{ fontWeight: '500' }}>{it.date}</div>
+              <div style={{ fontSize: '14px' }}>{it.reason}</div>
+              <div style={{ fontSize: '12px', color: '#475569' }}>Status: {it.status}</div>
               <div className="text-xs text-slate-600">Backup: {it.backupUserName || it.backupUserId}</div>
             </div>
-            <div className="flex flex-col gap-2">
-              {it.status === "pending" && <button className="px-2 py-1 bg-red-500 text-white rounded" onClick={() => cancelRequest(it)}>Cancel</button>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {it.status === "pending" && <button style={{
+                paddingLeft: '0.5rem',
+                paddingRight: '0.5rem',
+                paddingTop: '0.25rem',
+                paddingBottom: '0.25rem',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                borderRadius: '0.375rem'
+              }} onClick={() => cancelRequest(it)}>Cancel</button>}
             </div>
           </div>
         ))}

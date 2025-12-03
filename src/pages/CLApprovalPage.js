@@ -114,7 +114,7 @@ export default function CLApprovalPage({ currentUser }) {
 
 
     async function rejectCL(req) {
-        const ref = doc(db, "leaveRequests", req.userId, "Items", req.id);
+        const ref = doc(db, "leaveRequests", req.userId, "items", req.id);
 
         await updateDoc(ref, {
             status: "rejected",

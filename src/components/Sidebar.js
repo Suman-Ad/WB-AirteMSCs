@@ -89,7 +89,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
         {(role === "Admin" || role === "Super Admin") && (
         <Link to="/dhr-dashboard" className="sidepanel-manage-btn" title={collapsed ? "DHR Dashboard" : ""} onClick={() => setCollapsed(true)}>⚡<span className="label">DHR Dashboard</span></Link>
           )}
-        {(role === "Admin" || role === "Super Admin") && (
+        {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
           <Link to="/daily-activity-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Daily Activity Dashboard" : ""} onClick={() => setCollapsed(true)}>🏗️ <span className="label">Daily Activity Dashboard</span></Link>
         )}
 

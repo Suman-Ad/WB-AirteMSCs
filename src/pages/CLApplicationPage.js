@@ -1,3 +1,5 @@
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { db } from "../firebase";
 import {
@@ -10,12 +12,15 @@ import {
     serverTimestamp,
     addDoc
 } from "firebase/firestore";
+import { set } from "date-fns";
 
 export default function CLApplicationPage({ currentUser }) {
     const [date, setDate] = useState("");
     const [reason, setReason] = useState("");
     const [backupUser, setBackupUser] = useState("");
     const [siteUsers, setSiteUsers] = useState([]);
+    const [apply, setApply] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (!currentUser?.site) return;
@@ -40,6 +45,7 @@ export default function CLApplicationPage({ currentUser }) {
     async function applyCL() {
         if (!date) return alert("Please select date");
         if (!backupUser) return alert("Please select backup team member");
+        setApply(true);
 
         const dateKey = date; // YYYY-MM-DD
 
@@ -122,11 +128,13 @@ export default function CLApplicationPage({ currentUser }) {
                 requesterId: currentUser.uid
             }
         );
-
+        
+        setApply(false);
         alert("CL Request Submitted!");
         setReason("");
         setBackupUser("");
         setDate("");
+        navigate("/my-leave");
     }
 
 
@@ -216,7 +224,7 @@ export default function CLApplicationPage({ currentUser }) {
                     borderRadius: '0.375rem'
                 }}
             >
-                Apply CL
+                {apply ? "Appling....." :"Apply CL"}
             </button>
         </div>
     );

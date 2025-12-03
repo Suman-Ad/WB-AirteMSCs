@@ -78,7 +78,9 @@ export default function DailyActivityDashboard({ userData }) {
   const isAdmin =
     userData?.role === "Super Admin" ||
     userData?.role === "Admin" ||
-    !!userData?.isAdminAssigned;
+    !!userData?.isAdminAssigned ||
+    userData?.designation === "Vertiv Site Infra Engineer" ||
+    userData?.designation === "Vertiv CIH" ;
 
   const navigate = useNavigate();
 

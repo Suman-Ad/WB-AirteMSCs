@@ -101,7 +101,7 @@ function useDutyRoster(siteId, monthDate) {
       };
 
       // Validate max 2 per shift
-      for (const s of ["M", "E", "N"]) {
+      for (const s of ["M", "E", "N", "G", "WO"]) {
         const arr = newData.shifts?.[s] || [];
         if (arr.length > 2) throw new Error(`Max 2 users allowed for shift ${s}`);
       }
@@ -194,13 +194,13 @@ export default function DutyTrackerPage({ currentUser }) {
   const [leaveMap, setLeaveMap] = useState({});
 
   const [weekdayTemplate, setWeekdayTemplate] = useState({
-    Mon: { M: [], E: [], N: [] },
-    Tue: { M: [], E: [], N: [] },
-    Wed: { M: [], E: [], N: [] },
-    Thu: { M: [], E: [], N: [] },
-    Fri: { M: [], E: [], N: [] },
-    Sat: { M: [], E: [], N: [] },
-    Sun: { M: [], E: [], N: [] },
+    Mon: { M: [], E: [], N: [], G: [], WO: [] },
+    Tue: { M: [], E: [], N: [], G: [], WO: [] },
+    Wed: { M: [], E: [], N: [], G: [], WO: [] },
+    Thu: { M: [], E: [], N: [], G: [], WO: [] },
+    Fri: { M: [], E: [], N: [], G: [], WO: [] },
+    Sat: { M: [], E: [], N: [], G: [], WO: [] },
+    Sun: { M: [], E: [], N: [], G: [], WO: [] },
   });
 
   useEffect(() => {
@@ -237,7 +237,7 @@ export default function DutyTrackerPage({ currentUser }) {
       setActiveRoster({
         siteId: selectedSite,
         date: activeDateISO,
-        shifts: { M: [], E: [], N: [] },
+        shifts: { M: [], E: [], N: [], G: [], WO: [] },
         remarks: ""
       });
 
@@ -262,7 +262,7 @@ export default function DutyTrackerPage({ currentUser }) {
   function getNewlyAssignedUsers(oldRoster, newRoster) {
     const result = [];
 
-    ["M", "E", "N"].forEach(shift => {
+    ["M", "E", "N", "G", "WO"].forEach(shift => {
       const oldArr = oldRoster?.shifts?.[shift] || [];
       const newArr = newRoster?.shifts?.[shift] || [];
 
@@ -283,7 +283,7 @@ export default function DutyTrackerPage({ currentUser }) {
     const dateISO = activeDateISO;
 
     // old roster from Firestore
-    const oldRoster = rosters[dateISO] || { shifts: { M: [], E: [], N: [] } };
+    const oldRoster = rosters[dateISO] || { shifts: { M: [], E: [], N: [], G: [], WO: [] } };
 
     // new roster being edited
     const newRoster = activeRoster;
@@ -301,7 +301,7 @@ export default function DutyTrackerPage({ currentUser }) {
           collection(db, "notifications", item.uid, "items"),
           {
             title: "New Duty Assigned",
-            message: `You have been assigned to ${item.shift === "M" ? "Morning": item.shift === "E" ? "Evening" : "Night"} shift on ${dateISO}.`,
+            message: `You have been assigned to ${item.shift === "M" ? "Morning": item.shift === "E" ? "Evening" : item.shift === "N" ? "Night" : item.shift === "G" ? "General" : "W/O"} shift on ${dateISO}.`,
             date: dateISO,
             shift: item.shift,
             site: selectedSite,
@@ -475,8 +475,40 @@ export default function DutyTrackerPage({ currentUser }) {
                     </div>
                   </div>
 
+                  
+
                   <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>
-                    <div style={{ fontSize: "12px" }}>🌅 Morning:</div>
+
+                    <div style={{ fontSize: "12px" }}> 🅶 Genarel:</div>
+                    <div
+                      style={{
+                        // display: "flex",
+                        gap: "0.25rem",
+                        marginTop: "0.25rem"
+                      }}
+                    >
+                      {(roster?.shifts?.G || []).map((uid) => {
+                        const u = siteUsers.find((su) => su.uid === uid);
+                        return (
+                          <div
+                            key={uid}
+                            style={{
+                              paddingLeft: "0.25rem",
+                              paddingRight: "0.25rem",
+                              paddingTop: "0.125rem",
+                              paddingBottom: "0.125rem",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "0.375rem",
+                              fontSize: "0.75rem"
+                            }}
+                          >
+                            {u?.name ? initials(u.name) : uid.slice(0, 4)}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🌇 Evening:</div>
+                    {/* <div style={{ fontSize: "12px" }}>🌅 Morning:</div> */}
                     <div
                       style={{
                         // display: "flex",
@@ -562,6 +594,34 @@ export default function DutyTrackerPage({ currentUser }) {
                         );
                       })}
                     </div>
+                    <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🅾 Weekly OFF:</div>
+                    <div
+                      style={{
+                        // display: "flex",
+                        gap: "0.25rem",
+                        marginTop: "0.25rem"
+                      }}
+                    >
+                      {(roster?.shifts?.WO || []).map((uid) => {
+                        const u = siteUsers.find((su) => su.uid === uid);
+                        return (
+                          <div
+                            key={uid}
+                            style={{
+                              paddingLeft: "0.25rem",
+                              paddingRight: "0.25rem",
+                              paddingTop: "0.125rem",
+                              paddingBottom: "0.125rem",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: "0.375rem",
+                              fontSize: "0.75rem"
+                            }}
+                          >
+                            {u?.name ? initials(u.name) : uid.slice(0, 4)}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               );
@@ -591,7 +651,7 @@ export default function DutyTrackerPage({ currentUser }) {
           </div>
 
           {/* Shift editors */}
-          {["M", "E", "N"].map((shift) => (
+          {["M", "E", "N", "G", "WO"].map((shift) => (
             <ShiftEditor
               key={shift}
               shift={shift}
@@ -626,7 +686,7 @@ export default function DutyTrackerPage({ currentUser }) {
               <div key={wd} className="border p-2 mt-2 rounded">
                 <h4 className="font-semibold">{wd}</h4>
 
-                {["M", "E", "N"].map((shift) => (
+                {["M", "E", "N", "G", "WO"].map((shift) => (
                   <ShiftEditor
                     key={shift}
                     shift={shift}

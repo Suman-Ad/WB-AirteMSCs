@@ -51,6 +51,7 @@ import BackupDutyPage from "./pages/BackupDutyPage";
 import CLCalendar from "./pages/CLCalendar";
 import MyLeaveStatus from "./pages/MyLeaveStatus";
 import MonthlyCLSummary from "./pages/MonthlyCLSummary";
+import MyDutySchedule from "./components/MyDutySchedule";
 
 function App() {
   const [userData, setUserData] = useState(null);
@@ -225,7 +226,7 @@ function App() {
           </RoleProtectedRoute>} />
 
         <Route path="/daily-activity-dashboard" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <DailyActivityDashboard userData={userData} />
             </Layout>
@@ -418,6 +419,13 @@ function App() {
           <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <MonthlyCLSummary currentUser={userData} />
+            </Layout>
+          </RoleProtectedRoute>} />
+
+          <Route path="/my-duty" element={
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+            <Layout userData={userData}>
+              <MyDutySchedule currentUser={userData} />
             </Layout>
           </RoleProtectedRoute>} />
 
