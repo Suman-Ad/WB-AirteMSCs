@@ -189,7 +189,7 @@ const Layout = ({ userData, children }) => {
                   {todayDuty ? (
                     <div
                       style={{
-                        padding: "4px 10px",
+                        // padding: "4px 10px",
                         backgroundColor: shiftColor(todayDuty.shift),
                         color: "white",
                         borderRadius: "6px",
@@ -204,7 +204,7 @@ const Layout = ({ userData, children }) => {
                       ⏱ Today Shift: <strong>{todayDuty.shift === "M" ? "Morning" : todayDuty.shift === "E" ? "Evening" : todayDuty.shift === "N" ? "Night" : todayDuty.shift === "G" ? "General" : "W/O"}</strong>
                       || {nextDuty && (
                         <div style={{ fontSize: "12px", marginTop: "2px" }}>
-                          Next: {nextDuty.date} → "{nextDuty.shift}" Shift
+                          Next: {nextDuty.date} → <strong>"{nextDuty.shift}"</strong>
                         </div>
                       )}
                     </div>

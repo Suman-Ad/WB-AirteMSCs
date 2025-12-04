@@ -9,14 +9,18 @@ import {
     updateDoc,
     addDoc,
     orderBy,
-    serverTimestamp
+    serverTimestamp,
+    runTransaction
 } from "firebase/firestore";
+import { set } from "date-fns";
 
 export default function CLApprovalPage({ currentUser }) {
     const [requests, setRequests] = useState([]);
     const [siteUsers, setSiteUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState("pending");
+    const [clApproving, setCLApproving] = useState(false);
+    const [clRejecting, setCLRejecting] = useState(false);
 
     // Load all site users (needed for backup selection)
     useEffect(() => {
@@ -75,6 +79,8 @@ export default function CLApprovalPage({ currentUser }) {
             return;
         }
 
+        setCLApproving(true);
+
         const ref = doc(db, "leaveRequests", req.userId, "items", req.id);
 
         await updateDoc(ref, {
@@ -82,6 +88,107 @@ export default function CLApprovalPage({ currentUser }) {
             approvedBy: currentUser.uid,
             approvedAt: serverTimestamp()
         });
+
+        // add these imports at top of file if not present:
+        // import { doc, runTransaction } from "firebase/firestore";
+
+        try {
+            // duty doc id used across your app:
+            const dutyDocId = `${currentUser.site}_${req.id}`; // req.id is YYYY-MM-DD
+            const dutyRef = doc(db, "dutyRoster", dutyDocId);
+
+            await runTransaction(db, async (tx) => {
+                const dutySnap = await tx.get(dutyRef);
+
+                if (!dutySnap.exists()) {
+                    // nothing to update (no roster for that date)
+                    console.warn("No dutyRoster doc for", dutyDocId);
+                    return;
+                }
+
+                const duty = dutySnap.data();
+
+                // find which shift the requester currently holds
+                const shifts = duty.shifts || {};
+                let foundShift = null;
+
+                for (const s of Object.keys(shifts)) {
+                    const arr = shifts[s] || [];
+                    if (arr.includes(req.userId)) {
+                        foundShift = s;
+                        break;
+                    }
+                }
+
+                if (!foundShift) {
+                    console.warn("Requester not found in any shift on", dutyDocId);
+                    return;
+                }
+
+                // remove original user from the shift
+                const updatedShiftArr = (shifts[foundShift] || []).filter((u) => u !== req.userId);
+
+                // add backup user (if provided) — avoid duplicate
+                const backupUid = req.backupUserId || null;
+                if (backupUid) {
+                    if (!updatedShiftArr.includes(backupUid)) {
+                        updatedShiftArr.push(backupUid);
+                    }
+                }
+
+                // prepare OT map (structure: { M: [uids], E: [...], N: [...] })
+                const otMap = duty.ot ? { ...duty.ot } : {};
+                if (backupUid) {
+                    if (!otMap[foundShift]) otMap[foundShift] = [];
+                    if (!otMap[foundShift].includes(backupUid)) {
+                        otMap[foundShift].push(backupUid);
+                    }
+                }
+
+                // update transaction: set shifts.<foundShift> and ot
+                const shiftUpdates = {
+                    [`shifts.${foundShift}`]: updatedShiftArr,
+                };
+                const updates = {
+                    // [`shifts.${foundShift}`]: updatedShiftArr,
+                    ot: otMap,
+                    updatedAt: serverTimestamp(),
+                    replacements: {
+                        ...(duty.replacements || {}),
+                        [req.userId]: {
+                            replacedBy: backupUid || null,
+                            replacedAt: serverTimestamp(),
+                            type: "CL"
+                        }
+                    }
+                };
+
+                // Merge everything safely
+                tx.update(dutyRef, shiftUpdates);
+                tx.set(dutyRef, updates, { merge: true });
+            });
+
+            // Notify backup user (if any)
+            if (req.backupUserId) {
+                await addDoc(collection(db, "notifications", req.backupUserId, "items"), {
+                    title: "OT Duty Assigned",
+                    message: `You have been assigned as backup (OT) for ${req.userName || req.userId} on ${req.id}.`,
+                    date: req.id,
+                    site: currentUser.site,
+                    read: false,
+                    createdAt: serverTimestamp(),
+                    actionType: "ot_assignment",
+                    originalUserId: req.userId,
+                    shiftAssigned: null // you can set this if you want; UI can infer by reading duty doc
+                });
+            }
+
+            console.log("Duty roster updated: backup assigned as OT for", req.id);
+        } catch (err) {
+            console.error("Error auto-updating duty roster after CL approval:", err);
+        }
+
+
 
         // Notify Applicant
         await addDoc(collection(db, "notifications", req.userId, "items"), {
@@ -94,26 +201,27 @@ export default function CLApprovalPage({ currentUser }) {
         });
 
         // Notify Backup User (if accepted)
-        if (req.backupUserId) {
-            await addDoc(
-                collection(db, "notifications", req.backupUserId, "items"),
-                {
-                    title: "Backup Duty Confirmed",
-                    message: `Backup duty confirmed for ${req.userName} on ${req.id}.`,
-                    date: req.id,
-                    site: currentUser.site,
-                    read: false,
-                    createdAt: serverTimestamp(),
-                }
-            );
-        }
-
+        // if (req.backupUserId) {
+        //     await addDoc(
+        //         collection(db, "notifications", req.backupUserId, "items"),
+        //         {
+        //             title: "Backup Duty Confirmed",
+        //             message: `Backup duty confirmed for ${req.userName} on ${req.id}.`,
+        //             date: req.id,
+        //             site: currentUser.site,
+        //             read: false,
+        //             createdAt: serverTimestamp(),
+        //         }
+        //     );
+        // }
+        setCLApproving(false);
         alert("CL Approved & Notifications sent!");
         window.location.reload();
     }
 
 
     async function rejectCL(req) {
+        setCLRejecting(true);
         const ref = doc(db, "leaveRequests", req.userId, "items", req.id);
 
         await updateDoc(ref, {
@@ -131,7 +239,7 @@ export default function CLApprovalPage({ currentUser }) {
             read: false,
             createdAt: new Date(),
         });
-
+        setCLRejecting(false);
         alert("CL Rejected & Applicant Notified!");
         window.location.reload();
     }
@@ -268,7 +376,7 @@ export default function CLApprovalPage({ currentUser }) {
                                             }}
                                             onClick={() => approveCL(req)}
                                         >
-                                            Approve
+                                            {clApproving ? "Approving..." : "Approve"}
                                         </button>
 
                                         <button
@@ -283,7 +391,7 @@ export default function CLApprovalPage({ currentUser }) {
                                             }}
                                             onClick={() => rejectCL(req)}
                                         >
-                                            Reject
+                                            {clRejecting ? "Rejecting..." : "Reject"}
                                         </button>
                                     </>
                                 )}

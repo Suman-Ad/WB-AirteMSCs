@@ -51,7 +51,7 @@ export default function BackupDutyPage({ currentUser }) {
 
 
     async function acceptBackup(req) {
-        const ref = doc(db, "leaveRequests", req.empId, "Items", req.id);
+        const ref = doc(db, "leaveRequests", req.userId, "items", req.id);
         await updateDoc(ref, {
             backupStatus: "accepted",
             backupResponseAt: new Date(),
@@ -62,7 +62,7 @@ export default function BackupDutyPage({ currentUser }) {
     }
 
     async function rejectBackup(req) {
-        const ref = doc(db, "leaveRequests", req.empId, "Items", req.id);
+        const ref = doc(db, "leaveRequests", req.userId, "items", req.id);
         await updateDoc(ref, {
             backupStatus: "rejected",
             backupResponseAt: new Date(),

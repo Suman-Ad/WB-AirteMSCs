@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 export default function NotificationBell({ user }) {
     const [items, setItems] = useState([]);
     const [open, setOpen] = useState(false);
-    const [acrejBtn, setAcrejBtn] = useState(true); // Show accept/reject buttons for backup_request notifications
+    const [filter, setFilter] = useState("all");
     const navigate = useNavigate();
 
     const soundRef = React.useRef(null);
@@ -34,11 +34,38 @@ export default function NotificationBell({ user }) {
             const newUnread = arr.filter(n => !n.read).length;
             const oldUnread = items.filter(n => !n.read).length;
 
-            if (!open && newUnread > oldUnread) {
+            const newBackupReq = arr.filter(
+                n => !n.read && n.actionType === "backup_request"
+            ).length;
+
+            const oldBackupReq = items.filter(
+                n => !n.read && n.actionType === "backup_request"
+            ).length;
+
+            // Play sound ONLY for new backup requests
+            if (!open && newBackupReq > oldBackupReq) {
                 soundRef.current?.play().catch(() => { });
             }
+
             setItems(arr);
         });
+
+        async function cleanupOld() {
+            const q = query(collection(db, "notifications", user.uid, "items"));
+            const snap = await getDocs(q);
+
+            const now = Date.now();
+            const cutoff = now - 30 * 24 * 60 * 60 * 1000; // 30 days
+
+            snap.forEach((d) => {
+                const created = d.data().createdAt?.toMillis?.() ?? 0;
+                if (created < cutoff) {
+                    deleteDoc(doc(db, "notifications", user.uid, "items", d.id));
+                }
+            });
+        }
+
+        cleanupOld();
 
         return () => unsub();
     }, [user]);
@@ -81,10 +108,11 @@ export default function NotificationBell({ user }) {
                 backupResponseAt: serverTimestamp()
             });
 
-            setAcrejBtn(false);
-
             // mark notification read
-            await updateDoc(doc(db, "notifications", user.uid, "items", notification.id), { read: true });
+            await updateDoc(doc(db, "notifications", user.uid, "items", notification.id), {
+                read: true,
+                backupStatus: "accepted"   // 🔥 ADD THIS
+            });
 
             // notify applicant
             await addDoc(collection(db, "notifications", requesterId, "items"), {
@@ -96,7 +124,7 @@ export default function NotificationBell({ user }) {
                 actionType: "backup_response",
                 requestId,
                 responderId: user.uid,
-                responderName: user.name || ""
+                responderName: user.name || "",
             });
 
             // notify admins for site (find admins by site on users collection)
@@ -141,9 +169,11 @@ export default function NotificationBell({ user }) {
                 backupResponseAt: serverTimestamp()
             });
 
-            setAcrejBtn(false);
+            await updateDoc(doc(db, "notifications", user.uid, "items", notification.id), {
+                read: true,
+                backupStatus: "rejected"   // 🔥 ADD THIS
+            });
 
-            await updateDoc(doc(db, "notifications", user.uid, "items", notification.id), { read: true });
 
             await addDoc(collection(db, "notifications", requesterId, "items"), {
                 title: "Backup Rejected",
@@ -186,6 +216,41 @@ export default function NotificationBell({ user }) {
         }
     }
 
+    function getNotificationColor(n) {
+        if (n.actionType === "backup_request") {
+            if (n.backupStatus === "accepted") return "#dcfce7";  // light green
+            if (n.backupStatus === "rejected") return "#fee2e2";  // light red
+            return "#fef9c3"; // pending - light yellow
+        }
+
+        // default for other notifications
+        return n.read ? "white" : "#dbeafe";
+    }
+
+    function filterNotifications(list) {
+        if (filter === "all") return list;
+
+        const todayISO = new Date().toISOString().split("T")[0];
+
+        if (filter === "today") {
+            return list.filter(n => n.date === todayISO);
+        }
+
+        if (filter === "week") {
+            const now = new Date();
+            const weekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+
+            return list.filter(n => {
+                const ts = n.createdAt?.toMillis?.() ?? 0;
+                return ts >= weekAgo;
+            });
+        }
+
+        return list;
+    }
+
+
+
     return (
         <div style={{ position: "relative" }}>
             {/* Bell icon */}
@@ -218,7 +283,7 @@ export default function NotificationBell({ user }) {
             {open && (
                 <div style={{
                     position: 'absolute',
-                    right: '0',
+                    right: '-1rem',
                     marginTop: '0.5rem',
                     width: '18rem',
                     backgroundColor: 'white',
@@ -233,14 +298,35 @@ export default function NotificationBell({ user }) {
                         padding: '0.75rem',
                         borderBottom: '1px solid #e5e7eb',
                         fontWeight: '600',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'column',
+                        position: 'sticky',
                         top: '0',
                         backgroundColor: 'white',
                         zIndex: 10
-                    }}>Notifications<div style={{ display: "flex", gap: "8px" }}>
-
+                    }}>
+                        {/* X close */}
+                        <div style={{ display: "flex", justifyContent: 'space-between', }}><h2>Notifications</h2>
+                            <p onClick={() => setOpen(!open)} style={{ cursor: "pointer", height: "fit-content", position: "absolute", right: "0", top: "0", fontWeight: "bold" }} onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#cc5353b7';
+                            }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '';
+                                }}>X</p>
+                        </div>
+                        <div style={{ display: "flex", gap:"10px", marginBottom: "10px" }}>
+                            <p onClick={() => setFilter("today")} style={{ fontSize: '10px', borderRadius: "4px", border: "1px solid #000000ff", cursor: "pointer" }}>
+                                Today
+                            </p>
+                            <p onClick={() => setFilter("week")} style={{ fontSize: '10px', borderRadius: "4px", border: "1px solid #000000ff", cursor: "pointer" }}>
+                                This Week
+                            </p>
+                            <p onClick={() => setFilter("all")} style={{ fontSize: '10px', borderRadius: "4px", border: "1px solid #000000ff", cursor: "pointer" }}>
+                                All
+                            </p>
+                        </div>
+                        <div style={{ display: "flex", gap: "8px" }}>
                             {/* ✔ Mark All Read button */}
-                            <button
+                            <p
                                 onClick={markAllAsRead}
                                 style={{
                                     fontSize: "8px",
@@ -248,14 +334,17 @@ export default function NotificationBell({ user }) {
                                     color: "white",
                                     padding: "4px 6px",
                                     borderRadius: "4px",
-                                    cursor: "pointer"
+                                    cursor: "pointer",
+                                    height: "fit-content",
+                                    position:"absolute",
+                                    left:"0"
                                 }}
                             >
                                 Mark All Read
-                            </button>
+                            </p>
 
                             {/* 🗑 Delete all button */}
-                            <button
+                            <p
                                 onClick={() => {
                                     if (window.confirm("Delete all notifications?")) {
                                         items.forEach(n => deleteNotification(n.id));
@@ -267,22 +356,15 @@ export default function NotificationBell({ user }) {
                                     color: "white",
                                     padding: "4px 6px",
                                     borderRadius: "4px",
-                                    cursor: "pointer"
+                                    cursor: "pointer",
+                                    height: "fit-content",
+                                    position:"absolute",
+                                    right:"0"
                                 }}
                             >
                                 Delete All
-                            </button>
-
-
-                            {/* X close */}
-                            <p onClick={() => setOpen(!open)} style={{ cursor: "pointer" }} onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#cc5353b7';
-                            }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '';
-                                }}>X</p>
+                            </p>
                         </div>
-
                     </div>
 
                     {items.length === 0 && (
@@ -292,20 +374,17 @@ export default function NotificationBell({ user }) {
                             color: '#6b7280',
                             textAlign: 'center',
                         }}>No notifications
-                            <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-application")}>Apply For CL</p>
-
                         </div>
-
                     )}
 
-                    {items.map((n) => (
+                    {filterNotifications(items).map((n) => (
                         <div
                             key={n.id + (n.createdAt?.toMillis?.() ?? "")}
                             style={{
                                 padding: '0.75rem',
                                 borderBottom: '1px solid #e5e7eb',
                                 cursor: 'pointer',
-                                backgroundColor: n.read ? 'white' : '#dbeafe',
+                                backgroundColor: getNotificationColor(n),
                                 position: 'relative'
                             }}
                             onClick={() => markAsRead(n.id)}
@@ -330,51 +409,67 @@ export default function NotificationBell({ user }) {
 
                             {/* Inline actions for backup_request */}
                             {n.actionType === "backup_request" && (
-                                <div style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '0.5rem'
-                                }}>
-                                    {!!acrejBtn && (
-                                        <button style={{
-                                            paddingLeft: '0.5rem',
-                                            paddingRight: '0.5rem',
-                                            paddingTop: '0.25rem',
-                                            paddingBottom: '0.25rem',
-                                            backgroundColor: '#16a34a',
-                                            color: 'white',
-                                            fontSize: '0.75rem',
-                                            borderRadius: '0.375rem'
-                                        }} onClick={() => acceptBackup(n)}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0285c7ff"}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#16a34a"}
-                                        >
-                                            Accept</button>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+
+                                    {/* SHOW only if request still pending */}
+                                    {n.backupStatus !== "accepted" && n.backupStatus !== "rejected" && (
+                                        <>
+                                            <button
+                                                style={{
+                                                    paddingLeft: "0.5rem",
+                                                    paddingRight: "0.5rem",
+                                                    paddingTop: "0.25rem",
+                                                    paddingBottom: "0.25rem",
+                                                    backgroundColor: "#16a34a",
+                                                    color: "white",
+                                                    fontSize: "0.75rem",
+                                                    borderRadius: "0.375rem",
+                                                }}
+                                                onClick={() => acceptBackup(n)}
+                                            >
+                                                Accept
+                                            </button>
+
+                                            <button
+                                                style={{
+                                                    paddingLeft: "0.5rem",
+                                                    paddingRight: "0.5rem",
+                                                    paddingTop: "0.25rem",
+                                                    paddingBottom: "0.25rem",
+                                                    backgroundColor: "#a31616ff",
+                                                    color: "white",
+                                                    fontSize: "0.75rem",
+                                                    borderRadius: "0.375rem",
+                                                }}
+                                                onClick={() => rejectBackup(n)}
+                                            >
+                                                Reject
+                                            </button>
+                                        </>
                                     )}
 
-                                    {!!acrejBtn && (
-                                        <button style={{
-                                            paddingLeft: '0.5rem',
-                                            paddingRight: '0.5rem',
-                                            paddingTop: '0.25rem',
-                                            paddingBottom: '0.25rem',
-                                            backgroundColor: '#a31616ff',
-                                            color: 'white',
-                                            fontSize: '0.75rem',
-                                            borderRadius: '0.375rem'
-                                        }} onClick={() => rejectBackup(n)}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0285c7ff"}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#a31616ff"}
-                                        >Reject</button>
+                                    {/* SHOW message after accept / reject */}
+                                    {n.backupStatus === "accepted" && (
+                                        <p style={{ color: "#16a34a", fontSize: "0.75rem", marginTop: "4px" }}>
+                                            ✔ Backup Accepted
+                                        </p>
                                     )}
+
+                                    {n.backupStatus === "rejected" && (
+                                        <p style={{ color: "#b91c1c", fontSize: "0.75rem", marginTop: "4px" }}>
+                                            ✖ Backup Rejected
+                                        </p>
+                                    )}
+
                                 </div>
                             )}
+
                             {/* 🗑 Delete one notification */}
                             <button
                                 onClick={() => deleteNotification(n.id)}
                                 style={{
                                     position: "absolute",
-                                    right: "0px",
+                                    right: "0",
                                     top: "8px",
                                     background: "transparent",
                                     border: "none",
@@ -388,20 +483,6 @@ export default function NotificationBell({ user }) {
                             </button>
                         </div>
                     ))}
-                    <p style={{
-                        marginTop: "12px",
-                        fontSize: "0.875rem",
-                        color: "#ffffffff",
-                        cursor: "pointer",
-                        position: "sticky",
-                        bottom: "0",
-                        background: "#1c4685ff"
-                    }}
-                        onClick={() => navigate("/cl-application")}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#447dd3ff"}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1c4685ff"}
-                    >Apply For CL</p>
-
                 </div>
             )}
         </div>

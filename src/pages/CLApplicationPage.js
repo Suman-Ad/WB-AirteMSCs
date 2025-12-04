@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { db } from "../firebase";
 import {
@@ -15,12 +15,16 @@ import {
 import { set } from "date-fns";
 
 export default function CLApplicationPage({ currentUser }) {
-    const [date, setDate] = useState("");
+    const location = useLocation();
+    const [date, setDate] = useState(location.state?.date || "");
     const [reason, setReason] = useState("");
     const [backupUser, setBackupUser] = useState("");
     const [siteUsers, setSiteUsers] = useState([]);
     const [apply, setApply] = useState(false);
     const navigate = useNavigate();
+    const [yearlyCLUsed, setYearlyCLUsed] = useState(0);
+    const [yearlyCLRemaining, setYearlyCLRemaining] = useState(10);
+
 
     useEffect(() => {
         if (!currentUser?.site) return;
@@ -36,6 +40,31 @@ export default function CLApplicationPage({ currentUser }) {
             setSiteUsers(arr);
         }
 
+        async function fetchYearlyCL() {
+            const year = new Date().getFullYear().toString();
+
+            const snap = await getDocs(
+                collection(db, "leaveRequests", currentUser.uid, "items")
+            );
+
+            let count = 0;
+
+            snap.forEach(docSnap => {
+                const id = docSnap.id; // YYYY-MM-DD
+                if (!id.startsWith(year + "-")) return;
+
+                const d = docSnap.data();
+                if (d.reason === "CL" || (d.status === "approved" || d.status === "pending")) {
+                    count++;
+                }
+            });
+
+            setYearlyCLUsed(count);
+            setYearlyCLRemaining(10 - count);
+        }
+
+        fetchYearlyCL();
+
         loadUsers();
     }, [currentUser]);
 
@@ -49,24 +78,30 @@ export default function CLApplicationPage({ currentUser }) {
 
         const dateKey = date; // YYYY-MM-DD
 
-        // dateKey = "YYYY-MM-DD"
+        // ------- CHECK YEARLY LIMIT (10 max) -------
         const year = dateKey.split("-")[0];
 
-        // count CL for this year (approved + pending)
-        const lrSnapYear = await getDocs(query(collection(db, "leaveRequests", currentUser.uid, "items")));
-        let count = 0;
+        const lrSnapYear = await getDocs(
+            collection(db, "leaveRequests", currentUser.uid, "items")
+        );
+
+        let used = 0;
+
         lrSnapYear.forEach(d => {
-            const dd = d.id;
-            if (!dd.startsWith(year + "-")) return;
+            const id = d.id;
+            if (!id.startsWith(year + "-")) return;
+
             const data = d.data();
-            if ((data.reason === "CL") && (data.status === "approved" || data.status === "pending")) {
-                count++;
+            if (data.reason === "CL" && (data.status === "approved" || data.status === "pending")) {
+                used++;
             }
         });
 
-        if (count >= 12) {
-            return alert("CL limit reached for this year (12). Cannot apply more.");
+        if (used >= 10) {
+            setApply(false);
+            return alert("❌ You have already used all 10 CL for this year.");
         }
+
 
         // path: leaveRequests/{uid}/items/{dateKey}
         const ref = doc(db, "leaveRequests", currentUser.uid, "items", dateKey);
@@ -128,7 +163,7 @@ export default function CLApplicationPage({ currentUser }) {
                 requesterId: currentUser.uid
             }
         );
-        
+
         setApply(false);
         alert("CL Request Submitted!");
         setReason("");
@@ -139,7 +174,7 @@ export default function CLApplicationPage({ currentUser }) {
 
 
     return (
-        <div style={{
+        <div className="daily-log-container" style={{
             padding: '1rem',
             maxWidth: '32rem',
             marginLeft: 'auto',
@@ -148,6 +183,24 @@ export default function CLApplicationPage({ currentUser }) {
             boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
             borderRadius: '0.375rem'
         }}>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <p className="pm-manage-btn" onClick={() => navigate("/my-leave")}>My Leaves</p>
+                <p className="pm-manage-btn" onClick={() => navigate("/cl-calendar")}>My CL Calendar</p>
+            </div>
+
+            <div
+                style={{
+                    background: "#f3f4f6",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    marginBottom: "16px"
+                }}
+            >
+                <p><strong>CL Used:</strong> {yearlyCLUsed} / 10</p>
+                <p><strong>CL Remaining:</strong> {yearlyCLRemaining}</p>
+            </div>
+
+
             <h2 className="text-xl font-semibold mb-4">Apply for CL</h2>
 
             <label style={{
@@ -165,6 +218,7 @@ export default function CLApplicationPage({ currentUser }) {
                     width: '100%',
                     marginBottom: '16px'
                 }}
+                disabled
             />
 
             <label style={{
@@ -213,19 +267,22 @@ export default function CLApplicationPage({ currentUser }) {
             </select>
 
             <button
+                disabled={yearlyCLRemaining <= 0 || apply}
                 onClick={applyCL}
                 style={{
-                    paddingLeft: '1rem',
-                    paddingRight: '1rem',
-                    paddingTop: '0.5rem',
-                    paddingBottom: '0.5rem',
-                    backgroundColor: '#2563eb',
-                    color: 'white',
-                    borderRadius: '0.375rem'
+                    paddingLeft: "1rem",
+                    paddingRight: "1rem",
+                    paddingTop: "0.5rem",
+                    paddingBottom: "0.5rem",
+                    backgroundColor: yearlyCLRemaining <= 0 ? "#9ca3af" : "#2563eb",
+                    cursor: yearlyCLRemaining <= 0 ? "not-allowed" : "pointer",
+                    color: "white",
+                    borderRadius: "0.375rem"
                 }}
             >
-                {apply ? "Appling....." :"Apply CL"}
+                {apply ? "Applying..." : yearlyCLRemaining <= 0 ? "CL Limit Reached" : "Apply CL"}
             </button>
+
         </div>
     );
 }
