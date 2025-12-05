@@ -38,13 +38,16 @@ function formatISODate(date) {
 
 // Small UI atoms
 function Button({ children, onClick, className = "" }) {
-  let customClass = className.includes("bg-green-600") ? " bg-green-600" : "";
   return (
-    <button onClick={onClick} className={`button${customClass}`}>
+    <button
+      onClick={onClick}
+      className={`button ${className}`}
+    >
       {children}
     </button>
   );
 }
+
 
 function Badge({ children }) {
   return (
@@ -394,14 +397,7 @@ export default function DutyTrackerPage({ currentUser }) {
       <h2>Duty Tracker</h2>
 
       {/* Filters */}
-      <div
-        style={{
-          display: "flex",
-          gap: "12px",
-          marginBottom: "16px",
-          alignItems: "center"
-        }}
-      >
+      <div className="flex filter-bar">
         <select
           value={selectedRegion}
           onChange={(e) => setSelectedRegion(e.target.value)}
@@ -443,32 +439,10 @@ export default function DutyTrackerPage({ currentUser }) {
         </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-          gap: "16px"
-        }}
-      >
+      <div className="grid">
         {/* Calendar (col-span 2) */}
-        <div
-          style={{
-            gridColumn: "span 2 / span 2",
-            backgroundColor: "white",
-            borderRadius: "0.375rem",
-            boxShadow:
-              "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-            padding: "0.75rem"
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
-              gap: "8px",
-              fontSize: "0.875rem"
-            }}
-          >
+        <div className="calendar-panel">
+          <div className="calendar-days-header">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div key={d} style={{
                 textAlign: 'center',
@@ -479,14 +453,7 @@ export default function DutyTrackerPage({ currentUser }) {
             ))}
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
-              gap: "8px",
-              marginTop: "8px"
-            }}
-          >
+          <div className="calendar-grid">
             {calendarDays.map((day, index) => {
               if (day === null) {
                 return (
@@ -500,25 +467,8 @@ export default function DutyTrackerPage({ currentUser }) {
               const iso = formatISODate(day);
               const roster = rosters[iso];
               return (
-                <div
-                  key={iso}
-                  onClick={() => openDate(day)}
-                  style={{
-                    minHeight: "90px",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "0.375rem",
-                    padding: "0.5rem",
-                    cursor: "pointer",
-                    transition: "box-shadow 0.2s ease-in-out"
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}
-                  >
+                <div className="calendar-day-cell" onClick={() => openDate(day)}>
+                  <div className="flex">
                     <div style={{ fontSize: "0.875rem", fontWeight: "500" }}>
                       {format(day, "d MMM")}
                     </div>
@@ -529,7 +479,7 @@ export default function DutyTrackerPage({ currentUser }) {
 
 
 
-                  <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>
+                  <div className="shift-title">
 
                     <div style={{ fontSize: "12px" }}> 🅶 Genarel:</div>
                     <div
@@ -542,18 +492,7 @@ export default function DutyTrackerPage({ currentUser }) {
                       {(roster?.shifts?.G || []).map((uid) => {
                         const u = siteUsers.find((su) => su.uid === uid);
                         return (
-                          <div
-                            key={uid}
-                            style={{
-                              paddingLeft: "0.25rem",
-                              paddingRight: "0.25rem",
-                              paddingTop: "0.125rem",
-                              paddingBottom: "0.125rem",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "0.375rem",
-                              fontSize: "0.75rem"
-                            }}
-                          >
+                          <div className="initial-badge">
                             {u?.name ? initials(u.name) : uid.slice(0, 4)}
                           </div>
                         );
@@ -689,14 +628,7 @@ export default function DutyTrackerPage({ currentUser }) {
         <motion.div
           initial={{ x: 50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          style={{
-            backgroundColor: "white",
-            borderRadius: "0.375rem",
-            boxShadow:
-              "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-            padding: "1rem"
-          }}
-        >
+          className="editor-panel">
           <h3>{activeDateISO}</h3>
           <div style={{ fontSize: "0.875rem", color: "#475569", marginBottom: "0.75rem" }}>
             Site: {selectedSite || "—"}
@@ -725,8 +657,8 @@ export default function DutyTrackerPage({ currentUser }) {
           </div>
 
           <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
-            <Button onClick={() => handleSaveRoster(activeRoster)}>Save</Button>
-            <Button onClick={handleSaveAndNotify} style={{ backgroundColor: "#16a34a" }}>
+            <Button onClick={() => handleSaveRoster(activeRoster)} className="bg-green-600">Save</Button>
+            <Button onClick={handleSaveAndNotify} className="bg-green-600">
               Save & Notify
             </Button>
           </div>
@@ -789,7 +721,7 @@ function ShiftEditor({ shift, roster, siteUsers, onChange }) {
   }
 
   return (
-    <div style={{ marginBottom: "0.75rem", border: "1px solid #e5e7eb", padding: "0.5rem", borderRadius: "0.375rem" }}>
+    <div className="shift-editor">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontWeight: "500" }}>Shift {shift}</div>
         <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Max 2</div>
@@ -845,31 +777,16 @@ function UserSelect({ siteUsers, onSelect }) {
   return (
     <div>
       <input
-        style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: "0.375rem",
-          paddingLeft: "0.5rem",
-          paddingRight: "0.5rem",
-          paddingTop: "0.25rem",
-          paddingBottom: "0.25rem",
-          width: "100%"
-        }}
+        className="user-select-input"
         placeholder="Search user"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
-      <div style={{ maxHeight: "10rem", overflow: "auto", marginTop: "0.5rem" }}>
+      <div className="user-select-list">
         {filtered.map((u) => (
           <div
             key={u.uid}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "0.25rem",
-              borderRadius: "0.375rem",
-              transition: "background-color 0.2s ease-in-out"
-            }}
+            className="user-select-item"
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = "#f8fafc";
             }}
@@ -884,15 +801,7 @@ function UserSelect({ siteUsers, onSelect }) {
               </div>
             </div>
             <button
-              style={{
-                paddingLeft: "0.5rem",
-                paddingRight: "0.5rem",
-                paddingTop: "0.25rem",
-                paddingBottom: "0.25rem",
-                backgroundColor: "#0284c7",
-                color: "white",
-                borderRadius: "0.375rem"
-              }}
+              className="bg-green-600"
               onClick={() => onSelect(u.uid)}
             >
               Add

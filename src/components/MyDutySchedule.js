@@ -203,7 +203,7 @@ export default function MyDutySchedule({ currentUser }) {
           <tbody>
             <tr>
               <td style={{ padding: "8px", borderBottom: "1px solid #e5e7eb" }}>
-                {format(new Date(), "MMMM yyyy")}
+                {format(selectedMonth, "MMMM yyyy")}
               </td>
               <td style={{ padding: "8px", borderBottom: "1px solid #e5e7eb" }}>
                 {summary.totalCL}
@@ -238,7 +238,7 @@ export default function MyDutySchedule({ currentUser }) {
               {formatDutyDisplay(d.mainShift, d.otShift, d.replacedUserName, d.cl)}
             </strong>
 
-            {!d.ot && (
+            {!d.otShift && (
               <p style={{
                 marginTop: "12px",
                 fontSize: "0.875rem",

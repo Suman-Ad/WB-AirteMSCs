@@ -324,10 +324,6 @@ body {
     background-color: #f8fafc; /* bg-slate-50 */
 }
 
-.user-select-item > div {
-    /* Container for name and details */
-    /* flex-grow property could be implied but not explicitly needed here */
-}
 
 .user-select-item .font-medium {
     /* User Name */
@@ -354,4 +350,120 @@ body {
 
 .user-select-item button:hover {
     background-color: #0369a1; /* Darker sky-600 */
+}
+
+.shift-title {
+    margin-top: 8px;
+    font-size: 0.75rem;
+    color: var(--color-slate-600);
+    border-top: 1px solid #e5e7eb;
+    padding-top: 4px;
+    line-height: 1.25rem;
+}
+
+.initial-badge {
+    padding: 2px 4px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+
+/* ===============================
+   MOBILE RESPONSIVE — DutyTracker
+   =============================== */
+
+@media (max-width: 768px) {
+  /* Container */
+  .daily-log-container {
+    padding: 10px !important;
+  }
+
+  /* Filter section */
+  .daily-log-container select,
+  .daily-log-container input[type="month"] {
+    width: 100% !important;
+    margin-bottom: 8px;
+  }
+
+  .daily-log-container > div {
+    flex-wrap: wrap !important;
+  }
+
+  /* Convert desktop grid → single column */
+  .daily-log-container > div[style*="grid-template-columns"] {
+    display: block !important;
+  }
+
+  /* Calendar container */
+  .daily-log-container > div > div:first-child {
+    width: 100% !important;
+    margin-bottom: 15px;
+  }
+
+  /* Calendar grid */
+  .daily-log-container div[style*="grid-template-columns: repeat(7"] {
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 4px !important;
+  }
+
+  /* Day cell */
+  .daily-log-container div[style*="min-height: 90px"] {
+    min-height: 65px !important;
+    padding: 4px !important;
+  }
+
+  /* Date+Today text */
+  .daily-log-container div[style*="justify-content: space-between"] {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 2px;
+  }
+
+  /* Shifts inside calendar */
+  .daily-log-container div[style*="border-top"] {
+    margin-top: 4px !important;
+    padding-top: 2px !important;
+    font-size: 11px !important;
+  }
+
+  /* Small boxes (initials) */
+  .daily-log-container div[style*="border: 1px solid #e5e7eb"] {
+    font-size: 11px !important;
+    padding: 1px 3px !important;
+  }
+
+  /* Date Editor (Right panel) */
+  .framer-motion-div,
+  .date-editor {
+    width: 100% !important;
+    margin-top: 20px;
+  }
+
+  /* Buttons */
+  .button {
+    width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Weekday Template section */
+  .weekday-template {
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+}
+
+/* EXTRA SMALL DEVICES */
+@media (max-width: 480px) {
+  .daily-log-container h2 {
+    font-size: 20px;
+  }
+
+  .daily-log-container div[style*="grid-template-columns: repeat(7"] {
+    font-size: 10px !important;
+  }
+
+  .daily-log-container div[style*="min-height: 65px"] {
+    min-height: 55px !important;
+  }
 }
