@@ -467,6 +467,121 @@
 .dglog-table th {
   background: #eaf1fa;
 }
+/***********************
+   3D FRAME CONTAINER
+************************/
+.rack-3d-wrapper {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  margin: 20px auto;
+  width: 450px;
+  position: relative;
+}
+
+/***********************
+    LEFT 3D PANEL
+************************/
+.rack-3d-left {
+  width: 40px;
+  background: linear-gradient(135deg, #666, #333);
+  border-left: 2px solid #222;
+  border-top: 2px solid #111;
+  border-bottom: 2px solid #111;
+  transform: skewY(-10deg);
+  margin-right: -10px;
+}
+
+/***********************
+     MAIN RACK FRAME
+************************/
+.rack-3d-main {
+  border: 2px solid #444;
+  width: 260px;
+  padding: 10px 0;
+  background: #fafafa;
+  position: relative;
+}
+
+/***********************
+       TOP ANGLE
+************************/
+.rack-3d-main::before {
+  content: "";
+  position: absolute;
+  top: -14px;
+  left: 0;
+  width: 100%;
+  height: 14px;
+  background: linear-gradient(to bottom, #444, #222);
+  transform: skewX(-45deg);
+  transform-origin: top left;
+  border-top: 2px solid #111;
+}
+
+/***********************
+      BOTTOM ANGLE
+************************/
+.rack-3d-main::after {
+  content: "";
+  position: absolute;
+  bottom: -14px;
+  left: 0;
+  width: 100%;
+  height: 14px;
+  background: linear-gradient(to top, #444, #222);
+  transform: skewX(-45deg);
+  transform-origin: bottom left;
+  border-bottom: 2px solid #111;
+}
+
+/***********************
+   U ROW + EQUIPMENT UI
+************************/
+.rack-u-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 18px;
+  position: relative;
+}
+
+.u-label {
+  width: 28px;
+  text-align: right;
+  padding-right: 6px;
+  font-size: 12px;
+  color: #333;
+}
+
+.u-empty {
+  flex: 1;
+  height: 100%;
+  border-top: 1px solid #ddd;
+}
+
+.u-equipment {
+  flex: 1;
+  background: #cfe2ff;
+  border: 1px solid #8bb6ff;
+  font-size: 11px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.u-details {
+  width: 180px;
+  padding-left: 10px;
+}
+
+.equipment-details {
+  font-size: 12px;
+  margin-bottom: 25px;
+  padding: 3px 5px;
+  background: #fff;
+  border-left: 2px solid #555;
+}
 
 
 /* Responsive tweaks */

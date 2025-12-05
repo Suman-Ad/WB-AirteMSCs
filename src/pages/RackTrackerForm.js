@@ -101,6 +101,7 @@ const RackTrackerForm = ({ userData }) => {
   const editData = location.state?.editData || null;
   const powerType = ["AC", "DC", "AC+DC"];
   const rackType = ["Active", "Passive"];
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState(
     editData
       ? { ...editData } // Prefill all fields from the record
@@ -115,6 +116,9 @@ const RackTrackerForm = ({ userData }) => {
         rackType: rackType[0],
         powerType: "",
         rackSize: "",
+        rackHeight: editData?.rackDimensions?.height || "",
+        rackWidth: editData?.rackDimensions?.width || "",
+        rackDepth: editData?.rackDimensions?.depth || "",
         rackDescription: "",
         totalRackUSpace: "",
         usedRackUSpace: "",
@@ -183,58 +187,129 @@ const RackTrackerForm = ({ userData }) => {
 
   const [status, setStatus] = useState("");
   const floorList = ["Ground Floor", "1st Floor", "2nd Floor", "3rd Floor", "4th Floor", "5th Floor"]
+  // U-by-U equipment map for SLD-style rack view
+  const [rackUSlots, setRackUSlots] = useState(() => {
+    const totalU = Number(formData.totalRackUSpace) || 42; // default 42U
+    // Each slot: { uNo, label, occupied }
+    return Array.from({ length: totalU }, (_, i) => ({
+      uNo: totalU - i,      // 42 at top, 1 at bottom
+      label: "",
+      occupied: false,
+    }));
+  });
+
+  const [rackEquipments, setRackEquipments] = useState(
+    (editData && editData.rackEquipments) || [
+      { id: Date.now().toString(), name: "", startU: "", endU: "", sizeU: 0, remarks: "" },
+    ]
+  );
+
+  const recomputeUSpaceFromEquipments = (equipments, totalRackUSpace) => {
+    const used = equipments.reduce((sum, e) => sum + (Number(e.sizeU) || 0), 0);
+    const total = Number(totalRackUSpace) || 0;
+    const free = total - used;
+    return {
+      usedRackUSpace: used,
+      freeRackUSpace: free,
+      pctRackOccupied: total > 0 ? ((used / total) * 100).toFixed(1) : "0.0",
+    };
+  };
+
+
 
   // ✅ Update input + auto-calc
   const handleChange = (e) => {
-    const updated = { ...formData, [e.target.name]: e.target.value };
-    // ✅ If Rack Type = Passive → Force Power Type = None
-    if (e.target.name === "rackType" && e.target.value === "Passive") {
+    const { name, value } = e.target;
+    let updated = { ...formData, [name]: value };
+
+    if (name === "rackType" && value === "Passive") {
       updated.powerType = "None";
     }
-
-    // ✅ If Rack Type changes from Passive to Active → clear old "None"
-    if (e.target.name === "rackType" && e.target.value === "Active") {
+    if (name === "rackType" && value === "Active") {
       updated.powerType = "";
     }
+
+    // When totalRackUSpace changes, recalc from equipments
+    if (name === "totalRackUSpace") {
+      const uCalc = recomputeUSpaceFromEquipments(rackEquipments, value);
+      updated = { ...updated, ...uCalc };
+    }
+
+    if (name === "rackHeight" || name === "rackWidth" || name === "rackDepth") {
+      updated[name] = value.replace(/[^0-9]/g, ""); // numeric only
+    }
+
     const calc = computeCapacityAnalysis(updated);
     setFormData({ ...updated, ...calc });
   };
 
+  function sanitizeRackEquipments(list) {
+    return list
+      .map(eq => {
+        const start = Number(eq.startU) || 0;
+        const end = Number(eq.endU) || 0;
+        const sizeU = start >= end && end > 0 ? start - end + 1 : 0;
+
+        return {
+          id: eq.id,
+          name: eq.name || "",
+          startU: start,
+          endU: end,
+          sizeU,
+          remarks: eq.remarks || "",
+        };
+      })
+      .filter(eq => eq.sizeU > 0);     // remove invalid entries
+  }
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!formData.siteName) {
       setStatus("❌ Please enter Site Name before saving");
       return;
     }
-
+    setSaving(true);
     try {
-      // 🔹 Site-wise storage: rackTracker/{siteName}
       const isEditMode = !!editData;
       const siteKey = formData.siteName.trim().toUpperCase().replace(/[\/\s]+/g, "_");
-      const rackKey = `${formData.equipmentLocation || "#UNKNOWN FLOOR"}_${formData.equipmentRackNo || "#A0"}-${formData.rackName || "#UNKNOWN RACK NAME"}`.replace(/[\/\s]+/g, "_");
+      const rackKey = `${formData.equipmentLocation || "#UNKNOWN FLOOR"}_${formData.equipmentRackNo || "#A0"
+        }-${formData.rackName || "#UNKNOWN RACK NAME"}`.replace(/[\/\s]+/g, "_");
       const siteRef = doc(db, "acDcRackDetails", siteKey);
+
+      const payload = {
+        ...formData,
+        rackDimensions: {
+          height: Number(formData.rackHeight) || 0,
+          width: Number(formData.rackWidth) || 0,
+          depth: Number(formData.rackDepth) || 0,
+        },
+        rackEquipments: sanitizeRackEquipments(rackEquipments),
+        updatedAt: new Date().toISOString(),
+      };
+
       if (isEditMode) {
-        // Update existing record
         const rackRef = doc(siteRef, "racks", rackKey);
-        await updateDoc(rackRef, { ...formData, updatedAt: new Date().toISOString() });
+        await updateDoc(rackRef, payload);
       } else {
-        // New record
         await setDoc(siteRef, { createdAt: new Date().toISOString() }, { merge: true });
-        await setDoc(
-          doc(siteRef, "racks", rackKey),
-          { ...formData, updatedAt: new Date().toISOString() },
-          { merge: true }
-        );
+        await setDoc(doc(siteRef, "racks", rackKey), payload, { merge: true });
       }
 
-      setStatus(isEditMode ? `✅ Updated record for ${formData.rackName}` : `✅ Data saved for site: ${formData.siteName}`);
+      setStatus(
+        isEditMode
+          ? `✅ Updated record for ${formData.rackName}`
+          : `✅ Data saved for site: ${formData.siteName}`
+      );
+      setSaving(false);
     } catch (err) {
       console.error("Error saving to Firestore:", err);
       setStatus("❌ Error saving data");
     }
+
     setTimeout(() => navigate("/acdc-rack-details"), 800);
   };
+
 
   return (
     <div className="daily-log-container">
@@ -295,12 +370,155 @@ const RackTrackerForm = ({ userData }) => {
             </select>
           </div>
           <div className="form-section">
-            <label>Rack Size (HxWxD in mm):</label>
-            <input type="text" name="rackSize" value={formData.rackSize} onChange={handleChange} placeholder="e.g., 2000x600x800" />
+            <label>Rack Dimentions:</label>
+            <div style={{display: "flex", flexDirection:"row"}}>
+              <input
+                type="number"
+                name="rackHeight"
+                placeholder="Rack Height (2200mm):"
+                value={formData.rackHeight}
+                onChange={handleChange}
+                style={{height:"fit-content", fontSize:"10px"}}
+              />
+X
+              <input
+                type="number"
+                name="rackWidth"
+                placeholder="Rack Width (600mm):"
+                value={formData.rackWidth}
+                onChange={handleChange}
+                style={{height:"fit-content", fontSize:"10px"}}
+              />
+X
+              <input
+                type="number"
+                name="rackDepth"
+                placeholder="Rack Depth (600mm):"
+                value={formData.rackDepth}
+                onChange={handleChange}
+                style={{height:"fit-content", fontSize:"10px"}}
+              />
+            </div>
+            <label>Rack Size:</label>
+            <input type="text" name="rackSize"
+              disabled
+             value={`${formData.rackHeight}x${formData.rackWidth}x${formData.rackDepth}`} onChange={handleChange} />
             <label>Rack Description:</label>
             <textarea type="text" name="rackDescription" value={formData.rackDescription} onChange={handleChange} />
             <label>Total Rack U Space:</label>
             <input type="number" name="totalRackUSpace" value={formData.totalRackUSpace} onChange={handleChange} />
+            <div className="mt-6 border p-4 rounded bg-gray-50">
+              <h3 className="font-semibold mb-2">Rack Equipments (U by U)</h3>
+
+              {rackEquipments.map((eq, idx) => (
+                <div key={eq.id} className="grid grid-cols-5 gap-2 mb-2">
+                  <input
+                    className="border rounded px-2 py-1"
+                    placeholder="Equipment name"
+                    value={eq.name}
+                    onChange={(e) => {
+                      const list = [...rackEquipments];
+                      list[idx] = { ...list[idx], name: e.target.value };
+                      setRackEquipments(list);
+                      // ⬇️ add these 3 lines after setRackEquipments
+                      const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
+                      const updated = { ...formData, ...uCalc };
+                      const calc = computeCapacityAnalysis(updated);
+                      setFormData({ ...updated, ...calc });
+                    }}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Start U"
+                    value={eq.startU}
+                    onChange={(e) => {
+                      const list = [...rackEquipments];
+                      const startU = Number(e.target.value) || 0;
+                      const endU = Number(list[idx].endU) || 0;
+                      const sizeU = startU && endU && startU >= endU ? startU - endU + 1 : 0;
+
+                      list[idx] = { ...list[idx], startU, sizeU };
+                      setRackEquipments(list);
+
+                      const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
+                      const updated = { ...formData, ...uCalc };
+                      const calc = computeCapacityAnalysis(updated);
+                      setFormData({ ...updated, ...calc });
+                    }}
+                  />
+
+                  <input
+                    type="number"
+                    placeholder="End U"
+                    value={eq.endU}
+                    onChange={(e) => {
+                      const list = [...rackEquipments];
+                      const endU = Number(e.target.value) || 0;
+                      const startU = Number(list[idx].startU) || 0;
+                      const sizeU = startU && endU && startU >= endU ? startU - endU + 1 : 0;
+
+                      list[idx] = { ...list[idx], endU, sizeU };
+                      setRackEquipments(list);
+
+                      const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
+                      const updated = { ...formData, ...uCalc };
+                      const calc = computeCapacityAnalysis(updated);
+                      setFormData({ ...updated, ...calc });
+                    }}
+                  />
+
+                  <input
+                    type="number"
+                    value={eq.sizeU || 0}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+
+                  <input
+                    className="border rounded px-2 py-1"
+                    placeholder="Remarks"
+                    value={eq.remarks}
+                    onChange={(e) => {
+                      const list = [...rackEquipments];
+                      list[idx] = { ...list[idx], remarks: e.target.value };
+                      setRackEquipments(list);
+                      // ⬇️ add these 3 lines after setRackEquipments
+                      const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
+                      const updated = { ...formData, ...uCalc };
+                      const calc = computeCapacityAnalysis(updated);
+                      setFormData({ ...updated, ...calc });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="text-red-600 text-sm"
+                    onClick={() => {
+                      const list = rackEquipments.filter((_, i) => i !== idx);
+                      setRackEquipments(list.length ? list : [
+                        { id: Date.now().toString(), name: "", startU: "", sizeU: "", remarks: "" },
+                      ]);
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                className="mt-2 text-blue-600 text-sm"
+                onClick={() =>
+                  setRackEquipments([
+                    ...rackEquipments,
+                    { id: Date.now().toString(), name: "", startU: "", sizeU: "", remarks: "" },
+                  ])
+                }
+              >
+                + Add Equipment
+              </button>
+            </div>
+
+
             <label>Used Rack U Space:</label>
             <input type="number" name="usedRackUSpace" value={formData.usedRackUSpace} onChange={handleChange} />
             <label>Free Rack U Space:</label>
@@ -455,7 +673,7 @@ const RackTrackerForm = ({ userData }) => {
         </div>
 
         {/* Submit */}
-        <button type="submit" className="submit-btn">💾 Save</button>
+        <button type="submit" className="submit-btn">{saving ? "Saving..." :"💾 Save"}</button>
       </form>
 
       {status && <p>{status}</p>}

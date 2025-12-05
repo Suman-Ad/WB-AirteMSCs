@@ -26,11 +26,15 @@ const AcDcRackDashboard = ({ userData }) => {
     const [rackNameFilter, setRackNameFilter] = useState("");
     const [powerTypeFilter, setPowerTypeFilter] = useState("");
     const [sourceTypeFilter, setSourceTypeFilter] = useState("");
+    const [rackType, setRackType] = useState("");
 
     const [status, setStatus] = useState("");
     const navigate = useNavigate();
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewData, setPreviewData] = useState(null);
+    const [equipPopupOpen, setEquipPopupOpen] = useState(false);
+    const [equipPopupData, setEquipPopupData] = useState(null);
+
 
     // 🔹 Fetch site data based on user role
     useEffect(() => {
@@ -132,8 +136,12 @@ const AcDcRackDashboard = ({ userData }) => {
         const sourceMatch = sourceTypeFilter
             ? d.sourceType?.toLowerCase().includes(sourceTypeFilter.toLowerCase())
             : true;
+        
+        const typeMatch = rackType
+            ? d.rackType?.toLowerCase().includes(rackType.toLowerCase())
+            : true;
 
-        const matchesAll = siteMatch && locationMatch && equipMatch && rackMatch && powerMatch && sourceMatch;
+        const matchesAll = siteMatch && locationMatch && equipMatch && rackMatch && powerMatch && sourceMatch && typeMatch;
 
         const location = d.equipmentLocation || "Unknown";
 
@@ -263,6 +271,20 @@ const AcDcRackDashboard = ({ userData }) => {
         setPreviewOpen(true);
     };
 
+
+
+    const getTotalRackU = (rack) => {
+        const total = Number(rack.totalRackUSpace);
+        return total > 0 ? total : 42;   // default 42U
+    };
+
+    const getRackDimensions = (rack) => {
+        return {
+            H: rack?.rackDimensions?.height || 0,
+            W: rack?.rackDimensions?.width || 0,
+            D: rack?.rackDimensions?.depth || 0,
+        };
+    };
 
     return (
         <div className="daily-log-container">
@@ -408,6 +430,18 @@ const AcDcRackDashboard = ({ userData }) => {
                             <select
                                 type="text"
                                 placeholder="⚡ Power Type"
+                                value={rackType}
+                                onChange={(e) => setRackType(e.target.value)}
+                                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                            >
+                                <option value="">⇨⚡ Select Rack Type</option>
+                                <option value="Active">Active</option>
+                                <option value="Passive">Passive</option>
+                            </select>
+
+                            <select
+                                type="text"
+                                placeholder="⚡ Power Type"
                                 value={powerTypeFilter}
                                 onChange={(e) => setPowerTypeFilter(e.target.value)}
                                 style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
@@ -460,6 +494,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                     setRackNameFilter("");
                                     setPowerTypeFilter("");
                                     setSourceTypeFilter("");
+                                    setRackType("");
                                 }}
                                 style={{
                                     padding: "8px 15px",
@@ -508,6 +543,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`gen`)}>Site Name</th>
                             <th style={getHeaderStyle(`gen`)}>Equipment Location(Switch Room)</th>
                             <th style={getHeaderStyle(`gen`)}>Power Type</th>
+                            <th style={getHeaderStyle(`gen`)}>Rack Type</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Size (HxWxD in mm)</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Description</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Owner Details</th>
@@ -580,7 +616,12 @@ const AcDcRackDashboard = ({ userData }) => {
                         {filteredData.map((item, index) => (
                             <tr
                                 key={item.id}
-                                onClick={() => preview(index)}
+                                onClick={() => {
+                                    preview(index);
+                                    setEquipPopupData(item);   // pass full rack record
+                                    setEquipPopupOpen(true);
+                                }
+                                }
                                 style={{ cursor: "pointer", transition: "background 0.2s" }}
                             // onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
                             // onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
@@ -591,6 +632,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.siteName}</td>
                                 <td>{item.equipmentLocation}</td>
                                 <td>{item.powerType}</td>
+                                <td>{item.rackType}</td>
                                 <td>{item.rackSize}</td>
                                 <td>{item.rackDescription}</td>
                                 <td>{item.rackOwnerName}</td>
@@ -900,6 +942,129 @@ const AcDcRackDashboard = ({ userData }) => {
                     </div>
                 </div>
             )}
+
+            {/* 🟦 SEPARATE RACK 3D POPUP VIEW */}
+            {equipPopupOpen && equipPopupData && (
+                <div
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        background: "rgba(0,0,0,0.6)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        zIndex: 2000,
+                    }}
+                >
+                    <div
+                        style={{
+                            background: "grey",
+                            padding: "20px 20px 30px",
+                            borderRadius: "10px",
+                            width: "95%",
+                            maxWidth: "700px",
+                            maxHeight: "90%",
+                            overflowY: "auto",
+                            position: "relative",
+                        }}
+                    >
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setEquipPopupOpen(false)}
+                            style={{
+                                background: "#b91010ff",
+                                color: "white",
+                                padding: "8px 14px",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                position: "absolute",
+                                top: "10px",
+                                right: "10px",
+                            }}
+                        >
+                            ❌
+                        </button>
+
+                        <h2
+                            style={{
+                                textAlign: "center",
+                                borderBottom: "2px solid #0ea5e9",
+                                paddingBottom: "10px",
+                                marginBottom: "20px",
+                            }}
+                        >
+                            🗄️ Rack Equipment Layout (3D View)
+                        </h2>
+
+                        {/* Rack Dimensions */}
+                        {(() => {
+                            const dim = getRackDimensions(equipPopupData);
+                            return (
+                                <div style={{ textAlign: "center", marginBottom: "15px" }}>
+                                    <div style={{ fontSize: "14px", fontWeight: "bold" }}>
+                                        📐 Rack Dimensions
+                                    </div>
+
+                                    <div style={{ marginTop: "5px", fontSize: "13px" }}>
+                                        Height: <b>{dim.H} mm</b> &nbsp; | &nbsp;
+                                        Width: <b>{dim.W} mm</b> &nbsp; | &nbsp;
+                                        Depth: <b>{dim.D} mm</b>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* 3D Rack View */}
+                        <div className="rack-3d-wrapper">
+                            <div className="rack-3d-left"></div>
+
+                            <div className="rack-3d-main">
+                                {Array.from({ length: getTotalRackU(equipPopupData) }, (_, i) => {
+                                    const total = getTotalRackU(equipPopupData);
+                                    const u = total - i;
+
+                                    const eq = equipPopupData.rackEquipments?.find(
+                                        item => Number(item.startU) === Number(u)
+                                    );
+
+                                    return (
+                                        <div key={u} className="rack-u-row">
+                                            <div className="u-label">{u}</div>
+
+                                            {eq ? (
+                                                <div
+                                                    className="u-equipment"
+                                                    style={{ height: `${eq.sizeU * 18}px` }}
+                                                >
+                                                    {eq.name}
+                                                </div>
+                                            ) : (
+                                                <div className="u-empty"></div>
+                                            )}
+
+                                            <div className="u-details">
+                                                {eq && (
+                                                    <div className="equipment-details">
+                                                        <b>{eq.name}</b><br />
+                                                        {eq.remarks || "—"}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                        </div>
+
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
         </div>
 
