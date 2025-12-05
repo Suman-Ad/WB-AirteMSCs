@@ -1,0 +1,127 @@
+/* Header Card */
+.mds-user-card {
+  font-weight: bold;
+  border: 1px solid #e5e7eb;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #f9fafb;
+}
+
+/* Month Selector */
+.mds-month-box {
+  margin-top: 10px;
+}
+
+.mds-month-box label {
+  margin-right: 8px;
+  font-weight: 500;
+}
+
+.mds-month-input {
+  padding: 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+/* Monthly Summary Box */
+.mds-summary-box {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: transparent;
+}
+
+.mds-summary-title {
+  margin-bottom: 10px;
+}
+
+.mds-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.mds-summary-table th,
+.mds-summary-table td {
+  padding: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Duty List Container */
+.mds-duty-list {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  width: 100%;
+  height: 400px;
+  overflow-y: auto;
+}
+
+/* Duty Row */
+.mds-duty-row {
+  padding: 10px;
+  border-bottom: 1px solid #e5e7eb;
+  /* display: flex;
+  flex-direction: column; */
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Background colors based on condition */
+.mds-bg-ot-main {
+  background-color: #eb7527ff;
+}
+
+.mds-bg-ot-only {
+  background-color: #4b9b33ff;
+}
+
+.mds-bg-cl {
+  background-color: #eb2121ff;
+}
+
+.mds-bg-normal {
+  background-color: transparent;
+}
+
+/* Apply For CL Button */
+.mds-apply-cl {
+  margin-top: 12px;
+  font-size: 0.875rem;
+  color: #ffffff;
+  cursor: pointer;
+  background: #1c468502;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.mds-apply-cl:hover {
+  background-color: #447dd3ff;
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 600px) {
+  .daily-log-container {
+    padding: 10px;
+  }
+
+  .mds-duty-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .mds-summary-table th,
+  .mds-summary-table td {
+    padding: 6px;
+    font-size: 0.9rem;
+  }
+
+  .mds-month-input {
+    width: 100%;
+  }
+}

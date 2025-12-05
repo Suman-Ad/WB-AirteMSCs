@@ -375,9 +375,6 @@ body {
 
 @media (max-width: 768px) {
   /* Container */
-  .daily-log-container {
-    padding: 10px !important;
-  }
 
   /* Filter section */
   .daily-log-container select,
@@ -386,9 +383,9 @@ body {
     margin-bottom: 8px;
   }
 
-  .daily-log-container > div {
+  /* .daily-log-container > div {
     flex-wrap: wrap !important;
-  }
+  } */
 
   /* Convert desktop grid → single column */
   .daily-log-container > div[style*="grid-template-columns"] {

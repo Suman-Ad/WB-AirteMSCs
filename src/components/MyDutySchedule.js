@@ -3,6 +3,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
+import "../assets/MyDutySchedule.css"
 
 function getShiftName(code) {
   switch (code) {
@@ -158,7 +159,7 @@ export default function MyDutySchedule({ currentUser }) {
   return (
     <div className="daily-log-container">
       <h2>My Duty Schedule</h2>
-      <div style={{ fontWeight: "bold", border: "1px solid #e5e7eb", padding: "10px", borderRadius: "8px", backgroundColor: "#f9fafb" }}>
+      <div className="mds-user-card">
         {currentUser?.role === "Super Admin" && <span>Hi, 👑 <strong>{currentUser?.name || "Team Member"}</strong></span>}
         {currentUser?.role === "Admin" && <span>Hi, 🔑 <strong>{currentUser?.name || "Team Member"}</strong></span>}
         {currentUser?.role === "Super User" && <span>Hi, 🦸 <strong>{currentUser?.name || "Team Member"}</strong></span>}
@@ -167,32 +168,20 @@ export default function MyDutySchedule({ currentUser }) {
         <p>Designation: <strong>{currentUser.designation}</strong></p>
       </div>
 
-      <div style={{ marginTop: "10px" }}>
-        <label style={{ marginRight: "8px", fontWeight: "500" }}>Select Month:</label>
+      <div className="mds-month-box">
+        <label>Select Month:</label>
         <input
           type="month"
           value={format(selectedMonth, "yyyy-MM")}
           onChange={(e) => setSelectedMonth(new Date(e.target.value + "-01"))}
-          style={{
-            padding: "6px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "6px"
-          }}
+          className="mds-month-input"
         />
       </div>
 
-      <div
-        style={{
-          marginTop: "20px",
-          padding: "15px",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px",
-          backgroundColor: "transparent",
-        }}
-      >
-        <h3 style={{ marginBottom: "10px" }}>Monthly Summary</h3>
+      <div className="mds-summary-box">
+        <h3 className="mds-summary-title">Monthly Summary</h3>
 
-        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+        <table className="mds-summary-table">
           <thead>
             <tr>
               <th style={{ padding: "8px", borderBottom: "1px solid #e5e7eb" }}>Month</th>
@@ -217,40 +206,31 @@ export default function MyDutySchedule({ currentUser }) {
       </div>
 
 
-      <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", border: "1px solid #e5e7eb", borderRadius: "8px", width: "100%", height: "400px", overflowY: "auto" }}>
+      <div className="mds-duty-list">
         {myDays.length === 0 && <p>No duty assigned this month.</p>}
 
         {myDays.map((d) => (
           <div
             key={d.date}
-            style={{
-              padding: "10px",
-              borderBottom: "1px solid #e5e7eb",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              backgroundColor: d.otShift && (d.mainShift !== "WO") ? "#eb7527ff" : d.otShift ? "#4b9b33ff" : d.cl ? "#eb2121ff" : "transparent",
-
-            }}
+            className={
+              "mds-duty-row " +
+              (d.otShift && d.mainShift !== "WO"
+                ? "mds-bg-ot-main"
+                : d.otShift
+                  ? "mds-bg-ot-only"
+                  : d.cl
+                    ? "mds-bg-cl"
+                    : "mds-bg-normal")
+            }
           >
-            <span>{d.date}</span>
+            <span>{d.date}:- </span>
             <strong>
               {formatDutyDisplay(d.mainShift, d.otShift, d.replacedUserName, d.cl)}
             </strong>
 
-            {!d.otShift && (
-              <p style={{
-                marginTop: "12px",
-                fontSize: "0.875rem",
-                color: "#ffffffff",
-                cursor: "pointer",
-                // position: "sticky",
-                // bottom: "0",
-                background: "#1c468502"
-              }}
+            {!d.otShift && !d.cl && (
+              <p className="mds-apply-cl"
                 onClick={() => navigate("/cl-application", { state: { date: d.date } })}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#447dd3ff"}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1c468507"}
               >Apply For CL</p>
             )}
           </div>
