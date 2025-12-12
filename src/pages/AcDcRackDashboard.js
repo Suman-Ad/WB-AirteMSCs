@@ -1109,26 +1109,34 @@ const AcDcRackDashboard = ({ userData }) => {
                                                         display: "flex",
                                                         alignItems: "center",
                                                         paddingLeft: "5px",
+                                                        borderTop: "2px solid rgba(30, 79, 134, 1)",
+                                                        borderRadius: "6px"
                                                     }}
                                                 >
-                                                    {eq.name}
+                                                    {isStart && (
+                                                        <div
+                                                            className="u-details"
+                                                            style={{ maxHeight: `${eq.sizeU * 18}px` }}
+                                                        >
+
+                                                            <div className="equipment-details"
+                                                            >
+                                                                <b>{eq.name}</b><br />
+                                                                {eq.remarks || "—"}
+                                                            </div>
+
+                                                        </div>
+                                                    )}
+
                                                 </div>
                                             ) : isInside ? (
                                                 // Middle U rows (equipment covers this, but no block here)
                                                 <div className="u-gap"></div>
                                             ) : (
                                                 // Normal empty U
-                                                <div className="u-empty"></div>
+                                                <div className="u-empty"><span>empty</span></div>
                                             )}
 
-                                            <div className="u-details">
-                                                {isStart && (
-                                                    <div className="equipment-details">
-                                                        <b>{eq.name}</b><br />
-                                                        {eq.remarks || "—"}
-                                                    </div>
-                                                )}
-                                            </div>
                                         </div>
                                     );
                                 })}

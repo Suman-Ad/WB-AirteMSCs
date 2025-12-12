@@ -576,11 +576,14 @@
   flex: 1;
   height: 18px;
   border-top: 1px solid #ddd;
+  text-align: center;
+  font-size: 10px;
+  color: gray;
 }
 
 .u-equipment {
   flex: 1;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .u-gap {
@@ -592,13 +595,13 @@
 
 
 .u-details {
-  width: 180px;
-  padding-left: 10px;
+  overflow-y: auto;
+  width: 219px;
 }
 
 .equipment-details {
   font-size: 12px;
-  margin-bottom: 25px;
+  /* margin-bottom: 25px; */
   padding: 3px 5px;
   background: #fff;
   border-left: 2px solid #555;
