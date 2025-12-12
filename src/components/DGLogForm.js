@@ -139,7 +139,7 @@ const DGLogForm = ({ userData }) => {
             }, { merge: true }); // Use merge:true to avoid overwriting other fields if you add them later
 
             alert("Run log saved ✅");
-            window.location.reload(); // Reload to reflect changes
+            // window.location.reload(); // Reload to reflect changes
 
             setForm({
                 date: "",
@@ -160,18 +160,7 @@ const DGLogForm = ({ userData }) => {
     };
 
     // Define this with your other constants (before the component)
-    const [showFuelModal, setShowFuelModal] = useState(false);
-    const [dgCapacity, setDgCapacity] = useState("");
-    const [dgKw, setDgKw] = useState("");
-    const [dgHmr, setDgHmr] = useState("");
     const [calculationResult, setCalculationResult] = useState("");
-    const [selectedCapacity, setSelectedCapacity] = useState("");
-    const dgCapacityOptions = [
-        "82.5 kVA", "125.0 kVA", "160.0 kVA", "180.0 kVA", "200.0 kVA",
-        "250.0 kVA", "320.0 kVA", "380.0 kVA", "400.0 kVA", "500.0 kVA",
-        "600.0 kVA", "625.0 kVA", "650.0 kVA", "750.0 kVA", "1010.0 kVA",
-        "1250.0 kVA", "1500.0 kVA", "2000.0 kVA", "2250.0 kVA", "2500.0 kVA"
-    ];
 
     // Then in your component, add these functions:
     const findRowDgCapacity = (dgRating) => {

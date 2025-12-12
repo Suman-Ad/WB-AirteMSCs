@@ -379,7 +379,7 @@
   border-radius: 10px;
   overflow: hidden;
   margin-top: 3px;
-  box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
 }
 
 .fuel-bar {
@@ -392,7 +392,8 @@
   position: sticky;
   background: #ffffffa2;
   left: 0;
-  z-index: 2; /* keep above other cells */
+  z-index: 2;
+  /* keep above other cells */
   box-shadow: 2px 0 3px rgba(0, 0, 0, 0.1);
   font-weight: bold;
 }
@@ -405,7 +406,10 @@
   background: #fafcff;
   box-shadow: 0 2px 4px #ccc;
 }
-.details-btn, .excel-btn, .close-btn {
+
+.details-btn,
+.excel-btn,
+.close-btn {
   padding: 8px 18px;
   margin: 0.75em 1em 0 0;
   font-size: 1em;
@@ -418,9 +422,12 @@
   position: sticky;
   left: 0;
 }
-.details-btn:hover, .excel-btn:hover {
+
+.details-btn:hover,
+.excel-btn:hover {
   background: #184cbe;
 }
+
 .close-btn {
   background: #eb4d4b;
   float: right;
@@ -430,18 +437,24 @@
   position: sticky;
   left: 380px;
 }
+
 .close-btn:hover {
   background: #c0392b;
 }
+
 .popup-bg {
   position: fixed;
-  top:10; left:0; right:0; bottom:0;
-  background: rgba(20,27,100,0.23);
+  top: 10;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(20, 27, 100, 0.23);
   z-index: 80;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .popup-modal {
   background: #fff;
   padding: 2em 1.3em 1.2em 1.3em;
@@ -453,20 +466,25 @@
   overflow-y: auto;
   position: relative;
 }
+
 .dglog-table {
   margin-top: 1em;
   font-size: 1em;
   border-collapse: collapse;
   width: 100%;
 }
-.dglog-table th, .dglog-table td {
+
+.dglog-table th,
+.dglog-table td {
   border: 1px solid #bbb;
   padding: 6px 11px;
   background: #f6f9ff;
 }
+
 .dglog-table th {
   background: #eaf1fa;
 }
+
 /***********************
    3D FRAME CONTAINER
 ************************/
@@ -541,8 +559,8 @@
 .rack-u-row {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  height: 18px;
+  align-items: stretch;
+  /* allow auto height */
   position: relative;
 }
 
@@ -556,19 +574,22 @@
 
 .u-empty {
   flex: 1;
-  height: 100%;
+  height: 18px;
   border-top: 1px solid #ddd;
 }
 
 .u-equipment {
   flex: 1;
-  background: #cfe2ff;
-  border: 1px solid #8bb6ff;
   font-size: 11px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
+
+.u-gap {
+  flex: 1;
+  height: 0px;
+  /* invisible */
+  border-top: none;
+}
+
 
 .u-details {
   width: 180px;

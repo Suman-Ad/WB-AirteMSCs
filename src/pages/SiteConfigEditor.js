@@ -22,8 +22,15 @@ const SiteConfigEdit = ({ userData }) => {
         setConfig(snap.data());
       }
     };
+
+    if (userData?.site) {
+      setConfig((prev) => ({
+        ...prev,
+        siteName: userData.site.toUpperCase()
+      }));
+    }
     fetchConfig();
-  }, [siteKey]);
+  }, [siteKey, userData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -50,7 +57,14 @@ const SiteConfigEdit = ({ userData }) => {
 
   const saveConfig = async () => {
     setSaving(true);
-    await setDoc(doc(db, "siteConfigs", siteKey), config, { merge: true });
+
+    // Auto-insert siteName into config before saving
+    const updatedConfig = {
+      ...config,
+      siteName: config.siteName || userData?.site?.toUpperCase()
+    };
+
+    await setDoc(doc(db, "siteConfigs", siteKey), updatedConfig, { merge: true });
     alert("Config updated!");
     setSaving(false);
     window.location.reload(); // Reload to reflect changes
@@ -145,7 +159,6 @@ const SiteConfigEdit = ({ userData }) => {
               <input
                 name="siteName"
                 value={config.siteName || userData?.site?.toUpperCase()}
-                onChange={handleChange}
                 disabled
               />
 

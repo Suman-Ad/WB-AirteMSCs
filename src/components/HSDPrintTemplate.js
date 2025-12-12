@@ -163,7 +163,7 @@ const HSDPrintTemplate = ({ form, hsdForm, siteConfig, setPreviewOpen }) => {
                         <td>—</td>
                         <td>{hsdForm.ltrs || 0} Ltrs</td>
                         <td>—</td>
-                        <td>{form.fuelFill ? `${form.fuelFill} Ltr` : "—"}</td>
+                        <td>{hsdForm.ltrs ? `${hsdForm.ltrs} Ltrs` : "—"}</td>
                         <td>Nil</td>
                         <td>#{hsdForm.dillerInvoice || "N/A"}</td>
                         <td>{hsdForm.outTime || "00:00"} Hrs</td>

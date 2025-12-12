@@ -213,8 +213,10 @@ const Layout = ({ userData, children }) => {
                       style={{
                         padding: "4px 10px",
                         backgroundColor: "#e2e8f0",
-                        borderRadius: "6px"
+                        borderRadius: "6px",
+                        cursor:"pointer"
                       }}
+                      onClick={() => navigate("/my-duty")}
                     >
                       No Duty Today
                     </div>

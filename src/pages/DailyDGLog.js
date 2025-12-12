@@ -1853,7 +1853,7 @@ const DailyDGLog = ({ userData }) => {
                       value={form[field] > 0 ? form[field] : 0}
                       onChange={handleChange}
                       className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
-                      disabled={disabled}
+                      // disabled={disabled}
                     />
                   </label>
                 );

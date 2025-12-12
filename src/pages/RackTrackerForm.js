@@ -119,6 +119,12 @@ const RackTrackerForm = ({ userData }) => {
         rackHeight: editData?.rackDimensions?.height || "",
         rackWidth: editData?.rackDimensions?.width || "",
         rackDepth: editData?.rackDimensions?.depth || "",
+        frontTopTemp: "",
+        frontMiddleTemp: "",
+        frontBottomTemp: "",
+        backTopTemp: "",
+        backMiddleTemp: "",
+        backBottomTemp: "",
         rackDescription: "",
         totalRackUSpace: "",
         usedRackUSpace: "",
@@ -371,47 +377,79 @@ const RackTrackerForm = ({ userData }) => {
           </div>
           <div className="form-section">
             <label>Rack Dimentions:</label>
-            <div style={{display: "flex", flexDirection:"row"}}>
+            <div style={{ display: "flex", flexDirection: "row" }}>
               <input
                 type="number"
                 name="rackHeight"
                 placeholder="Rack Height (2200mm):"
                 value={formData.rackHeight}
                 onChange={handleChange}
-                style={{height:"fit-content", fontSize:"10px"}}
+                style={{ height: "fit-content", fontSize: "10px" }}
               />
-X
+              X
               <input
                 type="number"
                 name="rackWidth"
                 placeholder="Rack Width (600mm):"
                 value={formData.rackWidth}
                 onChange={handleChange}
-                style={{height:"fit-content", fontSize:"10px"}}
+                style={{ height: "fit-content", fontSize: "10px" }}
               />
-X
+              X
               <input
                 type="number"
                 name="rackDepth"
                 placeholder="Rack Depth (600mm):"
                 value={formData.rackDepth}
                 onChange={handleChange}
-                style={{height:"fit-content", fontSize:"10px"}}
+                style={{ height: "fit-content", fontSize: "10px" }}
               />
             </div>
             <label>Rack Size:</label>
             <input type="text" name="rackSize"
               disabled
-             value={`${formData.rackHeight}x${formData.rackWidth}x${formData.rackDepth}`} onChange={handleChange} />
+              value={`${formData.rackHeight}x${formData.rackWidth}x${formData.rackDepth}`} onChange={handleChange} />
             <label>Rack Description:</label>
             <textarea type="text" name="rackDescription" value={formData.rackDescription} onChange={handleChange} />
             <label>Total Rack U Space:</label>
             <input type="number" name="totalRackUSpace" value={formData.totalRackUSpace} onChange={handleChange} />
-            <div className="mt-6 border p-4 rounded bg-gray-50">
-              <h3 className="font-semibold mb-2">Rack Equipments (U by U)</h3>
-
+            <h2>Rack Equipments (U by U)</h2>
+            <div style={{
+              marginTop: '1.5rem',
+              border: '1px solid #e5e7eb',
+              padding: '1rem',
+              borderRadius: '0.375rem',
+              backgroundColor: '#f9fafb65',
+              overflowY: "auto",
+              maxHeight: "350px",
+              marginBottom: "10px"
+            }}>
               {rackEquipments.map((eq, idx) => (
-                <div key={eq.id} className="grid grid-cols-5 gap-2 mb-2">
+                <div
+                  key={eq.id}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "50px repeat(5, minmax(0, 1fr)) auto",
+                    gap: "0.5rem",
+                    marginBottom: "0.5rem",
+                    alignItems: "center",
+                    border: "1px solid rgba(0, 0, 0, 0.37)",
+                    borderRadius: "10px"
+                  }}
+                >
+                  {/* SL No */}
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      textAlign: "center",
+                      padding: "6px 0",
+                      background: "#4b7496d2",
+                    }}
+                  >
+                    {idx + 1}
+                  </div>
+
+                  {/* Equipment Name */}
                   <input
                     className="border rounded px-2 py-1"
                     placeholder="Equipment name"
@@ -420,13 +458,15 @@ X
                       const list = [...rackEquipments];
                       list[idx] = { ...list[idx], name: e.target.value };
                       setRackEquipments(list);
-                      // ⬇️ add these 3 lines after setRackEquipments
+
                       const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
                       const updated = { ...formData, ...uCalc };
                       const calc = computeCapacityAnalysis(updated);
                       setFormData({ ...updated, ...calc });
                     }}
                   />
+
+                  {/* Start U */}
                   <input
                     type="number"
                     placeholder="Start U"
@@ -447,6 +487,7 @@ X
                     }}
                   />
 
+                  {/* End U */}
                   <input
                     type="number"
                     placeholder="End U"
@@ -467,46 +508,59 @@ X
                     }}
                   />
 
-                  <input
-                    type="number"
-                    value={eq.sizeU || 0}
-                    readOnly
-                    className="bg-gray-100"
-                  />
+                  {/* Size U */}
+                  <input type="number" value={eq.sizeU || 0} readOnly className="bg-gray-100" />
 
-                  <input
-                    className="border rounded px-2 py-1"
+                  {/* Remarks */}
+                  <textarea
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "0.375rem",
+                      paddingLeft: "0.5rem",
+                      paddingRight: "0.5rem",
+                      paddingTop: "0.25rem",
+                      paddingBottom: "0.25rem"
+                    }}
                     placeholder="Remarks"
                     value={eq.remarks}
                     onChange={(e) => {
                       const list = [...rackEquipments];
                       list[idx] = { ...list[idx], remarks: e.target.value };
                       setRackEquipments(list);
-                      // ⬇️ add these 3 lines after setRackEquipments
+
                       const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
                       const updated = { ...formData, ...uCalc };
                       const calc = computeCapacityAnalysis(updated);
                       setFormData({ ...updated, ...calc });
                     }}
                   />
-                  <button
+
+                  {/* Delete Button */}
+                  <p
                     type="button"
-                    className="text-red-600 text-sm"
+                    style={{ color: "#dc2626", fontSize: "0.875rem", width: "fit-content", cursor: "pointer" }}
                     onClick={() => {
                       const list = rackEquipments.filter((_, i) => i !== idx);
-                      setRackEquipments(list.length ? list : [
-                        { id: Date.now().toString(), name: "", startU: "", sizeU: "", remarks: "" },
-                      ]);
+                      setRackEquipments(
+                        list.length
+                          ? list
+                          : [{ id: Date.now().toString(), name: "", startU: "", sizeU: "", remarks: "" }]
+                      );
                     }}
                   >
-                    Remove
-                  </button>
+                    ❌
+                  </p>
                 </div>
               ))}
 
+
               <button
                 type="button"
-                className="mt-2 text-blue-600 text-sm"
+                style={{
+                  marginTop: '0.5rem',
+                  color: '#2563eb',
+                  fontSize: '0.875rem'
+                }}
                 onClick={() =>
                   setRackEquipments([
                     ...rackEquipments,
@@ -517,13 +571,51 @@ X
                 + Add Equipment
               </button>
             </div>
-
-
             <label>Used Rack U Space:</label>
             <input type="number" name="usedRackUSpace" value={formData.usedRackUSpace} onChange={handleChange} />
             <label>Free Rack U Space:</label>
             <input type="number" name="freeRackUSpace" value={formData.freeRackUSpace} onChange={handleChange} disabled />
           </div>
+          <h2 style={{ marginTop: "15px", borderBottom: "2px solid #2083a1ff", padding: "5px" }}>
+            <strong>Rack Temperature (Front / Back)</strong>
+          </h2>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+
+            {/* FRONT */}
+            <div>
+              <label style={{ fontWeight: "bold", color: "#0077b6" }}>Front - Top (°C):</label>
+              <input type="number" name="frontTopTemp" value={formData.frontTopTemp} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label style={{ fontWeight: "bold", color: "#0077b6" }}>Front - Middle (°C):</label>
+              <input type="number" name="frontMiddleTemp" value={formData.frontMiddleTemp} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label style={{ fontWeight: "bold", color: "#0077b6" }}>Front - Bottom (°C):</label>
+              <input type="number" name="frontBottomTemp" value={formData.frontBottomTemp} onChange={handleChange} />
+            </div>
+
+            {/* BACK */}
+            <div>
+              <label style={{ fontWeight: "bold", color: "#8a2be2" }}>Back - Top (°C):</label>
+              <input type="number" name="backTopTemp" value={formData.backTopTemp} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label style={{ fontWeight: "bold", color: "#8a2be2" }}>Back - Middle (°C):</label>
+              <input type="number" name="backMiddleTemp" value={formData.backMiddleTemp} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label style={{ fontWeight: "bold", color: "#8a2be2" }}>Back - Bottom (°C):</label>
+              <input type="number" name="backBottomTemp" value={formData.backBottomTemp} onChange={handleChange} />
+            </div>
+
+          </div>
+
           <div className="form-section">
             <label>Rack Owner Details (Name-Ph.):</label>
             <input type="text" name="rackOwnerName" value={formData.rackOwnerName} onChange={handleChange} />
@@ -673,7 +765,7 @@ X
         </div>
 
         {/* Submit */}
-        <button type="submit" className="submit-btn">{saving ? "Saving..." :"💾 Save"}</button>
+        <button type="submit" className="submit-btn">{saving ? "Saving..." : "💾 Save"}</button>
       </form>
 
       {status && <p>{status}</p>}

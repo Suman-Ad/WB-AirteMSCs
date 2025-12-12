@@ -136,7 +136,7 @@ const AcDcRackDashboard = ({ userData }) => {
         const sourceMatch = sourceTypeFilter
             ? d.sourceType?.toLowerCase().includes(sourceTypeFilter.toLowerCase())
             : true;
-        
+
         const typeMatch = rackType
             ? d.rackType?.toLowerCase().includes(rackType.toLowerCase())
             : true;
@@ -542,13 +542,14 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`gen`)}>Circle</th>
                             <th style={getHeaderStyle(`gen`)}>Site Name</th>
                             <th style={getHeaderStyle(`gen`)}>Equipment Location(Switch Room)</th>
+                            <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 5 }}>Equipment/Rack No</th>
+                            <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 4 }}>Equipment/Rack Name</th>
                             <th style={getHeaderStyle(`gen`)}>Power Type</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Type</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Size (HxWxD in mm)</th>
+                            <th style={getHeaderStyle(`gen`)}>Rack Temperature (T-M-B)</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Description</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Owner Details</th>
-                            <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 5 }}>Equipment/Rack No</th>
-                            <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 4 }}>Equipment/Rack Name</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Rating (Amps/kVA)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Name</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Source DB Number</th>
@@ -631,13 +632,17 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.circle}</td>
                                 <td>{item.siteName}</td>
                                 <td>{item.equipmentLocation}</td>
+                                <td className="sticky-col" style={{ position: "sticky", left: 0, zIndex: 3 }}>{item.equipmentRackNo}</td>
+                                <td className="sticky-col">{item.rackName}</td>
                                 <td>{item.powerType}</td>
                                 <td>{item.rackType}</td>
                                 <td>{item.rackSize}</td>
+                                <td style={{ display: "flex", flex: "1" }}>
+                                    <p>FT:{item.frontTopTemp}°C FM:{item.frontMiddleTemp}°C FB:{item.frontBottomTemp}°C</p>
+                                    <p>BT:{item.backTopTemp}°C BM:{item.backMiddleTemp}°C BB:{item.backBottomTemp}°C</p>
+                                </td>
                                 <td>{item.rackDescription}</td>
                                 <td>{item.rackOwnerName}</td>
-                                <td className="sticky-col" style={{ position: "sticky", left: 0, zIndex: 3 }}>{item.equipmentRackNo}</td>
-                                <td className="sticky-col">{item.rackName}</td>
 
                                 {/* A Source */}
                                 <td>{item.smpsRatingA}</td>
@@ -884,8 +889,56 @@ const AcDcRackDashboard = ({ userData }) => {
                                         );
                                     });
 
+                                    // 🔹 Show Rack Dimensions properly
+                                    if (previewData.rackDimensions) {
+                                        pushSectionHeader("Rack Dimensions");
+
+                                        rows.push(
+                                            <tr key="dim-height">
+                                                <td style={{ fontWeight: "bold" }}>Height</td>
+                                                <td>{previewData.rackDimensions.height} mm</td>
+                                            </tr>
+                                        );
+                                        rows.push(
+                                            <tr key="dim-width">
+                                                <td style={{ fontWeight: "bold" }}>Width</td>
+                                                <td>{previewData.rackDimensions.width} mm</td>
+                                            </tr>
+                                        );
+                                        rows.push(
+                                            <tr key="dim-depth">
+                                                <td style={{ fontWeight: "bold" }}>Depth</td>
+                                                <td>{previewData.rackDimensions.depth} mm</td>
+                                            </tr>
+                                        );
+                                    }
+
+                                    // 🔹 Show Rack Equipments properly
+                                    if (previewData.rackEquipments && previewData.rackEquipments.length > 0) {
+                                        pushSectionHeader("Rack Equipments (U-by-U)");
+
+                                        previewData.rackEquipments.forEach((eq, i) => {
+                                            rows.push(
+                                                <tr key={`eq-${i}`}>
+                                                    <td style={{ fontWeight: "bold", verticalAlign: "top" }}>
+                                                        {eq.name}
+                                                    </td>
+                                                    <td>
+                                                        <div><b>Start U:</b> {eq.startU}</div>
+                                                        <div><b>End U:</b> {eq.endU}</div>
+                                                        <div><b>Size U:</b> {eq.sizeU}</div>
+                                                        <div><b>Remarks:</b> {eq.remarks || "—"}</div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        });
+                                    }
+
+
                                     // If there are any extra keys in previewData not listed in orderedKeys, show them at the end
-                                    const extraKeys = Object.keys(previewData || {}).filter((k) => !orderedKeys.includes(k));
+                                    const extraKeys = Object.keys(previewData || {}).filter(
+                                        (k) => !orderedKeys.includes(k) && k !== "rackDimensions" && k !== "rackEquipments"
+                                    )
                                     if (extraKeys.length > 0) {
                                         pushSectionHeader("Other Fields");
                                         extraKeys.forEach((k) =>
@@ -975,7 +1028,7 @@ const AcDcRackDashboard = ({ userData }) => {
                         <button
                             onClick={() => setEquipPopupOpen(false)}
                             style={{
-                                background: "#b91010ff",
+                                background: "#b9101057",
                                 color: "white",
                                 padding: "8px 14px",
                                 border: "none",
@@ -997,7 +1050,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                 marginBottom: "20px",
                             }}
                         >
-                            🗄️ Rack Equipment Layout (3D View)
+                            🗄️ {equipPopupData.rackName} Equipment Layout (3D View)
                         </h2>
 
                         {/* Rack Dimensions */}
@@ -1023,40 +1076,60 @@ const AcDcRackDashboard = ({ userData }) => {
                             <div className="rack-3d-left"></div>
 
                             <div className="rack-3d-main">
-                                {Array.from({ length: getTotalRackU(equipPopupData) }, (_, i) => {
-                                    const total = getTotalRackU(equipPopupData);
-                                    const u = total - i;
 
-                                    const eq = equipPopupData.rackEquipments?.find(
-                                        item => Number(item.startU) === Number(u)
+                                {Array.from({ length: getTotalRackU(equipPopupData) }, (_, i) => {
+                                    const totalU = getTotalRackU(equipPopupData);
+                                    const u = totalU - i;
+
+                                    const allEq = equipPopupData.rackEquipments || [];
+
+                                    // find equipment that spans this U
+                                    const eq = allEq.find(item =>
+                                        Number(item.startU) === u ||
+                                        (u <= Number(item.startU) && u >= Number(item.endU))
                                     );
 
+                                    const isStart = eq && Number(eq.startU) === u;
+                                    const isInside = eq && u < Number(eq.startU) && u >= Number(eq.endU);
+
                                     return (
-                                        <div key={u} className="rack-u-row">
+                                        <div key={u} className="rack-u-row" style={{ height: "18px" }}>
                                             <div className="u-label">{u}</div>
 
-                                            {eq ? (
+                                            {isStart ? (
+                                                // Draw full-size block ONLY at startU
                                                 <div
                                                     className="u-equipment"
-                                                    style={{ height: `${eq.sizeU * 18}px` }}
+                                                    style={{
+                                                        height: `${eq.sizeU * 18}px`,
+                                                        position: "relative",
+                                                        background: "#cfe2ff",
+                                                        border: "1px solid #8bb6ff",
+                                                        zIndex: 9,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        paddingLeft: "5px",
+                                                    }}
                                                 >
                                                     {eq.name}
                                                 </div>
+                                            ) : isInside ? (
+                                                // Middle U rows (equipment covers this, but no block here)
+                                                <div className="u-gap"></div>
                                             ) : (
+                                                // Normal empty U
                                                 <div className="u-empty"></div>
                                             )}
 
                                             <div className="u-details">
-                                                {eq && (
+                                                {isStart && (
                                                     <div className="equipment-details">
                                                         <b>{eq.name}</b><br />
                                                         {eq.remarks || "—"}
                                                     </div>
                                                 )}
                                             </div>
-
                                         </div>
-
                                     );
                                 })}
                             </div>
