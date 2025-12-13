@@ -1,6 +1,6 @@
 // src/pages/AcDcRackDashboard.js
 import React, { useEffect, useState } from "react";
-import { db } from "../firebase";
+import { auth, db } from "../firebase";
 import {
     collection,
     getDocs,
@@ -340,7 +340,7 @@ const AcDcRackDashboard = ({ userData }) => {
                     className="segr-manage-btn"
                     onClick={() => navigate('/rack-details-form')}
                 >
-                    🗄️...✏️
+                    + Add New Rack ✏️
                 </button>
                 <button className="download-btn" onClick={handleDownloadExcel}>📥 Download Excel</button>
 
@@ -544,6 +544,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`gen`)}>Equipment Location(Switch Room)</th>
                             <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 5 }}>Equipment/Rack No</th>
                             <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 4 }}>Equipment/Rack Name</th>
+                            <th style={getHeaderStyle(`gen`)}>RFAI No.</th>
                             <th style={getHeaderStyle(`gen`)}>Power Type</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Type</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Size (HxWxD in mm)</th>
@@ -634,6 +635,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.equipmentLocation}</td>
                                 <td className="sticky-col" style={{ position: "sticky", left: 0, zIndex: 3 }}>{item.equipmentRackNo}</td>
                                 <td className="sticky-col">{item.rackName}</td>
+                                <td>{item.rfaiNo ? item.rfaiNo : "---"}</td>
                                 <td>{item.powerType}</td>
                                 <td>{item.rackType}</td>
                                 <td>{item.rackSize}</td>
@@ -747,8 +749,11 @@ const AcDcRackDashboard = ({ userData }) => {
                                 marginRight: "10px",
                                 position: "sticky",
                                 top: 0,
+                                left: 0,
                                 zIndex: 1,
                                 float: "right",
+                                width: "fit-content",
+
                             }}
                         >
                             ❌
@@ -1034,9 +1039,12 @@ const AcDcRackDashboard = ({ userData }) => {
                                 border: "none",
                                 borderRadius: "6px",
                                 cursor: "pointer",
-                                position: "absolute",
-                                top: "10px",
-                                right: "10px",
+                                position: "sticky",
+                                top: 0,
+                                zIndex: 11,
+                                float: "right",
+                                width: "fit-content",
+                                left: 0,
                             }}
                         >
                             ❌
@@ -1121,7 +1129,14 @@ const AcDcRackDashboard = ({ userData }) => {
 
                                                             <div className="equipment-details"
                                                             >
-                                                                <b>{eq.name}</b><br />
+                                                                <b
+                                                                    style={{
+                                                                        color: "rgba(44, 42, 156, 1)",
+                                                                        borderRadius: "3px",
+                                                                        borderBottom: "1px solid",
+                                                                        borderTop: "1px solid",
+                                                                        borderBottomColor: "ActiveBorder",
+                                                                    }}>{eq.name}</b><br />
                                                                 {eq.remarks || "—"}
                                                             </div>
 

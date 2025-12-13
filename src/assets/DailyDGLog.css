@@ -596,7 +596,8 @@
 
 .u-details {
   overflow-y: auto;
-  width: 219px;
+  max-width: 219px;
+  scrollbar-width: thin;
 }
 
 .equipment-details {
@@ -605,6 +606,11 @@
   padding: 3px 5px;
   background: #fff;
   border-left: 2px solid #555;
+  width: 219px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
+
 }
 
 

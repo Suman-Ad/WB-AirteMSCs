@@ -113,6 +113,7 @@ const RackTrackerForm = ({ userData }) => {
         equipmentLocation: "",
         equipmentRackNo: "",
         rackName: "",
+        rfaiNo: "",
         rackType: rackType[0],
         powerType: "",
         rackSize: "",
@@ -347,6 +348,8 @@ const RackTrackerForm = ({ userData }) => {
             <input type="text" name="equipmentRackNo" value={formData.equipmentRackNo} onChange={handleChange} disabled={!!editData} />
             <label>Rack Name/Equipment Name:</label>
             <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} disabled={!!editData} />
+            <label>RFAI Number:</label>
+            <input type="text" name="rfaiNo" value={formData.rfaiNo} onChange={handleChange} disabled={!!editData} />
           </div>
           <div className="form-section">
             <label>Rack Type:</label>
