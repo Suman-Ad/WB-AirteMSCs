@@ -13,6 +13,8 @@ import {
     runTransaction
 } from "firebase/firestore";
 import { set } from "date-fns";
+import * as XLSX from "xlsx";
+
 
 export default function CLApprovalPage({ currentUser }) {
     const [requests, setRequests] = useState([]);
@@ -21,6 +23,13 @@ export default function CLApprovalPage({ currentUser }) {
     const [filterStatus, setFilterStatus] = useState("pending");
     const [clApproving, setCLApproving] = useState(false);
     const [clRejecting, setCLRejecting] = useState(false);
+    const currentYear = new Date().getFullYear();
+    const [selectedYear, setSelectedYear] = useState(currentYear);
+
+    const [summary, setSummary] = useState([]);
+    const [summaryLoading, setSummaryLoading] = useState(true);
+
+
 
     // Load all site users (needed for backup selection)
     useEffect(() => {
@@ -38,8 +47,88 @@ export default function CLApprovalPage({ currentUser }) {
             setSiteUsers(arr);
         }
 
+        async function loadSummary() {
+            setSummaryLoading(true);
+
+            const usersSnap = await getDocs(
+                query(collection(db, "users"), where("site", "==", currentUser.site))
+            );
+
+            const summaryMap = {};
+
+            // init users
+            usersSnap.forEach(u => {
+                summaryMap[u.id] = {
+                    uid: u.id,
+                    name: u.data().name || u.data().fullName || "Unknown",
+                    empId: u.data().empId || "",
+                    clUsed: 0,
+                    clPending: 0,
+                    otCount: 0,
+                    monthlyCL: Array(12).fill(0),
+                    monthlyOT: Array(12).fill(0)
+                };
+            });
+
+            // ---- CL COUNT (YEAR FILTER) ----
+            for (const uid of Object.keys(summaryMap)) {
+                const lrSnap = await getDocs(
+                    collection(db, "leaveRequests", uid, "items")
+                );
+
+                lrSnap.forEach(d => {
+                    const data = d.data();
+                    // if (data.reason !== "CL") return;
+
+                    const year = d.id.split("-")[0];
+                    if (Number(year) !== Number(selectedYear)) return;
+
+                    const monthIdx = Number(d.id.split("-")[1]) - 1;
+
+                    if (data.status === "approved") {
+                        summaryMap[uid].clUsed++;
+                        summaryMap[uid].monthlyCL[monthIdx]++;
+                    }
+
+                    if (data.status === "pending") {
+                        summaryMap[uid].clPending++;
+                    }
+                });
+            }
+
+            // ---- OT COUNT (MONTHLY + YEAR) ----
+            const dutySnap = await getDocs(
+                query(collection(db, "dutyRoster"), where("site", "==", currentUser.site))
+            );
+
+            dutySnap.forEach(d => {
+                const date = d.id.split("_")[1]; // site_YYYY-MM-DD
+                if (!date) return;
+
+                const [yr, mo] = date.split("-");
+                if (Number(yr) !== Number(selectedYear)) return;
+
+                const monthIdx = Number(mo) - 1;
+
+                const ot = d.data().ot || {};
+                Object.values(ot).forEach(arr => {
+                    (arr || []).forEach(uid => {
+                        if (summaryMap[uid]) {
+                            summaryMap[uid].otCount++;
+                            summaryMap[uid].monthlyOT[monthIdx]++;
+                        }
+                    });
+                });
+            });
+
+            setSummary(Object.values(summaryMap));
+            setSummaryLoading(false);
+        }
+
+        loadSummary();
+
         loadUsers();
-    }, [currentUser]);
+    }, [currentUser, selectedYear]);
 
     // Load CL requests for this site
     useEffect(() => {
@@ -200,20 +289,6 @@ export default function CLApprovalPage({ currentUser }) {
             createdAt: serverTimestamp(),
         });
 
-        // Notify Backup User (if accepted)
-        // if (req.backupUserId) {
-        //     await addDoc(
-        //         collection(db, "notifications", req.backupUserId, "items"),
-        //         {
-        //             title: "Backup Duty Confirmed",
-        //             message: `Backup duty confirmed for ${req.userName} on ${req.id}.`,
-        //             date: req.id,
-        //             site: currentUser.site,
-        //             read: false,
-        //             createdAt: serverTimestamp(),
-        //         }
-        //     );
-        // }
         setCLApproving(false);
         alert("CL Approved & Notifications sent!");
         window.location.reload();
@@ -259,8 +334,114 @@ export default function CLApprovalPage({ currentUser }) {
 
     const filtered = requests.filter((r) => r.status === filterStatus);
 
+    function exportSummaryToExcel() {
+        const data = summary.map(u => ({
+            Name: u.name,
+            EmpID: u.empId,
+            CL_Used: u.clUsed,
+            CL_Pending: u.clPending,
+            OT_Count: u.otCount
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "CL_OT_Summary");
+
+        XLSX.writeFile(wb, `CL_OT_Summary_${selectedYear}.xlsx`);
+    }
+
+
     return (
         <div className="daily-log-container">
+            <div style={{ marginBottom: "12px" }}>
+                <label style={{ marginRight: "8px" }}>Year:</label>
+                <select
+                    value={selectedYear}
+                    onChange={e => setSelectedYear(Number(e.target.value))}
+                >
+                    {[currentYear, currentYear - 1, currentYear - 2].map(y => (
+                        <option key={y} value={y}>{y}</option>
+                    ))}
+                </select>
+            </div>
+
+            <h2 className="text-xl font-semibold mb-2">CL / OT Summary</h2>
+
+            <button
+                onClick={() => exportSummaryToExcel()}
+                style={{
+                    background: "#16a34a",
+                    color: "white",
+                    padding: "6px 10px",
+                    borderRadius: "6px",
+                    marginBottom: "10px",
+                }}
+            >
+                Export Excel
+            </button>
+            {summaryLoading ? (
+                <div>Loading summary...</div>
+            ) : (
+                <div style={{ overflowX: "auto", marginBottom: "20px", maxHeight: "300px" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead style={{ background: "#f3f4f6" }}>
+                            <tr>
+                                <th style={th}>Name</th>
+                                <th style={th}>Emp ID</th>
+                                <th style={th}>CL Used</th>
+                                <th style={th}>CL Pending</th>
+                                <th style={th}>OT Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {summary.map(u => (
+                                <tr
+                                    key={u.uid}
+                                    style={{
+                                        background:
+                                            u.clUsed >= 10 ? "#fee2e2" :
+                                                u.clUsed >= 8 ? "#fef9c3" :
+                                                    "white"
+                                    }}
+                                >
+                                    <td style={td}>{u.name}</td>
+                                    <td style={td}>{u.empId}</td>
+                                    <td style={td}>{u.clUsed}</td>
+                                    <td style={td}>{u.clPending}</td>
+                                    <td style={td}>{u.otCount}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <h3 className="font-semibold mt-4">Monthly Breakdown</h3>
+
+                    <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                            <thead>
+                                <tr>
+                                    <th style={th}>Name</th>
+                                    {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(m => (
+                                        <th key={m} style={th}>{m}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {summary.map(u => (
+                                    <tr key={u.uid}>
+                                        <td style={td}>{u.name}</td>
+                                        {u.monthlyCL.map((v, i) => (
+                                            <td key={i} style={td}>
+                                                CL:{v}<br />OT:{u.monthlyOT[i]}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
             <h2 className="text-2xl font-semibold mb-4">CL Approval Panel</h2>
 
             {/* Status Filter */}
@@ -417,3 +598,16 @@ export default function CLApprovalPage({ currentUser }) {
         </div>
     );
 }
+
+const th = {
+    padding: "6px",
+    borderBottom: "1px solid #e5e7eb",
+    textAlign: "left"
+};
+
+const td = {
+    padding: "6px",
+    borderBottom: "1px solid #e5e7eb"
+};
+
+

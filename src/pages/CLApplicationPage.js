@@ -136,7 +136,7 @@ export default function CLApplicationPage({ currentUser }) {
                 collection(db, "notifications", adminDoc.id, "items"),
                 {
                     title: "New CL Request",
-                    message: `${currentUser.name} applied CL for ${dateKey}`,
+                    message: `${currentUser.name} applied CL for ${dateKey}. BackUp Persion-${backupUserData?.name || ""}`,
                     date: dateKey,
                     site: currentUser.site,
                     read: false,
@@ -163,6 +163,23 @@ export default function CLApplicationPage({ currentUser }) {
                 requesterId: currentUser.uid
             }
         );
+
+        // Notify applicant (self) – cancellable
+        await addDoc(
+            collection(db, "notifications", currentUser.uid, "items"),
+            {
+                title: "CL Request Pending",
+                message: `Your CL request for ${dateKey} is pending. You can cancel it anytime before approval.`,
+                date: dateKey,
+                site: currentUser.site,
+                read: false,
+                createdAt: serverTimestamp(),
+                actionType: "cl_pending",
+                requestId: dateKey,
+                requesterId: currentUser.uid
+            }
+        );
+
 
         setApply(false);
         alert("CL Request Submitted!");
@@ -241,7 +258,8 @@ export default function CLApplicationPage({ currentUser }) {
             <label style={{
                 display: 'block',
                 marginBottom: '0.5rem'
-            }}>Select Backup Team Member</label>
+            }}>Select Backup Team Member
+            </label>
             <select
                 value={backupUser}
                 onChange={e => setBackupUser(e.target.value)}

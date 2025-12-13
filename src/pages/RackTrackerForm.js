@@ -349,7 +349,7 @@ const RackTrackerForm = ({ userData }) => {
             <label>Rack Name/Equipment Name:</label>
             <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} disabled={!!editData} />
             <label>RFAI Number:</label>
-            <input type="text" name="rfaiNo" value={formData.rfaiNo} onChange={handleChange} disabled={!!editData} />
+            <input type="text" name="rfaiNo" value={formData.rfaiNo} onChange={handleChange} />
           </div>
           <div className="form-section">
             <label>Rack Type:</label>

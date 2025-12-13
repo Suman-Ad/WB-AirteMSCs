@@ -1,6 +1,6 @@
 // src/pages/MyLeaveStatus.jsx
 import React, { useEffect, useState } from "react";
-import { collection, getDocs, query, doc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, query, doc, deleteDoc, serverTimestamp, addDoc, where, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
 export default function MyLeaveStatus({ currentUser }) {
@@ -23,12 +23,67 @@ export default function MyLeaveStatus({ currentUser }) {
   }, [currentUser]);
 
   async function cancelRequest(item) {
-    if (item.status !== "pending") return alert("Only pending requests can be canceled");
-    // if (!confirm("Cancel this CL request?")) return;
-    await deleteDoc(doc(db, "leaveRequests", currentUser.uid, "items", item.id));
+    if (item.status !== "pending") {
+      return alert("Only pending requests can be canceled");
+    }
+
+    // 1️⃣ Mark existing backup_request notification as cancelled
+    const q = query(
+      collection(db, "notifications", item.backupUserId, "items"),
+      where("actionType", "==", "backup_request"),
+      where("requestId", "==", item.id)
+    );
+
+    const snap = await getDocs(q);
+    for (const d of snap.docs) {
+      await updateDoc(d.ref, {
+        backupStatus: "cancelled",
+        read: true,
+        cancelledAt: serverTimestamp()
+      });
+    }
+
+    // 2️⃣ Send info notification (optional but OK)
+    await addDoc(
+      collection(db, "notifications", item.backupUserId, "items"),
+      {
+        title: "Cancelled Backup Duty Request",
+        message: `${item.userName} (${item.empId}) cancelled backup request for ${item.date}.`,
+        date: item.date,
+        site: item.siteId,
+        read: false,
+        createdAt: serverTimestamp(),
+        actionType: "cancelled_request",
+        requestId: item.id,
+        requesterId: currentUser.uid,
+      }
+    );
+
+    // 3️⃣ Notify applicant (self)
+    await addDoc(
+      collection(db, "notifications", item.userId, "items"),
+      {
+        title: "CL Cancelled",
+        message: `Your CL request for ${item.date} has been cancelled.`,
+        date: item.date,
+        site: item.siteId,
+        read: false,
+        createdAt: serverTimestamp(),
+        actionType: "cancelled_request",
+        requestId: item.id,
+        requesterId: currentUser.uid,
+      }
+    );
+
+    // 4️⃣ Delete leave request
+    await deleteDoc(
+      doc(db, "leaveRequests", currentUser.uid, "items", item.id)
+    );
+
     setList(prev => prev.filter(p => p.id !== item.id));
-    alert("Canceled");
+    alert("CL request cancelled");
   }
+
 
   return (
     <div className="daily-log-container">

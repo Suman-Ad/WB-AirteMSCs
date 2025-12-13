@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collection, onSnapshot, query, where, orderBy, updateDoc, doc, namedQuery, addDoc, getDocs, collectionGroup, serverTimestamp, deleteDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, where, orderBy, updateDoc, doc, namedQuery, addDoc, getDocs, collectionGroup, serverTimestamp, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
 
@@ -249,6 +249,60 @@ export default function NotificationBell({ user }) {
         return list;
     }
 
+    async function cancelCLFromNotification(n) {
+        try {
+            if (!window.confirm("Cancel this CL request?")) return;
+
+            const leaveRef = doc(db, "leaveRequests", user.uid, "items", n.requestId);
+            const leaveSnap = await getDoc(leaveRef);
+
+            if (!leaveSnap.exists()) {
+                alert("CL already cancelled or processed.");
+                return;
+            }
+
+            const leave = leaveSnap.data();
+            if (leave.status !== "pending") {
+                alert("Only pending CL can be cancelled.");
+                return;
+            }
+
+            // 1️⃣ invalidate backup request notification
+            if (leave.backupUserId) {
+                const q = query(
+                    collection(db, "notifications", leave.backupUserId, "items"),
+                    where("actionType", "==", "backup_request"),
+                    where("requestId", "==", n.requestId)
+                );
+
+                const snap = await getDocs(q);
+                for (const d of snap.docs) {
+                    await updateDoc(d.ref, {
+                        backupStatus: "cancelled",
+                        read: true
+                    });
+                }
+            }
+
+            // 2️⃣ delete leave request
+            await deleteDoc(leaveRef);
+
+            // 3️⃣ mark applicant notification cancelled
+            await updateDoc(
+                doc(db, "notifications", user.uid, "items", n.id),
+                {
+                    read: true,
+                    backupStatus: "cancelled"
+                }
+            );
+
+            alert("CL cancelled successfully");
+
+        } catch (err) {
+            console.error(err);
+            alert("Cancel failed");
+        }
+    }
 
 
     return (
@@ -313,7 +367,7 @@ export default function NotificationBell({ user }) {
                                     e.currentTarget.style.backgroundColor = '';
                                 }}>X</p>
                         </div>
-                        <div style={{ display: "flex", gap:"10px", marginBottom: "10px" }}>
+                        <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
                             <p onClick={() => setFilter("today")} style={{ fontSize: '10px', borderRadius: "4px", border: "1px solid #000000ff", cursor: "pointer" }}>
                                 Today
                             </p>
@@ -336,8 +390,8 @@ export default function NotificationBell({ user }) {
                                     borderRadius: "4px",
                                     cursor: "pointer",
                                     height: "fit-content",
-                                    position:"absolute",
-                                    left:"0"
+                                    position: "absolute",
+                                    left: "0"
                                 }}
                             >
                                 Mark All Read
@@ -358,8 +412,8 @@ export default function NotificationBell({ user }) {
                                     borderRadius: "4px",
                                     cursor: "pointer",
                                     height: "fit-content",
-                                    position:"absolute",
-                                    right:"0"
+                                    position: "absolute",
+                                    right: "0"
                                 }}
                             >
                                 Delete All
@@ -412,54 +466,79 @@ export default function NotificationBell({ user }) {
                                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
 
                                     {/* SHOW only if request still pending */}
-                                    {n.backupStatus !== "accepted" && n.backupStatus !== "rejected" && (
-                                        <>
-                                            <button
-                                                style={{
-                                                    paddingLeft: "0.5rem",
-                                                    paddingRight: "0.5rem",
-                                                    paddingTop: "0.25rem",
-                                                    paddingBottom: "0.25rem",
-                                                    backgroundColor: "#16a34a",
-                                                    color: "white",
-                                                    fontSize: "0.75rem",
-                                                    borderRadius: "0.375rem",
-                                                }}
-                                                onClick={() => acceptBackup(n)}
-                                            >
-                                                Accept
-                                            </button>
+                                    {n.actionType === "backup_request" && (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
 
-                                            <button
-                                                style={{
-                                                    paddingLeft: "0.5rem",
-                                                    paddingRight: "0.5rem",
-                                                    paddingTop: "0.25rem",
-                                                    paddingBottom: "0.25rem",
-                                                    backgroundColor: "#a31616ff",
-                                                    color: "white",
-                                                    fontSize: "0.75rem",
-                                                    borderRadius: "0.375rem",
-                                                }}
-                                                onClick={() => rejectBackup(n)}
-                                            >
-                                                Reject
-                                            </button>
-                                        </>
+                                            {/* BACKUP USER ACTIONS */}
+                                            {user.uid !== n.requesterId &&
+                                                n.backupStatus !== "accepted" &&
+                                                n.backupStatus !== "rejected" &&
+                                                n.backupStatus !== "cancelled" && (
+                                                    <>
+                                                        <button
+                                                            style={{
+                                                                backgroundColor: "#16a34a",
+                                                                color: "white",
+                                                                fontSize: "0.75rem",
+                                                                borderRadius: "0.375rem"
+                                                            }}
+                                                            onClick={() => acceptBackup(n)}
+                                                        >
+                                                            Accept
+                                                        </button>
+
+                                                        <button
+                                                            style={{
+                                                                backgroundColor: "#b91c1c",
+                                                                color: "white",
+                                                                fontSize: "0.75rem",
+                                                                borderRadius: "0.375rem"
+                                                            }}
+                                                            onClick={() => rejectBackup(n)}
+                                                        >
+                                                            Reject
+                                                        </button>
+                                                    </>
+                                                )}
+
+                                            {/* APPLICANT CANCEL ACTION */}
+                                            {n.actionType === "cl_pending" &&
+                                                n.requesterId === user.uid && (
+                                                    <button
+                                                        style={{
+                                                            backgroundColor: "#ef4444",
+                                                            color: "white",
+                                                            fontSize: "0.75rem",
+                                                            borderRadius: "0.375rem"
+                                                        }}
+                                                        onClick={() => cancelCLFromNotification(n)}
+                                                    >
+                                                        Cancel CL
+                                                    </button>
+                                                )}
+
+
+                                            {/* STATUS LABELS */}
+                                            {n.backupStatus === "accepted" && (
+                                                <p style={{ color: "#16a34a", fontSize: "0.75rem" }}>
+                                                    ✔ Backup Accepted
+                                                </p>
+                                            )}
+
+                                            {n.backupStatus === "rejected" && (
+                                                <p style={{ color: "#b91c1c", fontSize: "0.75rem" }}>
+                                                    ✖ Backup Rejected
+                                                </p>
+                                            )}
+
+                                            {n.backupStatus === "cancelled" && (
+                                                <p style={{ color: "#6b7280", fontSize: "0.75rem" }}>
+                                                    ⚠ Request Cancelled
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
 
-                                    {/* SHOW message after accept / reject */}
-                                    {n.backupStatus === "accepted" && (
-                                        <p style={{ color: "#16a34a", fontSize: "0.75rem", marginTop: "4px" }}>
-                                            ✔ Backup Accepted
-                                        </p>
-                                    )}
-
-                                    {n.backupStatus === "rejected" && (
-                                        <p style={{ color: "#b91c1c", fontSize: "0.75rem", marginTop: "4px" }}>
-                                            ✖ Backup Rejected
-                                        </p>
-                                    )}
 
                                 </div>
                             )}
