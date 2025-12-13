@@ -1,13 +1,16 @@
 // src/components/DGLogForm.js
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { collection, doc, setDoc, serverTimestamp, getDocs, query, orderBy, limit, where, getDoc } from "firebase/firestore";
+import { collection, doc, setDoc, serverTimestamp, getDocs, query, orderBy, limit, where, getDoc, addDoc } from "firebase/firestore";
 import { oemDieselCphData } from "../config/oemDieselCphData";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { saveAs } from "file-saver";
 import HSDPrintTemplate from "../components/HSDPrintTemplate";
+// import { toast } from "react-toastify";
+// import "react-toastify/dist/ReactToastify.css";
+
 
 
 
@@ -40,6 +43,7 @@ const DGLogForm = ({ userData }) => {
         parkingTime: "",
         fillingStartTime: "",
         outTime: "",
+        securityId: "",        // ✅ ADD THIS
         securityName: "",
         density: "",
         temperature: "",
@@ -49,10 +53,16 @@ const DGLogForm = ({ userData }) => {
         omSign: null,
         managerSign: null
     });
+
     const [previewOpen, setPreviewOpen] = useState(false);
 
 
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const isEdit = state?.editMode;
+    const isEditMode = Boolean(state?.editMode);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
 
 
     const handleChange = (e) => {
@@ -84,7 +94,7 @@ const DGLogForm = ({ userData }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+        setIsSubmitting(true);
         const totalRunHours =
             parseFloat(form.hrMeterEnd || 0) - parseFloat(form.hrMeterStart || 0);
 
@@ -96,6 +106,7 @@ const DGLogForm = ({ userData }) => {
             dateObj.getFullYear();
 
         try {
+
             // ✅ Correct (date is a document, runs is a subcollection)
             const runsCollectionRef = collection(
                 db,
@@ -118,44 +129,143 @@ const DGLogForm = ({ userData }) => {
             // Unique runId → dgNumber + start/stop
             const runId = form.fuelFill > 0 && !form.startTime && !form.stopTime ? `${form.dgNumber}_fuelOnly_${Date.now()}` : `${form.dgNumber}_${form.startTime}_${form.stopTime}`;
 
-            await setDoc(doc(runsCollectionRef, runId), {
-                ...form,
-                totalRunHours: form.fuelFill > 0 && !form.startTime && !form.stopTime
-                    ? 0   // no running
-                    : totalRunHours,
-                remarks: form.fuelFill > 0 && !form.startTime && !form.stopTime
-                    ? "Fuel Filling Only"
-                    : form.remarks,
-                siteId: userData.siteId,
-                siteName: userData.site,
-                enteredBy: userData.name,
-                createdAt: serverTimestamp(),
-            });
+            const finalHrMeterEnd =
+                form.remarks === "Fuel Filling Only"
+                    ? (form.hrMeterStart)
+                    : form.hrMeterEnd;
 
-            // ✅ --- NEW: Ensure the parent date document exists with a field ---
-            // This makes it visible to queries in DGLogTable.js
-            await setDoc(dateDocRef, {
-                lastUpdated: serverTimestamp()
-            }, { merge: true }); // Use merge:true to avoid overwriting other fields if you add them later
+            if (isEdit) {
+                const logRef = doc(
+                    db,
+                    "dgLogs",
+                    userData.site,
+                    monthKey,
+                    form.date,
+                    "runs",
+                    state.logData.id
+                );
+                if (isEditMode) {
+                    const confirmUpdate = window.confirm("⚠️ Are you sure you want to UPDATE this DG log?");
+                    if (!confirmUpdate) {
+                        setIsSubmitting(false);
+                        return;
+                    }
+                }
 
-            alert("Run log saved ✅");
-            // window.location.reload(); // Reload to reflect changes
+                if (form.remarks === "Fuel Filling Only" || Number(form.hsdFilled) > 0) {
+                    await addDoc(
+                        collection(db, "dgHsdLogs", userData.site, "entries"),
+                        {
+                            date: form.date,
+                            siteId: userData.siteId,
+                            siteName: userData.site,
+                            createdBy: userData.name,
+                            createdAt: serverTimestamp(),
+                            inTime: hsdForm.inTime,
+                            informTime: hsdForm.informTime,
+                            parkingTime: hsdForm.parkingTime,
+                            fillingStartTime: hsdForm.fillingStartTime,
+                            outTime: hsdForm.outTime,
+                            securityId: hsdForm.securityId,        // ✅ ADD THIS
+                            securityName: hsdForm.securityName,
+                            density: hsdForm.density,
+                            temperature: hsdForm.temperature,
+                            ltrs: hsdForm.ltrs,
+                            dillerInvoice: hsdForm.dillerInvoice,
+                            securitySign: hsdForm.securitySign,
+                            omSign: hsdForm.omSign,
+                            managerSign: hsdForm.managerSign
+                        }
+                    );
+                }
 
-            setForm({
-                date: "",
-                dgNumber: "DG-1",
-                startTime: "",
-                stopTime: "",
-                hrMeterStart: "",
-                hrMeterEnd: "",
-                remarks: "On Load",
-                fuelConsumption: "",
-                kWHReading: "",
-                fuelFill: "",
-            });
-            navigate("/dg-log-table")
+                await setDoc(logRef, {
+                    ...form,
+                    hrMeterEnd: finalHrMeterEnd,
+                    totalRunHours:
+                        form.remarks === "Fuel Filling Only"
+                            ? 0
+                            : (finalHrMeterEnd - form.hrMeterStart),
+                    updatedAt: serverTimestamp(),
+                }, { merge: true });
+
+                alert("Log updated ✅");
+                navigate("/dg-log-table")
+            } else {
+
+                // 🔥 SAVE HSD DATA ON EVERY FUEL FILLING
+                if (form.remarks === "Fuel Filling Only" || Number(form.hsdFilled) > 0) {
+                    await addDoc(
+                        collection(db, "dgHsdLogs", userData.site, "entries"),
+                        {
+                            date: form.date,
+                            siteId: userData.siteId,
+                            siteName: userData.site,
+                            createdBy: userData.name,
+                            createdAt: serverTimestamp(),
+                            inTime: hsdForm.inTime,
+                            informTime: hsdForm.informTime,
+                            parkingTime: hsdForm.parkingTime,
+                            fillingStartTime: hsdForm.fillingStartTime,
+                            outTime: hsdForm.outTime,
+                            securityId: hsdForm.securityId,        // ✅ ADD THIS
+                            securityName: hsdForm.securityName,
+                            density: hsdForm.density,
+                            temperature: hsdForm.temperature,
+                            ltrs: hsdForm.ltrs,
+                            dillerInvoice: hsdForm.dillerInvoice,
+                            securitySign: hsdForm.securitySign,
+                            omSign: hsdForm.omSign,
+                            managerSign: hsdForm.managerSign
+                        }
+                    );
+                }
+
+                await setDoc(doc(runsCollectionRef, runId), {
+                    ...form,
+                    hrMeterEnd: finalHrMeterEnd,
+                    totalRunHours:
+                        form.remarks === "Fuel Filling Only"
+                            ? 0
+                            : (finalHrMeterEnd - form.hrMeterStart),
+                    remarks:
+                        form.remarks === "Fuel Filling Only"
+                            ? "Fuel Filling Only"
+                            : form.remarks,
+                    siteId: userData.siteId,
+                    siteName: userData.site,
+                    enteredBy: userData.name,
+                    createdAt: serverTimestamp(),
+                });
+
+                // ✅ --- NEW: Ensure the parent date document exists with a field ---
+                // This makes it visible to queries in DGLogTable.js
+                await setDoc(dateDocRef, {
+                    lastUpdated: serverTimestamp()
+                }, { merge: true }); // Use merge:true to avoid overwriting other fields if you add them later
+
+                alert("Run log saved ✅");
+                // window.location.reload(); // Reload to reflect changes
+
+                setForm({
+                    date: "",
+                    dgNumber: "DG-1",
+                    startTime: "",
+                    stopTime: "",
+                    hrMeterStart: "",
+                    hrMeterEnd: "",
+                    remarks: "On Load",
+                    fuelConsumption: "",
+                    kWHReading: "",
+                    fuelFill: "",
+                });
+                navigate("/dg-log-table")
+            }
         } catch (err) {
             console.error("Error saving log: ", err);
+            alert("Something went wrong ❌");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -289,8 +399,11 @@ const DGLogForm = ({ userData }) => {
         setCalculationResult(result);
     };
 
+
     useEffect(() => {
         const fetchPrevHrMeter = async () => {
+            if (isEditMode) return; // 🛑 STOP auto-fetch during edit
+
             try {
                 if (!dgNumber) return;
 
@@ -367,9 +480,17 @@ const DGLogForm = ({ userData }) => {
             }
         };
 
+        if (state?.editMode && state?.logData) {
+            setForm({
+                ...state.logData,
+                date: state.selectedDate,
+            });
+            setDgNumber(state.logData.dgNumber);
+        }
+
         fetchPrevHrMeter();
         fetchConfig();
-    }, [dgNumber, userData.site]);
+    }, [dgNumber, userData.site, state, isEditMode]);
 
 
     // 🔹 Auto-calculate SEGR whenever key values change, including fuelConsumption edits
@@ -395,20 +516,27 @@ const DGLogForm = ({ userData }) => {
     ]);
 
     const handleSecuritySelect = (securityId) => {
-        const selected = siteConfig.securityTeam?.find(s => s.id == securityId);
+        const selected = siteConfig.securityTeam?.find(
+            (s) => String(s.id) === String(securityId)
+        );
 
-        setHsdForm(prev => ({
+        setHsdForm((prev) => ({
             ...prev,
-            securityName: selected?.name || "",
+            securityId: securityId,              // ✅ keep ID for select
+            securityName: selected?.name || "",  // ✅ save name separately
             securitySign: selected?.signUrl || null
         }));
     };
 
+
     return (
         <div className="daily-log-container">
             <h2 className="dashboard-header">
-                <strong>🎯 Daily DG Log Entry - {userData.site}</strong>
+                <strong>
+                    🎯 {isEditMode ? "Update DG Log" : "Daily DG Log Entry"} - {userData.site}
+                </strong>
             </h2>
+
             <form onSubmit={handleSubmit} className="daily-log-form">
 
                 <label className="form-label">Date:
@@ -417,9 +545,11 @@ const DGLogForm = ({ userData }) => {
                         name="date"
                         value={form.date}
                         onChange={handleChange}
-                        className="w-full p-2 border rounded"
+                        disabled={isEditMode}
+                        className={`w-full p-2 border rounded ${isEditMode ? "bg-gray-200 cursor-not-allowed" : ""}`}
                         required
                     />
+
                 </label>
 
                 <label className="form-label">Select DG:
@@ -427,11 +557,12 @@ const DGLogForm = ({ userData }) => {
                     <select
                         name="dgNumber"
                         value={dgNumber}
+                        disabled={isEditMode}
                         onChange={(e) => {
-                            setDgNumber(e.target.value);   // update DG state
-                            setForm((prev) => ({ ...prev, dgNumber: e.target.value })); // keep form in sync
+                            setDgNumber(e.target.value);
+                            setForm((prev) => ({ ...prev, dgNumber: e.target.value }));
                         }}
-                        className="w-full p-2 border rounded"
+                        className={`w-full p-2 border rounded ${isEditMode ? "bg-gray-200 cursor-not-allowed" : ""}`}
                     >
 
                         <option value="">Select DG</option>;
@@ -448,6 +579,7 @@ const DGLogForm = ({ userData }) => {
                     <select
                         name="remarks"
                         value={form.remarks}
+                        disabled={isEditMode}
                         onChange={handleChange}
                         className="w-full p-2 border rounded"
                     >
@@ -498,19 +630,22 @@ const DGLogForm = ({ userData }) => {
                             required
                         />
                     </label>
-                    <label className="form-label">Hr Meter End:
-                        <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- '1800.1')</span>
-                        <input
-                            type="number"
-                            step="0.1"
-                            name="hrMeterEnd"
-                            value={form.remarks === "Fuel Filling Only" ? form.hrMeterStart : form.hrMeterEnd}
-                            onChange={handleChange}
-                            placeholder="Hr meter end"
-                            className="p-2 border rounded"
-                            required
-                        />
-                    </label>
+                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
+                        <label className="form-label">Hr Meter End:
+                            <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- '1800.1')</span>
+                            <input
+                                type="number"
+                                step="0.1"
+                                name="hrMeterEnd"
+                                value={form.hrMeterEnd}
+                                onChange={handleChange}
+                                placeholder="Hr meter end"
+                                className="p-2 border rounded"
+                                required
+                            />
+
+                        </label>
+                    )}
                 </div>
 
                 {(form.remarks === "On Load" || form.remarks === "No Load") && (
@@ -536,7 +671,7 @@ const DGLogForm = ({ userData }) => {
                             type="number"
                             step="0.1"
                             name="fuelConsumption"
-                            value={form.remarks === "Fuel Filling Only" ? 0 : form.fuelConsumption}
+                            value={form.fuelConsumption}
                             onChange={handleChange}
                             placeholder="Fuel consumption (L)"
                             className="w-full p-2 border rounded"
@@ -545,19 +680,135 @@ const DGLogForm = ({ userData }) => {
                     </label>
                 )}
 
-                <label className="form-label">Fuel Filling (Liters):
-                    <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- Skip it('0') if Fuel not fill)</span>
-                    <input
-                        type="number"
-                        step="0.1"
-                        name="fuelFill"
-                        value={form.fuelFill}
-                        onChange={handleChange}
-                        placeholder="Add fuel filling (L)"
-                        className="w-full p-2 border rounded"
-                        required
-                    />
-                </label>
+                {form.remarks === "Fuel Filling Only" && (
+                    <label className="form-label">Fuel Filling (Liters):
+                        <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- Skip it('0') if Fuel not fill)</span>
+                        <input
+                            type="number"
+                            step="0.1"
+                            name="fuelFill"
+                            value={form.fuelFill}
+                            onChange={handleChange}
+                            placeholder="Add fuel filling (L)"
+                            className="w-full p-2 border rounded"
+                            required
+                        />
+                    </label>)}
+
+                {form.remarks === "Fuel Filling Only" && (
+                    <div className="child-container" style={{ padding: "10px", border: "1px solid #ccc", borderRadius: "10px", marginBottom: "10px" }}>
+                        <h3>🛢️ HSD Receiving Info</h3>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
+                            <div>
+                                <label>Diesel Tanker (In time HH:MM)</label>
+                                <input type="time" name="inTime" value={hsdForm.inTime} onChange={(e) => setHsdForm({ ...hsdForm, inTime: e.target.value })} required />
+                            </div>
+                            <div>
+                                <label>Time: Informed to O&M team of arrival of HSD tanker by Security Team</label>
+                                <input type="time" name="informTime" value={hsdForm.informTime} onChange={(e) => setHsdForm({ ...hsdForm, informTime: e.target.value })} required />
+                            </div>
+
+                            <div>
+                                <label>HSD parking and ignition off time at HSD yard (HH:MM)</label>
+                                <input type="time" name="parkingTime" value={hsdForm.parkingTime} onChange={(e) => setHsdForm({ ...hsdForm, parkingTime: e.target.value })} required />
+                            </div>
+
+                            <div>
+                                <label>HSD Tanker settling time (HH:MM)</label>
+                                <input type="time" name="fillingStartTime" value={hsdForm.fillingStartTime} onChange={(e) => setHsdForm({ ...hsdForm, fillingStartTime: e.target.value })} required />
+                            </div>
+                            <div>
+                                <label>HSD tanker (Out time) (HH:MM)</label>
+                                <input type="time" name="outTime" value={hsdForm.outTime} onChange={(e) => setHsdForm({ ...hsdForm, outTime: e.target.value })} required />
+                            </div>
+                            <div>
+                                <label>HSD Ltrs.</label>
+                                <input type="number" name="ltrs" value={hsdForm.ltrs || form.fuelFill} onChange={(e) => setHsdForm({ ...hsdForm, ltrs: e.target.value })} required />
+                            </div>
+                            <div>
+                                <label>HSD Density</label>
+                                <input type="number" name="density" value={hsdForm.density} onChange={(e) => setHsdForm({ ...hsdForm, density: e.target.value })} required />
+                            </div>
+                            <div>
+                                <label>HSD Temperature °C</label>
+                                <input type="number" name="temperature" value={hsdForm.temperature} onChange={(e) => setHsdForm({ ...hsdForm, temperature: e.target.value })} required />
+                            </div>
+                            <div>
+                                <label>Security Name</label>
+                                <select
+                                    name="securityId"
+                                    value={hsdForm.securityId}   // ✅ VALUE IS ID
+                                    onChange={(e) => handleSecuritySelect(e.target.value)}
+                                    required
+                                    style={{ padding: "6px", borderRadius: "6px", border: "1px solid #ccc" }}
+                                >
+                                    <option value="">Select Security</option>
+                                    {siteConfig.securityTeam?.map((sec) => (
+                                        <option key={sec.id} value={sec.id}>
+                                            {sec.name} ({sec.role})
+                                        </option>
+                                    ))}
+                                </select>
+
+                            </div>
+                            <div>
+                                <label>Accepted Invoice/Delivery challan number</label>
+                                <input type="text" name="dillerInvoice" value={hsdForm.dillerInvoice} onChange={(e) => setHsdForm({ ...hsdForm, dillerInvoice: e.target.value })} required />
+                            </div>
+                        </div>
+
+                        <h4 style={{ marginTop: "15px" }}>Upload Signatures</h4>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
+                            <div>
+                                <label>Security Signature</label><br />
+                                {hsdForm.securitySign ? (
+                                    <img src={hsdForm.securitySign} alt="Security Sign" width={80} />
+                                ) : (
+                                    <p style={{ fontSize: "12px", color: "#777" }}>No signature selected</p>
+                                )}
+                            </div>
+                            <div>
+                                <label>O&M Signature</label><br />
+                                {/* <input type="file" accept="image/*" onChange={(e) => handleSignUpload(e, "omSign")} /> */}
+                                {siteConfig.omSign && <img src={siteConfig.omSign} alt="OM Sign" width={80} />}
+                            </div>
+                            <div>
+                                <label>Manager Signature</label><br />
+                                {/* <input type="file" accept="image/*" onChange={(e) => handleSignUpload(e, "managerSign")} /> */}
+                                {siteConfig.managerSign && <img src={siteConfig.managerSign} alt="Manager Sign" width={80} />}
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: "15px" }}>
+                            <button type="button" onClick={() => setPreviewOpen(true)}>👁️ Preview & Save PDF</button>
+                            {/* <button type="button" style={{ marginLeft: "10px" }} onClick={() => generateHSDReport()}>📄 Generate HSD Report</button> */}
+                        </div>
+                    </div>
+                )}
+
+                {previewOpen && (
+                    <div
+                        style={{
+                            position: "fixed",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            background: "rgba(0,0,0,0.6)",
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            zIndex: 1000,
+                        }}
+                    >
+                        <HSDPrintTemplate
+                            form={form}
+                            hsdForm={hsdForm}
+                            siteConfig={siteConfig}
+                            setPreviewOpen={setPreviewOpen}
+                        />
+                    </div>
+                )}
 
                 {calculationResult && (
                     <div className="child-container">
@@ -567,125 +818,22 @@ const DGLogForm = ({ userData }) => {
                 )}
                 <button
                     type="submit"
-                    className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+                    disabled={isSubmitting}
+                    className={`w-full p-2 rounded text-white ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+                        }`}
                 >
-                    Save Log
+                    {isSubmitting
+                        ? isEditMode
+                            ? "Updating...."
+                            : "Saving...."
+                        : isEditMode
+                            ? "UPDATE"
+                            : "SAVE"}
                 </button>
+
             </form>
 
-            {form.remarks === "Fuel Filling Only" && (
-                <div className="child-container" style={{ padding: "10px", border: "1px solid #ccc", borderRadius: "10px", marginBottom: "10px" }}>
-                    <h3>🛢️ HSD Receiving Info</h3>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>
-                        <div>
-                            <label>Diesel Tanker (In time HH:MM)</label>
-                            <input type="time" name="inTime" value={hsdForm.inTime} onChange={(e) => setHsdForm({ ...hsdForm, inTime: e.target.value })} required />
-                        </div>
-                        <div>
-                            <label>Time: Informed to O&M team of arrival of HSD tanker by Security Team</label>
-                            <input type="time" name="informTime" value={hsdForm.informTime} onChange={(e) => setHsdForm({ ...hsdForm, informTime: e.target.value })} required />
-                        </div>
 
-                        <div>
-                            <label>HSD parking and ignition off time at HSD yard (HH:MM)</label>
-                            <input type="time" name="parkingTime" value={hsdForm.parkingTime} onChange={(e) => setHsdForm({ ...hsdForm, parkingTime: e.target.value })} required />
-                        </div>
-
-                        <div>
-                            <label>HSD Tanker settling time (HH:MM)</label>
-                            <input type="time" name="fillingStartTime" value={hsdForm.fillingStartTime} onChange={(e) => setHsdForm({ ...hsdForm, fillingStartTime: e.target.value })} required />
-                        </div>
-                        <div>
-                            <label>HSD tanker (Out time) (HH:MM)</label>
-                            <input type="time" name="outTime" value={hsdForm.outTime} onChange={(e) => setHsdForm({ ...hsdForm, outTime: e.target.value })} required />
-                        </div>
-                        <div>
-                            <label>HSD Ltrs.</label>
-                            <input type="number" name="ltrs" value={hsdForm.ltrs || form.fuelFill} onChange={(e) => setHsdForm({ ...hsdForm, ltrs: e.target.value })} required />
-                        </div>
-                        <div>
-                            <label>HSD Density</label>
-                            <input type="number" name="density" value={hsdForm.density} onChange={(e) => setHsdForm({ ...hsdForm, density: e.target.value })} required />
-                        </div>
-                        <div>
-                            <label>HSD Temperature °C</label>
-                            <input type="number" name="temperature" value={hsdForm.temperature} onChange={(e) => setHsdForm({ ...hsdForm, temperature: e.target.value })} required />
-                        </div>
-                        <div>
-                            <label>Security Name</label>
-                            <select
-                                name="securityName"
-                                value={hsdForm.securityName}
-                                onChange={(e) => handleSecuritySelect(e.target.value)}
-                                required
-                                style={{ padding: "6px", borderRadius: "6px", border: "1px solid #ccc" }}
-                            >
-                                <option value="">Select Security</option>
-                                {siteConfig.securityTeam?.map(sec => (
-                                    <option key={sec.id} value={sec.id}>
-                                        {sec.name} ({sec.role})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label>Accepted Invoice/Delivery challan number</label>
-                            <input type="text" name="dillerInvoice" value={hsdForm.dillerInvoice} onChange={(e) => setHsdForm({ ...hsdForm, dillerInvoice: e.target.value })} required />
-                        </div>
-                    </div>
-
-                    <h4 style={{ marginTop: "15px" }}>Upload Signatures</h4>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
-                        <div>
-                            <label>Security Signature</label><br />
-                            {hsdForm.securitySign ? (
-                                <img src={hsdForm.securitySign} alt="Security Sign" width={80} />
-                            ) : (
-                                <p style={{ fontSize: "12px", color: "#777" }}>No signature selected</p>
-                            )}
-                        </div>
-                        <div>
-                            <label>O&M Signature</label><br />
-                            {/* <input type="file" accept="image/*" onChange={(e) => handleSignUpload(e, "omSign")} /> */}
-                            {siteConfig.omSign && <img src={siteConfig.omSign} alt="OM Sign" width={80} />}
-                        </div>
-                        <div>
-                            <label>Manager Signature</label><br />
-                            {/* <input type="file" accept="image/*" onChange={(e) => handleSignUpload(e, "managerSign")} /> */}
-                            {siteConfig.managerSign && <img src={siteConfig.managerSign} alt="Manager Sign" width={80} />}
-                        </div>
-                    </div>
-
-                    <div style={{ marginTop: "15px" }}>
-                        <button type="button" onClick={() => setPreviewOpen(true)}>👁️ Preview & Save PDF</button>
-                        {/* <button type="button" style={{ marginLeft: "10px" }} onClick={() => generateHSDReport()}>📄 Generate HSD Report</button> */}
-                    </div>
-                </div>
-            )}
-
-            {previewOpen && (
-                <div
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        background: "rgba(0,0,0,0.6)",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        zIndex: 1000,
-                    }}
-                >
-                    <HSDPrintTemplate
-                        form={form}
-                        hsdForm={hsdForm}
-                        siteConfig={siteConfig}
-                        setPreviewOpen={setPreviewOpen}
-                    />
-                </div>
-            )}
 
         </div>
     );

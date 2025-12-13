@@ -1,9 +1,11 @@
 // src/components/DGLogTable.js
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc, query, limit, orderBy } from "firebase/firestore";
 import { db } from "../firebase";
 import { useLocation, useNavigate } from "react-router-dom";
 import { format, subDays } from "date-fns";
+import HSDPrintTemplate from "../components/HSDPrintTemplate";
+
 
 // Convert decimal hours to HH:MM format
 const formatTime = (hours) => {
@@ -35,12 +37,67 @@ const DGLogTable = ({ userData }) => {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [dhrDataForPreview, setDhrDataForPreview] = useState(null);
   const [dhrMessage, setDhrMessage] = useState("");
+  const [hsdLogs, setHsdLogs] = useState([]);
+  const [hsdPreviewOpen, setHsdPreviewOpen] = useState(false);
+  const [hsdPreviewData, setHsdPreviewData] = useState(null);
+  const [hsdPreviewForm, setHsdPreviewForm] = useState(null);
+
+
+
+  const fetchHsdLogs = async () => {
+    try {
+      const q = query(
+        collection(db, "dgHsdLogs", userData.site, "entries"),
+        orderBy("createdAt", "desc"),
+        limit(100)
+      );
+
+      const snap = await getDocs(q);
+      const list = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      setHsdLogs(list);
+    } catch (err) {
+      console.error("Failed to fetch HSD logs:", err);
+    }
+  };
+
+  const getHsdForLog = (log) => {
+    return hsdLogs.find(
+      (h) =>
+        h.date === selectedDate &&
+        Number(h.ltrs) === Number(log.fuelFill)
+    );
+  };
+
+
+  const openHsdPreview = (log) => {
+    const hsd = getHsdForLog(log);
+    if (!hsd) {
+      alert("HSD data not found for this entry");
+      return;
+    }
+
+    // form = DG log data
+    setHsdPreviewForm({
+      ...log,
+      date: selectedDate,
+    });
+
+    // hsdForm = HSD log data
+    setHsdPreviewData(hsd);
+
+    setHsdPreviewOpen(true);
+  };
 
   useEffect(() => {
     if (siteName && selectedDate) {
       fetchLogs();
       fetchMonthlySummary();
       fetchLogsForSelectedDate();
+      fetchHsdLogs();
     }
     // eslint-disable-next-line
   }, [siteName, selectedDate]);
@@ -121,9 +178,15 @@ const DGLogTable = ({ userData }) => {
   };
 
   const handleEdit = (log) => {
-    setEditingId(log.id);
-    setEditForm(log);
+    Navigate("/dg-log-entry", {
+      state: {
+        editMode: true,
+        logData: log,
+        selectedDate,
+      },
+    });
   };
+
 
   const handleDelete = async (logId) => {
     if (!window.confirm("Are you sure you want to delete this log?")) return;
@@ -356,6 +419,7 @@ const DGLogTable = ({ userData }) => {
                 <th>kWH Reading</th>
                 <th>Remarks</th>
                 <th>Fuel Filling</th>
+                <th>HSD Template</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -473,7 +537,18 @@ const DGLogTable = ({ userData }) => {
                       <td>{log.kWHReading || 0}</td>
                       <td>{log.remarks}</td>
                       <td>{log.fuelFill}</td>
-                      <td style={{display:"flex"}}>
+                      <td>
+                        {(log.remarks === "Fuel Filling Only" || Number(log.fuelFill) > 0) && (
+                          <button
+                            className="text-blue-600 underline"
+                            onClick={() => openHsdPreview(log)}
+                          >
+                            👁 View HSD
+                          </button>
+                        )}
+                      </td>
+
+                      <td style={{ display: "flex" }}>
                         <button onClick={() => handleEdit(log)}>Edit</button>
                         <button
                           style={{ marginLeft: "8px", color: "red" }}
@@ -488,6 +563,30 @@ const DGLogTable = ({ userData }) => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {hsdPreviewOpen && hsdPreviewData && hsdPreviewForm && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        >
+          <HSDPrintTemplate
+            form={hsdPreviewForm}
+            hsdForm={hsdPreviewData}
+            siteConfig={siteConfig}
+            setPreviewOpen={setHsdPreviewOpen}
+          />
         </div>
       )}
 
