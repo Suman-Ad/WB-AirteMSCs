@@ -334,7 +334,7 @@ const RackTrackerForm = ({ userData }) => {
           </div>
           <div className="form-section">
             <label>Equipment Switch Room Location:</label>
-            <select name="equipmentLocation" onChange={handleChange}>
+            <select name="equipmentLocation" onChange={handleChange} disabled={!!editData}>
 
               <option value={formData.equipmentLocation} >{formData.equipmentLocation || "Select Location"}</option>
               {floorList.map(q => (
@@ -428,18 +428,12 @@ const RackTrackerForm = ({ userData }) => {
               marginBottom: "10px"
             }}>
               {rackEquipments.map((eq, idx) => (
-                <div
-                  key={eq.id}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "50px repeat(5, minmax(0, 1fr)) auto",
-                    gap: "0.5rem",
-                    marginBottom: "0.5rem",
-                    alignItems: "center",
-                    border: "1px solid rgba(0, 0, 0, 0.37)",
-                    borderRadius: "10px"
-                  }}
-                >
+                <div style={{
+                  border: "1px solid rgba(0, 0, 0, 0.37)",
+                  borderRadius: "10px", marginBottom: "0.5rem",
+                  alignItems: "center",
+                  display: "flex",
+                }}>
                   {/* SL No */}
                   <div
                     style={{
@@ -447,113 +441,144 @@ const RackTrackerForm = ({ userData }) => {
                       textAlign: "center",
                       padding: "6px 0",
                       background: "#4b7496d2",
+                      height:"100px",
+                      borderTopLeftRadius:"9px",
+                      borderBottomLeftRadius:"9px",
+                      alignContent:"center"
                     }}
                   >
                     {idx + 1}
+
                   </div>
+                  <div>
+                    <div
+                      key={eq.id}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "2.5fr 1.5fr 1.5fr 1fr",
+                        gap: "0.1rem",
+                      }}
+                    >
+                      {/* Equipment Name */}
+                      <input
+                        className="border rounded px-2 py-1"
+                        placeholder="Equipment name"
+                        value={eq.name}
+                        onChange={(e) => {
+                          const list = [...rackEquipments];
+                          list[idx] = { ...list[idx], name: e.target.value };
+                          setRackEquipments(list);
 
-                  {/* Equipment Name */}
-                  <input
-                    className="border rounded px-2 py-1"
-                    placeholder="Equipment name"
-                    value={eq.name}
-                    onChange={(e) => {
-                      const list = [...rackEquipments];
-                      list[idx] = { ...list[idx], name: e.target.value };
-                      setRackEquipments(list);
+                          const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
+                          const updated = { ...formData, ...uCalc };
+                          const calc = computeCapacityAnalysis(updated);
+                          setFormData({ ...updated, ...calc });
+                        }}
+                      />
 
-                      const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
-                      const updated = { ...formData, ...uCalc };
-                      const calc = computeCapacityAnalysis(updated);
-                      setFormData({ ...updated, ...calc });
-                    }}
-                  />
+                      {/* Start U */}
+                      <input
+                        type="number"
+                        placeholder="Start U"
+                        value={eq.startU}
+                        onChange={(e) => {
+                          const list = [...rackEquipments];
+                          const startU = Number(e.target.value) || 0;
+                          const endU = Number(list[idx].endU) || 0;
+                          const sizeU = startU && endU && startU >= endU ? startU - endU + 1 : 0;
 
-                  {/* Start U */}
-                  <input
-                    type="number"
-                    placeholder="Start U"
-                    value={eq.startU}
-                    onChange={(e) => {
-                      const list = [...rackEquipments];
-                      const startU = Number(e.target.value) || 0;
-                      const endU = Number(list[idx].endU) || 0;
-                      const sizeU = startU && endU && startU >= endU ? startU - endU + 1 : 0;
+                          list[idx] = { ...list[idx], startU, sizeU };
+                          setRackEquipments(list);
 
-                      list[idx] = { ...list[idx], startU, sizeU };
-                      setRackEquipments(list);
+                          const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
+                          const updated = { ...formData, ...uCalc };
+                          const calc = computeCapacityAnalysis(updated);
+                          setFormData({ ...updated, ...calc });
+                        }}
+                      />
 
-                      const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
-                      const updated = { ...formData, ...uCalc };
-                      const calc = computeCapacityAnalysis(updated);
-                      setFormData({ ...updated, ...calc });
-                    }}
-                  />
+                      {/* End U */}
+                      <input
+                        type="number"
+                        placeholder="End U"
+                        value={eq.endU}
+                        onChange={(e) => {
+                          const list = [...rackEquipments];
+                          const endU = Number(e.target.value) || 0;
+                          const startU = Number(list[idx].startU) || 0;
+                          const sizeU = startU && endU && startU >= endU ? startU - endU + 1 : 0;
 
-                  {/* End U */}
-                  <input
-                    type="number"
-                    placeholder="End U"
-                    value={eq.endU}
-                    onChange={(e) => {
-                      const list = [...rackEquipments];
-                      const endU = Number(e.target.value) || 0;
-                      const startU = Number(list[idx].startU) || 0;
-                      const sizeU = startU && endU && startU >= endU ? startU - endU + 1 : 0;
+                          list[idx] = { ...list[idx], endU, sizeU };
+                          setRackEquipments(list);
 
-                      list[idx] = { ...list[idx], endU, sizeU };
-                      setRackEquipments(list);
+                          const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
+                          const updated = { ...formData, ...uCalc };
+                          const calc = computeCapacityAnalysis(updated);
+                          setFormData({ ...updated, ...calc });
+                        }}
+                      />
 
-                      const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
-                      const updated = { ...formData, ...uCalc };
-                      const calc = computeCapacityAnalysis(updated);
-                      setFormData({ ...updated, ...calc });
-                    }}
-                  />
+                      {/* Size U */}
+                      <input type="number" value={eq.sizeU || 0} readOnly className="bg-gray-100" />
 
-                  {/* Size U */}
-                  <input type="number" value={eq.sizeU || 0} readOnly className="bg-gray-100" />
+                    </div>
 
-                  {/* Remarks */}
-                  <textarea
-                    style={{
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "0.375rem",
-                      paddingLeft: "0.5rem",
-                      paddingRight: "0.5rem",
-                      paddingTop: "0.25rem",
-                      paddingBottom: "0.25rem"
-                    }}
-                    placeholder="Remarks"
-                    value={eq.remarks}
-                    onChange={(e) => {
-                      const list = [...rackEquipments];
-                      list[idx] = { ...list[idx], remarks: e.target.value };
-                      setRackEquipments(list);
+                    <div>
+                      {/* Remarks */}
+                      <textarea
+                        style={{
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "0.375rem",
+                          paddingLeft: "0.5rem",
+                          paddingRight: "0.5rem",
+                          paddingTop: "0.25rem",
+                          paddingBottom: "0.25rem",
+                          resize: "none", 
+                        }}
+                        placeholder="Enter equipment details"
+                        value={eq.remarks}
+                        onFocus={() => {
+                          if (!eq.remarks) {
+                            const list = [...rackEquipments];
+                            list[idx] = {
+                              ...list[idx],
+                              remarks: "Model No:- \nSl. No:- \nRemarks:- "
+                            };
+                            setRackEquipments(list);
+                          }
+                        }}
+                        onChange={(e) => {
+                          const list = [...rackEquipments];
+                          list[idx] = { ...list[idx], remarks: e.target.value };
+                          setRackEquipments(list);
 
-                      const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
-                      const updated = { ...formData, ...uCalc };
-                      const calc = computeCapacityAnalysis(updated);
-                      setFormData({ ...updated, ...calc });
-                    }}
-                  />
-
-                  {/* Delete Button */}
-                  <p
-                    type="button"
-                    style={{ color: "#dc2626", fontSize: "0.875rem", width: "fit-content", cursor: "pointer" }}
-                    onClick={() => {
-                      const list = rackEquipments.filter((_, i) => i !== idx);
-                      setRackEquipments(
-                        list.length
-                          ? list
-                          : [{ id: Date.now().toString(), name: "", startU: "", sizeU: "", remarks: "" }]
-                      );
-                    }}
-                  >
-                    ❌
-                  </p>
+                          const uCalc = recomputeUSpaceFromEquipments(list, formData.totalRackUSpace);
+                          const updated = { ...formData, ...uCalc };
+                          const calc = computeCapacityAnalysis(updated);
+                          setFormData({ ...updated, ...calc });
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    {/* Delete Button */}
+                    <p
+                      type="button"
+                      style={{ color: "#dc2626", fontSize: "0.875rem", width: "fit-content", cursor: "pointer", height:"100px", alignContent:"center", background:"rgba(224, 44, 44, 1)", borderTopRightRadius:"9px", borderBottomRightRadius:"9px" }}
+                      onClick={() => {
+                        const list = rackEquipments.filter((_, i) => i !== idx);
+                        setRackEquipments(
+                          list.length
+                            ? list
+                            : [{ id: Date.now().toString(), name: "", startU: "", sizeU: "", remarks: "" }]
+                        );
+                      }}
+                    >
+                      ❌
+                    </p>
+                  </div>
                 </div>
+
               ))}
 
 
