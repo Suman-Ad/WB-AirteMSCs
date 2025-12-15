@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "../firebase";
-import { collection, getDocs, getDoc, updateDoc, doc , setDoc} from "firebase/firestore";
+import { collection, getDocs, getDoc, updateDoc, doc, setDoc } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { Link, useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto"; // auto-registers needed controllers
@@ -73,14 +73,45 @@ const inDateRange = (rowDateStr, fromStr, toStr) => {
   return true;
 };
 
+const isAdminAssignmentValid = (userData) => {
+  if (!userData?.isAdminAssigned) return false;
+  if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const from = new Date(userData.adminAssignFrom);
+  const to = new Date(userData.adminAssignTo);
+  to.setHours(23, 59, 59, 999);
+
+  return today >= from && today <= to;
+};
+
+
 export default function DailyActivityDashboard({ userData }) {
+  const [editingRow, setEditingRow] = useState(null);
+  const [draftRow, setDraftRow] = useState({});
+  function startEdit(rowObj) {
+    setEditingRow({
+      sheetId: rowObj._sheetId,
+      rowIndex: rowObj._rowIndex,
+    });
+    setDraftRow({ ...rowObj });
+  }
+
+  function cancelEdit() {
+    setEditingRow(null);
+    setDraftRow({});
+  }
+
   /** permissions */
   const isAdmin =
     userData?.role === "Super Admin" ||
     userData?.role === "Admin" ||
-    !!userData?.isAdminAssigned ||
+    isAdminAssignmentValid(userData) ||
     userData?.designation === "Vertiv Site Infra Engineer" ||
-    userData?.designation === "Vertiv CIH" ;
+    userData?.designation === "Vertiv CIH" ||
+    userData?.designation === "Vertiv ZM";
 
   const navigate = useNavigate();
 
@@ -151,22 +182,30 @@ export default function DailyActivityDashboard({ userData }) {
         setLoading(false);
       }
     })();
-  }, []);
+    if (
+      userData?.isAdminAssigned &&
+      !isAdminAssignmentValid(userData)
+    ) {
+      updateDoc(doc(db, "users", userData.uid), {
+        isAdminAssigned: false
+      });
+    }
+  }, [userData]);
 
   const [instructionText, setInstructionText] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(""); 
+  const [editText, setEditText] = useState("");
   useEffect(() => {
-          const fetchInstruction = async () => {
-            const docRef = doc(db, "config", "daily_activity_dashboard_instruction");
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-              setInstructionText(docSnap.data().text || "");
-              setEditText(docSnap.data().text || "");
-            }
-          };
-          fetchInstruction();
-        }, []);
+    const fetchInstruction = async () => {
+      const docRef = doc(db, "config", "daily_activity_dashboard_instruction");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setInstructionText(docSnap.data().text || "");
+        setEditText(docSnap.data().text || "");
+      }
+    };
+    fetchInstruction();
+  }, []);
 
   /** prepared list of rows respecting user visibility (non-admins only own site) */
   const visibleRows = useMemo(() => {
@@ -184,6 +223,17 @@ export default function DailyActivityDashboard({ userData }) {
   /** apply filters from popup to visibleRows */
   const filteredRows = useMemo(() => {
     let data = [...visibleRows];
+
+    // enforce site lock ONLY for DailyActivityDashboard
+    if (!isAdmin) {
+      const mySite = (userData?.site || userData?.siteName || "")
+        .trim()
+        .toLowerCase();
+
+      data = data.filter(
+        (r) => (r.siteName || "").trim().toLowerCase() === mySite
+      );
+    }
 
     // quick search across values
     const st = filters.searchText.trim().toLowerCase();
@@ -252,6 +302,39 @@ export default function DailyActivityDashboard({ userData }) {
       console.error("Edit failed", e);
     }
   }
+
+  async function saveEdit(rowObj) {
+    try {
+      const ref = doc(db, "daily_activity_sheets", rowObj._sheetId);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return;
+
+      const data = snap.data();
+      const arr = [...(data.rows || [])];
+
+      const updated = {};
+      KEYS.forEach((k) => {
+        updated[k] = draftRow[k] || "";
+      });
+
+      arr[rowObj._rowIndex] = updated;
+      await updateDoc(ref, { rows: arr });
+
+      // update local rows
+      setRows((prev) =>
+        prev.map((r) =>
+          r._sheetId === rowObj._sheetId && r._rowIndex === rowObj._rowIndex
+            ? { ...r, ...updated }
+            : r
+        )
+      );
+
+      cancelEdit();
+    } catch (e) {
+      console.error("Save failed", e);
+    }
+  }
+
 
   /** delete row (admin only) */
   async function handleDelete(rowObj) {
@@ -443,11 +526,11 @@ export default function DailyActivityDashboard({ userData }) {
         <h1 className="dashboard-header">
           <strong>🏗️ Daily Activity Dashboard</strong>
         </h1>
-        
+
         <div className="daily-activity-subtitle">
           {isAdmin ? "Admin view: all sites" : "User view: your site only"}
         </div>
-        <p onClick={() => navigate("/activity-dashboard")} style={{cursor:"pointer"}}>Activity Matrix</p>
+        <p onClick={() => navigate("/activity-dashboard")} style={{ cursor: "pointer" }}>Activity Matrix</p>
         {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.role === "User") && (
           <Link to="/daily-activity-management"><span className="pm-manage-btn">🚧🛠️ Manage Daily {userData?.site} Activity</span></Link>
         )}
@@ -483,52 +566,52 @@ export default function DailyActivityDashboard({ userData }) {
         </div>
       </div>
 
-      
+
       <div className="instruction-tab">
-          <h2 className="noticeboard-header">📌 Notice Board </h2>
-          {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
-          {isEditing ? (
-            <>
-              <textarea
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                rows={5}
-                className="dashboard-instruction-panel"
-              />
-              <div className="flex gap-2">
-                <button
-                  className="bg-blue-600 text-white px-3 py-1 rounded"
-                  onClick={async () => {
-                    const docRef = doc(db, "config", "daily_activity_dashboard_instruction");
-                    await setDoc(docRef, { text: editText });
-                    setInstructionText(editText);
-                    setIsEditing(false);
-                  }}
-                >
-                  Save
-                </button>
-                <button
-                  className="bg-gray-400 text-white px-3 py-1 rounded"
-                  onClick={() => setIsEditing(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
-              {["Admin", "Super Admin"].includes(userData?.role) && (
-                <button
-                  className="text-blue-600 underline"
-                  onClick={() => setIsEditing(true)}
-                >
-                  Edit Instruction
-                </button>
-              )}
-            </>
-          )}
-          <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
+        <h2 className="noticeboard-header">📌 Notice Board </h2>
+        {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
+        {isEditing ? (
+          <>
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              rows={5}
+              className="dashboard-instruction-panel"
+            />
+            <div className="flex gap-2">
+              <button
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+                onClick={async () => {
+                  const docRef = doc(db, "config", "daily_activity_dashboard_instruction");
+                  await setDoc(docRef, { text: editText });
+                  setInstructionText(editText);
+                  setIsEditing(false);
+                }}
+              >
+                Save
+              </button>
+              <button
+                className="bg-gray-400 text-white px-3 py-1 rounded"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
+            {["Admin", "Super Admin"].includes(userData?.role) && (
+              <button
+                className="text-blue-600 underline"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit Instruction
+              </button>
+            )}
+          </>
+        )}
+        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @Suman Adhikari</h6>
       </div>
 
       {/* Table */}
@@ -553,12 +636,17 @@ export default function DailyActivityDashboard({ userData }) {
                   <td>{idx + 1}</td>
                   {KEYS.map((k) => (
                     <td key={k}>
-                      {isAdmin ? (
+                      {isAdmin &&
+                        editingRow &&
+                        editingRow.sheetId === rowObj._sheetId &&
+                        editingRow.rowIndex === rowObj._rowIndex ? (
                         <input
                           type="text"
                           className="daily-activity-input"
-                          value={rowObj[k] || ""}
-                          onChange={(e) => handleEdit(rowObj, k, e.target.value)}
+                          value={draftRow[k] || ""}
+                          onChange={(e) =>
+                            setDraftRow((d) => ({ ...d, [k]: e.target.value }))
+                          }
                         />
                       ) : (
                         rowObj[k] || ""
@@ -567,12 +655,39 @@ export default function DailyActivityDashboard({ userData }) {
                   ))}
                   {isAdmin && (
                     <td>
-                      <button
-                        className="daily-activity-btn daily-activity-btn-danger"
-                        onClick={() => handleDelete(rowObj)}
-                      >
-                        Delete
-                      </button>
+                      {editingRow &&
+                        editingRow.sheetId === rowObj._sheetId &&
+                        editingRow.rowIndex === rowObj._rowIndex ? (
+                        <>
+                          <button
+                            className="daily-activity-btn daily-activity-btn-primary"
+                            onClick={() => saveEdit(rowObj)}
+                          >
+                            Save
+                          </button>
+                          <button
+                            className="daily-activity-btn daily-activity-btn-secondary"
+                            onClick={cancelEdit}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="daily-activity-btn daily-activity-btn-secondary"
+                            onClick={() => startEdit(rowObj)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="daily-activity-btn daily-activity-btn-danger"
+                            onClick={() => handleDelete(rowObj)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
                     </td>
                   )}
                 </tr>
@@ -628,15 +743,24 @@ export default function DailyActivityDashboard({ userData }) {
                   setFilters((f) => ({ ...f, searchText: e.target.value }))
                 }
               />
-              <input
-                type="text"
-                className="daily-activity-input"
-                placeholder="Site name"
-                value={filters.siteName}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, siteName: e.target.value }))
-                }
-              />
+              {isAdmin ? (
+                <input
+                  type="text"
+                  className="daily-activity-input"
+                  placeholder="Site name"
+                  value={filters.siteName}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, siteName: e.target.value }))
+                  }
+                />
+              ) : (
+                <input
+                  type="text"
+                  className="daily-activity-input"
+                  value={userData?.site || userData?.siteName || ""}
+                  disabled
+                />
+              )}
               <input
                 type="date"
                 className="daily-activity-input"

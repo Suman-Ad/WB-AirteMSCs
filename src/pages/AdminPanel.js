@@ -16,6 +16,8 @@ const AdminPanel = ({ userData }) => {
   const [users, setUsers] = useState([]);
   const [userSiteFilter, setUserSiteFilter] = useState("");
   const [editingUserId, setEditingUserId] = useState(null);
+  const [cardFilter, setCardFilter] = useState("");
+
   const [roleCounts, setRoleCounts] = useState({
     "Super Admin": 0,
     "Admin": 0,
@@ -24,7 +26,68 @@ const AdminPanel = ({ userData }) => {
     "Total": 0
   });
   const [searchName, setSearchName] = useState("");
+  const [tempAdminDraft, setTempAdminDraft] = useState({
+    from: "",
+    to: ""
+  });
 
+  const validateTempAdminPeriod = (from, to) => {
+    if (!from || !to) return "From and To dates are required";
+
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+
+    if (fromDate > toDate) return "From date cannot be after To date";
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (toDate < today) return "To date cannot be in the past";
+
+    return null;
+  };
+
+  const assignTempAdmin = async (userId) => {
+    const error = validateTempAdminPeriod(
+      tempAdminDraft.from,
+      tempAdminDraft.to
+    );
+
+    if (error) {
+      alert(error);
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, "users", userId), {
+        isAdminAssigned: true,
+        adminAssignFrom: tempAdminDraft.from,
+        adminAssignTo: tempAdminDraft.to,
+      });
+
+      setTempAdminDraft({ from: "", to: "" });
+      fetchAllUsers();
+      alert("Temporary admin access assigned");
+    } catch (err) {
+      console.error("Temp admin assign failed", err);
+    }
+  };
+
+  const removeTempAdmin = async (userId) => {
+    if (!window.confirm("Remove temporary admin access?")) return;
+
+    try {
+      await updateDoc(doc(db, "users", userId), {
+        isAdminAssigned: false,
+        adminAssignFrom: "",
+        adminAssignTo: "",
+      });
+
+      fetchAllUsers();
+    } catch (err) {
+      console.error("Remove temp admin failed", err);
+    }
+  };
 
   const siteList = [
     "Andaman", "Asansol", "Berhampore", "DLF", "Globsyn",
@@ -37,6 +100,21 @@ const AdminPanel = ({ userData }) => {
     const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     setUsers(data);
     updateRoleCounts(data);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    data.forEach(async (u) => {
+      if (u.isAdminAssigned && u.adminAssignTo) {
+        const end = new Date(u.adminAssignTo);
+        if (end < today) {
+          await updateDoc(doc(db, "users", u.id), {
+            isAdminAssigned: false
+          });
+        }
+      }
+    });
+
   };
 
   const updateRoleCounts = (users) => {
@@ -122,6 +200,29 @@ const AdminPanel = ({ userData }) => {
     return userData.role === "Super Admin" && editingUserId === userId;
   };
 
+  const isTempAdminValid = (user) => {
+    if (!user.isAdminAssigned) return false;
+    if (!user.adminAssignFrom || !user.adminAssignTo) return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const from = new Date(user.adminAssignFrom);
+    const to = new Date(user.adminAssignTo);
+    to.setHours(23, 59, 59, 999);
+
+    return today >= from && today <= to;
+  };
+
+  const tempAdminCount = users.filter(
+    (u) => isTempAdminValid(u)
+  ).length;
+
+  const handleCardFilter = (filterKey) => {
+    setCardFilter((prev) => (prev === filterKey ? "" : filterKey));
+  };
+
+
   return (
     <div className="admin-panel">
       <h2 className="dashboard-header">🧑‍💻👁️ Admin User Control Panel</h2>
@@ -134,24 +235,52 @@ const AdminPanel = ({ userData }) => {
           <h3 className="admin-subtitle">👥 User Role Management</h3>
 
           {/* User Count Statistics */}
+
           <div className="user-stats-container">
-            <div className="user-stat-card total">
+            <div
+              className={`user-stat-card total ${cardFilter === "ALL" ? "active" : ""}`}
+              onClick={() => handleCardFilter("ALL")}
+            >
               <span className="stat-number">{roleCounts.Total}</span>
               <span className="stat-label">Total Users</span>
             </div>
-            <div className="user-stat-card super-admin">
+
+            <div
+              className={`user-stat-card super-admin ${cardFilter === "Super Admin" ? "active" : ""}`}
+              onClick={() => handleCardFilter("Super Admin")}
+            >
               <span className="stat-number">{roleCounts["Super Admin"]}</span>
               <span className="stat-label">Super Admins</span>
             </div>
-            <div className="user-stat-card admin">
+
+            <div
+              className={`user-stat-card admin ${cardFilter === "Admin" ? "active" : ""}`}
+              onClick={() => handleCardFilter("Admin")}
+            >
               <span className="stat-number">{roleCounts["Admin"]}</span>
               <span className="stat-label">Admins</span>
             </div>
-            <div className="user-stat-card super-user">
+
+            <div
+              className={`user-stat-card temp-admin ${cardFilter === "Temp Admin" ? "active" : ""}`}
+              onClick={() => handleCardFilter("Temp Admin")}
+            >
+              <span className="stat-number">{tempAdminCount}</span>
+              <span className="stat-label">Temp Admin</span>
+            </div>
+
+            <div
+              className={`user-stat-card super-user ${cardFilter === "Super User" ? "active" : ""}`}
+              onClick={() => handleCardFilter("Super User")}
+            >
               <span className="stat-number">{roleCounts["Super User"]}</span>
               <span className="stat-label">Super Users</span>
             </div>
-            <div className="user-stat-card user">
+
+            <div
+              className={`user-stat-card user ${cardFilter === "User" ? "active" : ""}`}
+              onClick={() => handleCardFilter("User")}
+            >
               <span className="stat-number">{roleCounts["User"]}</span>
               <span className="stat-label">Users</span>
             </div>
@@ -195,8 +324,11 @@ const AdminPanel = ({ userData }) => {
                   <th>Site ID</th>
                   <th>Site Name</th>
                   <th>Role</th>
+                  {(userData.role === "Admin" || userData.role === "Super Admin") && (
+                    <th>UID</th>
+                  )}
+                    <th>Actions</th>
 
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -207,6 +339,15 @@ const AdminPanel = ({ userData }) => {
                   .filter((user) =>
                     user.name?.toLowerCase().includes(searchName.toLowerCase())
                   )
+                  .filter((user) => {
+                    if (!cardFilter || cardFilter === "ALL") return true;
+
+                    if (cardFilter === "Temp Admin") {
+                      return isTempAdminValid(user);
+                    }
+
+                    return user.role === cardFilter;
+                  })
                   .map((user) => {
 
                     const { promote, demote } = getNextRoles(user.role);
@@ -263,9 +404,53 @@ const AdminPanel = ({ userData }) => {
                           ) : user.site}
                         </td>
                         <td data-label="Role">{user.role}</td>
-
+                        {(userData.role === "Admin" || userData.role === "Super Admin") && (
+                          <td data-label="UID">{user.uid}</td>
+                        )}
                         <td data-label="Actions">
                           <div className="action-buttons">
+                            {["Admin", "Super Admin"].includes(userData.role) && user.id !== userData.uid && (
+                              <div className="temp-admin-box">
+                                {user.isAdminAssigned ? (
+                                  <>
+                                    <span className="temp-admin-badge">
+                                      Temp Admin<br />
+                                      {user.adminAssignFrom} → {user.adminAssignTo}
+                                    </span>
+                                    <button
+                                      className="btn-demote"
+                                      onClick={() => removeTempAdmin(user.id)}
+                                    >
+                                      Remove
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <input
+                                      type="date"
+                                      value={tempAdminDraft.from}
+                                      onChange={(e) =>
+                                        setTempAdminDraft(d => ({ ...d, from: e.target.value }))
+                                      }
+                                    />
+                                    <input
+                                      type="date"
+                                      value={tempAdminDraft.to}
+                                      onChange={(e) =>
+                                        setTempAdminDraft(d => ({ ...d, to: e.target.value }))
+                                      }
+                                    />
+                                    <button
+                                      className="btn-promote"
+                                      onClick={() => assignTempAdmin(user.id)}
+                                    >
+                                      Temp Admin
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+
                             {userData.role === "Super Admin" && (
                               <button
                                 className={`btn-edit ${editingUserId === user.id ? 'btn-cancel' : ''}`}

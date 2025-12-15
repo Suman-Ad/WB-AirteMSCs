@@ -106,6 +106,15 @@ const AcDcRackDashboard = ({ userData }) => {
     // 🔹 Prepare Chart Data (by Equipment Location)
     const chartDataMap = {};
 
+    // 🔹 Derived filter options from loaded rackData
+    const siteOptions = Array.from(
+        new Set(rackData.map(d => d.siteName).filter(Boolean))
+    ).sort();
+
+    const locationOptions = Array.from(
+        new Set(rackData.map(d => d.equipmentLocation).filter(Boolean))
+    ).sort();
+
     // 🔹 Advanced Filter Logic
     // 🔹 Multi-field filter logic
     const filteredData = rackData.filter((d) => {
@@ -394,22 +403,30 @@ const AcDcRackDashboard = ({ userData }) => {
                                 userData?.role === "Super Admin" ||
                                 userData?.designation === "Vertiv CIH" ||
                                 userData?.designation === "Vertiv ZM") && (
-                                    <input
-                                        type="text"
-                                        placeholder="🏢 Site Name"
+                                    <select
                                         value={siteFilter}
                                         onChange={(e) => setSiteFilter(e.target.value)}
                                         style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
-                                    />
+                                    >
+                                        <option value="">🏢 Select Site</option>
+                                        {siteOptions.map(site => (
+                                            <option key={site} value={site}>{site}</option>
+                                        ))}
+                                    </select>
+
                                 )}
 
-                            <input
-                                type="text"
-                                placeholder="📍 Equipment Location"
+                            <select
                                 value={locationFilter}
                                 onChange={(e) => setLocationFilter(e.target.value)}
                                 style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
-                            />
+                            >
+                                <option value="">📍 Select Equipment Location</option>
+                                {locationOptions.map(loc => (
+                                    <option key={loc} value={loc}>{loc}</option>
+                                ))}
+                            </select>
+
 
                             <input
                                 type="text"
@@ -449,6 +466,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <option value="">⇨⚡ Select Power Type</option>
                                 <option value="AC">AC</option>
                                 <option value="DC">DC</option>
+                                <option value="AC+DC">AC+DC</option>
                             </select>
 
                             <select

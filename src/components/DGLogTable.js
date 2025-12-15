@@ -554,7 +554,7 @@ const DGLogTable = ({ userData }) => {
                           style={{ marginLeft: "8px", color: "red" }}
                           onClick={() => handleDelete(log.id)}
                         >
-                          Delete
+                          ❌
                         </button>
                       </td>
                     </>

@@ -16,6 +16,7 @@ export default function ActivityDashboard() {
     frequency: "All",
     performer: "All",
     category: "All",
+    asset: "All",     // ✅ NEW
     startDate: "",
     endDate: "",
   });
@@ -78,11 +79,17 @@ export default function ActivityDashboard() {
     if (filters.category !== "All")
       temp = temp.filter(d => d["Activity Category"] === filters.category);
 
+    if (filters.asset !== "All")
+      temp = temp.filter(
+        d => d["Asset Name"] === filters.asset   // 🔴 change column name here if needed
+      );
+
     if (filters.startDate && filters.endDate) {
       const start = new Date(filters.startDate);
       const end = new Date(filters.endDate);
       temp = temp.filter(d => new Date(d.Date) >= start && new Date(d.Date) <= end);
     }
+
 
     setFiltered(temp);
     calculateSummary(temp);
@@ -93,6 +100,7 @@ export default function ActivityDashboard() {
       frequency: "All",
       performer: "All",
       category: "All",
+      asset: "All",
       startDate: "",
       endDate: "",
     });
@@ -103,11 +111,26 @@ export default function ActivityDashboard() {
   if (!data.length) return <p style={{ textAlign: "center" }}>Loading dashboard...</p>;
 
   return (
-    <div style={{ padding: "30px" }}>
+    <div className="daily-log-container">
       <h1 style={{ textAlign: "center", marginBottom: "30px" }}>📊 Activity Summary Dashboard</h1>
 
       {/* Filter Section */}
       <div className="filters">
+        <div>
+          <label>Asset Name:</label>
+          <select
+            name="asset"
+            value={filters.asset}
+            onChange={handleFilterChange}
+          >
+            <option>All</option>
+            {[...new Set(data.map(d => d["Asset Name"]).filter(Boolean))]
+              .map(a => (
+                <option key={a}>{a}</option>
+              ))}
+          </select>
+        </div>
+
         <div>
           <label>Frequency:</label>
           <select name="frequency" value={filters.frequency} onChange={handleFilterChange}>

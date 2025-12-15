@@ -1,15 +1,14 @@
 // src/pages/IncidentDashboard.js
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, getDocs, query, where, orderBy, setDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, setDoc, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import '../assets/IncidentDashboard.css';
 import { Link, useNavigate } from 'react-router-dom';
 import { siteList } from "../config/sitelist";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-
-
+import { Button } from 'antd';
 
 
 const IncidentDashboard = ({ userData }) => {
@@ -160,9 +159,9 @@ const IncidentDashboard = ({ userData }) => {
     if (cached1) {
       setSummaryData(JSON.parse(cached1));
     }
-      if (cached) {
-        setIncidents(JSON.parse(cached));
-      }
+    if (cached) {
+      setIncidents(JSON.parse(cached));
+    }
   }, [filters]);
 
   const formatDate = (dateString) => {
@@ -185,9 +184,9 @@ const IncidentDashboard = ({ userData }) => {
       Site_ID: item.siteId || "",
       Site_Name: item.siteName || "",
       OEM_Partner: item.ompPartner || "",
-      Date: item. dateOfIncident || "",
-      Time: item. timeOfIncident || "",
-      SA_NSA: item.saNsa ||"",
+      Date: item.dateOfIncident || "",
+      Time: item.timeOfIncident || "",
+      SA_NSA: item.saNsa || "",
       Equipment_Category: item.equipmentCategory || "",
       Title: item.incidentTitle || "",
       Issue_Details: item.incidentDescription || "",
@@ -196,7 +195,7 @@ const IncidentDashboard = ({ userData }) => {
       Effect_Equipment_Details: item.effectedEquipmentDetails || "",
       Action_Taken: item.actionsTaken || "",
       RCA_Status: item.rcaStatus || "",
-      Ownership: item.ownership|| "",
+      Ownership: item.ownership || "",
       Reason_Category: item.reasonCategory || "",
       Real_Reason: item.realReason || "",
       Impact_Type: item.impactType || "",
@@ -204,7 +203,7 @@ const IncidentDashboard = ({ userData }) => {
       Closure_Date: item.closureDate || "",
       Clouser_Time: item.closureTime || "",
       Status: item.status || "",
-      MTTR : item.mttr || "",
+      MTTR: item.mttr || "",
       Learning: item.learningShared || "",
       Clouser_Remarks: item.closureRemarks || "",
       TT_Docket: item.ttDocketNo || "",
@@ -221,10 +220,29 @@ const IncidentDashboard = ({ userData }) => {
     saveAs(data, `Incident_Report_${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
+  const handleDeleteIncident = async (incidentId) => {
+    const confirmDelete = window.confirm(
+      "⚠️ Are you sure you want to permanently delete this incident?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await deleteDoc(doc(db, "incidents", incidentId));
+
+      // Update UI instantly
+      setIncidents(prev => prev.filter(item => item.id !== incidentId));
+
+      alert("✅ Incident deleted successfully");
+    } catch (error) {
+      console.error("Delete failed:", error);
+      alert("❌ Failed to delete incident");
+    }
+  };
 
   return (
     <div className="dhr-dashboard-container">
-      <h1 style={{textAlign:"center", paddingBottom:"20px"}}>
+      <h1 style={{ textAlign: "center", paddingBottom: "20px" }}>
         <strong>🚨 Incident Dashboard</strong>
       </h1>
 
@@ -408,7 +426,7 @@ const IncidentDashboard = ({ userData }) => {
         </div>
       )}
 
-      
+
       {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User") && (
         <button className="pm-manage-btn" onClick={downloadExcel}>
           ⬇️ Download Excel
@@ -438,6 +456,9 @@ const IncidentDashboard = ({ userData }) => {
                 <th>Status</th>
                 <th>RCA Status</th>
                 <th>RCA File</th>
+                {(userData.role === "Admin" || userData.role === "Super Admin" || userData.role === "Super User") &&
+                  <th>Action</th>
+                }
               </tr>
             </thead>
             <tbody>
@@ -458,11 +479,21 @@ const IncidentDashboard = ({ userData }) => {
                   <td>{incident.status}</td>
                   <td>{incident.rcaStatus}</td>
                   <td>
-                    {incident.rcaFileUrl?
+                    {incident.rcaFileUrl ?
                       <Link to={incident.rcaFileUrl}>
                         👁️‍🗨️
                       </Link> : "N/A"}
                   </td>
+                  {(userData.role === "Admin" || userData.role === "Super Admin" || userData.role === "Super User") &&
+                    <td>
+                      <button onClick={(e) => {
+                        e.stopPropagation(); // 🔴 important
+                        handleDeleteIncident(incident.id);
+                      }}>
+                        ❌
+                      </button>
+                    </td>
+                  }
                 </tr>
               ))}
             </tbody>

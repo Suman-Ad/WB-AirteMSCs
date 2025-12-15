@@ -285,6 +285,20 @@ select {
   border-top: 4px solid #f39c12;
 }
 
+.user-stat-card {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.user-stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.user-stat-card.active {
+  box-shadow: 0 0 0 3px #2563eb;
+}
+
+
 @media (max-width: 768px) {
   .user-stats-container {
     gap: 10px;

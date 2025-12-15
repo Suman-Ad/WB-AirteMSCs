@@ -542,7 +542,7 @@ const RackTrackerForm = ({ userData }) => {
                             const list = [...rackEquipments];
                             list[idx] = {
                               ...list[idx],
-                              remarks: "Model No:- \nSl. No:- \nRemarks:- "
+                              remarks: "Make:- \nModel No:- \nSl. No:-"
                             };
                             setRackEquipments(list);
                           }
@@ -564,7 +564,7 @@ const RackTrackerForm = ({ userData }) => {
                     {/* Delete Button */}
                     <p
                       type="button"
-                      style={{ color: "#dc2626", fontSize: "0.875rem", width: "fit-content", cursor: "pointer", height:"100px", alignContent:"center", background:"rgba(224, 44, 44, 1)", borderTopRightRadius:"9px", borderBottomRightRadius:"9px" }}
+                      style={{ color: "#dc2626ff", fontSize: "0.875rem", width: "fit-content", cursor: "pointer", height:"100px", alignContent:"center", background:"rgba(224, 44, 44, 0.73)", borderTopRightRadius:"9px", borderBottomRightRadius:"9px" }}
                       onClick={() => {
                         const list = rackEquipments.filter((_, i) => i !== idx);
                         setRackEquipments(
