@@ -1,7 +1,7 @@
 // src/pages/ExcelLiveEditPage.js
 import React, { useEffect, useState } from "react";
 import { Tabs, Tab } from "@mui/material";
-import ExcelSheetEditor, { sheetTemplates } from "../components/ExcelSheetEditor";
+import ExcelSheetEditor, { sheetTemplates, fetchLatestDailyDGLog  }  from "../components/ExcelSheetEditor";
 import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import "../assets/ExcelLiveEditPage.css";
@@ -72,6 +72,7 @@ const ExcelLiveEditPage = ({ userData }) => {
 
     fetchSheet();
   }, [siteId, dateId]);
+  
 
   const handleSheetUpdate = async (key, rows) => {
     if (!siteId) return;

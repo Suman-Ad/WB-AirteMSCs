@@ -48,6 +48,7 @@ const Login = ({ setUserData }) => {
           email: data.email,
           designation: data.designation,
           photoURL: data.photoURL || "",
+          isAdminAssigned : data.isAdminAssigned,
         };
         localStorage.setItem("userData", JSON.stringify(userData));
         setUserData(userData);

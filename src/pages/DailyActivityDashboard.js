@@ -108,6 +108,7 @@ export default function DailyActivityDashboard({ userData }) {
   const isAdmin =
     userData?.role === "Super Admin" ||
     userData?.role === "Admin" ||
+    userData.isAdminAssigned ||
     isAdminAssignmentValid(userData) ||
     userData?.designation === "Vertiv Site Infra Engineer" ||
     userData?.designation === "Vertiv CIH" ||
@@ -531,7 +532,7 @@ export default function DailyActivityDashboard({ userData }) {
           {isAdmin ? "Admin view: all sites" : "User view: your site only"}
         </div>
         <p onClick={() => navigate("/activity-dashboard")} style={{ cursor: "pointer" }}>Activity Matrix</p>
-        {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.role === "User") && (
+        {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin" ) && (
           <Link to="/daily-activity-management"><span className="pm-manage-btn">🚧🛠️ Manage Daily {userData?.site} Activity</span></Link>
         )}
       </div>

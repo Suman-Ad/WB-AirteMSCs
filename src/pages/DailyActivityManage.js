@@ -9,6 +9,7 @@ import {
   updateDoc,
   deleteDoc,
   serverTimestamp,
+  query, where
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { Link } from "react-router-dom";
@@ -37,20 +38,20 @@ import "../assets/daily-activity.css";
 */
 
 const DEFAULT_EQUIP_LIST = [
-  "ACS","Air Conditioner","BMS","CCTV","Comfort AC","Diesel Generator","Earth Pit","Exhust Fan",
-  "FAS","FSS","HT Panel","Inverter","LT Panel","PAS","PFE","SMPS","SMPS BB","Solar System",
-  "UPS","UPS BB","DCDB/ACDB","Transformer"
+  "ACS", "Air Conditioner", "BMS", "CCTV", "Comfort AC", "Diesel Generator", "Earth Pit", "Exhust Fan",
+  "FAS", "FSS", "HT Panel", "Inverter", "LT Panel", "PAS", "PFE", "SMPS", "SMPS BB", "Solar System",
+  "UPS", "UPS BB", "DCDB/ACDB", "Transformer"
 ];
 
 const FREQUENCIES = ["monthly", "quarterly", "half-yearly", "yearly"];
 
-function pad2(n){ return n < 10 ? `0${n}` : `${n}`; }
-function todayISO(){ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-function siteDocId(region, circle, site, year){ return `${(region||"")}_${(circle||"")}_${(site||"")}_${year}`.replace(/\s+/g,"_"); }
-function pmDocId(region, circle, site, year){ return `${(region||"")}${"__"}${(circle||"")}${"__"}${(site||"")}${"__"}${year}`.replace(/\s+/g,"_"); }
-function genId(){ return `${Date.now()}_${Math.random().toString(36).slice(2,8)}`; }
-function monthOfISO(iso){ if(!iso) return null; const p=iso.split("-"); return parseInt(p[1],10); }
-function dayOfISO(iso){ if(!iso) return null; const p=iso.split("-"); return parseInt(p[2],10); }
+function pad2(n) { return n < 10 ? `0${n}` : `${n}`; }
+function todayISO() { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function siteDocId(region, circle, site, year) { return `${(region || "")}_${(circle || "")}_${(site || "")}_${year}`.replace(/\s+/g, "_"); }
+function pmDocId(region, circle, site, year) { return `${(region || "")}${"__"}${(circle || "")}${"__"}${(site || "")}${"__"}${year}`.replace(/\s+/g, "_"); }
+function genId() { return `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
+function monthOfISO(iso) { if (!iso) return null; const p = iso.split("-"); return parseInt(p[1], 10); }
+function dayOfISO(iso) { if (!iso) return null; const p = iso.split("-"); return parseInt(p[2], 10); }
 
 export default function DailyActivityManage({ userData }) {
   // selection
@@ -77,33 +78,16 @@ export default function DailyActivityManage({ userData }) {
   // permissions
   const isSuperAdmin = userData?.role === "Super Admin";
   const isAdmin = isSuperAdmin || userData?.role === "Admin";
-  const [isAssignedUser, setIsAssignedUser] = useState(false);
-  const canEdit = isAdmin || isAssignedUser;
+  const isAssignedUser = userData?.isAdminAssigned;
+  const canEdit = isAdmin || isAssignedUser || isSuperAdmin;
 
   // equipment list
   const [equipmentList, setEquipmentList] = useState(DEFAULT_EQUIP_LIST);
 
-  // load admin_assignments to detect assigned user
-  useEffect(() => {
-    async function loadAssigns(){
-      try{
-        const snap = await getDocs(collection(db, "admin_assignments"));
-        let found = false;
-        snap.forEach(s=>{
-          const d = s.data() || {};
-          if(Array.isArray(d.assignedUsers) && d.assignedUsers.includes(userData?.uid)) found = true;
-        });
-        setIsAssignedUser(found);
-      }catch(e){
-        console.warn("admin_assignments load failed", e);
-      }
-    }
-    loadAssigns();
-  }, [userData?.uid]);
 
   // load site hierarchy from assets_register if available (best-effort)
   useEffect(() => {
-    async function loadHierarchy(){
+    async function loadHierarchy() {
       setLoadingHierarchy(true);
       try {
         const snap = await getDocs(collection(db, "assets_register"));
@@ -122,7 +106,7 @@ export default function DailyActivityManage({ userData }) {
         } else {
           setHierarchy(prev => prev);
         }
-      } catch(e) {
+      } catch (e) {
         console.warn("Failed to load assets_register", e);
       } finally {
         setLoadingHierarchy(false);
@@ -133,18 +117,18 @@ export default function DailyActivityManage({ userData }) {
 
   // load pm doc for selected site/year
   useEffect(() => {
-    async function loadPm(){
-      if(!region || !circle || !site || !year){ setPmDoc(null); return; }
+    async function loadPm() {
+      if (!region || !circle || !site || !year) { setPmDoc(null); return; }
       setLoadingPm(true);
       const id = pmDocId(region, circle, site, year);
       try {
         const snap = await getDoc(doc(db, "pm_registers", id));
-        if(snap.exists()){
+        if (snap.exists()) {
           const d = snap.data() || {};
           // normalize equipmentSchedules
           d.equipmentSchedules = d.equipmentSchedules || {};
-          Object.keys(d.equipmentSchedules).forEach(eq=>{
-            if(!Array.isArray(d.equipmentSchedules[eq])) d.equipmentSchedules[eq] = [];
+          Object.keys(d.equipmentSchedules).forEach(eq => {
+            if (!Array.isArray(d.equipmentSchedules[eq])) d.equipmentSchedules[eq] = [];
           });
           setPmDoc(d);
         } else {
@@ -154,7 +138,7 @@ export default function DailyActivityManage({ userData }) {
             equipmentSchedules: {}
           });
         }
-      } catch(e){
+      } catch (e) {
         console.error("loadPm error", e);
         setPmDoc({
           region, circle, site, year,
@@ -170,18 +154,18 @@ export default function DailyActivityManage({ userData }) {
 
   // load daily sheet for selected date
   useEffect(() => {
-    async function loadDaily(){
-      if(!site) { setDailyRows([]); return; }
+    async function loadDaily() {
+      if (!site) { setDailyRows([]); return; }
       setLoadingDaily(true);
-      const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g,"_");
+      const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
       try {
         const snap = await getDoc(doc(db, "daily_activity_sheets", docId));
-        if(snap.exists()){
+        if (snap.exists()) {
           setDailyRows(snap.data().rows || []);
         } else {
           setDailyRows([]);
         }
-      } catch(e){
+      } catch (e) {
         console.error("loadDaily error", e);
         setDailyRows([]);
       } finally {
@@ -193,20 +177,20 @@ export default function DailyActivityManage({ userData }) {
 
   // helpers for modifying pmDoc locally
   function ensureEquipmentSlot(equipment) {
-    if(!pmDoc) return;
-    setPmDoc(prev=>{
+    if (!pmDoc) return;
+    setPmDoc(prev => {
       const copy = { ...(prev || {}) };
       copy.equipmentSchedules = copy.equipmentSchedules || {};
-      if(!Array.isArray(copy.equipmentSchedules[equipment])) copy.equipmentSchedules[equipment] = [];
+      if (!Array.isArray(copy.equipmentSchedules[equipment])) copy.equipmentSchedules[equipment] = [];
       return copy;
     });
   }
 
   function addSchedule(equipment, payload = null) {
-    if(!pmDoc) return;
+    if (!pmDoc) return;
     const entry = payload || { id: genId(), frequency: "monthly", months: [1], dayOfMonth: 1, vendor: "", notes: "" };
-    setPmDoc(prev=>{
-      const copy = { ...(prev||{}) };
+    setPmDoc(prev => {
+      const copy = { ...(prev || {}) };
       copy.equipmentSchedules = copy.equipmentSchedules || {};
       const arr = Array.isArray(copy.equipmentSchedules[equipment]) ? [...copy.equipmentSchedules[equipment]] : [];
       arr.push(entry);
@@ -216,13 +200,13 @@ export default function DailyActivityManage({ userData }) {
   }
 
   function updateSchedule(equipment, entryId, field, value) {
-    if(!pmDoc) return;
-    setPmDoc(prev=>{
-      const copy = { ...(prev||{}) };
+    if (!pmDoc) return;
+    setPmDoc(prev => {
+      const copy = { ...(prev || {}) };
       copy.equipmentSchedules = copy.equipmentSchedules || {};
       const arr = Array.isArray(copy.equipmentSchedules[equipment]) ? [...copy.equipmentSchedules[equipment]] : [];
-      const idx = arr.findIndex(x=>x.id === entryId);
-      if(idx >= 0){
+      const idx = arr.findIndex(x => x.id === entryId);
+      if (idx >= 0) {
         arr[idx] = { ...arr[idx], [field]: value };
       }
       copy.equipmentSchedules[equipment] = arr;
@@ -231,20 +215,20 @@ export default function DailyActivityManage({ userData }) {
   }
 
   function removeSchedule(equipment, entryId) {
-    if(!pmDoc) return;
-    setPmDoc(prev=>{
-      const copy = { ...(prev||{}) };
+    if (!pmDoc) return;
+    setPmDoc(prev => {
+      const copy = { ...(prev || {}) };
       copy.equipmentSchedules = copy.equipmentSchedules || {};
       const arr = Array.isArray(copy.equipmentSchedules[equipment]) ? [...copy.equipmentSchedules[equipment]] : [];
-      copy.equipmentSchedules[equipment] = arr.filter(x=>x.id !== entryId);
+      copy.equipmentSchedules[equipment] = arr.filter(x => x.id !== entryId);
       return copy;
     });
   }
 
   // Save pmDoc to Firestore (create/update)
   async function savePmDocToFirestore() {
-    if(!canEdit) { alert("No permission to save"); return; }
-    if(!pmDoc) return;
+    if (!canEdit) { alert("No permission to save"); return; }
+    if (!pmDoc) return;
     setSaving(true);
     try {
       const id = pmDocId(pmDoc.region, pmDoc.circle, pmDoc.site, pmDoc.year);
@@ -261,8 +245,8 @@ export default function DailyActivityManage({ userData }) {
       alert("PM register saved.");
       // reload
       const snap = await getDoc(doc(db, "pm_registers", id));
-      if(snap.exists()) setPmDoc(snap.data());
-    } catch(e){
+      if (snap.exists()) setPmDoc(snap.data());
+    } catch (e) {
       console.error("savePmDoc error", e);
       alert("Save failed. See console.");
     } finally {
@@ -272,9 +256,9 @@ export default function DailyActivityManage({ userData }) {
 
   // Delete entire pm doc
   async function deletePmDocFromFirestore() {
-    if(!canEdit) { alert("No permission"); return; }
-    if(!pmDoc) return;
-    if(!window.confirm("Delete entire PM register for this site & year? This cannot be undone.")) return;
+    if (!canEdit) { alert("No permission"); return; }
+    if (!pmDoc) return;
+    if (!window.confirm("Delete entire PM register for this site & year? This cannot be undone.")) return;
     try {
       const id = pmDocId(pmDoc.region, pmDoc.circle, pmDoc.site, pmDoc.year);
       await deleteDoc(doc(db, "pm_registers", id));
@@ -284,7 +268,7 @@ export default function DailyActivityManage({ userData }) {
         equipmentSchedules: {}
       });
       alert("Deleted.");
-    } catch(e){
+    } catch (e) {
       console.error("deletePmDoc error", e);
       alert("Delete failed.");
     }
@@ -295,18 +279,18 @@ export default function DailyActivityManage({ userData }) {
   // - if entry.months includes the month (1..12) AND entry.dayOfMonth equals day -> include
   // - OR if entry has scheduleDates array (YYYY-MM-DD strings) -> check includes selectedDate
   async function addScheduledItemsToDailySheet() {
-    if(!pmDoc) return alert("No PM template loaded.");
+    if (!pmDoc) return alert("No PM template loaded.");
     const month = monthOfISO(selectedDate);
     const day = dayOfISO(selectedDate);
-    if(!month || !day) return alert("Invalid date selected.");
+    if (!month || !day) return alert("Invalid date selected.");
     const matches = [];
-    Object.entries(pmDoc.equipmentSchedules || {}).forEach(([eq, arr])=>{
-      (Array.isArray(arr) ? arr : []).forEach(entry=>{
+    Object.entries(pmDoc.equipmentSchedules || {}).forEach(([eq, arr]) => {
+      (Array.isArray(arr) ? arr : []).forEach(entry => {
         const months = Array.isArray(entry.months) ? entry.months : [];
         const scheduleDates = Array.isArray(entry.scheduleDates) ? entry.scheduleDates : [];
         const matchesByMonths = months.length ? months.includes(month) && (entry.dayOfMonth ? entry.dayOfMonth === day : true) : false;
         const matchesByDates = scheduleDates.length ? scheduleDates.includes(selectedDate) : false;
-        if(matchesByMonths || matchesByDates){
+        if (matchesByMonths || matchesByDates) {
           matches.push({
             nodeName: eq,
             activityDetails: `${entry.pmType || "PM"} scheduled (${entry.frequency || entry.pmType || "scheduled"})`,
@@ -319,11 +303,11 @@ export default function DailyActivityManage({ userData }) {
             coreOpsHead: "NA",
             fiberOpsHead: "NA",
             crqNo: "CRQ00000",
-            activityStartTime: entry.activityStartTime && entry.activityStartTime.trim() !== "" 
-              ? entry.activityStartTime 
+            activityStartTime: entry.activityStartTime && entry.activityStartTime.trim() !== ""
+              ? entry.activityStartTime
               : "10:00 AM", // ✅ Default Start Time
-            activityEndTime: entry.activityEndTime && entry.activityEndTime.trim() !== "" 
-              ? entry.activityEndTime 
+            activityEndTime: entry.activityEndTime && entry.activityEndTime.trim() !== ""
+              ? entry.activityEndTime
               : "06:00 PM", // ✅ Default End Time
             createdFromPmId: entry.id || null,
             pmEntry: entry,
@@ -332,22 +316,22 @@ export default function DailyActivityManage({ userData }) {
       });
     });
 
-    if(matches.length === 0) {
+    if (matches.length === 0) {
       alert("No scheduled PM items for selected date.");
       return;
     }
 
     // Merge into existing dailyRows, avoid duplicates by nodeName + pmEntry.id
     const merged = [...dailyRows];
-    matches.forEach(m=>{
+    matches.forEach(m => {
       const exists = merged.some(r => (r.nodeName === m.nodeName) && (r.createdFromPmId && r.createdFromPmId === m.createdFromPmId));
-      if(!exists){
+      if (!exists) {
         merged.push(m);
       }
     });
 
     // save to daily_activity_sheets
-    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g,"_");
+    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
     try {
       await setDoc(doc(db, "daily_activity_sheets", docId), {
         siteId: userData?.siteId || site,
@@ -359,7 +343,7 @@ export default function DailyActivityManage({ userData }) {
       }, { merge: true });
       setDailyRows(merged);
       alert(`Added ${matches.length} scheduled item(s) to daily sheet.`);
-    } catch(e){
+    } catch (e) {
       console.error("addScheduledItemsToDailySheet error", e);
       alert("Failed to add scheduled items.");
     }
@@ -369,7 +353,7 @@ export default function DailyActivityManage({ userData }) {
   async function updateDailyRow(index, key, value) {
     const updated = [...dailyRows];
     updated[index] = { ...(updated[index] || {}), [key]: value };
-    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g,"_");
+    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
     try {
       await setDoc(doc(db, "daily_activity_sheets", docId), {
         siteId: userData?.siteId || site,
@@ -380,11 +364,11 @@ export default function DailyActivityManage({ userData }) {
         lastUpdatedAt: serverTimestamp()
       }, { merge: true });
       setDailyRows(updated);
-    } catch(e){ console.error("updateDailyRow", e); alert("Save failed"); }
+    } catch (e) { console.error("updateDailyRow", e); alert("Save failed"); }
   }
   async function deleteDailyRow(index) {
-    const updated = dailyRows.filter((_,i)=>i!==index);
-    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g,"_");
+    const updated = dailyRows.filter((_, i) => i !== index);
+    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
     try {
       await setDoc(doc(db, "daily_activity_sheets", docId), {
         siteId: userData?.siteId || site,
@@ -395,12 +379,12 @@ export default function DailyActivityManage({ userData }) {
         lastUpdatedAt: serverTimestamp()
       }, { merge: true });
       setDailyRows(updated);
-    } catch(e){ console.error("deleteDailyRow", e); alert("Delete failed"); }
+    } catch (e) { console.error("deleteDailyRow", e); alert("Delete failed"); }
   }
 
   // UI helpers
-  const equipmentKeys = useMemo(()=> {
-    if(!pmDoc || !pmDoc.equipmentSchedules) return DEFAULT_EQUIP_LIST;
+  const equipmentKeys = useMemo(() => {
+    if (!pmDoc || !pmDoc.equipmentSchedules) return DEFAULT_EQUIP_LIST;
     const keys = Array.from(new Set([...Object.keys(pmDoc.equipmentSchedules || {}), ...DEFAULT_EQUIP_LIST]));
     return keys;
   }, [pmDoc]);
@@ -410,31 +394,31 @@ export default function DailyActivityManage({ userData }) {
       <div className="daily-activity-header">
         <h1 className="dashboard-header">
           <strong>🚧🛠️ Daily Activity Manage (PM Register integration)</strong>
-        </h1> 
+        </h1>
         <div className="daily-activity-subtitle">Admins / assigned users maintain PM registers. Site users add scheduled PM to daily sheet.</div>
       </div>
 
-      {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.role === "User") && (
-                      <Link to="/pm-register"><span className="pm-manage-btn">📜Manage PM Register</span></Link>
-                    )}
+      {(userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.isAdminAssigned || userData.designation === "Vertiv CIH" || userData.designation === "Vertiv ZM") && (
+        <Link to="/pm-register"><span className="pm-manage-btn">📜Manage PM Register</span></Link>
+      )}
 
       {/* selection row */}
       <div className="daily-activity-toolbar" style={{ alignItems: "center", gap: 8 }}>
-        <input className="daily-activity-input" placeholder="Region" value={region} onChange={(e)=>setRegion(e.target.value)} style={{ width: 140 }} />
-        <input className="daily-activity-input" placeholder="Circle" value={circle} onChange={(e)=>setCircle(e.target.value)} style={{ width: 140 }} />
-        <input className="daily-activity-input" placeholder="Site" value={site} onChange={(e)=>setSite(e.target.value)} style={{ width: 220 }} />
-        <input className="daily-activity-input" type="number" min="2000" max="2100" value={year} onChange={(e)=>setYear(parseInt(e.target.value || String(new Date().getFullYear()),10))} style={{ width: 110 }} />
+        <input className="daily-activity-input" placeholder="Region" value={region} onChange={(e) => setRegion(e.target.value)} style={{ width: 140 }} />
+        <input className="daily-activity-input" placeholder="Circle" value={circle} onChange={(e) => setCircle(e.target.value)} style={{ width: 140 }} />
+        <input className="daily-activity-input" placeholder="Site" value={site} onChange={(e) => setSite(e.target.value)} style={{ width: 220 }} />
+        <input className="daily-activity-input" type="number" min="2000" max="2100" value={year} onChange={(e) => setYear(parseInt(e.target.value || String(new Date().getFullYear()), 10))} style={{ width: 110 }} />
         <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
           // reload pm doc (useEffect covers it) — but we force re-fetch
-          if(!region || !circle || !site) return alert("Select region, circle & site");
-          (async ()=> {
+          if (!region || !circle || !site) return alert("Select region, circle & site");
+          (async () => {
             setLoadingPm(true);
             try {
               const id = pmDocId(region, circle, site, year);
               const snap = await getDoc(doc(db, "pm_registers", id));
-              if(snap.exists()) setPmDoc(snap.data());
+              if (snap.exists()) setPmDoc(snap.data());
               else setPmDoc({ region, circle, site, year, createdBy: userData?.uid || null, equipmentSchedules: {} });
-            } catch(e){ console.error(e); alert("Load failed"); } finally { setLoadingPm(false); }
+            } catch (e) { console.error(e); alert("Load failed"); } finally { setLoadingPm(false); }
           })();
         }}>Load PM Register</button>
 
@@ -460,8 +444,8 @@ export default function DailyActivityManage({ userData }) {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ fontWeight: 600 }}>{eq}</div>
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button className="daily-activity-btn daily-activity-btn-secondary" onClick={()=>ensureEquipmentSlot(eq)} disabled={!canEdit}>Ensure</button>
-                        <button className="daily-activity-btn daily-activity-btn-primary" onClick={()=>addSchedule(eq)} disabled={!canEdit}>+ Add Schedule</button>
+                        <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => ensureEquipmentSlot(eq)} disabled={!canEdit}>Ensure</button>
+                        <button className="daily-activity-btn daily-activity-btn-primary" onClick={() => addSchedule(eq)} disabled={!canEdit}>+ Add Schedule</button>
                       </div>
                     </div>
 
@@ -475,32 +459,32 @@ export default function DailyActivityManage({ userData }) {
                             <div style={{ fontSize: 12, color: "#444" }}>{entry.notes || ""}</div>
                           </div>
                           <div>
-                            <label style={{ fontSize:12, color:"#666" }}>Frequency</label>
-                            <select className="daily-activity-select" value={entry.frequency || "monthly"} onChange={(e)=>updateSchedule(eq, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
+                            <label style={{ fontSize: 12, color: "#666" }}>Frequency</label>
+                            <select className="daily-activity-select" value={entry.frequency || "monthly"} onChange={(e) => updateSchedule(eq, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
                               {FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
                             </select>
                           </div>
                           <div>
-                            <label style={{ fontSize:12, color:"#666" }}>Months (comma separated)</label>
-                            <input className="daily-activity-input" value={(entry.months || []).join(",")} onChange={(e)=>{
-                              const months = (e.target.value||"").split(/[,\s]+/).map(x=>parseInt(x,10)).filter(n=>!isNaN(n) && n>=1 && n<=12);
-                              updateSchedule(eq, entry.id, "months", Array.from(new Set(months)).sort((a,b)=>a-b));
+                            <label style={{ fontSize: 12, color: "#666" }}>Months (comma separated)</label>
+                            <input className="daily-activity-input" value={(entry.months || []).join(",")} onChange={(e) => {
+                              const months = (e.target.value || "").split(/[,\s]+/).map(x => parseInt(x, 10)).filter(n => !isNaN(n) && n >= 1 && n <= 12);
+                              updateSchedule(eq, entry.id, "months", Array.from(new Set(months)).sort((a, b) => a - b));
                             }} disabled={!canEdit} />
                             <div style={{ fontSize: 11, color: "#666" }}>{(entry.months || []).length ? `Months: ${(entry.months || []).join(",")}` : "No months set"}</div>
                           </div>
                           <div style={{ textAlign: "right" }}>
                             <div style={{ marginBottom: 6 }}>
                               <label style={{ display: "block", fontSize: 12, color: "#666" }}>Day (1-31)</label>
-                              <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1} onChange={(e)=>updateSchedule(eq, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value||"1",10))))} disabled={!canEdit} />
+                              <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1} onChange={(e) => updateSchedule(eq, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1", 10))))} disabled={!canEdit} />
                             </div>
                             <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                              <button className="daily-activity-btn daily-activity-btn-secondary" onClick={()=>{
+                              <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
                                 // quick toggle pmType between In-House and Vendor
                                 updateSchedule(eq, entry.id, "pmType", entry.pmType === "Vendor" ? "In-House" : "Vendor");
                               }} disabled={!canEdit}>Toggle Type</button>
-                              <button className="daily-activity-btn daily-activity-btn-danger" onClick={()=>{
-                                if(!canEdit) return;
-                                if(!window.confirm("Remove this schedule entry?")) return;
+                              <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => {
+                                if (!canEdit) return;
+                                if (!window.confirm("Remove this schedule entry?")) return;
                                 removeSchedule(eq, entry.id);
                               }} disabled={!canEdit}>Remove</button>
                             </div>
@@ -521,16 +505,16 @@ export default function DailyActivityManage({ userData }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div style={{ fontWeight: 700 }}>Daily Sheet — {site} — {selectedDate}</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input type="date" className="daily-activity-date-picker" value={selectedDate} onChange={(e)=>setSelectedDate(e.target.value)} />
-            <button className="daily-activity-btn daily-activity-btn-secondary" onClick={()=> {
+            <input type="date" className="daily-activity-date-picker" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+            <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
               // reload daily
-              (async ()=> {
+              (async () => {
                 setLoadingDaily(true);
                 try {
-                  const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g,"_");
+                  const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
                   const snap = await getDoc(doc(db, "daily_activity_sheets", docId));
                   setDailyRows(snap.exists() ? snap.data().rows || [] : []);
-                } catch(e){ console.error(e); } finally { setLoadingDaily(false); }
+                } catch (e) { console.error(e); } finally { setLoadingDaily(false); }
               })();
             }}>Reload</button>
 
@@ -564,23 +548,23 @@ export default function DailyActivityManage({ userData }) {
                 <tr><td colSpan="14" className="daily-activity-empty">No rows for this date</td></tr>
               ) : (dailyRows || []).map((r, idx) => (
                 <tr key={idx}>
-                  <td>{idx+1}</td>
+                  <td>{idx + 1}</td>
                   <td>
-                    <input className="daily-activity-input" value={r.nodeName || ""} onChange={(e)=>updateDailyRow(idx, "nodeName", e.target.value)} />
+                    <input className="daily-activity-input" value={r.nodeName || ""} onChange={(e) => updateDailyRow(idx, "nodeName", e.target.value)} />
                   </td>
                   <td>
-                    <input className="daily-activity-input" value={r.activityDetails || ""} onChange={(e)=>updateDailyRow(idx, "activityDetails", e.target.value)} />
+                    <input className="daily-activity-input" value={r.activityDetails || ""} onChange={(e) => updateDailyRow(idx, "activityDetails", e.target.value)} />
                   </td>
                   {/* Activity Type dropdown */}
                   <td>
-                    <select className="daily-activity-select" value={r.activityType || "Major"} onChange={(e)=>updateDailyRow(idx, "activityType", e.target.value)}>
+                    <select className="daily-activity-select" value={r.activityType || "Major"} onChange={(e) => updateDailyRow(idx, "activityType", e.target.value)}>
                       <option value="Major">Major</option>
                       <option value="Minor">Minor</option>
                     </select>
                   </td>
                   {/* Site Category dropdown */}
                   <td>
-                    <select className="daily-activity-select" value={r.siteCategory || "Super Critical"} onChange={(e)=>updateDailyRow(idx, "siteCategory", e.target.value)}>
+                    <select className="daily-activity-select" value={r.siteCategory || "Super Critical"} onChange={(e) => updateDailyRow(idx, "siteCategory", e.target.value)}>
                       <option value="Super Critical">Super Critical</option>
                       <option value="Critical">Critical</option>
                       <option value="Major">Major</option>
@@ -588,7 +572,7 @@ export default function DailyActivityManage({ userData }) {
                   </td>
                   {/* Approval Required dropdown */}
                   <td>
-                    <select className="daily-activity-select" value={r.approvalRequire || "CIH"} onChange={(e)=>updateDailyRow(idx, "approvalRequire", e.target.value)}>
+                    <select className="daily-activity-select" value={r.approvalRequire || "CIH"} onChange={(e) => updateDailyRow(idx, "approvalRequire", e.target.value)}>
                       <option value="CIH">CIH</option>
                       <option value="Central Infra">Central Infra</option>
                       <option value="RAN Ops Head">RAN Ops Head</option>
@@ -597,9 +581,9 @@ export default function DailyActivityManage({ userData }) {
                     </select>
                   </td>
                   {/* Individual approvals */}
-                  {["cih","centralInfra","ranOpsHead","coreOpsHead","fiberOpsHead"].map(col => (
+                  {["cih", "centralInfra", "ranOpsHead", "coreOpsHead", "fiberOpsHead"].map(col => (
                     <td key={col}>
-                      <select className="daily-activity-select" value={r[col] || "NA"} onChange={(e)=>updateDailyRow(idx, col, e.target.value)}>
+                      <select className="daily-activity-select" value={r[col] || "NA"} onChange={(e) => updateDailyRow(idx, col, e.target.value)}>
                         <option value="NA">NA</option>
                         <option value="Y">Y</option>
                         <option value="N">N</option>
@@ -622,11 +606,11 @@ export default function DailyActivityManage({ userData }) {
                     </datalist>
                   </td>
                   {/* Start/End time */}
-                  <td><input className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e)=>updateDailyRow(idx, "activityStartTime", e.target.value)} /></td>
-                  <td><input className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e)=>updateDailyRow(idx, "activityEndTime", e.target.value)} /></td>
+                  <td><input className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e) => updateDailyRow(idx, "activityStartTime", e.target.value)} /></td>
+                  <td><input className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e) => updateDailyRow(idx, "activityEndTime", e.target.value)} /></td>
                   {/* Delete */}
                   <td>
-                    <button className="daily-activity-btn daily-activity-btn-danger" onClick={()=>deleteDailyRow(idx)}>Delete</button>
+                    <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => deleteDailyRow(idx)}>Delete</button>
                   </td>
                 </tr>
               ))}

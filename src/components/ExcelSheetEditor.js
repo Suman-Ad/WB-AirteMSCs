@@ -5,6 +5,39 @@ import { Parser } from 'hot-formula-parser';
 import structuredClone from '@ungap/structured-clone';
 import { formulasConfig } from "../config/formulasConfig";
 import * as XLSX from "xlsx";
+import { db } from "../firebase";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+
+// 🔹 Fetch latest DailyDGLog entry for a site + date
+export const fetchLatestDailyDGLog = async (site, selectedDate) => {
+  if (!site || !selectedDate) return null;
+
+  try {
+    const dateObj = new Date(selectedDate);
+    const monthKey =
+      dateObj.toLocaleString("en-US", { month: "short" }) +
+      "-" +
+      dateObj.getFullYear();
+
+    const logsRef = collection(db, "dailyDGLogs", site, monthKey);
+    const snap = await getDocs(logsRef);
+
+    if (snap.empty) return null;
+
+    // Find latest date ≤ selectedDate
+    const logs = snap.docs
+      .map(d => d.data())
+      .filter(d => d.Date && d.Date <= selectedDate)
+      .sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+    return logs[0] || null;
+  } catch (err) {
+    console.error("fetchLatestDailyDGLog error:", err);
+    return null;
+  }
+};
+
+// import { fetchLatestDailyDGLog } from "./ExcelSheetEditor"; // same file if helper is above
 
 
 const DEBOUNCE_DELAY = 1500;
@@ -57,15 +90,15 @@ export const sheetTemplates = {
     { SlNo: "", Circle: "", Site_Name: "", Site_ID: "", Infra_Uptime_Percentage: "" },
   ],
   Fault_Details: [
-    { 
-      SlNo: "", Region: "", Circle: "", Date: "", Complaint_Reg_by:"", Site_Name: "", 
-      Site_ID: "", Location:"", Equipment_Type:"", Equipment_Name:"", Equipment_Make:"", 
-      Equipment_Capacity:"", Equipment_Sl_No:"", Complaint_ID:"", Complaint_Open_Date:"", 
-      Complaint_Open_Time:"", Severity_Major_Minor:"", Service_Provider:"", Issue_Details:"", 
-      Reason_Category:"", Real_Reason_of_Incident:"", Status_Open_Close:"", Open_Complaint:"", 
-      Closure_Date:"", Closure_Time:"", Ageing_In_Hours:"", Outage_Duration_In_Min:"", 
-      Total_Month_Min: "", Uptime_Percentage: "", TAT_as_per_SOW: "", Time_taken_more_than_TAT:"", 
-      TAT_Status:"", Name_of_Service_Engineer:"", Action_Taken_for_clouser:"", Remarks: ""
+    {
+      SlNo: "", Region: "", Circle: "", Date: "", Complaint_Reg_by: "", Site_Name: "",
+      Site_ID: "", Location: "", Equipment_Type: "", Equipment_Name: "", Equipment_Make: "",
+      Equipment_Capacity: "", Equipment_Sl_No: "", Complaint_ID: "", Complaint_Open_Date: "",
+      Complaint_Open_Time: "", Severity_Major_Minor: "", Service_Provider: "", Issue_Details: "",
+      Reason_Category: "", Real_Reason_of_Incident: "", Status_Open_Close: "", Open_Complaint: "",
+      Closure_Date: "", Closure_Time: "", Ageing_In_Hours: "", Outage_Duration_In_Min: "",
+      Total_Month_Min: "", Uptime_Percentage: "", TAT_as_per_SOW: "", Time_taken_more_than_TAT: "",
+      TAT_Status: "", Name_of_Service_Engineer: "", Action_Taken_for_clouser: "", Remarks: ""
     },
   ],
   Planned_Activity_Details: [
@@ -105,6 +138,8 @@ export const sheetTemplates = {
   ],
 };
 
+// const snap = await getDoc(doc(db, "siteConfigs", userData.site.toUpperCase()));
+
 const siteWiseDefaults = {
   Diesel_Back_Up: {
     DG_fuel_tank_capacity: {
@@ -122,7 +157,7 @@ const siteWiseDefaults = {
       "Siliguri": 2970.00
 
     },
-    
+
     External_Stock_capacity_Barrel_UG_Buffer_Ltr: {
       "Andaman": 850.00,
       "Asansol": 200.00,
@@ -152,73 +187,73 @@ const siteWiseDefaults = {
       "Kharagpur": 261.00,
       "SDF": 45.00,
       "Siliguri": 165.00
-      
+
     }
-    
+
   },
 
   Manpower_Availability: {
-      SEng_Circle_SPOC: {
-        "Andaman": 0.00,
-        "Asansol": 0.00,
-        "Berhampore": 1.00,
-        "Globsyn": 0.00,
-        "Mira Tower": 0.00,
-        "New Alipore": 0.00,
-        "DLF": 0.00,
-        "Infinity-I": 1.00,
-        "Infinity-II": 0.00,
-        "Kharagpur": 0.00,
-        "SDF": 0.00,
-        "Siliguri": 0.00
-      },
-
-      Engg: {
-        "Andaman": 1.00,
-        "Asansol": 1.00,
-        "Berhampore": 1.00,
-        "Globsyn": 1.00,
-        "Mira Tower": 0.00,
-        "New Alipore": 1.00,
-        "DLF": 1.00,
-        "Infinity-I": 1.00,
-        "Infinity-II": 1.00,
-        "Kharagpur": 1.00,
-        "SDF": 1.00,
-        "Siliguri": 1.00
-
-      }, 
-      
-      Supervisor: {
-        "Andaman": 1.00,
-        "Asansol": 1.00,
-        "Berhampore": 0.00,
-        "Globsyn": 1.00,
-        "Mira Tower": 0.00,
-        "New Alipore": 1.00,
-        "DLF": 1.00,
-        "Infinity-I": 1.00,
-        "Infinity-II": 1.00,
-        "Kharagpur": 1.00,
-        "SDF": 1.00,
-        "Siliguri": 1.00
-
-      }, 
-      Technician: {
-        "Andaman": 5.00,
-        "Asansol": 7.00,
-        "Berhampore": 7.00,
-        "Globsyn": 7.00,
-        "Mira Tower": 7.00,
-        "New Alipore": 7.00,
-        "DLF": 10.00,
-        "Infinity-I": 9.00,
-        "Infinity-II": 7.00,
-        "Kharagpur": 7.00,
-        "SDF": 7.00,
-        "Siliguri": 7.00
-      },
+    SEng_Circle_SPOC: {
+      "Andaman": 0.00,
+      "Asansol": 0.00,
+      "Berhampore": 1.00,
+      "Globsyn": 0.00,
+      "Mira Tower": 0.00,
+      "New Alipore": 0.00,
+      "DLF": 0.00,
+      "Infinity-I": 1.00,
+      "Infinity-II": 0.00,
+      "Kharagpur": 0.00,
+      "SDF": 0.00,
+      "Siliguri": 0.00
     },
+
+    Engg: {
+      "Andaman": 1.00,
+      "Asansol": 1.00,
+      "Berhampore": 1.00,
+      "Globsyn": 1.00,
+      "Mira Tower": 0.00,
+      "New Alipore": 1.00,
+      "DLF": 1.00,
+      "Infinity-I": 1.00,
+      "Infinity-II": 1.00,
+      "Kharagpur": 1.00,
+      "SDF": 1.00,
+      "Siliguri": 1.00
+
+    },
+
+    Supervisor: {
+      "Andaman": 1.00,
+      "Asansol": 1.00,
+      "Berhampore": 0.00,
+      "Globsyn": 1.00,
+      "Mira Tower": 0.00,
+      "New Alipore": 1.00,
+      "DLF": 1.00,
+      "Infinity-I": 1.00,
+      "Infinity-II": 1.00,
+      "Kharagpur": 1.00,
+      "SDF": 1.00,
+      "Siliguri": 1.00
+
+    },
+    Technician: {
+      "Andaman": 5.00,
+      "Asansol": 7.00,
+      "Berhampore": 7.00,
+      "Globsyn": 7.00,
+      "Mira Tower": 7.00,
+      "New Alipore": 7.00,
+      "DLF": 10.00,
+      "Infinity-I": 9.00,
+      "Infinity-II": 7.00,
+      "Kharagpur": 7.00,
+      "SDF": 7.00,
+      "Siliguri": 7.00
+    },
+  },
 };
 
 const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selectedDate, allSheetsData = {} }) => {
@@ -243,7 +278,7 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
     columns.forEach((key) => {
       const val = r[key];
       if (typeof val === "string" && val.trim().startsWith("=")) return; // keep formulas
-      if ((val === "" || val === null || val === undefined)) {
+      if ((val === "" || val === null || val === undefined) && !row.__lockedFields?.[key]) {
         // prefer template default number if present
         if (typeof template[key] === "number") r[key] = template[key];
         else if (numericKeyPattern.test(key)) r[key] = 0;
@@ -326,7 +361,7 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
           const arr = Array.isArray(args[0]) ? args[0] : [args[0]];
           const nums = arr.map(v => parseFloat(v)).filter(n => !isNaN(n));
           if (nums.length === 0) return 0;
-          return nums.reduce((a,b)=>a+b,0)/nums.length;
+          return nums.reduce((a, b) => a + b, 0) / nums.length;
         });
 
         // COUNTARRAY(array) -> count numeric values
@@ -437,10 +472,10 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
       });
     }
 
-    
+
     let init = [];
     const isBlank = !rows || rows.length === 0 || rows.every(r => Object.values(r).every(v => v === "" || v === null || v === undefined));
-    
+
     if (isBlank && templateRows.length) {
       init = structuredClone(templateRows).map((tpl) => {
         console.log("Initializing row formulas for sheet", sheetKey, init);
@@ -490,6 +525,65 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
 
     setRawData(init);
   }, [rows, sheetKey, userData, selectedDate]); // re-init on these changes
+
+
+  useEffect(() => {
+    if (
+      sheetKey !== "Diesel_Back_Up" ||
+      !userData?.site ||
+      !selectedDate ||
+      rawData.length === 0
+    ) return;
+
+    const autoFillDieselBackup = async () => {
+      const site = userData.site;
+
+      // 1️⃣ Fetch latest daily DG log
+      const dailyLog = await fetchLatestDailyDGLog(site, selectedDate);
+
+      // 2️⃣ Fetch siteConfig (Firestore, NOT static)
+      let siteConfig = {};
+      try {
+        const snap = await getDoc(doc(db, "siteConfigs", site.toUpperCase()));
+        if (snap.exists()) siteConfig = snap.data();
+      } catch (e) {
+        console.error("SiteConfig fetch failed", e);
+      }
+
+      setRawData(prev =>
+        prev.map((row, idx) => {
+          if (idx !== 0) return row; // 🔒 only first row
+
+          // 🟢 DG Tank Stock = live dailyDGLogs
+          const dgTankStock =
+            dailyLog
+              ? (Number(dailyLog["DG-1 Fuel Closing"] || 0) +
+                Number(dailyLog["DG-2 Fuel Closing"] || 0))
+              : row.Present_Diesel_Stock_in_DG_tank_Ltr;
+
+          // 🟢 External stock priority
+          const externalStock =
+            dailyLog?.External_Stock_availiabl_at_MSC_Ltr ??
+            siteConfig.External_Stock_availiabl_at_MSC_Ltr ??
+            siteConfig.External_Stock_capacity_Barrel_UG_Buffer_Ltr ??
+            row.External_Stock_availiabl_at_MSC_Ltr;
+
+
+          return {
+            ...row,
+            Present_Diesel_Stock_in_DG_tank_Ltr: dgTankStock,
+            External_Stock_availiabl_at_MSC_Ltr: externalStock,
+            __lockedFields: {
+              Present_Diesel_Stock_in_DG_tank_Ltr: true,
+              External_Stock_availiabl_at_MSC_Ltr: true,
+            },
+          };
+        })
+      );
+    };
+
+    autoFillDieselBackup();
+  }, [sheetKey, selectedDate, userData?.site]);
 
   // Debounced save of rawData (saves formulas + inputs)
   const scheduleSave = (updatedRaw) => {
@@ -612,9 +706,19 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
                     type={numericKeyPattern.test(col) ? "number" : "text"}
                     step={numericKeyPattern.test(col) ? "any" : undefined}
                     value={row[col] ?? ""}
-                    onChange={(e) => handleChange(rIdx, col, e.target.value)}
+                    // readOnly={rawData[rIdx]?.__lockedFields?.[col]}
                     disabled={isFormulaCell(rIdx, col)}
-                    className={isFormulaCell(rIdx, col) ? "formula-cell" : ""}
+                    onChange={(e) => {
+                      if (rawData[rIdx]?.__lockedFields?.[col]) return;
+                      handleChange(rIdx, col, e.target.value);
+                    }}
+                    className={
+                      rawData[rIdx]?.__lockedFields?.[col]
+                        ? "locked-cell"
+                        : isFormulaCell(rIdx, col)
+                          ? "formula-cell"
+                          : ""
+                    }
                   />
                 </td>
               ))}

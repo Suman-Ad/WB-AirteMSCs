@@ -233,14 +233,14 @@ function App() {
           </RoleProtectedRoute>} />
 
         <Route path="/daily-activity-management" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
             <Layout userData={userData}>
               <DailyActivityManage userData={userData} />
             </Layout>
           </RoleProtectedRoute>} />
 
         <Route path="/pm-register" element={
-          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
+          <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User"]}>
             <Layout userData={userData}>
               <PMRegister userData={userData} />
             </Layout>
