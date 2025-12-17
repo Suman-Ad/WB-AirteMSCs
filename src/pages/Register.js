@@ -186,6 +186,7 @@ const Register = () => {
         siteId: formData.siteId,
         role,
         designation: formData.designation,
+        isActive: false,
         createdAt: new Date().toISOString()
       });
 

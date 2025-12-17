@@ -97,7 +97,15 @@ const AdminPanel = ({ userData }) => {
 
   const fetchAllUsers = async () => {
     const snapshot = await getDocs(collection(db, "users"));
-    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    // const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const data = snapshot.docs.map((docSnap) => {
+      const d = docSnap.data();
+      return {
+        id: docSnap.id,
+        ...d,
+        isActive: d.isActive ?? true, // ✅ fallback for old users
+      };
+    });
     setUsers(data);
     updateRoleCounts(data);
 
@@ -222,6 +230,17 @@ const AdminPanel = ({ userData }) => {
     setCardFilter((prev) => (prev === filterKey ? "" : filterKey));
   };
 
+  const toggleUserActive = async (userId, currentStatus) => {
+    try {
+      await updateDoc(doc(db, "users", userId), {
+        isActive: !currentStatus,
+      });
+      fetchAllUsers();
+    } catch (err) {
+      console.error("Failed to update user status", err);
+    }
+  };
+
 
   return (
     <div className="admin-panel">
@@ -324,10 +343,11 @@ const AdminPanel = ({ userData }) => {
                   <th>Site ID</th>
                   <th>Site Name</th>
                   <th>Role</th>
+                  <th>Status</th>
                   {(userData.role === "Admin" || userData.role === "Super Admin") && (
                     <th>UID</th>
                   )}
-                    <th>Actions</th>
+                  <th>Actions</th>
 
                 </tr>
               </thead>
@@ -404,6 +424,13 @@ const AdminPanel = ({ userData }) => {
                           ) : user.site}
                         </td>
                         <td data-label="Role">{user.role}</td>
+                        <td data-label="Status">
+                          <span
+                            className={`status-badge ${user.isActive ? "active" : "inactive"}`}
+                          >
+                            {user.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </td>
                         {(userData.role === "Admin" || userData.role === "Super Admin") && (
                           <td data-label="UID">{user.uid}</td>
                         )}
@@ -459,6 +486,17 @@ const AdminPanel = ({ userData }) => {
                                 {editingUserId === user.id ? 'Cancel' : 'Edit'}
                               </button>
                             )}
+
+                            {["Admin", "Super Admin"].includes(userData.role) &&
+                              user.id !== userData.uid && (
+                                <button
+                                  className={user.isActive ? "btn-deactivate" : "btn-activate"}
+                                  onClick={() => toggleUserActive(user.id, user.isActive)}
+                                >
+                                  {user.isActive ? "Deactivate" : "Activate"}
+                                </button>
+                              )}
+
                             {canPromote && (
                               <button
                                 className="btn-promote"

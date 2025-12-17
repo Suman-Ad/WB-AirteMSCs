@@ -36,6 +36,11 @@ const Login = ({ setUserData }) => {
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
+        if (data.isActive === false) {
+          setError("🚫 Your account is inactive. Please contact with Admin.");
+          await auth.signOut();
+          return;
+        }
         const userData = {
           uid: user.uid,
           circle: data.circle,
@@ -48,7 +53,8 @@ const Login = ({ setUserData }) => {
           email: data.email,
           designation: data.designation,
           photoURL: data.photoURL || "",
-          isAdminAssigned : data.isAdminAssigned,
+          isAdminAssigned: data.isAdminAssigned,
+          isActive: data.isActive,
         };
         localStorage.setItem("userData", JSON.stringify(userData));
         setUserData(userData);

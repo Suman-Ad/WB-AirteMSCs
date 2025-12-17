@@ -132,6 +132,7 @@ const ProfilePage = ({ userData }) => {
           className="profile-avatar"
           style={{ width: "300px", height: "300px", borderRadius: "50%" }}
         />
+        <p style={{color: "whitesmoke", background: `${userData?.isActive ? "Green" : "Red"}`, height:"fit-content", borderRadius:"6px", borderBottom:"1px solid"}}>{userData?.isActive ? "Active" : "Inactive"}</p>
       </div>
 
       {editMode && (

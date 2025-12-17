@@ -160,12 +160,12 @@ const HSDPrintTemplate = ({ form, hsdForm, siteConfig, setPreviewOpen }) => {
                     <tr>
                         <td>{hsdForm.density || "—"}</td>
                         <td>{hsdForm.temperature || 0} °C</td>
-                        <td>—</td>
+                        <td>200+200 Ltr (Iron Barrel)</td>
                         <td>{hsdForm.ltrs || 0} Ltrs</td>
                         <td>—</td>
                         <td>{hsdForm.ltrs ? `${hsdForm.ltrs} Ltrs` : "—"}</td>
                         <td>Nil</td>
-                        <td>#{hsdForm.dillerInvoice || "N/A"}</td>
+                        <td>{hsdForm.dillerInvoice || "N/A"}</td>
                         <td>{hsdForm.outTime || "00:00"} Hrs</td>
                     </tr>
                 </tbody>

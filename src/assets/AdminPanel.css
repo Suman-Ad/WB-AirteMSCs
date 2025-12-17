@@ -298,6 +298,26 @@ select {
   box-shadow: 0 0 0 3px #2563eb;
 }
 
+.status-badge.active {
+  color: green;
+  font-weight: bold;
+}
+
+.status-badge.inactive {
+  color: red;
+  font-weight: bold;
+}
+
+.btn-activate {
+  background: #16a34a;
+  color: white;
+}
+
+.btn-deactivate {
+  background: #dc2626;
+  color: white;
+}
+
 
 @media (max-width: 768px) {
   .user-stats-container {

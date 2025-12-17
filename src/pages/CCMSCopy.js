@@ -40,6 +40,7 @@ const CCMSCopy = () => {
     };
 
 
+    const totalFuelQuentity = logData['Total Fuel Filling'];
     const totalAmount = (logData['Total Fuel Filling'] * fuelRate).toFixed(2);
     const invoiceDate = new Date(logData.Date);
     // Extract parts
@@ -152,6 +153,7 @@ const CCMSCopy = () => {
                                 <td>Site ID/ Location ID</td>
                                 <td>Invoice Date</td>
                                 <td>Invoice nos.</td>
+                                <td>Total Fuel Qnt. (Ltrs)</td>
                                 <td>Invoice Value(Actual Value)</td>
                                 <td>Billing Period Start Date</td>
                                 <td>Billing Period End Date</td>
@@ -170,10 +172,11 @@ const CCMSCopy = () => {
                                 <td>{siteConfig.siteId}</td>
                                 <td>{formattedDate}</td>
                                 <td>{invoiceNumber}</td>
+                                <td>{totalFuelQuentity}</td>
                                 <td>{totalAmount}</td>
                                 <td>{formattedDate}</td>
                                 <td>{formattedDate}</td>
-                                <td>Diesel</td>
+                                <td>DIESEL</td>
                                 <td>{siteConfig.department}</td>
                                 <td>{siteConfig.txnNumber}</td>
                             </tr>
