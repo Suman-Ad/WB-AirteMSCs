@@ -20,13 +20,20 @@ const AcDcRackDashboard = ({ userData }) => {
     const [rackData, setRackData] = useState([]);
     // 🔹 Filter popup states
     const [showFilterPopup, setShowFilterPopup] = useState(false);
-    const [siteFilter, setSiteFilter] = useState("");
-    const [locationFilter, setLocationFilter] = useState("");
-    const [equipNoFilter, setEquipNoFilter] = useState("");
-    const [rackNameFilter, setRackNameFilter] = useState("");
-    const [powerTypeFilter, setPowerTypeFilter] = useState("");
-    const [sourceTypeFilter, setSourceTypeFilter] = useState("");
-    const [rackType, setRackType] = useState("");
+    const [filters, setFilters] = useState(() => {
+        const saved = localStorage.getItem("acdcRackFilters");
+        return saved
+            ? JSON.parse(saved)
+            : {
+                site: "",
+                location: "",
+                equipNo: "",
+                rackName: "",
+                powerType: "",
+                sourceType: "",
+                rackType: "",
+            };
+    });
 
     const [status, setStatus] = useState("");
     const navigate = useNavigate();
@@ -85,8 +92,10 @@ const AcDcRackDashboard = ({ userData }) => {
             }
         };
 
+        localStorage.setItem("acdcRackFilters", JSON.stringify(filters));
+
         fetchData();
-    }, [userData]);
+    }, [userData, filters]);
 
 
     // 🔹 Handle delete
@@ -124,62 +133,51 @@ const AcDcRackDashboard = ({ userData }) => {
             userData?.designation === "Vertiv CIH" ||
             userData?.designation === "Vertiv ZM";
 
-        // Basic matches for each field
-        const siteMatch = siteFilter
-            ? d.siteName?.toLowerCase().includes(siteFilter.toLowerCase())
-            : true;
-        const locationMatch = locationFilter
-            ? d.equipmentLocation?.toLowerCase().includes(locationFilter.toLowerCase())
-            : true;
-        const equipMatch = equipNoFilter
-            ? d.equipmentRackNo?.toLowerCase().includes(equipNoFilter.toLowerCase())
-            : true;
-        const rackMatch = rackNameFilter
-            ? d.rackName?.toLowerCase().includes(rackNameFilter.toLowerCase())
+        const siteMatch = filters.site
+            ? d.siteName?.toLowerCase().includes(filters.site.toLowerCase())
             : true;
 
-        const powerMatch = powerTypeFilter
-            ? d.powerType?.toLowerCase().includes(powerTypeFilter.toLowerCase())
+        const locationMatch = filters.location
+            ? d.equipmentLocation?.toLowerCase().includes(filters.location.toLowerCase())
             : true;
 
-        const sourceMatch = sourceTypeFilter
-            ? d.sourceType?.toLowerCase().includes(sourceTypeFilter.toLowerCase())
+        const equipMatch = filters.equipNo
+            ? d.equipmentRackNo?.toLowerCase().includes(filters.equipNo.toLowerCase())
             : true;
 
-        const typeMatch = rackType
-            ? d.rackType?.toLowerCase().includes(rackType.toLowerCase())
+        const rackMatch = filters.rackName
+            ? d.rackName?.toLowerCase().includes(filters.rackName.toLowerCase())
             : true;
 
-        const matchesAll = siteMatch && locationMatch && equipMatch && rackMatch && powerMatch && sourceMatch && typeMatch;
+        const powerMatch = filters.powerType
+            ? d.powerType?.toLowerCase() === filters.powerType.toLowerCase()
+            : true;
 
-        const location = d.equipmentLocation || "Unknown";
+        const sourceMatch = filters.sourceType
+            ? d.sourceType?.toLowerCase() === filters.sourceType.toLowerCase()
+            : true;
 
-        if (!chartDataMap[location]) {
-            chartDataMap[location] = {
-                equipmentLocation: location,
-                totalLoad: 0,
-                rackCount: 0,
-            };
-        }
+        const typeMatch = filters.rackType
+            ? d.rackType?.toLowerCase() === filters.rackType.toLowerCase()
+            : true;
 
-        // Convert totalLoadBoth to number safely
-        const loadValue = parseFloat(d.totalLoadBoth) || 0;
+        const matchesAll =
+            siteMatch &&
+            locationMatch &&
+            equipMatch &&
+            rackMatch &&
+            powerMatch &&
+            sourceMatch &&
+            typeMatch;
 
-        chartDataMap[location].totalLoad += loadValue;
-        chartDataMap[location].rackCount += 1;
+        if (isPrivileged) return matchesAll;
 
-        // Apply role-based restriction
-        if (isPrivileged) {
-            return matchesAll;
-        } else {
-            return (
-                d.siteName?.toLowerCase() === userData?.site?.toLowerCase() &&
-                matchesAll
-            );
-        }
-
-
+        return (
+            d.siteName?.toLowerCase() === userData?.site?.toLowerCase() &&
+            matchesAll
+        );
     });
+
 
     // Convert map to array for Recharts
     const chartData = Object.values(chartDataMap);
@@ -404,8 +402,10 @@ const AcDcRackDashboard = ({ userData }) => {
                                 userData?.designation === "Vertiv CIH" ||
                                 userData?.designation === "Vertiv ZM") && (
                                     <select
-                                        value={siteFilter}
-                                        onChange={(e) => setSiteFilter(e.target.value)}
+                                        value={filters.site}
+                                        onChange={(e) =>
+                                            setFilters((prev) => ({ ...prev, site: e.target.value }))
+                                        }
                                         style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
                                     >
                                         <option value="">🏢 Select Site</option>
@@ -417,8 +417,10 @@ const AcDcRackDashboard = ({ userData }) => {
                                 )}
 
                             <select
-                                value={locationFilter}
-                                onChange={(e) => setLocationFilter(e.target.value)}
+                                value={filters.location}
+                                onChange={(e) =>
+                                    setFilters((prev) => ({ ...prev, location: e.target.value }))
+                                }
                                 style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
                             >
                                 <option value="">📍 Select Equipment Location</option>
@@ -431,24 +433,27 @@ const AcDcRackDashboard = ({ userData }) => {
                             <input
                                 type="text"
                                 placeholder="🔢 Equipment No"
-                                value={equipNoFilter}
-                                onChange={(e) => setEquipNoFilter(e.target.value)}
+                                value={filters.equipNo}
+                                onChange={(e) => setFilters((prev) => ({ ...prev, equipNo: e.target.value }))
+                                }
                                 style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
                             />
 
                             <input
                                 type="text"
                                 placeholder="🗄️ Rack Name (optional)"
-                                value={rackNameFilter}
-                                onChange={(e) => setRackNameFilter(e.target.value)}
+                                value={filters.rackName}
+                                onChange={(e) => setFilters((prev) => ({ ...prev, rackName: e.target.value }))
+                                }
                                 style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
                             />
 
                             <select
                                 type="text"
                                 placeholder="⚡ Power Type"
-                                value={rackType}
-                                onChange={(e) => setRackType(e.target.value)}
+                                value={filters.rackType}
+                                onChange={(e) => setFilters((prev) => ({ ...prev, rackType: e.target.value }))
+                                }
                                 style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
                             >
                                 <option value="">⇨⚡ Select Rack Type</option>
@@ -459,8 +464,9 @@ const AcDcRackDashboard = ({ userData }) => {
                             <select
                                 type="text"
                                 placeholder="⚡ Power Type"
-                                value={powerTypeFilter}
-                                onChange={(e) => setPowerTypeFilter(e.target.value)}
+                                value={filters.powerType}
+                                onChange={(e) => setFilters((prev) => ({ ...prev, powerType: e.target.value }))
+                                }
                                 style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
                             >
                                 <option value="">⇨⚡ Select Power Type</option>
@@ -472,8 +478,9 @@ const AcDcRackDashboard = ({ userData }) => {
                             <select
                                 type="text"
                                 placeholder="⇨○ Source Type"
-                                value={sourceTypeFilter}
-                                onChange={(e) => setSourceTypeFilter(e.target.value)}
+                                value={filters.sourceType}
+                                onChange={(e) => setFilters((prev) => ({ ...prev, sourceType: e.target.value }))
+                                }
                                 style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
                             >
                                 <option value="">⇨○ Select Source Type</option>
@@ -506,25 +513,22 @@ const AcDcRackDashboard = ({ userData }) => {
 
                             <button
                                 onClick={() => {
-                                    setSiteFilter("");
-                                    setLocationFilter("");
-                                    setEquipNoFilter("");
-                                    setRackNameFilter("");
-                                    setPowerTypeFilter("");
-                                    setSourceTypeFilter("");
-                                    setRackType("");
-                                }}
-                                style={{
-                                    padding: "8px 15px",
-                                    background: "#f59e0b",
-                                    border: "none",
-                                    borderRadius: "6px",
-                                    color: "white",
-                                    cursor: "pointer",
+                                    const emptyFilters = {
+                                        site: "",
+                                        location: "",
+                                        equipNo: "",
+                                        rackName: "",
+                                        powerType: "",
+                                        sourceType: "",
+                                        rackType: "",
+                                    };
+                                    setFilters(emptyFilters);
+                                    localStorage.removeItem("acdcRackFilters");
                                 }}
                             >
                                 🔄 Clear
                             </button>
+
 
                             <button
                                 onClick={() => setShowFilterPopup(false)}
