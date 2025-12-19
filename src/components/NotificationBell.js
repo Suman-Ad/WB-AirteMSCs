@@ -35,11 +35,11 @@ export default function NotificationBell({ user }) {
             const oldUnread = items.filter(n => !n.read).length;
 
             const newBackupReq = arr.filter(
-                n => !n.read && n.actionType === "backup_request"
+                n => !n.read && (n.actionType === "backup_request" || n.actionType === "registration_request")
             ).length;
 
             const oldBackupReq = items.filter(
-                n => !n.read && n.actionType === "backup_request"
+                n => !n.read && (n.actionType === "backup_request" || n.actionType === "registration_request")
             ).length;
 
             // Play sound ONLY for new backup requests
@@ -304,6 +304,50 @@ export default function NotificationBell({ user }) {
         }
     }
 
+    async function activateUser(notification) {
+        try {
+            if (!window.confirm("Activate this user account?")) return;
+
+            const userRef = doc(db, "users", notification.requesterId);
+
+            // 1️⃣ Activate user
+            await updateDoc(userRef, {
+                isActive: true,
+                activatedAt: serverTimestamp(),
+                activatedBy: user.uid
+            });
+
+            // 2️⃣ Mark admin notification as read
+            await updateDoc(
+                doc(db, "notifications", user.uid, "items", notification.id),
+                {
+                    read: true,
+                    approvalStatus: "approved"
+                }
+            );
+
+            // 3️⃣ Notify user
+            await addDoc(
+                collection(db, "notifications", notification.requesterId, "items"),
+                {
+                    title: "Account Activated",
+                    message: "Your account has been approved and activated by Admin.",
+                    actionType: "registration_response",
+                    read: false,
+                    createdAt: serverTimestamp(),
+                    date: new Date().toISOString().split("T")[0],
+                    responderId: user.uid
+                }
+            );
+
+            alert("User activated successfully");
+        } catch (err) {
+            console.error("activateUser error", err);
+            alert("Activation failed");
+        }
+    }
+
+
 
     return (
         <div style={{ position: "relative" }}>
@@ -461,6 +505,35 @@ export default function NotificationBell({ user }) {
                             }}>{n.date}
                             </div>
 
+                            {/* 🔐 Registration Approval */}
+                            {n.actionType === "registration_request" &&
+                                (user.role === "Admin" || user.role === "Super Admin") &&
+                                !n.read && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            activateUser(n);
+                                        }}
+                                        style={{
+                                            marginTop: "6px",
+                                            backgroundColor: "#16a34a",
+                                            color: "white",
+                                            fontSize: "0.75rem",
+                                            padding: "4px 8px",
+                                            borderRadius: "4px",
+                                            cursor: "pointer"
+                                        }}
+                                    >
+                                        Activate User
+                                    </button>
+
+                                )}
+                            {n.approvalStatus === "approved" && (
+                                <p style={{ color: "#16a34a", fontSize: "0.75rem", marginTop: "4px" }}>
+                                    ✔ User Activated
+                                </p>
+                            )}
+                            
                             {/* Inline actions for backup_request */}
                             {n.actionType === "backup_request" && (
                                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -547,7 +620,7 @@ export default function NotificationBell({ user }) {
                             <button
                                 onClick={() => deleteNotification(n.id)}
                                 style={{
-                                    position: "absolute",
+                                    // position: "absolute",
                                     right: "0",
                                     top: "8px",
                                     background: "transparent",

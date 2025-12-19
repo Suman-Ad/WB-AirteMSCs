@@ -6,7 +6,7 @@ import {
   sendEmailVerification,
   updateProfile,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, query, collection, getDocs, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import "../assets/Register.css";
 import Vertiv from "../assets/vertiv.png";
@@ -22,7 +22,7 @@ const siteList = {
   "East": {
     "BH & JH": ["Patliputra", "Bhaglpur", "Muzaffarpur New", "Muzaffarpur Old", "Ranchi", "Ranchi telenor", "Marwari Awas"],
     "WB": ["Andaman", "Asansol", "Berhampore", "DLF", "Globsyn", "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower", "New Alipore", "SDF", "Siliguri"],
-    "NESA":["Aizwal", "Guwahati", "Jorabat New", "Jorhat", "Shillong"],
+    "NESA": ["Aizwal", "Guwahati", "Jorabat New", "Jorhat", "Shillong"],
     "OR": ["Cuttack", "Sambalpur"],
 
   },
@@ -42,7 +42,7 @@ const siteList = {
 };
 
 // Add this mapping near the top of the file (below siteList)
-const siteIdMap = {
+export const siteIdMap = {
   "Astron Park": "N24027A",
   "Bharti House": "N24028A",
   "Changodar": "N24024A",
@@ -110,6 +110,7 @@ const Register = () => {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const navigate = useNavigate();
+  const [registering, setRegistering] = useState(false);
 
   const designations = [
     "Vertiv ZM",
@@ -162,6 +163,7 @@ const Register = () => {
     e.preventDefault();
     setError("");
     setSuccessMsg("");
+    setRegistering(true);
 
     try {
       const role = getRoleFromDesignation(formData.designation);
@@ -190,6 +192,52 @@ const Register = () => {
         createdAt: new Date().toISOString()
       });
 
+      // Notify Admin
+      const adminQuery = query(
+        collection(db, "users"),
+        where("role", "in", ["Admin", "Super Admin"]),
+        where("site", "==", formData.site)
+      );
+
+      const adminSnap = await getDocs(adminQuery);
+      const todayISO = new Date().toISOString().split("T")[0];
+
+      for (const adminDoc of adminSnap.docs) {
+        await addDoc(
+          collection(db, "notifications", adminDoc.id, "items"),
+          {
+            title: "New Registration",
+            message:
+              `New membership request
+
+UID: ${user.uid}
+Name: ${formData.name}
+Emp ID: ${formData.empId}
+Email: ${formData.email}
+
+Region: ${formData.region}
+Circle: ${formData.circle}
+Site: ${formData.site} (${formData.siteId})
+Role: ${role}
+Designation: ${formData.designation}`,
+
+            date: todayISO,
+            createdAt: serverTimestamp(),
+
+            site: formData.site,
+            siteId: formData.siteId,
+
+            actionType: "registration_request",
+            requesterId: user.uid,
+            roleRequested: role,
+            designation: formData.designation,
+
+            read: false
+          }
+        );
+      }
+
+
       setSuccessMsg("Registered successfully. Please verify your email.");
       setFormData({
         name: "",
@@ -201,6 +249,7 @@ const Register = () => {
         circle: "",
         site: ""
       });
+      setRegistering(false);
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
       setError("Registration error: " + err.message);
@@ -210,18 +259,18 @@ const Register = () => {
   return (
     <div className="auth-container">
       <form onSubmit={handleRegister} className="auth-form" style={{
-          background: "rgba(255, 255, 255, 0.1)",
-          backdropFilter: "blur(8px)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-          borderRadius: "10px",
-          padding: "2rem",
-          maxWidth: "400px",
-        }}>
-        
+        background: "rgba(255, 255, 255, 0.1)",
+        backdropFilter: "blur(8px)",
+        border: "1px solid rgba(255, 255, 255, 0.2)",
+        borderRadius: "10px",
+        padding: "2rem",
+        maxWidth: "400px",
+      }}>
+
         <h2>
-          <img 
-            src={Vertiv} 
-            alt="Vertiv Logo" 
+          <img
+            src={Vertiv}
+            alt="Vertiv Logo"
             className="logo"
             style={{
               height: '2.5em',
@@ -230,7 +279,7 @@ const Register = () => {
             }}
           />
         </h2>
-        <h2 style={{color: "white"}}>Employee Register</h2>
+        <h2 style={{ color: "white" }}>Employee Register</h2>
         {error && <p className="auth-error">{error}</p>}
         {successMsg && <p className="auth-success">{successMsg}</p>}
 
@@ -336,7 +385,7 @@ const Register = () => {
           type="submit"
           className="auth-button"
         >
-          Register
+          {registering ? "Registering..." : "Register"}
         </button>
 
         <Link to={"/login"}>

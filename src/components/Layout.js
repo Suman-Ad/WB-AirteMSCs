@@ -184,7 +184,7 @@ const Layout = ({ userData, children }) => {
 
               </div>
               <p className="dashboard-subinfo">
-                <strong>🏢{userData?.site || "All"}</strong>|&nbsp;<strong>🆔{userData.siteId || "All"}</strong>
+                <strong>🏢{userData?.site || "All"}</strong>|&nbsp;<strong>🆔{userData.siteId || "All"}</strong>|&nbsp;<strong style={{color: "whitesmoke", background: `${userData?.isActive ? "#3f8a2985" : "#8a0f0f85"}`, height:"fit-content", borderRadius:"6px", borderBottom:"1px solid"}}>{userData?.isActive ? "Active" : "Inactive"}</strong>
                 <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
                   {todayDuty ? (
                     <div

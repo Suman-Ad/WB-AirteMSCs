@@ -11,6 +11,9 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import "../assets/AdminPanel.css";
+import { siteIdMap } from "./Register";
+// import { getFunctions, httpsCallable } from "firebase/functions";
+
 
 const AdminPanel = ({ userData }) => {
   const [users, setUsers] = useState([]);
@@ -404,24 +407,36 @@ const AdminPanel = ({ userData }) => {
                         </td>
                         <td data-label="EMP ID">{user.empId}</td>
                         <td data-label="Email">{user.email}</td>
-                        <td data-label="Site ID">{user.siteId}</td>
+                        <td data-label="Site ID">
+                          {user.siteId}
+                        </td>
                         <td data-label="Site">
+                          {/* Site Name column */}
                           {userData.role === "Super Admin" ? (
                             isEditable(user.id) ? (
                               <select
-                                className="editable-field"
                                 value={user.site || ""}
-                                onChange={(e) => handleUserFieldEdit(user.id, "site", e.target.value)}
+                                onChange={(e) => {
+                                  const newSite = e.target.value;
+                                  const newSiteId = siteIdMap[newSite] || "";
+                                  // update both site and siteId together
+                                  handleUserFieldEdit(user.id, "site", newSite);
+                                  handleUserFieldEdit(user.id, "siteId", newSiteId);
+                                }}
                               >
-                                <option value="">Select</option>
+                                <option value="">Select Site</option>
                                 {siteList.map((site) => (
-                                  <option key={site} value={site}>{site}</option>
+                                  <option key={site} value={site}>
+                                    {site}
+                                  </option>
                                 ))}
                               </select>
                             ) : (
                               user.site
                             )
-                          ) : user.site}
+                          ) : (
+                            user.site
+                          )}
                         </td>
                         <td data-label="Role">{user.role}</td>
                         <td data-label="Status">
@@ -453,26 +468,30 @@ const AdminPanel = ({ userData }) => {
                                   </>
                                 ) : (
                                   <>
-                                    <input
-                                      type="date"
-                                      value={tempAdminDraft.from}
-                                      onChange={(e) =>
-                                        setTempAdminDraft(d => ({ ...d, from: e.target.value }))
-                                      }
-                                    />
-                                    <input
-                                      type="date"
-                                      value={tempAdminDraft.to}
-                                      onChange={(e) =>
-                                        setTempAdminDraft(d => ({ ...d, to: e.target.value }))
-                                      }
-                                    />
-                                    <button
-                                      className="btn-promote"
-                                      onClick={() => assignTempAdmin(user.id)}
-                                    >
-                                      Temp Admin
-                                    </button>
+                                    {user?.role !== "Admin" && user?.role !== "Super Admin" && (
+                                      <>
+                                        <input
+                                          type="date"
+                                          value={tempAdminDraft.from}
+                                          onChange={(e) =>
+                                            setTempAdminDraft(d => ({ ...d, from: e.target.value }))
+                                          }
+                                        />
+                                        <input
+                                          type="date"
+                                          value={tempAdminDraft.to}
+                                          onChange={(e) =>
+                                            setTempAdminDraft(d => ({ ...d, to: e.target.value }))
+                                          }
+                                        />
+                                        <button
+                                          className="btn-promote"
+                                          onClick={() => assignTempAdmin(user.id)}
+                                        >
+                                          Temp Admin
+                                        </button>
+                                      </>
+                                    )}
                                   </>
                                 )}
                               </div>
@@ -526,6 +545,26 @@ const AdminPanel = ({ userData }) => {
                               >
                                 Delete
                               </button>
+                              // <button
+                              //   className="btn-delete"
+                              //   onClick={async () => {
+                              //     if (!window.confirm("Delete this user permanently?")) return;
+
+                              //     try {
+                              //       const functions = getFunctions();
+                              //       const deleteUserFn = httpsCallable(functions, "deleteUserCompletely");
+                              //       await deleteUserFn({ uid: user.id });
+
+                              //       alert("User deleted from Auth & Database");
+                              //       fetchAllUsers();
+                              //     } catch (err) {
+                              //       console.error(err);
+                              //       alert(err.message || "Delete failed");
+                              //     }
+                              //   }}
+                              // >
+                              //   Delete
+                              // </button>
                             )}
                           </div>
                         </td>

@@ -35,6 +35,13 @@ const AcDcRackDashboard = ({ userData }) => {
             };
     });
 
+    const isPrivileged =
+        userData?.role === "Admin" ||
+        userData?.role === "Super Admin" ||
+        userData?.designation === "Vertiv CIH" ||
+        userData?.isAdminAssigned ||
+        userData?.designation === "Vertiv ZM";
+
     const [status, setStatus] = useState("");
     const navigate = useNavigate();
     const [previewOpen, setPreviewOpen] = useState(false);
@@ -44,17 +51,73 @@ const AcDcRackDashboard = ({ userData }) => {
 
 
     // 🔹 Fetch site data based on user role
+    // useEffect(() => {
+    //     const fetchData = async () => {
+    //         try {
+    //             let allRacks = [];
+
+    //             // ✅ Super Admin / Admin can see ALL sites
+    //             if (userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM") {
+    //                 const sitesSnapshot = await getDocs(collection(db, "acDcRackDetails"));
+
+    //                 for (const siteDoc of sitesSnapshot.docs) {
+    //                     const siteKey = String(siteDoc.id);
+    //                     const racksRef = collection(db, "acDcRackDetails", siteKey, "racks");
+    //                     const racksSnapshot = await getDocs(racksRef);
+
+    //                     racksSnapshot.forEach((rackDoc) => {
+    //                         allRacks.push({
+    //                             id: rackDoc.id,
+    //                             siteKey,
+    //                             ...rackDoc.data(),
+    //                         });
+    //                     });
+    //                 }
+    //             }
+
+    //             // ✅ Normal user — only see their own site
+    //             else if (userData?.site) {
+    //                 const siteKey = userData.site.trim().toUpperCase().replace(/[\/\s]+/g, "_");
+    //                 const racksRef = collection(db, "acDcRackDetails", siteKey, "racks");
+    //                 const racksSnapshot = await getDocs(racksRef);
+
+    //                 racksSnapshot.forEach((rackDoc) => {
+    //                     allRacks.push({
+    //                         id: rackDoc.id,
+    //                         siteKey,
+    //                         ...rackDoc.data(),
+    //                     });
+    //                 });
+    //             } else {
+    //                 console.warn("⚠️ No site assigned to this user");
+    //             }
+
+    //             setRackData(allRacks);
+    //             console.log(`✅ Loaded ${allRacks.length} rack records`);
+    //         } catch (error) {
+    //             console.error("Error fetching data:", error);
+    //         }
+    //     };
+
+    //     localStorage.setItem("acdcRackFilters", JSON.stringify(filters));
+
+    //     fetchData();
+    // }, [userData, filters]);
+
     useEffect(() => {
+        if (!userData) return;
+
         const fetchData = async () => {
             try {
                 let allRacks = [];
 
-                // ✅ Super Admin / Admin can see ALL sites
-                if (userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM") {
+
+
+                if (isPrivileged) {
                     const sitesSnapshot = await getDocs(collection(db, "acDcRackDetails"));
 
                     for (const siteDoc of sitesSnapshot.docs) {
-                        const siteKey = String(siteDoc.id);
+                        const siteKey = siteDoc.id;
                         const racksRef = collection(db, "acDcRackDetails", siteKey, "racks");
                         const racksSnapshot = await getDocs(racksRef);
 
@@ -63,13 +126,11 @@ const AcDcRackDashboard = ({ userData }) => {
                                 id: rackDoc.id,
                                 siteKey,
                                 ...rackDoc.data(),
+                                siteName: rackDoc.data().siteName || siteKey, // ✅ fallback
                             });
                         });
                     }
-                }
-
-                // ✅ Normal user — only see their own site
-                else if (userData?.site) {
+                } else if (userData?.site) {
                     const siteKey = userData.site.trim().toUpperCase().replace(/[\/\s]+/g, "_");
                     const racksRef = collection(db, "acDcRackDetails", siteKey, "racks");
                     const racksSnapshot = await getDocs(racksRef);
@@ -79,24 +140,24 @@ const AcDcRackDashboard = ({ userData }) => {
                             id: rackDoc.id,
                             siteKey,
                             ...rackDoc.data(),
+                            siteName: rackDoc.data().siteName || siteKey,
                         });
                     });
-                } else {
-                    console.warn("⚠️ No site assigned to this user");
                 }
 
                 setRackData(allRacks);
-                console.log(`✅ Loaded ${allRacks.length} rack records`);
-            } catch (error) {
-                console.error("Error fetching data:", error);
+                console.log("✅ Total racks fetched:", allRacks.length);
+            } catch (err) {
+                console.error("❌ Fetch error:", err);
             }
         };
 
-        localStorage.setItem("acdcRackFilters", JSON.stringify(filters));
-
         fetchData();
-    }, [userData, filters]);
+    }, [userData]);
 
+    useEffect(() => {
+        localStorage.setItem("acdcRackFilters", JSON.stringify(filters));
+    }, [filters]);
 
     // 🔹 Handle delete
     const handleDelete = async (siteName) => {
@@ -112,8 +173,46 @@ const AcDcRackDashboard = ({ userData }) => {
         }
     };
 
-    // 🔹 Prepare Chart Data (by Equipment Location)
-    const chartDataMap = {};
+    // 🔹 Handle delete ALL (filtered) racks
+    const handleDeleteAll = async () => {
+        if (filteredData.length === 0) {
+            alert("No racks to delete for current filters");
+            return;
+        }
+
+        const confirmMsg =
+            `Delete ALL ${filteredData.length} rack records currently shown (matching filters)?\n` +
+            `This cannot be undone.`;
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            const isPrivileged =
+                userData?.role === "Admin" ||
+                userData?.role === "Super Admin" ||
+                userData?.designation === "Vertiv CIH" ||
+                userData?.designation === "Vertiv ZM";
+
+            // Delete each rack using its own siteKey (works for multi-site / admin view)
+            const deletePromises = filteredData.map((rack) =>
+                deleteDoc(
+                    doc(db, "acDcRackDetails", rack.siteKey, "racks", rack.id)
+                )
+            );
+
+            await Promise.all(deletePromises);
+
+            // Remove them from local state
+            const idsToDelete = new Set(filteredData.map((r) => r.id));
+            setRackData((prev) => prev.filter((r) => !idsToDelete.has(r.id)));
+
+            setStatus(`🗑️ Deleted ${filteredData.length} rack records`);
+            setPreviewOpen(false);
+        } catch (error) {
+            console.error("Error deleting all racks:", error);
+            setStatus("❌ Failed to delete all records");
+        }
+    };
+
 
     // 🔹 Derived filter options from loaded rackData
     const siteOptions = Array.from(
@@ -178,10 +277,46 @@ const AcDcRackDashboard = ({ userData }) => {
         );
     });
 
+    // 🔹 Site-wise Summary Calculation
+    const siteSummaryMap = {};
+
+    filteredData.forEach(rack => {
+        const site = rack.siteName || "UNKNOWN";
+
+        if (!siteSummaryMap[site]) {
+            siteSummaryMap[site] = {
+                site,
+                totalInstalled: 0,
+                totalPassive: 0,
+                totalActive: 0,
+                totalCore: 0,
+                totalTNG: 0,
+                totalOther: 0,
+                totalSwitchOff: 0,
+            };
+        }
+
+        const s = siteSummaryMap[site];
+
+        // Total installed
+        s.totalInstalled += 1;
+
+        // Rack type
+        if (rack.rackType === "Passive") s.totalPassive += 1;
+        if (rack.rackType === "Active") s.totalActive += 1;
+
+        // Domain type
+        if (rack.rackDomainType === "Core") s.totalCore += 1;
+        else if (rack.rackDomainType === "TNG") s.totalTNG += 1;
+        else if (rack.rackDomainType) s.totalOther += 1;
+
+        // Switch Off logic
+        const totalLoad = Number(rack.totalLoadBoth) || 0;
+        if (totalLoad === 0) s.totalSwitchOff += 1;
+    });
 
     // Convert map to array for Recharts
-    const chartData = Object.values(chartDataMap);
-
+    const siteSummaryChartData = Object.values(siteSummaryMap);
 
     // 🔹 Download Excel
     const handleDownloadExcel = () => {
@@ -300,7 +435,7 @@ const AcDcRackDashboard = ({ userData }) => {
             </h1>
 
 
-            {/* 🔹 Summary Chart Section */}
+            {/* 🔹 Site-wise Rack Summary */}
             <div
                 style={{
                     background: "#1e293b",
@@ -310,36 +445,46 @@ const AcDcRackDashboard = ({ userData }) => {
                     color: "white",
                 }}
             >
-                <h2 style={{ textAlign: "center", marginBottom: "10px" }}>📊 Rack/Load Summary</h2>
+                <h2 style={{ textAlign: "center", marginBottom: "10px" }}>
+                    📊 Site-wise Rack Summary
+                </h2>
 
-                {chartData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
+                {siteSummaryChartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={360}>
                         <BarChart
-                            data={chartData}
-                            margin={{ top: 10, right: 20, left: 0, bottom: 30 }}
+                            data={siteSummaryChartData}
+                            margin={{ top: 10, right: 30, left: 10, bottom: 60 }}
                         >
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="equipmentLocation" angle={-25} textAnchor="end" interval={0} height={60} />
-                            <YAxis />
-                            <Tooltip
-                                contentStyle={{ backgroundColor: "#1f6dbbff", borderRadius: "6px" }}
-                                formatter={(value, name) =>
-                                    name === "Total Running Load (A)"
-                                        ? [`${value.toFixed(2)} A`, "Total Load (Amps)"]
-                                        : [value, "Rack Count"]
-                                }
+                            <XAxis
+                                dataKey="site"
+                                angle={-30}
+                                textAnchor="end"
+                                interval={0}
+                                height={80}
                             />
+                            <YAxis allowDecimals={false} />
+                            <Tooltip />
                             <Legend />
-                            <Bar dataKey="totalLoad" fill="#22c55e" name="Total Running Load (A)" />
-                            <Bar dataKey="rackCount" fill="#3b82f6" name="Rack Count" />
+
+                            <Bar dataKey="totalInstalled" stackId="a" name="Installed" fill="#22c55e" />
+                            <Bar dataKey="totalActive" stackId="a" name="Active" fill="#3b82f6" />
+                            <Bar dataKey="totalPassive" stackId="a" name="Passive" fill="#94a3b8" />
+
+                            <Bar dataKey="totalCore" stackId="b" name="Core" fill="#f97316" />
+                            <Bar dataKey="totalTNG" stackId="b" name="TNG" fill="#a855f7" />
+                            <Bar dataKey="totalOther" stackId="b" name="Other" fill="#64748b" />
+
+                            <Bar dataKey="totalSwitchOff" name="Switch Off" fill="#ef4444" />
                         </BarChart>
                     </ResponsiveContainer>
                 ) : (
                     <p style={{ textAlign: "center", color: "#cbd5e1" }}>
-                        No data available for chart
+                        No data available for summary
                     </p>
                 )}
             </div>
+
 
 
             <div style={{ marginBottom: "10px" }}>
@@ -554,6 +699,18 @@ const AcDcRackDashboard = ({ userData }) => {
                     ⚡ <strong>Total Running Load:</strong>{" "}
                     {filteredData.reduce((sum, d) => sum + (parseFloat(d.totalLoadBoth) || 0), 0).toFixed(2)} A
                 </div>
+                {isPrivileged && (
+                    <p
+                        onClick={handleDeleteAll}
+                        style={{ color:"white", background: "#d6090938", borderRadius: '3px', height: "fit-content", fontSize: '12px', marginLeft: "16px", cursor: "pointer", padding:"2px 3px"}}
+                        onMouseMove={(e) => { e.currentTarget.style.backgroundColor = '#d60909a1' }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#d6090938';
+                        }}
+                        title="Delete All button, Please ensure before delete !!!"
+                    >
+                        ❌ All Data
+                    </p>)}
             </div>
 
             <div className="table-container" style={{ maxHeight: "600px" }}>

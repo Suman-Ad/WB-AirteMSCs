@@ -1,9 +1,11 @@
 // src/pages/RackTrackerForm.js
 import React, { useState } from "react";
 import { db } from "../firebase"; // ✅ make sure firebase.js is configured
-import { doc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, updateDoc, collection, deleteDoc, getDocs } from "firebase/firestore";
 import { useNavigate, useLocation } from "react-router-dom";
 import { XAxis, YAxis, ZAxis } from "recharts";
+import * as XLSX from "xlsx";
+
 
 
 // ✅ Helper function for safe numeric conversion
@@ -63,6 +65,8 @@ function computeCapacityAnalysis(form) {
     ? (toNumber(form.usedRackUSpace) / toNumber(form.totalRackUSpace)) * 100
     : 0;
 
+  const rackType = form.rackType;
+
   return {
     cableCapacityA,
     pctLoadCableA: pctLoadOnCableA.toFixed(1),
@@ -89,31 +93,77 @@ function computeCapacityAnalysis(form) {
     rackEndRunningLoadA,
     rackEndRunningLoadB,
 
-    sourceType: A > 0 && B > 0 ? "Dual Source" : "Single Source",
+    sourceType: rackType === "Passive" ? "None" : A > 0 && B > 0 ? "Dual Source" : "Single Source",
     freeRackUSpace: toNumber(form.totalRackUSpace) - toNumber(form.usedRackUSpace),
     pctRackOccupied: pctRackOccupied.toFixed(1),
   };
 }
 
 const RackTrackerForm = ({ userData }) => {
+
+  /** permissions */
+  const isAdmin =
+    userData?.role === "Super Admin" ||
+    userData?.role === "Admin" ||
+    userData.isAdminAssigned ||
+    // isAdminAssignmentValid(userData) ||
+    userData?.designation === "Vertiv Site Infra Engineer" ||
+    userData?.designation === "Vertiv CIH" ||
+    userData?.designation === "Vertiv ZM";
+
+
+  // const isAdminAssignmentValid = (userData) => {
+  //   if (!userData?.isAdminAssigned) return false;
+  //   if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+  //   const today = new Date();
+  //   today.setHours(0, 0, 0, 0);
+
+  //   const from = new Date(userData.adminAssignFrom);
+  //   const to = new Date(userData.adminAssignTo);
+  //   to.setHours(23, 59, 59, 999);
+
+  //   return today >= from && today <= to;
+  // };
+
   const navigate = useNavigate();
   const location = useLocation();
   const editData = location.state?.editData || null;
   const powerType = ["AC", "DC", "AC+DC"];
   const rackType = ["Active", "Passive"];
   const [saving, setSaving] = useState(false);
+  const bulkControlRef = React.useRef({
+    paused: false,
+    cancelled: false,
+  });
+
+  const [uploadProgress, setUploadProgress] = useState({
+    total: 0,
+    current: 0,
+    skipped: 0,
+    active: false,
+  });
+
+  const [bulkCreatedRefs, setBulkCreatedRefs] = useState([]);
+  const [bulkControl, setBulkControl] = useState({
+    paused: false,
+    cancelled: false,
+  });
+
   const [formData, setFormData] = useState(
     editData
       ? { ...editData } // Prefill all fields from the record
       : {
         // General default empty form for new entries
         slNo: "",
+        region: userData?.region,
         circle: userData?.circle,
         siteName: userData?.site,
         equipmentLocation: "",
         equipmentRackNo: "",
         rackName: "",
         rfaiNo: "",
+        rackPowerOnDate: "",
         rackType: rackType[0],
         powerType: "",
         rackSize: "",
@@ -130,6 +180,7 @@ const RackTrackerForm = ({ userData }) => {
         totalRackUSpace: "",
         usedRackUSpace: "",
         freeRackUSpace: "",
+        rackDomainType: "",
         rackOwnerName: "",
 
         // Source A
@@ -191,6 +242,228 @@ const RackTrackerForm = ({ userData }) => {
         remarksB: "",
         sourceType: "",
       });
+
+  const handleBulkRollback = async () => {
+    if (bulkCreatedRefs.length === 0) {
+      alert("No bulk-uploaded racks to rollback.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Rollback ${bulkCreatedRefs.length} uploaded racks?\n\nThis cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      for (const ref of bulkCreatedRefs) {
+        await deleteDoc(
+          doc(db, "acDcRackDetails", ref.siteKey, "racks", ref.rackKey)
+        );
+      }
+
+      setBulkCreatedRefs([]);
+      alert("✅ Bulk upload rollback completed successfully.");
+
+    } catch (err) {
+      console.error("Rollback failed:", err);
+      alert("❌ Rollback failed. Check console.");
+    }
+  };
+
+  const handleDownloadExcelTemplate = () => {
+    const link = document.createElement("a");
+    link.href = "/rack-bulk-upload-template.xlsx"; // public folder path
+    link.download = "Rack_Bulk_Upload_Template.xlsx";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleBulkExcelUpload = async (e) => {
+    if (userData?.role === "User" || userData?.role === "Super User" && userData?.designation === "Vertiv Technician") {
+      alert("Not Authorised");
+      return;
+    }
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (
+      !window.confirm(
+        "Are you sure you want to start bulk upload?\n\n" +
+        "• Existing racks will NOT be overwritten\n" +
+        "• Duplicate racks will be skipped\n" +
+        "• This action can be undone after upload"
+      )
+    ) {
+      return;
+    }
+
+    const uploadedBy = {
+      uid: userData.uid,
+      name: userData.name || "",
+      role: userData.role,
+      empId: userData.empId,
+    };
+
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer);
+
+    const rackSheet = workbook.Sheets["Racks"];
+    if (!rackSheet) {
+      alert("❌ 'Racks' sheet not found");
+      return;
+    }
+
+    const rackRows = XLSX.utils.sheet_to_json(rackSheet);
+
+    const eqSheet = workbook.Sheets["RackEquipments"];
+    const eqRows = eqSheet ? XLSX.utils.sheet_to_json(eqSheet) : [];
+
+    let success = 0;
+    let failed = [];
+
+    setUploadProgress({
+      total: rackRows.length,
+      current: 0,
+      active: true,
+    });
+
+    setUploadProgress({
+      total: rackRows.length,
+      current: 0,
+      skipped: 0,
+      active: true,
+    });
+
+    bulkControlRef.current = { paused: false, cancelled: false };
+
+    for (const row of rackRows) {
+      // Cancel check
+      if (bulkControlRef.current.cancelled) {
+        setStatus("❌ Bulk upload cancelled by user");
+        break;
+      }
+
+      // Pause check
+      while (bulkControlRef.current.paused) {
+        await new Promise(res => setTimeout(res, 300));
+      }
+
+      try {
+        if (!row.siteName || !row.equipmentRackNo || !row.rackName) {
+          throw new Error("Missing required fields");
+        }
+        const siteKey = userData?.site
+          .trim()
+          .toUpperCase()
+          .replace(/[\/\s]+/g, "_");
+
+        const rackKey = `${row.equipmentLocation}_${row.equipmentRackNo}-${row.rackName}`
+          .replace(/[\/\s]+/g, "_");
+
+        /* Filter equipments for this rack */
+        const rackEquipments = eqRows
+          .filter(
+            e =>
+              e.siteName === userData?.site &&
+              e.rackName === row.rackName
+          )
+          .map(e => {
+            const startU = Number(e.startU) || 0;
+            const endU = Number(e.endU) || 0;
+            const sizeU =
+              startU >= endU && endU > 0 ? startU - endU + 1 : 0;
+
+            return {
+              id: Date.now().toString() + Math.random(),
+              name: e.name || "",
+              startU,
+              endU,
+              sizeU,
+              remarks: e.remarks || "",
+            };
+          })
+          .filter(e => e.sizeU > 0);
+
+        const uCalc = recomputeUSpaceFromEquipments(
+          rackEquipments,
+          row.totalRackUSpace
+        );
+
+        const baseData = {
+          ...row,
+          ...uCalc,
+          rackEquipments,
+          rackDimensions: {
+            height: Number(row.rackHeight) || 0,
+            width: Number(row.rackWidth) || 0,
+            depth: Number(row.rackDepth) || 0,
+          },
+          createdAt: new Date().toISOString(),
+        };
+
+        const calc = computeCapacityAnalysis(baseData);
+        const payload = {
+          ...baseData, ...calc, uploadedBy,
+          uploadedAt: new Date().toISOString()
+        };
+        const existingRackKeys = new Set();
+
+        const siteSnap = await getDocs(
+          collection(db, "acDcRackDetails", siteKey, "racks")
+        );
+
+        siteSnap.forEach(doc => existingRackKeys.add(doc.id));
+
+        const siteRef = doc(db, "acDcRackDetails", siteKey);
+        await setDoc(siteRef, { createdAt: new Date() }, { merge: true });
+
+        if (existingRackKeys.has(rackKey)) {
+          setUploadProgress(p => ({
+            ...p,
+            skipped: p.skipped + 1,
+          }));
+          continue; // ⬅️ important (do NOT throw)
+        }
+
+
+        await setDoc(
+          doc(siteRef, "racks", rackKey),
+          payload,
+          { merge: true }
+        );
+
+        success++;
+
+        setUploadProgress(p => ({
+          ...p,
+          current: p.current + 1,
+        }));
+
+
+        setBulkCreatedRefs(prev => [
+          ...prev,
+          {
+            siteKey,
+            rackKey,
+          },
+        ]);
+
+      } catch (err) {
+        console.error("Bulk upload error:", err);
+        failed.push({ rack: row.rackName, error: err.message });
+      }
+    }
+    setBulkControl({ paused: false, cancelled: false });
+    setUploadProgress(p => ({ ...p, active: false }));
+    bulkControlRef.current = { paused: false, cancelled: false };
+
+
+    alert(`✅ Bulk upload completed\nSuccess: ${success}\nFailed: ${failed.length}`);
+  };
 
   const [status, setStatus] = useState("");
   const floorList = ["Ground Floor", "1st Floor", "2nd Floor", "3rd Floor", "4th Floor", "5th Floor"]
@@ -322,6 +595,84 @@ const RackTrackerForm = ({ userData }) => {
     <div className="daily-log-container">
       <h1 style={{ color: "white", textAlign: "center", paddingBottom: "20px" }}>
         <strong>🗄️UPS / SMPS Equipment Details</strong>
+        {isAdmin && !editData && (
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv,.xlsb"
+              onChange={handleBulkExcelUpload}
+            />
+            <p style={{ fontSize: "11px", color: "#aaa", marginTop: "4px" }}>
+              Please use the provided Excel format for bulk upload.
+            </p>
+            <button
+              type="button"
+              onClick={handleDownloadExcelTemplate}
+              style={{
+                padding: "4px 8px",
+                fontSize: "12px",
+                cursor: "pointer",
+                background: "#2563eb",
+                color: "white",
+                border: "none",
+                borderRadius: "4px"
+              }}
+            >
+              ⬇ Download Excel Format
+            </button>
+          </div>
+        )}
+
+
+        {isAdmin && !editData && (
+          <p style={{ fontSize: "12px", color: "#aaa" }}>
+            {bulkCreatedRefs.length > 0 && !uploadProgress.active && (
+              <button
+                className="danger-btn"
+                onClick={handleBulkRollback}
+              >
+                Undo Bulk Upload
+              </button>
+            )}
+            {uploadProgress.active && (
+              <div className="upload-progress">
+                <progress
+                  value={uploadProgress.current + uploadProgress.skipped}
+                  max={uploadProgress.total}
+                />
+
+                <p>
+                  Uploaded {uploadProgress.current} / {uploadProgress.total}
+                  &nbsp;|&nbsp;
+                  Skipped: {uploadProgress.skipped}
+                </p>
+              </div>
+            )}
+
+            {uploadProgress.active && (
+              <div className="bulk-controls">
+                <button
+                  onClick={() => {
+                    bulkControlRef.current.paused = !bulkControlRef.current.paused;
+                  }}
+                >
+                  {bulkControlRef.current.paused ? "Resume" : "Pause"}
+                </button>
+
+                <button
+                  className="danger-btn"
+                  onClick={() => {
+                    bulkControlRef.current.cancelled = true;
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+
+          </p>
+        )}
       </h1>
 
       <form onSubmit={handleSubmit}>
@@ -350,6 +701,8 @@ const RackTrackerForm = ({ userData }) => {
             <input type="text" name="rackName" value={formData.rackName} onChange={handleChange} disabled={!!editData} />
             <label>RFAI Number:</label>
             <input type="text" name="rfaiNo" value={formData.rfaiNo} onChange={handleChange} />
+            <label>Rack Power On Date:</label>
+            <input type="date" name="rackPowerOnDate" value={formData.rackPowerOnDate} onChange={handleChange} />
           </div>
           <div className="form-section">
             <label>Rack Type:</label>
@@ -370,7 +723,7 @@ const RackTrackerForm = ({ userData }) => {
                 <option value="None">None</option>
               ) : (
                 <>
-                  <option value="">Select Source Type</option>
+                  <option value="">Select Power Type</option>
                   {powerType.map((q) => (
                     <option key={q} value={q}>{q}</option>
                   ))}
@@ -441,10 +794,10 @@ const RackTrackerForm = ({ userData }) => {
                       textAlign: "center",
                       padding: "6px 0",
                       background: "#4b7496d2",
-                      height:"100px",
-                      borderTopLeftRadius:"9px",
-                      borderBottomLeftRadius:"9px",
-                      alignContent:"center"
+                      height: "100px",
+                      borderTopLeftRadius: "9px",
+                      borderBottomLeftRadius: "9px",
+                      alignContent: "center"
                     }}
                   >
                     {idx + 1}
@@ -533,7 +886,7 @@ const RackTrackerForm = ({ userData }) => {
                           paddingRight: "0.5rem",
                           paddingTop: "0.25rem",
                           paddingBottom: "0.25rem",
-                          resize: "none", 
+                          resize: "none",
                         }}
                         placeholder="Enter equipment details"
                         value={eq.remarks}
@@ -564,7 +917,7 @@ const RackTrackerForm = ({ userData }) => {
                     {/* Delete Button */}
                     <p
                       type="button"
-                      style={{ color: "#dc2626ff", fontSize: "0.875rem", width: "fit-content", cursor: "pointer", height:"100px", alignContent:"center", background:"rgba(224, 44, 44, 0.73)", borderTopRightRadius:"9px", borderBottomRightRadius:"9px" }}
+                      style={{ color: "#dc2626ff", fontSize: "0.875rem", width: "fit-content", cursor: "pointer", height: "100px", alignContent: "center", background: "rgba(224, 44, 44, 0.73)", borderTopRightRadius: "9px", borderBottomRightRadius: "9px" }}
                       onClick={() => {
                         const list = rackEquipments.filter((_, i) => i !== idx);
                         setRackEquipments(
@@ -645,6 +998,17 @@ const RackTrackerForm = ({ userData }) => {
           </div>
 
           <div className="form-section">
+            <label>Rack Domain Type:</label>
+            <select
+              name="rackDomainType"
+              value={formData.rackDomainType}
+              onChange={handleChange}
+            >
+              <option value="">Select Domain Type</option>
+              <option value="TNG">TNG</option>
+              <option value="Core">Core</option>
+              <option value="Others">Others</option>
+            </select>
             <label>Rack Owner Details (Name-Ph.):</label>
             <input type="text" name="rackOwnerName" value={formData.rackOwnerName} onChange={handleChange} />
           </div>

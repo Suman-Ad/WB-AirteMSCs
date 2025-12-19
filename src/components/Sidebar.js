@@ -20,6 +20,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
     localStorage.removeItem("pmData");
     localStorage.removeItem("thermalReports");
     localStorage.removeItem("lastFilling")
+    localStorage.removeItem("acdcRackFilters")
     navigate("/login");
   };
 
@@ -42,8 +43,8 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
           <button onClick={() => {goProfile(); setCollapsed(true);}} className="profile-manage-btn" title="Profile" >
             {userData?.role === "Super Admin" && <span>👑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super Admin*</div></span>}
             {userData?.role === "Admin" && <span>🔑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Admin*</div></span>}
-            {userData?.role === "Super User" && <span>🦸 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super User*</div></span>}
-            {userData?.role === "User" && <span>👤 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*User*</div></span>}
+            {userData?.role === "Super User" && <span>🦸 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: `${userData?.isAdminAssigned ? "#e64219ff" : "#6b7280"}`, fontSize: 12 }}>{userData?.isAdminAssigned ? "🪪 Temp Admin" :"*Super User*"}</div></span>}
+            {userData?.role === "User" && <span>👤 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: `${userData?.isAdminAssigned ? "#e64219ff" : "#6b7280"}`, fontSize: 12}}>{userData?.isAdminAssigned ? "🪪 Temp Admin" : "*User*"}</div></span>}
           </button>
         }
         <span>
