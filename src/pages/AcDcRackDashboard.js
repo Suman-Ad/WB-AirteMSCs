@@ -14,6 +14,7 @@ import { saveAs } from "file-saver";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
+import { styleEffect } from "framer-motion";
 
 
 const AcDcRackDashboard = ({ userData }) => {
@@ -318,6 +319,74 @@ const AcDcRackDashboard = ({ userData }) => {
     // Convert map to array for Recharts
     const siteSummaryChartData = Object.values(siteSummaryMap);
 
+
+    const applyRackSheetStyles = (ws) => {
+        const range = XLSX.utils.decode_range(ws["!ref"]);
+
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+            const headerCell = XLSX.utils.encode_cell({ r: 0, c: C });
+            const cell = ws[headerCell];
+            if (!cell || !cell.v) continue;
+
+            const headerText = String(cell.v);
+
+            // 🎨 Header color logic
+            let fillColor = "FFD9D9D9"; // default grey
+
+            if (headerText.trim().endsWith("A")) {
+                fillColor = "FFDBEAFE"; // blue
+            } else if (headerText.trim().endsWith("B")) {
+                fillColor = "FFFFEDD5"; // orange
+            }
+
+            cell.s = {
+                font: {
+                    bold: true,
+                },
+                alignment: {
+                    wrapText: true,
+                    horizontal: "center",
+                    vertical: "center",
+                },
+                fill: {
+                    fgColor: { rgb: fillColor },
+                },
+                border: {
+                    top: { style: "thin" },
+                    bottom: { style: "thin" },
+                    left: { style: "thin" },
+                    right: { style: "thin" },
+                },
+            };
+        }
+
+        // 📐 Auto column width
+        ws["!cols"] = Array(range.e.c + 1).fill({ wch: 22 });
+    };
+
+    const applyAllBorders = (ws) => {
+        const range = XLSX.utils.decode_range(ws["!ref"]);
+
+        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+                const cell = ws[cellRef];
+                if (!cell) continue;
+
+                cell.s = {
+                    ...(cell.s || {}),
+                    border: {
+                        top: { style: "thin" },
+                        bottom: { style: "thin" },
+                        left: { style: "thin" },
+                        right: { style: "thin" },
+                    },
+                };
+            }
+        }
+    };
+
+
     // 🔹 Download Excel
     const handleDownloadExcel = () => {
         if (filteredData.length === 0) {
@@ -328,9 +397,31 @@ const AcDcRackDashboard = ({ userData }) => {
         // Map Firestore data to a flat table
         const exportData = filteredData.map((item) => ({
             "Sl. No": filteredData.indexOf(item) + 1,
+            "Reagion": item.region,
             "Circle": item.circle,
             "Site Name": item.siteName,
             "Equipment Location": item.equipmentLocation,
+            "Equipment Name": item.equipmentRackNo,
+            "Rack Name": item.rackName,
+            "RFAI No.": item.rfaiNo,
+            "Rack Power On Date": item.rackPowerOnDate,
+            "Rack Type (Active/Passive)": item.rackType,
+            "Power Type (AC/DC/AC+DC)": item.powerType,
+            "Source Type": item.sourceType,
+            "Rack Size (H x W x D)": item.rackSize,
+            "Temp Front Top": item.frontTopTemp,
+            "Temp Front Mid": item.frontMiddleTemp,
+            "Temp Front Bottom": item.frontBottomTemp,
+            "Temp Back Top": item.backTopTemp,
+            "Temp Back Mid": item.backMiddleTemp,
+            "Temp Back Bottom": item.backBottomTemp,
+            "Rack Description": item.rackDescription,
+            "Total Rack U": item.totalRackUSpace,
+            "Total Used U": item.usedRackUSpace,
+            "Total Free U": item.freeRackUSpace,
+            "% of Rack Occupied": item.pctRackOccupied,
+            "Domain Type": item.rackDomainType,
+            "Rack Owner Details": item.rackOwnerName,
             "SMPS Rating A (Amps)": item.smpsRatingA,
             "SMPS Name A": item.smpsNameA,
             "DB Number A": item.dbNumberA,
@@ -382,18 +473,53 @@ const AcDcRackDashboard = ({ userData }) => {
             "% Load on Cable": item.bothPctLoadCable,
             "% Load on MCB": item.bothPctLoadMcb,
             "Both MCB Same": item.bothMcbSame,
-            "Last Updated": item.updatedAt,
+            "Last Updated": item.updatedBy?.name
+                ? `${item.updatedBy.name}(${item.updatedBy.empId}) - ${item.updatedAt}`
+                : item.updatedAt,
         }));
 
+        const exportEquipment = filteredData.flatMap((eqItem, rackIndex) => {
+            // If no rack equipments, still export one empty row
+            if (!Array.isArray(eqItem.rackEquipments) || eqItem.rackEquipments.length === 0) {
+                return [{
+                    "Sl. No": rackIndex + 1,
+                    "Site Name": eqItem.siteName || "-",
+                    "Equipment Location": eqItem.equipmentLocation || "-",
+                    "Equipment Rack No": eqItem.equipmentRackNo || "-",
+                    "Equipment Name": "-",
+                    "Start U": "-",
+                    "End U": "-",
+                    "Remarks": "-",
+                }];
+            }
+
+            // One row per equipment
+            return eqItem.rackEquipments.map((eq, eqIndex) => ({
+                "Sl. No": `${rackIndex + 1}.${eqIndex + 1}`,   // keeps grouping
+                "Site Name": eqItem.siteName || "-",
+                "Equipment Location": eqItem.equipmentLocation || "-",
+                "Equipment Rack No": eqItem.equipmentRackNo || "-",
+                "Equipment Name": eq.name || "-",
+                "Start U": eq.startU ?? "-",
+                "End U": eq.endU ?? "-",
+                "Remarks": eq.remarks || "-",
+            }));
+        });
+
+
         const ws = XLSX.utils.json_to_sheet(exportData);
+        const ws1 = XLSX.utils.json_to_sheet(exportEquipment)
+        applyRackSheetStyles(ws);
+        applyAllBorders(ws);
+
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Rack Data");
+        XLSX.utils.book_append_sheet(wb, ws1, "Rack Equipments");
 
-        const wbout = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+        const wbout = XLSX.write(wb, { type: "array", bookType: "xlsx",  cellStyles: true });
         const blob = new Blob([wbout], { type: "application/octet-stream" });
         saveAs(blob, `ACDC_RackData_${new Date().toISOString().split("T")[0]}.xlsx`);
         // XLSX.writeFile(wb, `ACDC_RackData_${new Date().toISOString().split("T")[0]}.xlsx`);
-
     };
 
     const getHeaderStyle = (header) => {
@@ -412,8 +538,6 @@ const AcDcRackDashboard = ({ userData }) => {
         setPreviewData(record);
         setPreviewOpen(true);
     };
-
-
 
     const getTotalRackU = (rack) => {
         const total = Number(rack.totalRackUSpace);
@@ -484,8 +608,6 @@ const AcDcRackDashboard = ({ userData }) => {
                     </p>
                 )}
             </div>
-
-
 
             <div style={{ marginBottom: "10px" }}>
                 <button
@@ -702,7 +824,7 @@ const AcDcRackDashboard = ({ userData }) => {
                 {isPrivileged && (
                     <p
                         onClick={handleDeleteAll}
-                        style={{ color:"white", background: "#d6090938", borderRadius: '3px', height: "fit-content", fontSize: '12px', marginLeft: "16px", cursor: "pointer", padding:"2px 3px"}}
+                        style={{ color: "white", background: "#d6090938", borderRadius: '3px', height: "fit-content", fontSize: '12px', marginLeft: "16px", cursor: "pointer", padding: "2px 3px" }}
                         onMouseMove={(e) => { e.currentTarget.style.backgroundColor = '#d60909a1' }}
                         onMouseLeave={(e) => {
                             e.currentTarget.style.backgroundColor = '#d6090938';
@@ -800,7 +922,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                 onClick={() => {
                                     preview(index);
                                     setEquipPopupData(item);   // pass full rack record
-                                    setEquipPopupOpen(true);
+
                                 }
                                 }
                                 style={{ cursor: "pointer", transition: "background 0.2s" }}
@@ -916,30 +1038,40 @@ const AcDcRackDashboard = ({ userData }) => {
                             boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
                         }}
                     >
-                        <button
-                            onClick={() => setPreviewOpen(false)}
-                            style={{
-                                background: "#ef44442d",
-                                color: "white",
-                                padding: "8px 15px",
-                                border: "none",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                marginRight: "10px",
-                                position: "sticky",
-                                top: 0,
-                                left: 0,
-                                zIndex: 1,
-                                float: "right",
-                                width: "fit-content",
+                        <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "2px solid #2083a1ff", position: "sticky", top: "0" }}>
+                            <div style={{ left: 0, textAlign: "center", }}>
+                                <h2 style={{ cursor: "pointer", borderBottom: "2px solid #2083a1ff", borderRadius: "5px", background: 'linear-gradient(105deg, #3ba2b4a6 10%, #a3a360 100%)', padding: 2 }}
+                                    onClick={() => setEquipPopupOpen(true)}
+                                    onMouseMove={(e) => { e.currentTarget.style.backgroundColor = "#c72525ff" }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#3ba2b4a6" }}
+                                >
+                                    🗄️ Viwe Rack Details Preview
+                                </h2>
+                            </div>
+                            <div>
+                                <button
+                                    onClick={() => setPreviewOpen(false)}
+                                    style={{
+                                        background: "#ef44442d",
+                                        color: "white",
+                                        padding: "8px 15px",
+                                        border: "none",
+                                        borderRadius: "6px",
+                                        cursor: "pointer",
+                                        marginRight: "10px",
+                                        position: "sticky",
+                                        top: 0,
+                                        left: 0,
+                                        zIndex: 1,
+                                        float: "right",
+                                        width: "fit-content",
 
-                            }}
-                        >
-                            ❌
-                        </button>
-                        <h2 style={{ textAlign: "center", borderBottom: "2px solid #2083a1ff", paddingBottom: "10px" }}>
-                            🗄️ Rack Details Preview
-                        </h2>
+                                    }}
+                                >
+                                    ❌
+                                </button>
+                            </div>
+                        </div>
 
                         <table style={{ width: "100%", marginTop: "10px" }}>
                             {/* ---- Preview table body with explicit ordering & grouping ---- */}
@@ -1046,7 +1178,12 @@ const AcDcRackDashboard = ({ userData }) => {
                                     const pushSectionHeader = (title) =>
                                         rows.push(
                                             <tr key={`hdr-${title}`}>
-                                                <td colSpan="2" style={{ background: "#f3f4f6", fontWeight: "700", padding: "8px 10px", borderBottom: "1px solid #ddd" }}>
+                                                <td colSpan="2"
+                                                    style={title === "Rack Equipments (U-by-U)" ? { background: 'linear-gradient(105deg, #3ba2b4a6 10%, #a3a360 100%)', cursor: "pointer", borderRadius: "8px" } : { background: "#f3f4f6", fontWeight: "700", padding: "8px 10px", borderBottom: "1px solid #ddd", borderRadius: "8px" }}
+                                                    onClick={() => title === "Rack Equipments (U-by-U)" ? setEquipPopupOpen(true) : ""}
+                                                    onMouseMove={(e) => title === "Rack Equipments (U-by-U)" ? e.currentTarget.style.backgroundColor = "#ec1414ff" : ""}
+                                                    onMouseLeave={(e) => title === "Rack Equipments (U-by-U)" ? e.currentTarget.style.backgroundColor = "#3ba2b4a6" : ""}
+                                                >
                                                     {title}
                                                 </td>
                                             </tr>
@@ -1118,10 +1255,9 @@ const AcDcRackDashboard = ({ userData }) => {
                                         });
                                     }
 
-
                                     // If there are any extra keys in previewData not listed in orderedKeys, show them at the end
                                     const extraKeys = Object.keys(previewData || {}).filter(
-                                        (k) => !orderedKeys.includes(k) && k !== "rackDimensions" && k !== "rackEquipments"
+                                        (k) => !orderedKeys.includes(k) && k !== "rackDimensions" && k !== "rackEquipments" && k !== "updatedBy" && k !== "updatedAt"
                                     )
                                     if (extraKeys.length > 0) {
                                         pushSectionHeader("Other Fields");
@@ -1132,6 +1268,39 @@ const AcDcRackDashboard = ({ userData }) => {
                                                     <td style={{ padding: "6px 10px", borderBottom: "1px solid #eee" }}>{display(previewData[k])}</td>
                                                 </tr>
                                             )
+                                        );
+                                    }
+
+                                    // Update By
+                                    if (previewData?.updatedBy && typeof previewData.updatedBy === "object") {
+                                        pushSectionHeader("Updated By");
+
+                                        rows.push(
+                                            <tr key="updatedBy-name">
+                                                <td style={{ fontWeight: "bold" }}>Name</td>
+                                                <td>Mr. {previewData.updatedBy.name || "-"}</td>
+                                            </tr>
+                                        );
+
+                                        rows.push(
+                                            <tr key="updatedBy-empId">
+                                                <td style={{ fontWeight: "bold" }}>Emp. ID</td>
+                                                <td>{previewData.updatedBy.empId || "-"}</td>
+                                            </tr>
+                                        );
+
+                                        rows.push(
+                                            <tr key="updatedBy-role">
+                                                <td style={{ fontWeight: "bold" }}>Role</td>
+                                                <td>{previewData.updatedBy.role || "-"}</td>
+                                            </tr>
+                                        );
+
+                                        rows.push(
+                                            <tr key="updatedAt">
+                                                <td style={{ fontWeight: "bold" }}>Update At</td>
+                                                <td>{previewData.updatedAt || "-"}</td>
+                                            </tr>
                                         );
                                     }
 

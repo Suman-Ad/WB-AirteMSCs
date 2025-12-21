@@ -328,12 +328,6 @@ const RackTrackerForm = ({ userData }) => {
     setUploadProgress({
       total: rackRows.length,
       current: 0,
-      active: true,
-    });
-
-    setUploadProgress({
-      total: rackRows.length,
-      current: 0,
       skipped: 0,
       active: true,
     });
@@ -356,7 +350,28 @@ const RackTrackerForm = ({ userData }) => {
         if (!row.siteName || !row.equipmentRackNo || !row.rackName) {
           throw new Error("Missing required fields");
         }
-        const siteKey = userData?.site
+
+        const isRestrictedSuperUser =
+          userData?.role === "Super User" &&
+          (
+            userData?.designation === "Vertiv Technician" ||
+            userData?.designation === "Vertiv Site Infra Engineer"
+          );
+
+        if (isRestrictedSuperUser && row.siteName !== userData?.site) {
+          alert(`❌ Site Name Mismatch.\nPlease use site: "${userData?.site}"`);
+          return;
+        }
+
+        const excelSite = String(row.siteName).trim().toUpperCase();
+        const userSite = String(userData?.site).trim().toUpperCase();
+
+        if (isRestrictedSuperUser && excelSite !== userSite) {
+          alert(`❌ Site Name Mismatch.\nExpected: "${userData?.site}"`);
+          return;
+        }
+
+        const siteKey = row.siteName
           .trim()
           .toUpperCase()
           .replace(/[\/\s]+/g, "_");
@@ -368,7 +383,7 @@ const RackTrackerForm = ({ userData }) => {
         const rackEquipments = eqRows
           .filter(
             e =>
-              e.siteName === userData?.site &&
+              e.siteName === row.siteName &&
               e.rackName === row.rackName
           )
           .map(e => {
@@ -407,8 +422,8 @@ const RackTrackerForm = ({ userData }) => {
 
         const calc = computeCapacityAnalysis(baseData);
         const payload = {
-          ...baseData, ...calc, uploadedBy,
-          uploadedAt: new Date().toISOString()
+          ...baseData, ...calc, updatedBy: uploadedBy,
+          updatedAt: new Date().toISOString()
         };
         const existingRackKeys = new Set();
 
@@ -462,7 +477,7 @@ const RackTrackerForm = ({ userData }) => {
     bulkControlRef.current = { paused: false, cancelled: false };
 
 
-    alert(`✅ Bulk upload completed\nSuccess: ${success}\nFailed: ${failed.length}`);
+    alert(`✅ Bulk upload completed\nSuccess: ${success}\nSkipped: ${uploadProgress.skipped}\nFailed: ${failed.length}`);
   };
 
   const [status, setStatus] = useState("");
@@ -550,6 +565,12 @@ const RackTrackerForm = ({ userData }) => {
       return;
     }
     setSaving(true);
+    const uploadedBy = {
+      uid: userData.uid,
+      name: userData.name || "",
+      role: userData.role,
+      empId: userData.empId,
+    };
     try {
       const isEditMode = !!editData;
       const siteKey = formData.siteName.trim().toUpperCase().replace(/[\/\s]+/g, "_");
@@ -565,6 +586,7 @@ const RackTrackerForm = ({ userData }) => {
           depth: Number(formData.rackDepth) || 0,
         },
         rackEquipments: sanitizeRackEquipments(rackEquipments),
+        updatedBy: uploadedBy,
         updatedAt: new Date().toISOString(),
       };
 
@@ -601,25 +623,28 @@ const RackTrackerForm = ({ userData }) => {
               type="file"
               accept=".xlsx,.xls,.csv,.xlsb"
               onChange={handleBulkExcelUpload}
+              style={{ color: "blueviolet" }}
             />
-            <p style={{ fontSize: "11px", color: "#aaa", marginTop: "4px" }}>
-              Please use the provided Excel format for bulk upload.
-            </p>
-            <button
-              type="button"
-              onClick={handleDownloadExcelTemplate}
-              style={{
-                padding: "4px 8px",
-                fontSize: "12px",
-                cursor: "pointer",
-                background: "#2563eb",
-                color: "white",
-                border: "none",
-                borderRadius: "4px"
-              }}
-            >
-              ⬇ Download Excel Format
-            </button>
+            <div>
+              <button
+                type="button"
+                onClick={handleDownloadExcelTemplate}
+                style={{
+                  padding: "4px 8px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  background: "#2563eb",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px"
+                }}
+              >
+                ⬇ Download Excel Format
+              </button>
+              <p style={{ fontSize: "11px", color: "#aaa", marginTop: "4px" }}>
+                Please use the provided Excel format for bulk upload.
+              </p>
+            </div>
           </div>
         )}
 

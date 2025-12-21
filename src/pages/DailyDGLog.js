@@ -9,12 +9,21 @@ import {
   deleteDoc,
   serverTimestamp,
   sum,
+  query,
+  where,
+  limit
 } from "firebase/firestore";
 import { db } from "../firebase";
 import "../assets/DailyDGLog.css";
 // import * as XLSX from "xlsx";
 import { useNavigate } from "react-router-dom";
 import XLSX from "xlsx-js-style";
+import {
+  BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, Tooltip, Legend, ResponsiveContainer
+} from "recharts";
+
+// ✅ helper to format date as YYYY-MM-DD
 
 
 const getFormattedDate = (d = new Date()) => {
@@ -98,6 +107,33 @@ const findLastFillingInDGLogs = async (site, monthsToCheck = 3) => {
   return null;
 };
 
+
+
+const calculateMonthlySummary = (logs, calculateFields) => {
+  if (!logs?.length) return null;
+
+  const calculated = logs.map(e => calculateFields(e));
+
+  const sum = (key) =>
+    calculated.reduce((a, b) => a + (Number(b[key]) || 0), 0);
+
+  const avg = (key) => {
+    const vals = calculated.map(e => Number(e[key])).filter(v => v > 0);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+  };
+
+  return {
+    totalDGKWH: sum("Total DG KWH"),
+    totalEBKWH: sum("Total EB KWH"),
+    totalSolarKWH: sum("Total Solar KWH"),
+    totalFuel: sum("Total DG Fuel"),
+    totalDGHours: sum("Total DG Hours"),
+    avgSiteKW: avg("Site Running kW"),
+    avgPUE: avg("PUE"),
+  };
+};
+
+
 const DailyDGLog = ({ userData }) => {
   const [logs, setLogs] = useState([]);
   const [totalkW, setTotalkW] = useState([]);
@@ -113,7 +149,31 @@ const DailyDGLog = ({ userData }) => {
   const siteKey = userData?.site?.toUpperCase();
   const [lastFilling, setLastFilling] = useState(null);
   const [loadingFilling, setLoadingFilling] = useState(true);
-  const [fuelAvalable, setFuelAvalable] = useState()
+  const [fuelAvalable, setFuelAvalable] = useState();
+  const [yesterdayLog, setYesterdayLog] = useState(null);
+  //for Bulk excel Upload
+  const [previewRows, setPreviewRows] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [uploadErrors, setUploadErrors] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isUploadCalculate, setIsUploadCalculate] = useState(false);
+  // Summaries for current and previous month by year
+  const [currentSummary, setCurrentSummary] = useState(null);
+  const [previousSummary, setPreviousSummary] = useState(null);
+  const [multiYearData, setMultiYearData] = useState([]);
+  const [loadingTrend, setLoadingTrend] = useState(false);
+
+
+  /** permissions */
+  const isAdmin =
+    userData?.role === "Super Admin" ||
+    userData?.role === "Admin" ||
+    userData.isAdminAssigned ||
+    // isAdminAssignmentValid(userData) ||
+    userData?.designation === "Vertiv Site Infra Engineer" ||
+    userData?.designation === "Vertiv CIH" ||
+    userData?.designation === "Vertiv ZM";
 
   // Debounce helper (optional)
   let timeout;
@@ -139,6 +199,84 @@ const DailyDGLog = ({ userData }) => {
     setFuelRate(rate);
     saveFuelRate(rate);
   };
+
+  // Current month logs - previous year same month
+  const fetchPreviousYearLogs = async () => {
+    if (!siteName || !selectedMonth) return [];
+
+    const [year, month] = selectedMonth.split("-");
+    const prevYearMonth = `${Number(year) - 1}-${month}`;
+
+    try {
+      const snap = await getDocs(
+        collection(db, "dailyDGLogs", siteName, prevYearMonth)
+      );
+
+      return snap.docs.map(d => d.data());
+    } catch (err) {
+      console.error("Previous year fetch failed", err);
+      return [];
+    }
+  };
+
+  const yoy = (current, previous) => {
+    if (!previous || previous === 0) return "N/A";
+    return (((current - previous) / previous) * 100).toFixed(1) + "%";
+  };
+
+  const buildYoYChartData = (current, previous) => [
+    {
+      name: "DG KWH",
+      Current: current.totalDGKWH,
+      Previous: previous.totalDGKWH,
+    },
+    {
+      name: "EB KWH",
+      Current: current.totalEBKWH,
+      Previous: previous.totalEBKWH,
+    },
+    {
+      name: "Solar KWH",
+      Current: current.totalSolarKWH,
+      Previous: previous.totalSolarKWH,
+    },
+  ];
+
+
+  const fetchMultiYearData = async (years = 5) => {
+    if (!siteName || !selectedMonth) return [];
+
+    const [year, month] = selectedMonth.split("-");
+    const result = [];
+
+    for (let i = 0; i < years; i++) {
+      const targetYear = Number(year) - i;
+      const ym = `${targetYear}-${month}`;
+
+      try {
+        const snap = await getDocs(
+          collection(db, "dailyDGLogs", siteName, ym)
+        );
+
+        const logs = snap.docs.map(d => d.data());
+        const summary = calculateMonthlySummary(logs, calculateFields);
+
+        if (summary) {
+          result.push({
+            year: targetYear,
+            DG_KWH: summary.totalDGKWH,
+            Fuel: summary.totalFuel,
+            PUE: Number(summary.avgPUE.toFixed(2)),
+          });
+        }
+      } catch (err) {
+        console.error("Trend fetch failed:", ym, err);
+      }
+    }
+
+    return result.reverse(); // Old → New
+  };
+
 
 
   const siteName = userData?.site || "UnknownSite";
@@ -368,7 +506,19 @@ const DailyDGLog = ({ userData }) => {
     if (cached1) {
       setLastFilling(JSON.parse(cached1));
     }
-  }, []);
+
+
+    if (!form?.Date) return;
+
+    const loadYesterday = async () => {
+      const data = await getYesterdayLog(form.Date);
+      setYesterdayLog(data);
+    };
+
+    loadYesterday();
+
+
+  }, [form?.Date]);
 
 
   // After logs are fetched, set last submitted date
@@ -470,9 +620,43 @@ const DailyDGLog = ({ userData }) => {
     return logs.find((entry) => entry.Date === ymd) || null;
   };
 
+  const getYesterdayLog = async (date) => {
+    if (!date || !siteName) return null;
+
+    const selected = new Date(date);
+    selected.setDate(selected.getDate() - 1);
+
+    const ymd = selected.toISOString().split("T")[0];
+    const monthKey = selected.toISOString().slice(0, 7); // YYYY-MM
+
+    // 1️⃣ Try already-loaded logs (fast)
+    if (logs?.length) {
+      const local = logs.find(l => l.Date === ymd);
+      if (local) return local;
+    }
+
+    try {
+      // 2️⃣ Query by Date FIELD (not document ID)
+      const q = query(
+        collection(db, "dailyDGLogs", siteName, monthKey),
+        where("Date", "==", ymd),
+        limit(1)
+      );
+
+      const snap = await getDocs(q);
+      return !snap.empty ? snap.docs[0].data() : null;
+
+    } catch (err) {
+      console.error("getYesterdayLog error:", err);
+      return null;
+    }
+  };
+
+
+
   useEffect(() => {
     if (logs.length > 0 && form.Date) {
-      const yesterday = getYesterdayData();
+      const yesterday = yesterdayLog;
       // ✅ CALL THE NEW FUNCTION HERE
       fetchAndAggregateRuns(form.Date);
       if (yesterday) {
@@ -509,6 +693,7 @@ const DailyDGLog = ({ userData }) => {
       if (currentHrs < 20 && currentFuel > 0) alert("Give Fuel Requisition");
 
     }
+
   }, [logs, form.Date, dayFuelCon, dayFuelFill]);   // ✅ run also when Date changes
 
   const fetchAndAggregateRuns = async (selectedDate) => {
@@ -638,7 +823,34 @@ const DailyDGLog = ({ userData }) => {
   useEffect(() => {
     fetchLogs();
 
-  }, [selectedMonth, siteName]);
+    if (!logs.length) return;
+
+    const loadComparison = async () => {
+      const prevLogs = await fetchPreviousYearLogs();
+
+      setCurrentSummary(
+        calculateMonthlySummary(logs, calculateFields)
+      );
+
+      setPreviousSummary(
+        calculateMonthlySummary(prevLogs, calculateFields)
+      );
+    };
+
+    if (!selectedMonth || !siteName) return;
+
+    const loadTrend = async () => {
+      setLoadingTrend(true);
+      const data = await fetchMultiYearData(5);
+      setMultiYearData(data);
+      setLoadingTrend(false);
+    };
+
+    loadTrend();
+
+    loadComparison();
+
+  }, [selectedMonth, siteName, logs]);
 
   useEffect(() => {
     {
@@ -662,45 +874,80 @@ const DailyDGLog = ({ userData }) => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleDateChange = (newDate) => {
-    setForm((prev) => ({ ...prev, Date: newDate }));
 
-    // ✅ CALL THE NEW FUNCTION HERE
-    fetchAndAggregateRuns(newDate);
+  // const handleDateChange = (newDate) => {
+  //   setForm((prev) => ({ ...prev, Date: newDate }));
 
-    // Check if entry already exists for this date
+  //   // ✅ CALL THE NEW FUNCTION HERE
+  //   fetchAndAggregateRuns(newDate);
+
+  //   // Check if entry already exists for this date
+  //   const existing = logs.find((entry) => entry.Date === newDate);
+
+  //   if (existing) {
+  //     // ✅ Populate with saved values
+  //     setForm({ ...existing, Date: newDate });
+  //   } else {
+  //     // ✅ If not found, fall back to yesterday’s data
+  //     const selected = new Date(newDate);
+  //     const yesterdayDate = new Date(selected);
+  //     yesterdayDate.setDate(selected.getDate() - 1);
+  //     const ymd = yesterdayDate.toISOString().split("T")[0];
+
+  //     const yesterday = logs.find((entry) => entry.Date === ymd);
+
+  //     if (yesterday) {
+  //       setForm({
+  //         Date: newDate,
+  //         "DG-1 KWH Opening": yesterday["DG-1 KWH Closing"] || "",
+  //         "DG-2 KWH Opening": yesterday["DG-2 KWH Closing"] || "",
+  //         "DG-1 Fuel Opening": yesterday["DG-1 Fuel Closing"] || "",
+  //         "DG-2 Fuel Opening": yesterday["DG-2 Fuel Closing"] || "",
+  //         "DG-1 Hour Opening": yesterday["DG-1 Hour Closing"] || "",
+  //         "DG-2 Hour Opening": yesterday["DG-2 Hour Closing"] || "",
+  //         "EB-1 KWH Opening": yesterday["EB-1 KWH Closing"] || "",
+  //         "EB-2 KWH Opening": yesterday["EB-2 KWH Closing"] || "",
+  //       });
+  //     } else {
+  //       // ✅ Empty form if neither current nor yesterday’s exists
+  //       setForm({ Date: newDate });
+  //     }
+  //   }
+  // };
+
+  const handleDateChange = async (newDate) => {
+    // 1️⃣ Check if current date already exists
     const existing = logs.find((entry) => entry.Date === newDate);
-
     if (existing) {
-      // ✅ Populate with saved values
       setForm({ ...existing, Date: newDate });
-    } else {
-      // ✅ If not found, fall back to yesterday’s data
-      const selected = new Date(newDate);
-      const yesterdayDate = new Date(selected);
-      yesterdayDate.setDate(selected.getDate() - 1);
-      const ymd = yesterdayDate.toISOString().split("T")[0];
-
-      const yesterday = logs.find((entry) => entry.Date === ymd);
-
-      if (yesterday) {
-        setForm({
-          Date: newDate,
-          "DG-1 KWH Opening": yesterday["DG-1 KWH Closing"] || "",
-          "DG-2 KWH Opening": yesterday["DG-2 KWH Closing"] || "",
-          "DG-1 Fuel Opening": yesterday["DG-1 Fuel Closing"] || "",
-          "DG-2 Fuel Opening": yesterday["DG-2 Fuel Closing"] || "",
-          "DG-1 Hour Opening": yesterday["DG-1 Hour Closing"] || "",
-          "DG-2 Hour Opening": yesterday["DG-2 Hour Closing"] || "",
-          "EB-1 KWH Opening": yesterday["EB-1 KWH Closing"] || "",
-          "EB-2 KWH Opening": yesterday["EB-2 KWH Closing"] || "",
-        });
-      } else {
-        // ✅ Empty form if neither current nor yesterday’s exists
-        setForm({ Date: newDate });
-      }
+      fetchAndAggregateRuns(newDate);
+      return;
     }
+
+    // 2️⃣ Get yesterday (cross-month safe)
+    const yesterday = await getYesterdayLog(newDate);
+
+    if (yesterday) {
+      setForm({
+        Date: newDate,
+        "DG-1 KWH Opening": yesterday["DG-1 KWH Closing"] || "",
+        "DG-2 KWH Opening": yesterday["DG-2 KWH Closing"] || "",
+        "DG-1 Fuel Opening": yesterday["DG-1 Fuel Closing"] || "",
+        "DG-2 Fuel Opening": yesterday["DG-2 Fuel Closing"] || "",
+        "DG-1 Hour Opening": yesterday["DG-1 Hour Closing"] || "",
+        "DG-2 Hour Opening": yesterday["DG-2 Hour Closing"] || "",
+        "EB-1 KWH Opening": yesterday["EB-1 KWH Closing"] || "",
+        "EB-2 KWH Opening": yesterday["EB-2 KWH Closing"] || "",
+      });
+    } else {
+      // 3️⃣ Absolute fallback
+      setForm({ Date: newDate });
+    }
+
+    // 4️⃣ Aggregate runs AFTER opening values exist
+    fetchAndAggregateRuns(newDate);
   };
+
 
 
   // 🔹 Save entry
@@ -848,6 +1095,221 @@ const DailyDGLog = ({ userData }) => {
   inputFields.push("DCPS Load Amps");
   inputFields.push("UPS Load KWH");
   inputFields.push("Office kW Consumption");
+
+
+  // Down Tamplate For excel bluk upload
+  const downloadDGLogTemplate = () => {
+    const headers = ["Date"];
+
+    // 🔹 EB (Dynamic)
+    for (let i = 1; i <= eb; i++) {
+      headers.push(
+        `EB-${i} KWH Opening`,
+        `EB-${i} KWH Closing`
+      );
+    }
+
+    // 🔹 Solar (Dynamic)
+    for (let i = 1; i <= solar; i++) {
+      headers.push(
+        `Solar-${i} KWH Opening`,
+        `Solar-${i} KWH Closing`
+      );
+    }
+
+    // 🔹 DG (Dynamic)
+    for (let i = 1; i <= dg; i++) {
+      headers.push(
+        `DG-${i} KWH Opening`,
+        `DG-${i} KWH Closing`,
+        `DG-${i} Fuel Opening`,
+        `DG-${i} Fuel Closing`,
+        `DG-${i} Fuel Filling`,
+        `DG-${i} Hour Opening`,
+        `DG-${i} Hour Closing`,
+        `DG-${i} Off Load Hour`,
+        `DG-${i} Off Load Fuel Consumption`
+      );
+    }
+
+    // 🔹 IT & Office Load
+    headers.push(
+      "UPS Load KWH",
+      "DCPS Load Amps",
+      "Office kW Consumption",
+      "Remarks"
+    );
+
+    const ws = XLSX.utils.aoa_to_sheet([headers]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DG_LOG");
+
+    XLSX.writeFile(wb, "DG_Log_Template.xlsx");
+  };
+
+
+  const checkDuplicateDates = async (rows) => {
+    const duplicates = [];
+
+    for (const row of rows) {
+      const monthKey = row.Date?.slice(0, 7);
+      if (!monthKey) continue;
+
+      const ref = doc(db, "dailyDGLogs", siteName, monthKey, row.Date);
+      const snap = await getDoc(ref);
+
+      if (snap.exists()) {
+        duplicates.push(row.Date);
+      }
+    }
+
+    return duplicates;
+  };
+
+  const uploadDGLogs = async (rows) => {
+    setIsUploadCalculate(true);
+    setIsUploading(true);
+    setUploadErrors([]);
+    setUploadProgress(0);
+
+    const errors = [];
+
+    const duplicates = await checkDuplicateDates(rows);
+    if (duplicates.length) {
+      if (!window.confirm(
+        `Data already exists for dates:\n${duplicates.join(", ")}\n\nOverwrite?`
+      )) {
+        setIsUploading(false);
+        return;
+      }
+    }
+
+    let completed = 0;
+
+    for (const row of rows) {
+      try {
+        if (!row.Date || !/^\d{4}-\d{2}-\d{2}$/.test(row.Date)) {
+          errors.push({ row, error: "Invalid Date format" });
+          continue;
+        }
+
+        const monthKey = row.Date.slice(0, 7);
+        const payload = {};
+
+        Object.keys(row).forEach((k) => {
+          payload[k] = row[k] === "" ? "" : String(row[k]);
+        });
+
+        payload.siteName = siteName;
+        payload.updatedBy = userData?.email || "";
+        payload.updatedAt = new Date();
+        setIsUploadCalculate(false);
+        await setDoc(
+          doc(db, "dailyDGLogs", siteName, monthKey, row.Date),
+          payload,
+          { merge: true }
+        );
+
+        completed++;
+        setUploadProgress(Math.round((completed / rows.length) * 100));
+
+      } catch (err) {
+        errors.push({ row, error: err.message });
+      }
+    }
+
+    setUploadErrors(errors);
+    setIsUploading(false);
+    setShowPreview(false);
+    fetchLogs();
+    window.location.reload();
+  };
+
+
+  const handlePreviewDGExcel = async (file) => {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheet = workbook.Sheets["DG_LOG"];
+
+    if (!sheet) {
+      alert("DG_LOG sheet not found");
+      return;
+    }
+
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      defval: "",
+      raw: false,
+    });
+
+    setPreviewRows(rows);
+    setShowPreview(true);
+  };
+
+
+  const handleDGLogExcelUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !siteName) return;
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+
+      const sheet = workbook.Sheets["DG_LOG"];
+      if (!sheet) {
+        alert("DG_LOG sheet not found");
+        return;
+      }
+
+      const rows = XLSX.utils.sheet_to_json(sheet, {
+        defval: "",
+        raw: false,
+      });
+
+      if (!rows.length) {
+        alert("Excel is empty");
+        return;
+      }
+
+      for (const row of rows) {
+        if (!row.Date) continue;
+
+        // 🔐 Validate date
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(row.Date)) {
+          console.warn("Invalid Date format:", row.Date);
+          continue;
+        }
+
+        const monthKey = row.Date.slice(0, 7); // YYYY-MM
+        const docId = row.Date; // SAME AS YOUR DATA
+
+        // 🔒 Ensure all values stored as STRING (important)
+        const payload = {};
+        Object.keys(row).forEach((key) => {
+          payload[key] = row[key] === "" ? "" : String(row[key]);
+        });
+
+        payload.siteName = siteName;
+        payload.updatedBy = userData?.email || "";
+        payload.updatedAt = new Date();
+
+        await setDoc(
+          doc(db, "dailyDGLogs", siteName, monthKey, docId),
+          payload,
+          { merge: true } // ✅ safe overwrite
+        );
+      }
+
+      alert("DG Log Excel uploaded successfully");
+      fetchLogs(); // refresh UI
+
+    } catch (err) {
+      console.error("DG Excel upload failed:", err);
+      alert("Upload failed. Check console.");
+    }
+  };
+
+
+
 
   // 🔹 Download logs as Excel (Dynamic as per site config)
   const handleDownloadExcel = () => {
@@ -1273,6 +1735,139 @@ const DailyDGLog = ({ userData }) => {
         )}
       </div>
 
+      {isAdmin || userData?.designation === "Vertiv Site Infra Engineer" ? (
+      <div>
+        {!loadingTrend && multiYearData.length === 0 && (
+          <p style={{ color: "#888" }}>
+            No historical data available for previous years
+          </p>
+        )}
+        {loadingTrend && <p>Loading multi-year trend...</p>}
+
+        {multiYearData.length > 0 && (
+          <div className="chart-box">
+
+            <h3>📈 Multi-Year Trend (Same Month)</h3>
+
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={multiYearData}>
+                <XAxis dataKey="year" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line dataKey="DG_KWH" />
+                <Line dataKey="Fuel" />
+                <Line dataKey="PUE" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+
+
+        {currentSummary && previousSummary && (
+          <div className="chart-box">
+            <h3>📊 YoY Energy Comparison</h3>
+
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={buildYoYChartData(currentSummary, previousSummary)}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="Current" />
+                <Bar dataKey="Previous" />
+              </BarChart>
+            </ResponsiveContainer>
+
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart
+                data={[
+                  {
+                    name: "Fuel",
+                    Current: currentSummary.totalFuel,
+                    Previous: previousSummary.totalFuel,
+                  },
+                  {
+                    name: "PUE",
+                    Current: currentSummary.avgPUE,
+                    Previous: previousSummary.avgPUE,
+                  },
+                ]}
+              >
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line dataKey="Current" />
+                <Line dataKey="Previous" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {currentSummary && previousSummary && (
+          <div className="compare-summary">
+            <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>
+
+            <table className="compare-table">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Current Year</th>
+                  <th>Previous Year</th>
+                  <th>YoY Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Total DG KWH</td>
+                  <td>{fmt(currentSummary.totalDGKWH)}</td>
+                  <td>{fmt(previousSummary.totalDGKWH)}</td>
+                  <td>{yoy(currentSummary.totalDGKWH, previousSummary.totalDGKWH)}</td>
+                </tr>
+
+                <tr>
+                  <td>Total EB KWH</td>
+                  <td>{fmt(currentSummary.totalEBKWH)}</td>
+                  <td>{fmt(previousSummary.totalEBKWH)}</td>
+                  <td>{yoy(currentSummary.totalEBKWH, previousSummary.totalEBKWH)}</td>
+                </tr>
+
+                <tr>
+                  <td>Total Solar KWH</td>
+                  <td>{fmt(currentSummary.totalSolarKWH)}</td>
+                  <td>{fmt(previousSummary.totalSolarKWH)}</td>
+                  <td>{yoy(currentSummary.totalSolarKWH, previousSummary.totalSolarKWH)}</td>
+                </tr>
+
+                <tr>
+                  <td>Total Fuel Consumption</td>
+                  <td>{fmt(currentSummary.totalFuel)}</td>
+                  <td>{fmt(previousSummary.totalFuel)}</td>
+                  <td>{yoy(currentSummary.totalFuel, previousSummary.totalFuel)}</td>
+                </tr>
+
+                <tr>
+                  <td>Avg Site Running kW</td>
+                  <td>{fmt(currentSummary.avgSiteKW)}</td>
+                  <td>{fmt(previousSummary.avgSiteKW)}</td>
+                  <td>{yoy(currentSummary.avgSiteKW, previousSummary.avgSiteKW)}</td>
+                </tr>
+
+                <tr>
+                  <td>Avg PUE</td>
+                  <td>{fmt(currentSummary.avgPUE)}</td>
+                  <td>{fmt(previousSummary.avgPUE)}</td>
+                  <td>{yoy(currentSummary.avgPUE, previousSummary.avgPUE)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      ) : null}
+
       {/* <div className="chart-container" > */}
       {/* 🔹 New Monthly Stats */}
       {(() => {
@@ -1323,7 +1918,7 @@ const DailyDGLog = ({ userData }) => {
         const totalFuel = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Fuel"] || 0), 0);
         const totalHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Hours"] || 0), 0);
         const totalFilling = calculatedLogs.reduce((sum, cl) => sum + (cl["Total Fuel Filling"] || 0), 0);
-        const yesterday = getYesterdayData();
+        const yesterday = yesterdayLog;
         const availableFuel = (() => {
           if (!yesterday) return 0;
           return (
@@ -1439,7 +2034,7 @@ const DailyDGLog = ({ userData }) => {
         return (
           <div className="chart-container" >
             <div className="status-header">
-              <h1 style={{background:"#6ce9e35d", borderBottom:"3px solid #fff", borderTop:"3px solid #fff", borderRadius:"10px", color:"#746212ff"}}>🔄 Current Status</h1>
+              <h1 style={{ background: "#6ce9e35d", borderBottom: "3px solid #fff", borderTop: "3px solid #fff", borderRadius: "10px", color: "#746212ff" }}>🔄 Current Status</h1>
               <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
               <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
               {/* ✅ Fuel Level Bar */}
@@ -1490,11 +2085,11 @@ const DailyDGLog = ({ userData }) => {
                 </div>
                 <strong style={((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%</strong>
               </div>
-              <div style={{display:"flex", gap:"5px", marginTop:"10px"}}>
-                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight:"bold", border:"1px solid #fff", borderRadius:"10px", background:"#6ce9e35d"}} ><p>Today Consumption </p> <span> <strong>{dayFuelCon} ltrs.</strong></span></p>
-                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight:"bold", border:"1px solid #fff", borderRadius:"10px", background:"#6ce9e35d"}} ><p>Today DG Run</p> <span> <strong>{(dayRunningHrs).toFixed(1)} Hrs.</strong> <p style={{fontSize:"8px"}}>({(dayRunningHrs * 60).toFixed(2)} Min.)</p></span></p>
-                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight:"bold", border:"1px solid #fff", borderRadius:"10px", background:"#6ce9e35d"}} ><p>Total Power</p> <span> <strong>{(dayonLoadRunHrs).toFixed(1)} Hrs.</strong> <p style={{fontSize:"8px"}}>({(dayonLoadRunHrs * 60).toFixed(2)} Min.)</p></span></p>
-                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight:"bold", border:"1px solid #fff", borderRadius:"10px", background:"#6ce9e35d"}} ><p>Total Fuel Filled</p> <span><strong>{dayFuelFill} ltrs.</strong></span></p>
+              <div style={{ display: "flex", gap: "5px", marginTop: "10px" }}>
+                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight: "bold", border: "1px solid #fff", borderRadius: "10px", background: "#6ce9e35d" }} ><p>Today Consumption </p> <span> <strong>{dayFuelCon} ltrs.</strong></span></p>
+                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight: "bold", border: "1px solid #fff", borderRadius: "10px", background: "#6ce9e35d" }} ><p>Today DG Run</p> <span> <strong>{(dayRunningHrs).toFixed(1)} Hrs.</strong> <p style={{ fontSize: "8px" }}>({(dayRunningHrs * 60).toFixed(2)} Min.)</p></span></p>
+                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight: "bold", border: "1px solid #fff", borderRadius: "10px", background: "#6ce9e35d" }} ><p>Total Power</p> <span> <strong>{(dayonLoadRunHrs).toFixed(1)} Hrs.</strong> <p style={{ fontSize: "8px" }}>({(dayonLoadRunHrs * 60).toFixed(2)} Min.)</p></span></p>
+                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight: "bold", border: "1px solid #fff", borderRadius: "10px", background: "#6ce9e35d" }} ><p>Total Fuel Filled</p> <span><strong>{dayFuelFill} ltrs.</strong></span></p>
               </div>
             </div>
 
@@ -1853,7 +2448,7 @@ const DailyDGLog = ({ userData }) => {
                       value={form[field] > 0 ? form[field] : 0}
                       onChange={handleChange}
                       className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
-                      // disabled={disabled}
+                    // disabled={disabled}
                     />
                   </label>
                 );
@@ -1865,12 +2460,112 @@ const DailyDGLog = ({ userData }) => {
         </div>
       )}
 
-      <div>
+      {userData?.name === "Crash Algo" || userData?.designation === "Vertiv Site Infra Engineer" && (
+        <div className="child-container" style={{ border: "1px solid #000", borderRadius: "15px" }}>
+          <h2>⚡ DG Log Bulk Upload</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <label>📥 Bulk DG Log Upload:</label>
+            <b onClick={downloadDGLogTemplate}
+              style={{ fontSize: "12px", height: "fit-content", cursor: "pointer", color: "blue", textDecoration: "underline" }}>
+              📥Download DG Log Excel Template
+            </b>
+          </div>
+          <label>Upload DG Log Excel File:</label>
+          <input
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={(e) => handlePreviewDGExcel(e.target.files[0])}
+          />
+
+          {/* {showPreview && (
+              <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleDGLogExcelUpload}
+            />
+            )} */}
+
+          {showPreview && (
+            <div className="child-container" >
+              <h1>DG Log Upload Preview</h1>
+
+              <div className="table-container">
+
+                <table>
+                  <thead>
+                    <tr>
+                      {Object.keys(previewRows[0] || {}).map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previewRows.slice(0, 100).map((row, i) => (
+                      <tr key={i}>
+                        {Object.values(row).map((v, j) => (
+                          <td key={j}>{v}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+              </div>
+
+              {previewRows.length > 31 && <p>Showing first 31 rows of {previewRows.length} total rows.</p>}
+              <div style={{ marginTop: "10px" }}>
+                <button onClick={() => uploadDGLogs(previewRows)} style={{ width: "120px", marginRight: "10px" }}>
+                  Confirm Upload
+                </button>
+                <button onClick={() => {
+                  setShowPreview(false);
+                  setPreviewRows([]);
+                  window.location.reload();
+                }} style={{ width: "120px" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isUploading && (
+            <div>
+              <h4>{isUploadCalculate ? "Calculating" : "Uploading"}... Please wait.</h4>
+              <progress value={uploadProgress} max="100" />
+              <span>{uploadProgress}%</span>
+            </div>
+          )}
+          {uploadErrors.length > 0 && (
+            <div>
+              <h4>Upload Errors</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {uploadErrors.map((e, i) => (
+                    <tr key={i}>
+                      <td>{e.row?.Date}</td>
+                      <td>{e.error}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+        </div>
+      )}
+
+      <div className="download-section" style={{ marginTop: "20px" }}>
         <h2>📝 DG Logs UpTo – {allValues.length}th {formatMonthName(selectedMonth)}:</h2>
         <button className="download-btn" style={{ padding: "5px", margin: "5px" }} onClick={handleDownloadExcel}>⬇️ Full Excel</button>
         <button className="download-btn" style={{ padding: "5px", margin: "5px" }} onClick={handleDownloadExcelOnlyDGLogs}>⬇️ DG Log Excel</button>
       </div>
-      <div className="table-container">
+      <div className="table-container" style={{ border: "1px solid #ccc", borderRadius: "15px" }}>
         <table border="1" cellPadding="8" style={{ width: "100%" }}>
           <thead>
             <tr>
