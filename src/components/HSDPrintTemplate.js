@@ -1,9 +1,76 @@
 import React from "react";
 import Nxtra from "../assets/nxtra.png"; // ✅ adjust path to your Nxtra logo image
 import "../assets/HSDPrintTemplate.css";
+import html2pdf from "html2pdf.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../firebase";
+
 
 
 const HSDPrintTemplate = ({ form, hsdForm, siteConfig, setPreviewOpen }) => {
+
+    const pdfAlreadyUploaded = Boolean(hsdForm?.hsdPdfUrl);
+
+    const handleSavePdfToFirestore = async () => {
+        if (hsdForm?.hsdPdfUrl) {
+            alert("🔒 HSD PDF already exists. Re-upload is not allowed.");
+            return;
+        }
+
+        try {
+            const element = document.getElementById("printArea");
+
+            // 1️⃣ Generate PDF blob
+            const pdfBlob = await html2pdf()
+                .from(element)
+                .set({
+                    margin: 5,
+                    filename: "HSD.pdf",
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                })
+                .outputPdf("blob");
+
+            // 2️⃣ Upload to Firebase Storage
+            const storage = getStorage();
+            const fileName = `HSD_${form.siteName}_${form.date}.pdf`;
+            const storageRef = ref(
+                storage,
+                `hsd-pdfs/${form.siteName}/${form.date}/${fileName}`
+            );
+
+            await uploadBytes(storageRef, pdfBlob);
+            const downloadURL = await getDownloadURL(storageRef);
+
+            // 3️⃣ Update Firestore HSD entry
+            if (!hsdForm?.id) {
+                alert("HSD record ID missing");
+                return;
+            }
+
+            const hsdDocRef = doc(
+                db,
+                "dgHsdLogs",
+                form.siteName,
+                "entries",
+                hsdForm.id
+            );
+
+            await updateDoc(hsdDocRef, {
+                hsdPdfUrl: downloadURL,
+                hsdPdfUploadedAt: new Date(),
+            });
+
+            alert("✅ HSD PDF saved & attached successfully");
+            setPreviewOpen(false);
+
+        } catch (err) {
+            console.error("PDF upload failed:", err);
+            alert("❌ Failed to upload HSD PDF");
+        }
+    };
+
     return (
         <div
             id="printArea"
@@ -45,7 +112,37 @@ const HSDPrintTemplate = ({ form, hsdForm, siteConfig, setPreviewOpen }) => {
                         marginLeft: "10px",
                     }}
                 >
-                    🖨️ Print / Save as PDF
+                    🖨️ Print
+                </button>
+
+                <button
+                    onClick={handleSavePdfToFirestore}
+                    disabled={pdfAlreadyUploaded}
+                    style={{
+                        marginLeft: "10px",
+                        backgroundColor: pdfAlreadyUploaded ? "#6c757d" : "#28a745",
+                        color: "#fff",
+                        padding: "8px 20px",
+                        borderRadius: "5px",
+                        border: "none",
+                        cursor: pdfAlreadyUploaded ? "not-allowed" : "pointer",
+                        opacity: pdfAlreadyUploaded ? 0.7 : 1,
+                    }}
+                >
+                    {pdfAlreadyUploaded ? "🔒 PDF Already Saved" : "☁️ Save PDF to System"}
+                    {pdfAlreadyUploaded && (
+                        <p style={{ marginTop: "10px", color: "#155724", fontSize: "13px" }}>
+                            ✅ HSD PDF is already saved and locked for editing.
+                        </p>
+                    )}
+
+                    {hsdForm?.hsdPdfUrl && (
+                        <p style={{ marginTop: "8px" }}>
+                            📄 <a href={hsdForm.hsdPdfUrl} target="_blank" rel="noreferrer">
+                                View Attached PDF
+                            </a>
+                        </p>
+                    )}
                 </button>
             </div>
 
@@ -101,13 +198,13 @@ const HSDPrintTemplate = ({ form, hsdForm, siteConfig, setPreviewOpen }) => {
                 <tbody>
                     <tr>
                         <td colSpan={2}>
-                            <strong>Site Name:- {siteConfig?.siteName || "—"}</strong>
+                            <strong>Site Name:- {form.siteName || siteConfig?.siteName || "—"}</strong>
                         </td>
                         <td colSpan={5}>
                             <strong>Nxtra DC:- {siteConfig?.siteName || "—"}</strong>
                         </td>
                         <td colSpan={2}>
-                            <strong>Date:- {new Date(form.date).toLocaleDateString("en-GB")}</strong>
+                            <strong>Date:- {form?.date ? new Date(form.date).toLocaleDateString("en-GB") : "—"}</strong>
                         </td>
                     </tr>
                 </tbody>
@@ -195,7 +292,7 @@ const HSDPrintTemplate = ({ form, hsdForm, siteConfig, setPreviewOpen }) => {
                                         width={100}
                                     />
                                 ) : (
-                                    <div style={{ width: 100, height: 50, border: "1px solid #000"}}></div>
+                                    <div style={{ width: 100, height: 50, border: "1px solid #000" }}></div>
                                 )}
                                 <p>Signature:</p>
                             </div>

@@ -62,7 +62,25 @@ const DGLogForm = ({ userData }) => {
     const isEdit = state?.editMode;
     const isEditMode = Boolean(state?.editMode);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [calcNumbers, setCalcNumbers] = useState({
+        segr: 0,
+        dgRunPercentage: 0,
+        cph: 0,
+        oemCPH: 0,
+    });
 
+    const [totalFuelFilledDGCount, setTotalFuelFilledDGCount] = useState(0);
+
+    const isLastDGFill =
+        siteConfig?.dgCount &&
+        (siteConfig.dgCount - totalFuelFilledDGCount === 1);
+
+
+    useEffect(() => {
+        if (form.remarks === "Fuel Filling Only") {
+            setCalcNumbers({ segr: 0, dgRunPercentage: 0, cph: 0 });
+        }
+    }, [form.remarks]);
 
 
     const handleChange = (e) => {
@@ -91,6 +109,42 @@ const DGLogForm = ({ userData }) => {
         }
     };
 
+    //For HSD Form work while lasting Fuel Filling DG Count
+    const fetchTodayFuelFilledDGCount = async (date) => {
+        if (!userData?.site || !date) return;
+
+        const dateObj = new Date(date);
+        const monthKey =
+            dateObj.toLocaleString("en-US", { month: "short" }) +
+            "-" +
+            dateObj.getFullYear();
+
+        const runsRef = collection(
+            db,
+            "dgLogs",
+            userData.site,
+            monthKey,
+            date,
+            "runs"
+        );
+
+        const q = query(
+            runsRef,
+            where("remarks", "==", "Fuel Filling Only")
+        );
+
+        const snap = await getDocs(q);
+
+        setTotalFuelFilledDGCount(snap.size);
+    };
+
+
+    const uploadedBy = {
+        uid: userData.uid,
+        name: userData.name || "",
+        role: userData.role,
+        empId: userData.empId,
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -152,15 +206,13 @@ const DGLogForm = ({ userData }) => {
                     }
                 }
 
-                if (form.remarks === "Fuel Filling Only" || Number(form.hsdFilled) > 0) {
+                if (form.remarks === "Fuel Filling Only" && isLastDGFill) {
                     await addDoc(
                         collection(db, "dgHsdLogs", userData.site, "entries"),
                         {
                             date: form.date,
                             siteId: userData.siteId,
                             siteName: userData.site,
-                            createdBy: userData.name,
-                            createdAt: serverTimestamp(),
                             inTime: hsdForm.inTime,
                             informTime: hsdForm.informTime,
                             parkingTime: hsdForm.parkingTime,
@@ -174,35 +226,60 @@ const DGLogForm = ({ userData }) => {
                             dillerInvoice: hsdForm.dillerInvoice,
                             securitySign: hsdForm.securitySign,
                             omSign: hsdForm.omSign,
-                            managerSign: hsdForm.managerSign
+                            managerSign: hsdForm.managerSign,
+                            createdBy: uploadedBy,
+                            createdAt: serverTimestamp(),
                         }
                     );
                 }
 
-                await setDoc(logRef, {
-                    ...form,
-                    hrMeterEnd: finalHrMeterEnd,
-                    totalRunHours:
-                        form.remarks === "Fuel Filling Only"
-                            ? 0
-                            : (finalHrMeterEnd - form.hrMeterStart),
-                    updatedAt: serverTimestamp(),
-                }, { merge: true });
+                await setDoc(
+                    logRef,
+                    {
+                        ...form,
+                        hrMeterEnd: finalHrMeterEnd,
+                        totalRunHours:
+                            form.remarks === "Fuel Filling Only"
+                                ? 0
+                                : (finalHrMeterEnd - form.hrMeterStart),
 
+                        // ✅ ADD THIS (logic applies on UPDATE also)
+                        segr:
+                            form.remarks === "Fuel Filling Only"
+                                ? 0
+                                : calcNumbers.segr,
+
+                        dgRunPercentage:
+                            form.remarks === "Fuel Filling Only"
+                                ? 0
+                                : calcNumbers.dgRunPercentage,
+                        cph:
+                            form.remarks === "Fuel Filling Only"
+                                ? 0
+                                : calcNumbers.cph,
+
+                        oemCph:
+                            form.remarks === "Fuel Filling Only"
+                                ? 0
+                                : calcNumbers.oemCPH,
+
+                        updatedBy: uploadedBy,
+                        updatedAt: serverTimestamp(),
+                    },
+                    { merge: true }
+                );
                 alert("Log updated ✅");
                 navigate("/dg-log-table")
             } else {
 
                 // 🔥 SAVE HSD DATA ON EVERY FUEL FILLING
-                if (form.remarks === "Fuel Filling Only" || Number(form.hsdFilled) > 0) {
+                if (form.remarks === "Fuel Filling Only" && isLastDGFill) {
                     await addDoc(
                         collection(db, "dgHsdLogs", userData.site, "entries"),
                         {
                             date: form.date,
                             siteId: userData.siteId,
                             siteName: userData.site,
-                            createdBy: userData.name,
-                            createdAt: serverTimestamp(),
                             inTime: hsdForm.inTime,
                             informTime: hsdForm.informTime,
                             parkingTime: hsdForm.parkingTime,
@@ -216,7 +293,9 @@ const DGLogForm = ({ userData }) => {
                             dillerInvoice: hsdForm.dillerInvoice,
                             securitySign: hsdForm.securitySign,
                             omSign: hsdForm.omSign,
-                            managerSign: hsdForm.managerSign
+                            managerSign: hsdForm.managerSign,
+                            createdBy: uploadedBy,
+                            createdAt: serverTimestamp()
                         }
                     );
                 }
@@ -224,17 +303,16 @@ const DGLogForm = ({ userData }) => {
                 await setDoc(doc(runsCollectionRef, runId), {
                     ...form,
                     hrMeterEnd: finalHrMeterEnd,
-                    totalRunHours:
-                        form.remarks === "Fuel Filling Only"
-                            ? 0
-                            : (finalHrMeterEnd - form.hrMeterStart),
-                    remarks:
-                        form.remarks === "Fuel Filling Only"
-                            ? "Fuel Filling Only"
-                            : form.remarks,
+                    totalRunHours: form.remarks === "Fuel Filling Only" ? 0 : (finalHrMeterEnd - form.hrMeterStart),
+                    remarks: form.remarks === "Fuel Filling Only" ? "Fuel Filling Only" : form.remarks,
                     siteId: userData.siteId,
+                    // ✅ NEW — numeric & safe
+                    segr: form.remarks === "Fuel Filling Only" ? 0 : calcNumbers.segr,
+                    dgRunPercentage: form.remarks === "Fuel Filling Only" ? 0 : calcNumbers.dgRunPercentage,         // save calculation result snapshot
+                    cph: form.remarks === "Fuel Filling Only" ? 0 : calcNumbers.cph,
+                    oemCph: form.remarks === "Fuel Filling Only" ? 0 : calcNumbers.oemCPH,
                     siteName: userData.site,
-                    enteredBy: userData.name,
+                    enteredBy: uploadedBy,
                     createdAt: serverTimestamp(),
                 });
 
@@ -302,6 +380,11 @@ const DGLogForm = ({ userData }) => {
         // Calculating percentage of DG running (rounded)
         const runPercent = (dgKwh / (capacity * 0.8)) * 100;
         const roundedPercent = Math.round(runPercent);
+        setCalcNumbers(prev => ({
+            ...prev,
+            dgRunPercentage: roundedPercent,
+        }));
+
 
         // missing-percentage list (same as calculateFuel)
         const missingColumnList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 18, 20, 21, 23, 24, 25, 26, 29, 36];
@@ -320,6 +403,12 @@ const DGLogForm = ({ userData }) => {
                 // User provided fuelConsumption → use that for SEGR/CPH
                 const segr = kw / fuelFromForm;
                 const cph = fuelFromForm / hmr;
+                setCalcNumbers(prev => ({
+                    ...prev,
+                    segr: Number(segr.toFixed(2)),
+                    cph: cph,
+                    oemCPH: null,
+                }));
                 result += `❓ As per Load % OEM Diesel CPH: OEM CPH Data Not Available for ${roundedPercent}% Load....\n`;
                 result += `✅ Achieve CPH (Actual / User): ${(cph).toFixed(2)} ltrs/Hour....\n`;
                 result += `⛽ Total Fuel Consumption (user): ${fuelFromForm.toFixed(2)} Ltrs for ${(hmr * 60).toFixed(0)} Minutes....\n`;
@@ -334,6 +423,12 @@ const DGLogForm = ({ userData }) => {
                         if (adjusFuel >= kw) break;
                     }
                     const finalSegr = kw / x;
+                    setCalcNumbers(prev => ({
+                        ...prev,
+                        segr: Number(finalSegr.toFixed(2)),
+                        cph: adjustableCPH,
+                        oemCPH: null,
+                    }));
 
                     result += `❓ As per Load % OEM Diesel CPH: OEM CPH Data Not Available for ${roundedPercent}% Load....\n`;
                     result += `✅ Achieve CPH as per Physical Inspection: 80.00 ltrs/Hour....\n`;
@@ -360,7 +455,7 @@ const DGLogForm = ({ userData }) => {
             // OEM data exists for this percent — use OEM CPH table
             const rowIndex = findRowDgCapacity(capacity);
             const oDCPH = oemDieselCphData[`${roundedPercent}%`]?.[rowIndex];
-
+            
             // If user provided fuel, prefer that; else compute using OEM CPH
             let totalFuelConsumption = fuelFromForm && fuelFromForm > 0 ? fuelFromForm : (oDCPH ? (oDCPH * 1) * hmr : 0);
 
@@ -373,12 +468,19 @@ const DGLogForm = ({ userData }) => {
 
             const segr = kw / totalFuelConsumption;
             const cph = totalFuelConsumption / hmr;
-
+            
             if (oDCPH) {
                 result += `📊 As per Load % OEM Diesel CPH: ${oDCPH.toFixed(2)} ltrs/Hour....\n`;
             } else {
                 result += `❓ As per Load % OEM Diesel CPH: OEM Data Missing....\n`;
             }
+
+            setCalcNumbers(prev => ({
+                ...prev,
+                segr: Number(segr.toFixed(2)),
+                cph: Number(cph.toFixed(2)),
+                oemCPH: Number(oDCPH.toFixed(2)),
+            }));
 
             result += `✅ Achieve CPH (Actual): ${(cph).toFixed(2)} ltrs/Hour....\n`;
             result += `⛽ Total Fuel Consumption for ${(hmr * 60).toFixed(0)} Minutes DG Running: ${(totalFuelConsumption).toFixed(2)} Ltrs....\n`;
@@ -490,6 +592,8 @@ const DGLogForm = ({ userData }) => {
 
         fetchPrevHrMeter();
         fetchConfig();
+        // ✅ NEW
+        fetchTodayFuelFilledDGCount(form.date);
     }, [dgNumber, userData.site, state, isEditMode]);
 
 
@@ -529,6 +633,8 @@ const DGLogForm = ({ userData }) => {
     };
 
 
+
+
     return (
         <div className="daily-log-container">
             <h2 className="dashboard-header">
@@ -552,6 +658,21 @@ const DGLogForm = ({ userData }) => {
 
                 </label>
 
+                <label className="form-label">Remarks:
+                    <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- ON/NO Load & Fuel Filling Only)</span>
+                    <select
+                        name="remarks"
+                        value={form.remarks}
+                        disabled={isEditMode}
+                        onChange={handleChange}
+                        className="w-full p-2 border rounded"
+                    >
+                        <option value="On Load">On Load</option>
+                        <option value="No Load">No Load</option>
+                        <option value="Fuel Filling Only">Fuel Filling Only</option>
+                    </select>
+                </label>
+
                 <label className="form-label">Select DG:
                     <span style={{ fontSize: "10px", color: "#030a44ff" }}>(e.g.:- DG-1, DG-2, DG-3)</span>
                     <select
@@ -571,21 +692,6 @@ const DGLogForm = ({ userData }) => {
                                 DG-{i + 1}
                             </option>
                         ))}
-                    </select>
-                </label>
-
-                <label className="form-label">Remarks:
-                    <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- ON/NO Load & Fuel Filling Only)</span>
-                    <select
-                        name="remarks"
-                        value={form.remarks}
-                        disabled={isEditMode}
-                        onChange={handleChange}
-                        className="w-full p-2 border rounded"
-                    >
-                        <option value="On Load">On Load</option>
-                        <option value="No Load">No Load</option>
-                        <option value="Fuel Filling Only">Fuel Filling Only</option>
                     </select>
                 </label>
 
@@ -695,7 +801,7 @@ const DGLogForm = ({ userData }) => {
                         />
                     </label>)}
 
-                {form.remarks === "Fuel Filling Only" && (
+                {form.remarks === "Fuel Filling Only" && isLastDGFill && (
                     <div className="child-container" style={{ padding: "10px", border: "1px solid #ccc", borderRadius: "10px", marginBottom: "10px" }}>
                         <h3>🛢️ HSD Receiving Info</h3>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>

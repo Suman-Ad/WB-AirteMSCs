@@ -37,10 +37,22 @@ const DGLogTable = ({ userData }) => {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [dhrDataForPreview, setDhrDataForPreview] = useState(null);
   const [dhrMessage, setDhrMessage] = useState("");
+  // State for HSD Preview
   const [hsdLogs, setHsdLogs] = useState([]);
   const [hsdPreviewOpen, setHsdPreviewOpen] = useState(false);
   const [hsdPreviewData, setHsdPreviewData] = useState(null);
   const [hsdPreviewForm, setHsdPreviewForm] = useState(null);
+
+  const isLastDGFillForDay = () => {
+    if (!siteConfig?.dgCount) return false;
+
+    const fuelFillLogs = logs.filter(
+      (l) => l.remarks === "Fuel Filling Only"
+    );
+
+    return siteConfig.dgCount - fuelFillLogs.length === 0;
+  };
+
 
 
 
@@ -64,33 +76,34 @@ const DGLogTable = ({ userData }) => {
     }
   };
 
-  const getHsdForLog = (log) => {
+  const getHsdForLog = () => {
     return hsdLogs.find(
-      (h) =>
-        h.date === selectedDate &&
-        Number(h.ltrs) === Number(log.fuelFill)
+      (h) => h.date === selectedDate
     );
   };
 
 
-  const openHsdPreview = (log) => {
-    const hsd = getHsdForLog(log);
-    if (!hsd) {
-      alert("HSD data not found for this entry");
+  const openHsdPreview = () => {
+    if (!isLastDGFillForDay()) {
+      alert("⚠️ HSD is available only for the final DG fuel filling entry.");
       return;
     }
 
-    // form = DG log data
+    const hsd = getHsdForLog();
+    if (!hsd) {
+      alert("HSD data not found for this date");
+      return;
+    }
+
     setHsdPreviewForm({
-      ...log,
       date: selectedDate,
+      siteName,
     });
 
-    // hsdForm = HSD log data
     setHsdPreviewData(hsd);
-
     setHsdPreviewOpen(true);
   };
+
 
   useEffect(() => {
     if (siteName && selectedDate) {
@@ -225,41 +238,6 @@ const DGLogTable = ({ userData }) => {
       setSummary(JSON.parse(cached));
     }
   }, []);
-
-
-  const handleSave = async () => {
-    try {
-      const dateObj = new Date(selectedDate);
-      const monthKey =
-        dateObj.toLocaleString("en-US", { month: "short" }) +
-        "-" +
-        dateObj.getFullYear();
-
-      const logRef = doc(
-        db,
-        "dgLogs",
-        siteName,
-        monthKey,
-        selectedDate,
-        "runs",
-        editingId
-      );
-
-      await updateDoc(logRef, {
-        ...editForm,
-        totalRunHours:
-          parseFloat(editForm.hrMeterEnd || 0) -
-          parseFloat(editForm.hrMeterStart || 0),
-      });
-
-      alert("Run log Updated ✅");
-      setEditingId(null);
-      fetchLogs();
-      fetchMonthlySummary();
-    } catch (err) {
-      console.error("Error saving log:", err);
-    }
-  };
 
   // Fetches logs for the main table view (for the selected date)
   const fetchLogsForSelectedDate = async () => {
@@ -400,6 +378,18 @@ const DGLogTable = ({ userData }) => {
         <button onClick={openPreviewModal} className="segr-manage-btn">
           👁️ Preview & Share DHR
         </button>
+        {hsdLogs.find(h => h.date === selectedDate)?.hsdPdfUrl ? (
+          <a
+            href={hsdLogs.find(h => h.date === selectedDate).hsdPdfUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{cursor:"pointer"}}
+          >
+            📄 View PDF
+          </a>
+        ) : (
+          ""
+        )}
       </div>
 
       {logs.length === 0 ? (
@@ -410,15 +400,19 @@ const DGLogTable = ({ userData }) => {
             <thead>
               <tr>
                 <th>DG No</th>
-                <th>Start Time</th>
-                <th>Stop Time</th>
+                <th style={{ whiteSpace: "nowrap" }}>Start Time</th>
+                <th style={{ whiteSpace: "nowrap" }}>Stop Time</th>
                 <th>Hr Meter Start</th>
                 <th>Hr Meter End</th>
                 <th>Total Run Hours</th>
-                <th>Fuel Consumption</th>
+                <th>Fuel Consumption (Ltrs)</th>
                 <th>kWH Reading</th>
                 <th>Remarks</th>
-                <th>Fuel Filling</th>
+                <th>Fuel Filling (Ltrs)</th>
+                <th>OEM CPH (Ltrs)</th>
+                <th>Achieve CPH (Ltrs)</th>
+                <th>SEGR</th>
+                <th>DG Run %</th>
                 <th>HSD Template</th>
                 <th>Actions</th>
               </tr>
@@ -426,139 +420,40 @@ const DGLogTable = ({ userData }) => {
             <tbody>
               {logs.map((log) => (
                 <tr key={log.id}>
-                  {editingId === log.id ? (
-                    <>
-                      <td>
-                        <input
-                          value={editForm.dgNumber}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, dgNumber: e.target.value })
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="time"
-                          value={editForm.startTime}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, startTime: e.target.value })
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="time"
-                          value={editForm.stopTime}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, stopTime: e.target.value })
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={editForm.hrMeterStart}
-                          onChange={(e) =>
-                            setEditForm({
-                              ...editForm,
-                              hrMeterStart: e.target.value,
-                            })
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={editForm.hrMeterEnd}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, hrMeterEnd: e.target.value })
-                          }
-                        />
-                      </td>
-                      <td>
-                        {(editForm.hrMeterEnd - editForm.hrMeterStart).toFixed(1)}
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={editForm.fuelConsumption}
-                          onChange={(e) =>
-                            setEditForm({
-                              ...editForm,
-                              fuelConsumption: e.target.value,
-                            })
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={editForm.kWHReading}
-                          onChange={(e) =>
-                            setEditForm({
-                              ...editForm,
-                              kWHReading: e.target.value,
-                            })
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          value={editForm.remarks}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, remarks: e.target.value })
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          value={editForm.fuelFill}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, fuelFill: e.target.value })
-                          }
-                        />
-                      </td>
-                      <td>
-                        <button onClick={handleSave}>Save</button>
-                        <button onClick={() => setEditingId(null)}>
-                          Cancel
-                        </button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td>{log.dgNumber}</td>
-                      <td>{log.startTime}</td>
-                      <td>{log.stopTime}</td>
-                      <td>{log.hrMeterStart}</td>
-                      <td>{log.hrMeterEnd}</td>
-                      <td>{log.totalRunHours?.toFixed(1)}</td>
-                      <td>{log.fuelConsumption || 0}</td>
-                      <td>{log.kWHReading || 0}</td>
-                      <td>{log.remarks}</td>
-                      <td>{log.fuelFill}</td>
-                      <td>
-                        {(log.remarks === "Fuel Filling Only" || Number(log.fuelFill) > 0) && (
-                          <button
-                            className="text-blue-600 underline"
-                            onClick={() => openHsdPreview(log)}
-                          >
-                            👁 View HSD
-                          </button>
-                        )}
-                      </td>
+                  <td style={{ whiteSpace: "nowrap" }}>{log.dgNumber}</td>
+                  <td style={{}}>{log.startTime} Hrs</td>
+                  <td>{log.stopTime} Hrs</td>
+                  <td>{log.hrMeterStart}</td>
+                  <td>{log.hrMeterEnd}</td>
+                  <td>{log.totalRunHours?.toFixed(1)} <span style={{ fontSize: "10px" }}>({`${log.totalRunHours.toFixed(2) * 60}_Min`})</span></td>
+                  <td>{log.fuelConsumption || 0}</td>
+                  <td>{log.kWHReading || 0}</td>
+                  <td>{log.remarks}</td>
+                  <td>{log.fuelFill}</td>
+                  <td>{log.oemCPH ? log.oemCPH?.toFixed(2) : "N/A"}</td>
+                  <td>{log.cph?.toFixed(2)}</td>
+                  <td style={log.segr < 3 ? { color: "red" } : { color: "green" }}>{log.segr}</td>
+                  <td>{log.dgRunPercentage}%</td>
+                  <td>
+                    {log.remarks === "Fuel Filling Only" && isLastDGFillForDay() && (
+                      <button
+                        className="text-blue-600 underline"
+                        onClick={openHsdPreview}
+                      >
+                        👁 View HSD
+                      </button>
+                    )}
+                  </td>
 
-                      <td style={{ display: "flex" }}>
-                        <button onClick={() => handleEdit(log)}>Edit</button>
-                        <button
-                          style={{ marginLeft: "8px", color: "red" }}
-                          onClick={() => handleDelete(log.id)}
-                        >
-                          ❌
-                        </button>
-                      </td>
-                    </>
-                  )}
+                  <td style={{ display: "flex" }}>
+                    <button onClick={() => handleEdit(log)}>Edit</button>
+                    <button
+                      style={{ marginLeft: "8px", color: "red" }}
+                      onClick={() => handleDelete(log.id)}
+                    >
+                      ❌
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

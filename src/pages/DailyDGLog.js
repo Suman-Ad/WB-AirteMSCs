@@ -1736,136 +1736,143 @@ const DailyDGLog = ({ userData }) => {
       </div>
 
       {isAdmin || userData?.designation === "Vertiv Site Infra Engineer" ? (
-      <div>
-        {!loadingTrend && multiYearData.length === 0 && (
-          <p style={{ color: "#888" }}>
-            No historical data available for previous years
-          </p>
-        )}
-        {loadingTrend && <p>Loading multi-year trend...</p>}
+        <div style={{
+          background: "#1e293b",
+          padding: "15px",
+          borderRadius: "10px",
+          marginBottom: "25px",
+          color: "white",
+        }}
+        >
+          {!loadingTrend && multiYearData.length === 0 && (
+            <p style={{ color: "#888" }}>
+              No historical data available for previous years
+            </p>
+          )}
+          {/* {loadingTrend && <p>Loading multi-year trend...</p>} */}
 
-        {multiYearData.length > 0 && (
-          <div className="chart-box">
+          {multiYearData.length > 0 && (
+            <div className="chart-box">
 
-            <h3>📈 Multi-Year Trend (Same Month)</h3>
+              <h3>📈 Multi-Year Trend (Same Month)</h3>
 
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={multiYearData}>
-                <XAxis dataKey="year" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line dataKey="DG_KWH" />
-                <Line dataKey="Fuel" />
-                <Line dataKey="PUE" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={multiYearData}>
+                  <XAxis dataKey="year" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line dataKey="DG_KWH" />
+                  <Line dataKey="Fuel" />
+                  <Line dataKey="PUE" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
 
 
-        {currentSummary && previousSummary && (
-          <div className="chart-box">
-            <h3>📊 YoY Energy Comparison</h3>
+          {currentSummary && previousSummary && (
+            <div className="chart-box">
+              <h3>📊 YoY Energy Comparison</h3>
 
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={buildYoYChartData(currentSummary, previousSummary)}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Current" />
-                <Bar dataKey="Previous" />
-              </BarChart>
-            </ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={buildYoYChartData(currentSummary, previousSummary)}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="Current" />
+                  <Bar dataKey="Previous" />
+                </BarChart>
+              </ResponsiveContainer>
 
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart
-                data={[
-                  {
-                    name: "Fuel",
-                    Current: currentSummary.totalFuel,
-                    Previous: previousSummary.totalFuel,
-                  },
-                  {
-                    name: "PUE",
-                    Current: currentSummary.avgPUE,
-                    Previous: previousSummary.avgPUE,
-                  },
-                ]}
-              >
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line dataKey="Current" />
-                <Line dataKey="Previous" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart
+                  data={[
+                    {
+                      name: "Fuel",
+                      Current: currentSummary.totalFuel,
+                      Previous: previousSummary.totalFuel,
+                    },
+                    {
+                      name: "PUE",
+                      Current: currentSummary.avgPUE,
+                      Previous: previousSummary.avgPUE,
+                    },
+                  ]}
+                >
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line dataKey="Current" />
+                  <Line dataKey="Previous" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
-        {currentSummary && previousSummary && (
-          <div className="compare-summary">
-            <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>
+          {currentSummary && previousSummary && (
+            <div className="compare-summary">
+              <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>
 
-            <table className="compare-table">
-              <thead>
-                <tr>
-                  <th>Metric</th>
-                  <th>Current Year</th>
-                  <th>Previous Year</th>
-                  <th>YoY Change</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Total DG KWH</td>
-                  <td>{fmt(currentSummary.totalDGKWH)}</td>
-                  <td>{fmt(previousSummary.totalDGKWH)}</td>
-                  <td>{yoy(currentSummary.totalDGKWH, previousSummary.totalDGKWH)}</td>
-                </tr>
+              <table className="compare-table">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Current Year</th>
+                    <th>Previous Year</th>
+                    <th>YoY Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Total DG KWH</td>
+                    <td>{fmt(currentSummary.totalDGKWH)}</td>
+                    <td>{fmt(previousSummary.totalDGKWH)}</td>
+                    <td>{yoy(currentSummary.totalDGKWH, previousSummary.totalDGKWH)}</td>
+                  </tr>
 
-                <tr>
-                  <td>Total EB KWH</td>
-                  <td>{fmt(currentSummary.totalEBKWH)}</td>
-                  <td>{fmt(previousSummary.totalEBKWH)}</td>
-                  <td>{yoy(currentSummary.totalEBKWH, previousSummary.totalEBKWH)}</td>
-                </tr>
+                  <tr>
+                    <td>Total EB KWH</td>
+                    <td>{fmt(currentSummary.totalEBKWH)}</td>
+                    <td>{fmt(previousSummary.totalEBKWH)}</td>
+                    <td>{yoy(currentSummary.totalEBKWH, previousSummary.totalEBKWH)}</td>
+                  </tr>
 
-                <tr>
-                  <td>Total Solar KWH</td>
-                  <td>{fmt(currentSummary.totalSolarKWH)}</td>
-                  <td>{fmt(previousSummary.totalSolarKWH)}</td>
-                  <td>{yoy(currentSummary.totalSolarKWH, previousSummary.totalSolarKWH)}</td>
-                </tr>
+                  <tr>
+                    <td>Total Solar KWH</td>
+                    <td>{fmt(currentSummary.totalSolarKWH)}</td>
+                    <td>{fmt(previousSummary.totalSolarKWH)}</td>
+                    <td>{yoy(currentSummary.totalSolarKWH, previousSummary.totalSolarKWH)}</td>
+                  </tr>
 
-                <tr>
-                  <td>Total Fuel Consumption</td>
-                  <td>{fmt(currentSummary.totalFuel)}</td>
-                  <td>{fmt(previousSummary.totalFuel)}</td>
-                  <td>{yoy(currentSummary.totalFuel, previousSummary.totalFuel)}</td>
-                </tr>
+                  <tr>
+                    <td>Total Fuel Consumption</td>
+                    <td>{fmt(currentSummary.totalFuel)}</td>
+                    <td>{fmt(previousSummary.totalFuel)}</td>
+                    <td>{yoy(currentSummary.totalFuel, previousSummary.totalFuel)}</td>
+                  </tr>
 
-                <tr>
-                  <td>Avg Site Running kW</td>
-                  <td>{fmt(currentSummary.avgSiteKW)}</td>
-                  <td>{fmt(previousSummary.avgSiteKW)}</td>
-                  <td>{yoy(currentSummary.avgSiteKW, previousSummary.avgSiteKW)}</td>
-                </tr>
+                  <tr>
+                    <td>Avg Site Running kW</td>
+                    <td>{fmt(currentSummary.avgSiteKW)}</td>
+                    <td>{fmt(previousSummary.avgSiteKW)}</td>
+                    <td>{yoy(currentSummary.avgSiteKW, previousSummary.avgSiteKW)}</td>
+                  </tr>
 
-                <tr>
-                  <td>Avg PUE</td>
-                  <td>{fmt(currentSummary.avgPUE)}</td>
-                  <td>{fmt(previousSummary.avgPUE)}</td>
-                  <td>{yoy(currentSummary.avgPUE, previousSummary.avgPUE)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                  <tr>
+                    <td>Avg PUE</td>
+                    <td>{fmt(currentSummary.avgPUE)}</td>
+                    <td>{fmt(previousSummary.avgPUE)}</td>
+                    <td>{yoy(currentSummary.avgPUE, previousSummary.avgPUE)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       ) : null}
 
       {/* <div className="chart-container" > */}

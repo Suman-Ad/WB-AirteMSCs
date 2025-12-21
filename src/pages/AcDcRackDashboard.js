@@ -1459,7 +1459,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                                     style={{
                                                         height: `${eq.sizeU * 18}px`,
                                                         position: "relative",
-                                                        background: "#cfe2ff",
+                                                        background: "cyan",
                                                         border: "1px solid #8bb6ff",
                                                         zIndex: 9,
                                                         display: "flex",
