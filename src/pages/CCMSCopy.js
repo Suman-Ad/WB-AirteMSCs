@@ -1,7 +1,9 @@
 // src/pages/CCMSCopy.js
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../assets/CCMSCopy.css';
+import { db } from '../firebase';
+import { collection, query, getDocs, limit, where } from 'firebase/firestore';
 
 
 const CCMSCopy = () => {
@@ -10,6 +12,47 @@ const CCMSCopy = () => {
     // ✅ Hooks must come before any conditional return
     const [billImages, setBillImages] = useState([]);
     const { logData, siteConfig, fuelRate } = location.state || {};
+    const [txnNumber, setTxnNumber] = useState("");
+
+    
+
+    const toTitleCase = (str = "") =>
+        str
+            .toLowerCase()
+            .replace(/\b\w/g, (char) => char.toUpperCase());
+
+
+    useEffect(() => {
+        if (!siteConfig?.siteName || !logData?.Date) return;
+
+        const fetchTxnNumber = async () => {
+            try {
+                // 🔑 Site key must MATCH DGLogForm (userData.site)
+                const siteKey = toTitleCase(siteConfig.siteName);
+
+                const q = query(
+                    collection(db, "dgHsdLogs", siteKey, "entries"),
+                    where("date", "==", logData.Date),
+                    limit(1)
+                );
+
+                const snap = await getDocs(q);
+
+                if (!snap.empty) {
+                    const docSnap = snap.docs[0];
+                    setTxnNumber(docSnap.data().transactionId || "");
+                } else {
+                    setTxnNumber("");
+                }
+            } catch (err) {
+                console.error("Failed to fetch TXN Number:", err);
+                setTxnNumber("");
+            }
+        };
+
+        fetchTxnNumber();
+    }, [siteConfig.siteName, logData.Date]);
+
 
     if (!logData) {
         return (
@@ -19,6 +62,7 @@ const CCMSCopy = () => {
             </div>
         );
     }
+
 
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
@@ -64,7 +108,7 @@ const CCMSCopy = () => {
             </div>
 
             <div id="ccmsSheet" className="ccms-sheet">
-                <h2 className="ccms-header" style={{ fontSize: "20px" }}>BILL FORWARDING SHEET</h2>
+                <h2 className="ccms-header" style={{ fontSize: "20px", color:"black" }}>BILL FORWARDING SHEET</h2>
                 <p style={{ textAlign: "center", padding: "6px", fontSize: "13px" }}>EXPENSE OF (PLEASE TICK AS APPLICABLE)</p>
                 <p style={{ textAlign: "center", padding: "7px", fontSize: "13px" }}>FOR EXPENSE TO BE DEBITED TO OTHER CIRCLE/BUSINESS, PLEASE ATTACH A MAIL CONFIRMATION FROM YOUR FUNCTIONAL COUNTER PART ACCEPTING THE DEBIT TO AVOID INTER UNIT RECO ISSUE ON THE MONTH END.</p>
                 <p style={{ paddingTop: "20px", textAlign: "center" }}><strong>Please find attached bill with details.</strong></p>
@@ -178,7 +222,7 @@ const CCMSCopy = () => {
                                 <td>{formattedDate}</td>
                                 <td>DIESEL</td>
                                 <td>{siteConfig.department}</td>
-                                <td>{siteConfig.txnNumber}</td>
+                                <td>{txnNumber}</td>
                             </tr>
                         </tbody>
                         {/* <tbody>

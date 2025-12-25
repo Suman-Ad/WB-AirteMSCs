@@ -33,6 +33,10 @@ function computeCapacityAnalysis(form) {
   const y = toNumber(form.rackEndRunningLoadB);
   const yy1 = toNumber(form.rackEndMcbRatingB);
 
+  const rackHeight = toNumber(form.rackHeight);
+  const rackWidth = toNumber(form.rackWidth);
+  const rackDepth = toNumber(form.rackDepth);
+
   const cableCapacityA = A1 * A2 * 2;
   const cableCapacityB = B1 * B2 * 2;
 
@@ -93,6 +97,7 @@ function computeCapacityAnalysis(form) {
     rackEndRunningLoadA,
     rackEndRunningLoadB,
 
+    rackSize: `${rackHeight}x${rackWidth}x${rackDepth}`,
     sourceType: rackType === "Passive" ? "None" : A > 0 && B > 0 ? "Dual Source" : "Single Source",
     freeRackUSpace: toNumber(form.totalRackUSpace) - toNumber(form.usedRackUSpace),
     pctRackOccupied: pctRackOccupied.toFixed(1),

@@ -2,6 +2,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import XLSX from "xlsx-js-style";
+import { oemDieselCphData } from "../config/oemDieselCphData";
+import { db } from "../firebase"; // your firebase config
+import { collection, getDocs } from "firebase/firestore";
 
 const fmt = (val) => (val !== undefined && val !== null ? Number(val).toFixed(2) : "0.0");
 const fmt1 = (val) => (val !== undefined && val !== null ? Number(val).toFixed(1) : "0.0");
@@ -30,7 +33,7 @@ const METRICS = [
 export default function MonthlyData({ userData }) {
     // siteConfig can be passed via props or read from global state/context
     const { state } = useLocation();
-    const { logs, siteConfig } = state || {};
+    const { logs, siteConfig, selectedMonth } = state || {};
     const [monthDate, setMonthDate] = useState(() => {
         // default to selectedMonth used in DailyDGLog or today
         return new Date(); // override with your selectedMonth if available
@@ -38,10 +41,86 @@ export default function MonthlyData({ userData }) {
     // const [logs, setLogs] = useState([]); // raw daily docs for the site/month
     const [loading, setLoading] = useState(false);
     const [previewGrid, setPreviewGrid] = useState(null);
+    const [monthlyCPHvsRunHrs, setMonthlyCPHvsRunHrs] = useState([]);
+
+    const [summary, setSummary] = useState({
+        DG1_OnLoad: 0,
+        DG1_NoLoad: 0,
+        DG2_OnLoad: 0,
+        DG2_NoLoad: 0,
+    });
+
     const navigate = useNavigate();
 
     // derive days of month
     const days = useMemo(() => getDaysInMonthArray(monthDate), [monthDate]);
+
+    const formatMonthName = (ym) => {
+        const [year, month] = ym.split("-");
+        const date = new Date(year, month - 1); // month is 0-based
+        return date.toLocaleString("default", { month: "long" }); // , year: "numeric" 
+    };
+
+    const formatYear = (ym) => {
+        return ym.split("-")[0]; // just the YYYY part
+    };
+
+    const fetchMonthlySummary = async () => {
+        try {
+            const dateObj = new Date(selectedMonth + "-01");
+            const monthKey =
+                dateObj.toLocaleString("en-US", { month: "short" }) +
+                "-" +
+                dateObj.getFullYear();
+
+            // 🔹 Get all date docs under the month
+            const monthRef = collection(db, "dgLogs", userData?.site, monthKey);
+            const monthSnapshot = await getDocs(monthRef);
+
+            let counts = {
+                DG1_OnLoad: 0,
+                DG1_NoLoad: 0,
+                DG2_OnLoad: 0,
+                DG2_NoLoad: 0,
+            };
+
+            // 🔹 Loop each date (2025-09-01, 2025-09-02, …)
+            for (const dateDoc of monthSnapshot.docs) {
+                const runsRef = collection(
+                    db,
+                    "dgLogs",
+                    userData?.site,
+                    monthKey,
+                    dateDoc.id,
+                    "runs"
+                );
+                const runsSnap = await getDocs(runsRef);
+
+                runsSnap.forEach((r) => {
+                    const data = r.data();
+                    if (data.dgNumber === "DG-1" && data.remarks === "On Load") counts.DG1_OnLoad++;
+                    if (data.dgNumber === "DG-1" && data.remarks === "No Load") counts.DG1_NoLoad++;
+                    if (data.dgNumber === "DG-2" && data.remarks === "On Load") counts.DG2_OnLoad++;
+                    if (data.dgNumber === "DG-2" && data.remarks === "No Load") counts.DG2_NoLoad++;
+                });
+            }
+
+            setSummary(counts);
+            localStorage.setItem("summary", JSON.stringify(counts));
+
+        } catch (err) {
+            console.error("Error fetching monthly summary:", err);
+        }
+    };
+
+    useEffect(() => {
+        const cached = localStorage.getItem("summary");
+        if (cached) {
+          setSummary(JSON.parse(cached));
+        }
+        fetchMonthlySummary();
+
+      }, [userData, selectedMonth]);
 
     // 🔹 Auto calculations (like Excel)
     const calculateFields = (data) => {
@@ -174,36 +253,156 @@ export default function MonthlyData({ userData }) {
         return result;
     };
 
-    // useEffect(() => {
-    //     // fetch logs for selected site/month on mount or month change
-    //     const fetchLogs = async () => {
-    //         setLoading(true);
-    //         try {
-    //             // You probably store dailyDGLogs under collection(db, 'dailyDGLogs', siteKey, monthKey)
-    //             const siteKey = (userData?.site);
-    //             const monthKey = monthKeyFromDate(monthDate); // e.g. "sep-2025"
-    //             // adjust path/query as per your data organization
-    //             const q = query(collection(db, "dailyDGLogs", siteKey, monthKey));
-    //             const snap = await getDocs(q);
-    //             const docs = [];
-    //             snap.forEach((d) => {
-    //                 docs.push({ id: d.id, ...d.data() });
-    //             });
-    //             // sort by Date (if you store Date as string or timestamp adapt accordingly)
-    //             docs.sort((a, b) => {
-    //                 const da = new Date(a.Date), dbt = new Date(b.Date);
-    //                 return da - dbt;
-    //             });
-    //             setLogs(docs);
-    //         } catch (err) {
-    //             console.error("fetch monthly logs error", err);
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     };
+    const allValues = logs.flatMap((entry) => calculateFields(entry));
 
-    //     fetchLogs();
-    // }, [monthDate, userData]);
+    const siteRunningKwValues = allValues
+        .map(cl => cl["Site Running kW"])
+        .filter(v => v > 0);
+
+    const avgSiteRunningKw =
+        siteRunningKwValues.length > 0
+            ? (siteRunningKwValues.reduce((sum, v) => sum + v, 0) / siteRunningKwValues.length).toFixed(2)
+            : 0;
+
+    // helper to find row index in OEM CPH data
+    const findRowDgCapacity = (dgRating) => {
+        const capacities = oemDieselCphData["DG Capacity"];
+        for (let i = 0; i < capacities.length; i++) {
+            if (capacities[i] === dgRating) {
+                return i;
+            }
+        }
+        return -1;
+    };
+
+    // OEM data exists for this percent — use OEM CPH table
+    const runPercent = (avgSiteRunningKw / (siteConfig.dgCapacity * 0.8)) * 100;
+    const roundedPercent = Math.round(runPercent);
+    const capacity = parseFloat(siteConfig?.dgCapacity) || 0;
+    const rowIndex = findRowDgCapacity(capacity);
+    const oDCPH = oemDieselCphData[`${roundedPercent}%`]?.[rowIndex];
+
+    // 🔹 Build Monthly CPH vs Run Hrs Table
+    const buildMonthlyCPHvsRunHrsTable = (logs, siteConfig, siteMeta) => {
+        const dgMap = {};
+        let sno = 1;
+
+        logs.forEach((log) => {
+            const calc = calculateFields(log); // 🔥 IMPORTANT
+
+            for (let i = 1; i <= siteConfig.dgCount; i++) {
+                const dgKey = `DG-${i}`;
+
+                const onLoadHrs = Number(calc[`${dgKey} ON Load Hour`] || 0);
+                const offLoadHrs = Number(calc[`${dgKey} OFF Load Hour`] || 0);
+                const totalRunHrs = onLoadHrs + offLoadHrs;
+
+                const onLoadFuel = Number(calc[`${dgKey} ON Load Consumption`] || 0);
+                const offLoadFuel = Number(calc[`${dgKey} OFF Load Consumption`] || 0);
+                const totalFuel = onLoadFuel + offLoadFuel;
+                const totalFuelFilling = Number(calc[`${dgKey} Fuel Filling`] || 0);
+
+                const kwh = Number(calc[`${dgKey} KWH Generation`] || 0);
+
+                if (!totalRunHrs || !totalFuel) continue;
+
+                const mapKey = `${siteMeta.month}_${dgKey}`;
+
+                if (!dgMap[mapKey]) {
+                    dgMap[mapKey] = {
+                        sno: sno++,
+                        hub: siteMeta.hub,
+                        circle: siteMeta.circle,
+                        siteCode: siteMeta.siteCode,
+                        siteName: siteMeta.siteName,
+                        ownership: siteMeta.ownership,
+                        address: siteMeta.address,
+                        factory: siteMeta.factory,
+                        month: siteMeta.month,
+
+                        dgNumber: dgKey,
+                        dgCapacity: siteConfig.dgCapacity,
+                        dgMfgDate: siteConfig.dgMfgDate,
+
+                        dgUnitsConsumed: 0,
+
+                        dgRunHrsOnLoad: 0,
+                        dgRunHrsNoLoad: 0,
+                        dgTotalRunHrs: 0,
+
+                        dieselConsumedOnLoad: 0,
+                        dieselConsumedNoLoad: 0,
+                        totalDieselConsumed: 0,
+                        dieselPurchased: 0,
+                        dieselAdded: 0,
+
+                        pf: siteMeta.pf,
+                    };
+                }
+
+                dgMap[mapKey].dgUnitsConsumed += kwh;
+
+                dgMap[mapKey].dgRunHrsOnLoad += onLoadHrs;
+                dgMap[mapKey].dgRunHrsNoLoad += offLoadHrs;
+                dgMap[mapKey].dgTotalRunHrs += totalRunHrs;
+
+                dgMap[mapKey].dieselConsumedOnLoad += onLoadFuel;
+                dgMap[mapKey].dieselConsumedNoLoad += offLoadFuel;
+                dgMap[mapKey].totalDieselConsumed += totalFuel;
+                dgMap[mapKey].dieselPurchased += totalFuelFilling;
+                dgMap[mapKey].dieselAdded += totalFuelFilling;
+            }
+        });
+
+        // 🔹 Final calculations
+        return Object.values(dgMap).map((r) => {
+            const cph = r.dieselConsumedOnLoad / r.dgRunHrsOnLoad;
+            const kwhPerLtr = r.dgUnitsConsumed / r.dieselConsumedOnLoad;
+
+            const gap = cph - siteMeta.oemCph || 0;
+            const gapMargin = cph - ((siteMeta.oemCph || 0) * 1.05);
+            const dgKey = r.dgNumber.replace("-", "");
+
+            return {
+                ...r,
+                cph: Number(cph.toFixed(1)),
+                kwhPerLtr: Number(kwhPerLtr.toFixed(2)),
+                oemCph: siteMeta.oemCph || 0,
+                gapXV: Number(gap.toFixed(2)),
+                cphStatus: cph > siteMeta.oemCph ? "High" : "Low",
+                oemCphWithMargin: siteMeta.oemCphMargin || 0,
+                gapXVWithMargin: Number(gapMargin.toFixed(2)),
+                rcaHighCph: cph > siteMeta.oemCph ? "RCA Required" : "",
+                remarks: "",
+                dgRunIncidentsOnLoad: summary?.[`${dgKey}_OnLoad`] || 0,
+                dgRunIncidentsNoLoad: summary?.[`${dgKey}_NoLoad`] || 0,
+            };
+        });
+    };
+
+
+
+    useEffect(() => {
+        if (!logs?.length || !siteConfig) return;
+
+        const siteMeta = {
+            hub: userData?.region,
+            circle: userData?.circle,
+            siteCode: userData?.siteId,
+            siteName: siteConfig.siteName,
+            ownership: siteConfig.ownership,
+            address: siteConfig.address,
+            factory: siteConfig.factory,
+            month: selectedMonth ? `${formatMonthName(selectedMonth)}-${formatYear(selectedMonth)}` : "NA",
+            oemCph: oDCPH || 0,
+            oemCphMargin: oDCPH * 1.05,
+            pf: siteConfig.pf,
+        };
+
+        const data = buildMonthlyCPHvsRunHrsTable(logs, siteConfig, siteMeta);
+        setMonthlyCPHvsRunHrs(data);
+
+    }, [logs, siteConfig, userData, summary, selectedMonth]);
 
     // build preview grid: rows = METRICS, cols = days
     useEffect(() => {
@@ -415,62 +614,172 @@ export default function MonthlyData({ userData }) {
 
     return (
         <div className="daily-log-container">
-            <h2>Monthly Energy Outlook Data — {siteConfig?.siteName}</h2>
+            <h2>Monthly Data</h2>
+            <div style={{ border: "1px solid #000", borderRadius: "15px" }}>
+                <h2>Monthly Energy Outlook Data — {siteConfig?.siteName}</h2>
 
-            <div style={{ marginBottom: 12 }}>
+                <div style={{ marginBottom: 12 }}>
 
-                <button onClick={() => { /* reload triggered by state change anyway */ }}>Generate</button>
-                <button onClick={handleDownloadExcel} style={{ marginLeft: 8 }}>
-                    Download Excel (Styled)
-                </button>
-                {/* <button onClick={() => navigate(-1)} style={{ marginLeft: 8 }}>← Back</button> */}
-            </div>
-
-            {previewGrid?.summaryRows && (
-                <div style={{ marginTop: "20px" }}>
-                    <h3>Monthly Summary</h3>
-                    <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", minWidth: "300px" }}>
-                        <tbody>
-                            {previewGrid.summaryRows.map((r) => (
-                                <tr key={r.metric}>
-                                    <td style={{ fontWeight: "600", background: "#dfefff" }}>{r.metric}</td>
-                                    <td style={{ textAlign: "center" }}>{r.values[0]}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <button onClick={() => { /* reload triggered by state change anyway */ }}>Generate</button>
+                    <button onClick={handleDownloadExcel} style={{ marginLeft: 8 }}>
+                        Download Excel (Styled)
+                    </button>
+                    {/* <button onClick={() => navigate(-1)} style={{ marginLeft: 8 }}>← Back</button> */}
                 </div>
-            )}
 
-            {loading && <div>Loading logs...</div>}
+                {loading && <div>Loading logs...</div>}
 
-            {!loading && previewGrid && (
-                <div style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
-                    <table border="1" cellPadding="6" style={{ borderCollapse: "collapse" }}>
-                        <thead>
-                            <tr>
-                                <th style={{ position: "sticky", left: 0, background: "#fff", zIndex: 3 }}>Metric</th>
-                                {previewGrid.days.map((d) => (
-                                    <th key={d.toISOString()}>{d.getDate()}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {previewGrid.rows.map((r) => (
-                                <tr key={r.metric}>
-                                    <td style={{ position: "sticky", left: 0, background: "#fff", zIndex: 3 }}>{r.metric}</td>
-                                    {r.values.map((v, idx) => (
-                                        <td key={idx} style={{ textAlign: "center" }}>{v}</td>
+                {!loading && previewGrid && (
+                    <div style={{ overflowX: "auto", whiteSpace: "nowrap", marginTop: "20px", borderRadius: "15px" }}>
+                        <table className="table-container" border="1" cellPadding="6" style={{ borderRadius: "15px", overflowX: "auto", borderCollapse: "collapse", padding: "20px" }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ position: "sticky", left: 0, background: "#fff", zIndex: 3 }}>Metric</th>
+                                    {previewGrid.days.map((d) => (
+                                        <th key={d.toISOString()}>{d.getDate()}</th>
                                     ))}
                                 </tr>
+                            </thead>
+                            <tbody>
+                                {previewGrid.rows.map((r) => (
+                                    <tr key={r.metric}>
+                                        <td style={{ position: "sticky", left: 0, background: "#fff", zIndex: 3 }}>{r.metric}</td>
+                                        {r.values.map((v, idx) => (
+                                            <td key={idx} style={{ textAlign: "center" }}>{v}</td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {previewGrid?.summaryRows && (
+                    <div style={{ borderRadius: "15px", padding: "20px" }}>
+                        <h3>Monthly Summary</h3>
+                        <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", minWidth: "300px", borderRadius: "10px" }}>
+                            <tbody>
+                                {previewGrid.summaryRows.map((r) => (
+                                    <tr key={r.metric}>
+                                        <td style={{ fontWeight: "600", background: "#dfefff" }}>{r.metric}</td>
+                                        <td style={{ textAlign: "center" }}>{r.values[0]}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {!loading && !previewGrid && <div>No data found for this month.</div>}
+            </div>
+
+            <div style={{ border: "1px solid #000", borderRadius: "15px", marginTop: "30px", padding: "20px" }}>
+                <h2 style={{ marginTop: "40px" }}>Monthly CPH vs Run Hrs Table</h2>
+                <div style={{ overflowX: "auto" }}>
+                    <table className="table-container" border="1" cellPadding="6">
+                        <thead>
+                            <tr>
+                                <th>S.no</th>
+                                <th>Hub</th>
+                                <th>Circle</th>
+                                <th>Unique site Code</th>
+                                <th>Site name</th>
+                                <th>Rented / Owned / Long lease</th>
+                                <th>Address of Property</th>
+                                <th>Factory</th>
+                                <th>Month</th>
+                                <th>DG Number</th>
+                                <th>DG capacity (kVA)</th>
+                                <th>DG Manufacturing Date</th>
+                                <th>DG running load (kVA)</th>
+                                <th>DG running load (kW)</th>
+                                <th>% of DG load (kW)</th>
+                                <th>DG units consumed (kWh)</th>
+
+                                <th>DG Run Hrs (On Load)</th>
+                                <th>DG Run Hrs (No Load)</th>
+                                <th>Total DG Run Hrs</th>
+
+                                <th>Diesel Purchased (Ltrs)</th>
+                                <th>Diesel Added in DG (Ltrs)</th>
+
+                                <th>Diesel Consumption (On Load)</th>
+                                <th>Diesel Consumption (No Load)</th>
+                                <th>Total Diesel Consumption (Ltrs)</th>
+
+                                <th>CPH</th>
+                                <th>KWH / Ltrs</th>
+                                <th>OEM CPH</th>
+                                <th>Gap (X-V)</th>
+                                <th>CPH Status</th>
+                                <th>OEM CPH (With Margin)</th>
+                                <th>Gap (With Margin)</th>
+                                <th>RCA on High CPH</th>
+                                <th>Remarks</th>
+                                <th>PF</th>
+                                <th>DG Run Incidents (On Load)</th>
+                                <th>DG Run Incidents (No Load)</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {monthlyCPHvsRunHrs.map((row, index) => (
+                                <tr key={index}>
+                                    <td>{row.sno}</td>
+                                    <td>{row.hub}</td>
+                                    <td>{row.circle}</td>
+                                    <td>{row.siteCode}</td>
+                                    <td>{row.siteName}</td>
+                                    <td>{row.ownership}</td>
+                                    <td>{row.address}</td>
+                                    <td>{row.factory}</td>
+                                    <td>{row.month}</td>
+                                    <td>{row.dgNumber}</td>
+                                    <td>{row.dgCapacity}</td>
+                                    <td>{row.dgMfgDate}</td>
+                                    <td>{(avgSiteRunningKw / (siteConfig.pf || 0.8)).toFixed(2)}</td>
+                                    <td>{avgSiteRunningKw}</td>
+                                    <td>{((avgSiteRunningKw / (siteConfig.dgCapacity * 0.8)) * 100).toFixed(0)}%</td>
+                                    <td>{row.dgUnitsConsumed.toFixed(2)}</td>
+
+                                    <td>{row.dgRunHrsOnLoad.toFixed(1)}</td>
+                                    <td>{row.dgRunHrsNoLoad.toFixed(1)}</td>
+                                    <td>{row.dgTotalRunHrs.toFixed(1)}</td>
+
+                                    <td>{row.dieselPurchased}</td>
+                                    <td>{row.dieselAdded}</td>
+
+                                    <td>{row.dieselConsumedOnLoad}</td>
+                                    <td>{row.dieselConsumedNoLoad}</td>
+                                    <td>{row.totalDieselConsumed}</td>
+
+                                    <td>{row.cph}</td>
+                                    <td>{row.kwhPerLtr}</td>
+                                    <td>{row.oemCph}</td>
+                                    <td>{row.gapXV}</td>
+
+                                    <td
+                                        style={{
+                                            color: row.cphStatus === "High" ? "red" : "green",
+                                            fontWeight: "bold",
+                                        }}
+                                    >
+                                        {row.cphStatus}
+                                    </td>
+
+                                    <td>{row.oemCphWithMargin}</td>
+                                    <td>{row.gapXVWithMargin}</td>
+                                    <td>{row.rcaHighCph}</td>
+                                    <td>{row.remarks}</td>
+                                    <td>{row.pf}</td>
+                                    <td>{row.dgRunIncidentsOnLoad}</td>
+                                    <td>{row.dgRunIncidentsNoLoad}</td>
+                                </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
-            )}
-
-            {!loading && !previewGrid && <div>No data found for this month.</div>}
-
+            </div>
         </div>
     );
 }

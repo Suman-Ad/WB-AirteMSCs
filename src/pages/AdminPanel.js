@@ -405,8 +405,23 @@ const AdminPanel = ({ userData }) => {
                             )
                           ) : user.designation}
                         </td>
-                        <td data-label="EMP ID">{user.empId}</td>
+
+                        <td data-label="EMP ID">
+                          {userData.role === "Super Admin" ? (
+                            isEditable(user.id) ? (
+                              <input
+                                className="editable-field"
+                                value={user.empId || ""}
+                                onChange={(e) => handleUserFieldEdit(user.id, "empId", e.target.value)}
+                              />
+                            ) : (
+                              user.empId
+                            )
+                          ) : user.empId}
+                        </td>
+
                         <td data-label="Email">{user.email}</td>
+
                         <td data-label="Site ID">
                           {user.siteId}
                         </td>

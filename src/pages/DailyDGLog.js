@@ -354,7 +354,6 @@ const DailyDGLog = ({ userData }) => {
     result["Office kW Consumption"] = officeLoad;
 
 
-
     // Totals
     result["Total DG KWH"] =
       (result["DG-1 KWH Generation"] || 0) +
@@ -507,17 +506,6 @@ const DailyDGLog = ({ userData }) => {
       setLastFilling(JSON.parse(cached1));
     }
 
-
-    if (!form?.Date) return;
-
-    const loadYesterday = async () => {
-      const data = await getYesterdayLog(form.Date);
-      setYesterdayLog(data);
-    };
-
-    loadYesterday();
-
-
   }, [form?.Date]);
 
 
@@ -652,6 +640,17 @@ const DailyDGLog = ({ userData }) => {
     }
   };
 
+  useEffect(() => {
+
+    if (!form?.Date) return;
+
+    const loadYesterday = async () => {
+      const data = await getYesterdayLog(form.Date);
+      setYesterdayLog(data);
+    };
+
+    loadYesterday();
+  },[form?.Date]);
 
 
   useEffect(() => {
@@ -819,9 +818,13 @@ const DailyDGLog = ({ userData }) => {
     }
   };
 
-
+  // 🔹 Refetch logs on month/site change
   useEffect(() => {
     fetchLogs();
+  }, [selectedMonth, siteName]);
+
+  // 🔹 Year-over-Year comparison
+  useEffect(() => {
 
     if (!logs.length) return;
 
@@ -849,6 +852,7 @@ const DailyDGLog = ({ userData }) => {
     loadTrend();
 
     loadComparison();
+    // fetchLogs();
 
   }, [selectedMonth, siteName, logs]);
 
@@ -947,8 +951,6 @@ const DailyDGLog = ({ userData }) => {
     // 4️⃣ Aggregate runs AFTER opening values exist
     fetchAndAggregateRuns(newDate);
   };
-
-
 
   // 🔹 Save entry
   const handleSubmit = async (e) => {
@@ -1096,7 +1098,6 @@ const DailyDGLog = ({ userData }) => {
   inputFields.push("UPS Load KWH");
   inputFields.push("Office kW Consumption");
 
-
   // Down Tamplate For excel bluk upload
   const downloadDGLogTemplate = () => {
     const headers = ["Date"];
@@ -1145,6 +1146,7 @@ const DailyDGLog = ({ userData }) => {
     XLSX.utils.book_append_sheet(wb, ws, "DG_LOG");
 
     XLSX.writeFile(wb, "DG_Log_Template.xlsx");
+
   };
 
 
@@ -1246,69 +1248,67 @@ const DailyDGLog = ({ userData }) => {
   };
 
 
-  const handleDGLogExcelUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !siteName) return;
+  // const handleDGLogExcelUpload = async (e) => {
+  //   const file = e.target.files[0];
+  //   if (!file || !siteName) return;
 
-    try {
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
+  //   try {
+  //     const buffer = await file.arrayBuffer();
+  //     const workbook = XLSX.read(buffer, { type: "array" });
 
-      const sheet = workbook.Sheets["DG_LOG"];
-      if (!sheet) {
-        alert("DG_LOG sheet not found");
-        return;
-      }
+  //     const sheet = workbook.Sheets["DG_LOG"];
+  //     if (!sheet) {
+  //       alert("DG_LOG sheet not found");
+  //       return;
+  //     }
 
-      const rows = XLSX.utils.sheet_to_json(sheet, {
-        defval: "",
-        raw: false,
-      });
+  //     const rows = XLSX.utils.sheet_to_json(sheet, {
+  //       defval: "",
+  //       raw: false,
+  //     });
 
-      if (!rows.length) {
-        alert("Excel is empty");
-        return;
-      }
+  //     if (!rows.length) {
+  //       alert("Excel is empty");
+  //       return;
+  //     }
 
-      for (const row of rows) {
-        if (!row.Date) continue;
+  //     for (const row of rows) {
+  //       if (!row.Date) continue;
 
-        // 🔐 Validate date
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(row.Date)) {
-          console.warn("Invalid Date format:", row.Date);
-          continue;
-        }
+  //       // 🔐 Validate date
+  //       if (!/^\d{4}-\d{2}-\d{2}$/.test(row.Date)) {
+  //         console.warn("Invalid Date format:", row.Date);
+  //         continue;
+  //       }
 
-        const monthKey = row.Date.slice(0, 7); // YYYY-MM
-        const docId = row.Date; // SAME AS YOUR DATA
+  //       const monthKey = row.Date.slice(0, 7); // YYYY-MM
+  //       const docId = row.Date; // SAME AS YOUR DATA
 
-        // 🔒 Ensure all values stored as STRING (important)
-        const payload = {};
-        Object.keys(row).forEach((key) => {
-          payload[key] = row[key] === "" ? "" : String(row[key]);
-        });
+  //       // 🔒 Ensure all values stored as STRING (important)
+  //       const payload = {};
+  //       Object.keys(row).forEach((key) => {
+  //         payload[key] = row[key] === "" ? "" : String(row[key]);
+  //       });
 
-        payload.siteName = siteName;
-        payload.updatedBy = userData?.email || "";
-        payload.updatedAt = new Date();
+  //       payload.siteName = siteName;
+  //       payload.updatedBy = userData?.email || "";
+  //       payload.updatedAt = new Date();
 
-        await setDoc(
-          doc(db, "dailyDGLogs", siteName, monthKey, docId),
-          payload,
-          { merge: true } // ✅ safe overwrite
-        );
-      }
+  //       await setDoc(
+  //         doc(db, "dailyDGLogs", siteName, monthKey, docId),
+  //         payload,
+  //         { merge: true } // ✅ safe overwrite
+  //       );
+  //     }
 
-      alert("DG Log Excel uploaded successfully");
-      fetchLogs(); // refresh UI
+  //     alert("DG Log Excel uploaded successfully");
+  //     fetchLogs(); // refresh UI
 
-    } catch (err) {
-      console.error("DG Excel upload failed:", err);
-      alert("Upload failed. Check console.");
-    }
-  };
-
-
+  //   } catch (err) {
+  //     console.error("DG Excel upload failed:", err);
+  //     alert("Upload failed. Check console.");
+  //   }
+  // };
 
 
   // 🔹 Download logs as Excel (Dynamic as per site config)
@@ -2371,7 +2371,7 @@ const DailyDGLog = ({ userData }) => {
         )}
 
       <button onClick={() => navigate("/monthly-data", {
-        state: { logs, siteConfig },
+        state: { logs, siteConfig, selectedMonth },
       })} className="sidepanel-manage-btn" style={{ background: "blue" }}>
         📊 Preview Monthly Data
       </button>
@@ -2467,7 +2467,7 @@ const DailyDGLog = ({ userData }) => {
         </div>
       )}
 
-      {userData?.name === "Crash Algo" || userData?.designation === "Vertiv Site Infra Engineer" && (
+      {(userData?.name === "Crash Algo" || userData?.designation === "Vertiv Site Infra Engineer") && (
         <div className="child-container" style={{ border: "1px solid #000", borderRadius: "15px" }}>
           <h2>⚡ DG Log Bulk Upload</h2>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2477,20 +2477,14 @@ const DailyDGLog = ({ userData }) => {
               📥Download DG Log Excel Template
             </b>
           </div>
+          <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
           <label>Upload DG Log Excel File:</label>
           <input
             type="file"
             accept=".xlsx,.xls"
             onChange={(e) => handlePreviewDGExcel(e.target.files[0])}
           />
-
-          {/* {showPreview && (
-              <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleDGLogExcelUpload}
-            />
-            )} */}
+          </div>
 
           {showPreview && (
             <div className="child-container" >

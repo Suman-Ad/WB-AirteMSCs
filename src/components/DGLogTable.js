@@ -1,10 +1,12 @@
 // src/components/DGLogTable.js
-import React, { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc, query, limit, orderBy } from "firebase/firestore";
+import React, { useState, useEffect, useRef } from "react";
+import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc, query, limit, orderBy, addDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useLocation, useNavigate } from "react-router-dom";
-import { format, subDays } from "date-fns";
+import { format, set, subDays } from "date-fns";
 import HSDPrintTemplate from "../components/HSDPrintTemplate";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 
 // Convert decimal hours to HH:MM format
@@ -28,8 +30,6 @@ const DGLogTable = ({ userData }) => {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().slice(0, 10) // default today
   );
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({});
 
   const siteName = userData?.site;
 
@@ -42,7 +42,17 @@ const DGLogTable = ({ userData }) => {
   const [hsdPreviewOpen, setHsdPreviewOpen] = useState(false);
   const [hsdPreviewData, setHsdPreviewData] = useState(null);
   const [hsdPreviewForm, setHsdPreviewForm] = useState(null);
+  // State for Downloading Excel
+  const [downloading, setDownloading] = useState(false);
+  // State for Excel Bulk Upload
+  const [excelPreviewRows, setExcelPreviewRows] = useState([]);
+  const [excelErrors, setExcelErrors] = useState([]);
+  const [showExcelPreview, setShowExcelPreview] = useState(false);
+  const [isUploadingExcel, setIsUploadingExcel] = useState(false);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const fileInputRef = useRef(null);
 
+  // Check if the current log is the last DG fuel filling entry for the day
   const isLastDGFillForDay = () => {
     if (!siteConfig?.dgCount) return false;
 
@@ -52,8 +62,6 @@ const DGLogTable = ({ userData }) => {
 
     return siteConfig.dgCount - fuelFillLogs.length === 0;
   };
-
-
 
 
   const fetchHsdLogs = async () => {
@@ -201,7 +209,7 @@ const DGLogTable = ({ userData }) => {
   };
 
 
-  const handleDelete = async (logId) => {
+  const handleDelete = async (log) => {
     if (!window.confirm("Are you sure you want to delete this log?")) return;
 
     try {
@@ -211,6 +219,7 @@ const DGLogTable = ({ userData }) => {
         "-" +
         dateObj.getFullYear();
 
+      // 1️⃣ Delete DG Log
       const logRef = doc(
         db,
         "dgLogs",
@@ -218,19 +227,41 @@ const DGLogTable = ({ userData }) => {
         monthKey,
         selectedDate,
         "runs",
-        logId
+        log.id
       );
-
       await deleteDoc(logRef);
+
+      // 2️⃣ ALSO delete HSD log if Fuel Filling Only
+      if (log.remarks === "Fuel Filling Only") {
+        const hsdQuery = query(
+          collection(db, "dgHsdLogs", siteName, "entries")
+        );
+
+        const hsdSnap = await getDocs(hsdQuery);
+
+        const matchedHsd = hsdSnap.docs.find(
+          (d) => d.data().date === selectedDate
+        );
+
+        if (matchedHsd) {
+          await deleteDoc(
+            doc(db, "dgHsdLogs", siteName, "entries", matchedHsd.id)
+          );
+          console.log("HSD log deleted for date:", selectedDate);
+        }
+      }
+
       alert("Log deleted successfully ❌");
+
       fetchLogs();
       fetchMonthlySummary();
+      fetchHsdLogs();
+
     } catch (err) {
       console.error("Error deleting log:", err);
-      alert("Failed to delete log. Check console for details.");
+      alert("Failed to delete log. Check console.");
     }
   };
-
 
   useEffect(() => {
     const cached = localStorage.getItem("summary");
@@ -326,6 +357,429 @@ const DGLogTable = ({ userData }) => {
   const shareWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(generateShareText(dhrDataForPreview))}`, "_blank");
   const shareTelegram = () => window.open(`https://t.me/share/url?url=${encodeURIComponent(generateShareText(dhrDataForPreview))}`, "_blank");
 
+  const exportMonthlyDGLogsToExcel = async () => {
+    try {
+      if (!siteName || !selectedDate) {
+        alert("Site or Date missing");
+        return;
+      }
+      setDownloading(true);
+      const dateObj = new Date(selectedDate);
+      const monthKey = format(dateObj, "MMM-yyyy");
+
+      const monthRef = collection(db, "dgLogs", siteName, monthKey);
+      const monthSnap = await getDocs(monthRef);
+
+      const excelRows = [];
+
+      for (const dateDoc of monthSnap.docs) {
+        const date = dateDoc.id;
+
+        const runsRef = collection(
+          db,
+          "dgLogs",
+          siteName,
+          monthKey,
+          date,
+          "runs"
+        );
+
+        const runsSnap = await getDocs(runsRef);
+
+        runsSnap.forEach((docSnap) => {
+          const d = docSnap.data();
+
+          excelRows.push({
+            Date: date,
+            "DG No": d.dgNumber || "",
+            "Start Time": d.startTime || "",
+            "Stop Time": d.stopTime || "",
+            "HR Meter Start": d.hrMeterStart || "",
+            "HR Meter End": d.hrMeterEnd || "",
+            "Total Run Hours": d.totalRunHours || 0,
+            "Fuel Consumption (Ltrs)": d.fuelConsumption || 0,
+            "Fuel Filled (Ltrs)": d.fuelFill || 0,
+            "OEM CPH": d.oemCPH || "",
+            "Achieved CPH": d.cph || "",
+            "SEGR": d.segr || "",
+            "DG Run %": d.dgRunPercentage || "",
+            "Remarks": d.remarks || "",
+            "kWH Reading": d.kWHReading || "",
+          });
+        });
+      }
+
+      if (!excelRows.length) {
+        alert("No DG logs found for this month");
+        return;
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(excelRows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Monthly DG Logs");
+
+      const excelBuffer = XLSX.write(workbook, {
+        bookType: "xlsx",
+        type: "array",
+      });
+
+      const fileBlob = new Blob([excelBuffer], {
+        type:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      saveAs(
+        fileBlob,
+        `DG_Logs_${siteName}_${monthKey}.xlsx`
+      );
+
+      setDownloading(false);
+
+    } catch (error) {
+      console.error("Excel export failed:", error);
+      alert("Failed to export Excel");
+    }
+  };
+
+  const downloadDGBulkUploadTemplate = () => {
+    const templateData = [
+      {
+        Date: "",
+        "DG No": "",
+        "Start Time (HH:mm)": "",
+        "Stop Time (HH:mm)": "",
+        "HR Meter Start": "",
+        "HR Meter End": "",
+        "Fuel Consumption": "",
+        "Fuel Filled": "",
+        "Remarks": "",
+        "kWH Reading": "",
+      },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DG_LOGS");
+
+    XLSX.writeFile(wb, "DG_Bulk_Upload_Template.xlsx");
+  };
+
+  const normalizeExcelDate = (value) => {
+    // Case 1: Already string date
+    if (typeof value === "string") {
+      const d = new Date(value);
+      return isNaN(d) ? value : format(d, "yyyy-MM-dd");
+    }
+
+    // Case 2: Excel serial number
+    if (typeof value === "number") {
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const date = new Date(excelEpoch.getTime() + value * 86400000);
+      return format(date, "yyyy-MM-dd");
+    }
+
+    return "";
+  };
+
+  const normalizeExcelTime = (value) => {
+    // Case 1: already string
+    if (typeof value === "string") {
+      const d = new Date(`1970-01-01 ${value}`);
+      if (!isNaN(d)) {
+        return format(d, "HH:mm");
+      }
+      return value;
+    }
+
+    // Case 2: Excel serial time
+    if (typeof value === "number") {
+      const totalMinutes = Math.round(value * 24 * 60);
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    }
+
+    return "";
+  };
+
+  const getDGDuplicateKey = (row) => {
+    return [
+      normalizeExcelDate(row.Date),
+      row["DG No"],
+      normalizeExcelTime(row["Start Time (HH:mm)"]),
+      normalizeExcelTime(row["Stop Time (HH:mm)"]),
+      Number(row["HR Meter Start"]) || 0,
+      Number(row["HR Meter End"]) || 0,
+    ].join("|");
+  };
+
+  const resetExcelInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+
+  const checkFirestoreDuplicates = async (rows) => {
+    const duplicateErrors = [];
+
+    const groupedByMonth = {};
+
+    rows.forEach((row, index) => {
+      if (!row.Date || !row["DG No"]) return;
+
+      const dateObj = new Date(normalizeExcelDate(row.Date));
+      const monthKey = format(dateObj, "MMM-yyyy");
+      const dateKey = format(dateObj, "yyyy-MM-dd");
+
+      if (!groupedByMonth[monthKey]) groupedByMonth[monthKey] = [];
+      groupedByMonth[monthKey].push({ row, index, dateKey });
+    });
+
+    for (const monthKey in groupedByMonth) {
+      for (const item of groupedByMonth[monthKey]) {
+        const { row, index, dateKey } = item;
+
+        const runsRef = collection(
+          db,
+          "dgLogs",
+          siteName,
+          monthKey,
+          dateKey,
+          "runs"
+        );
+
+        const snap = await getDocs(runsRef);
+
+        const excelKey = getDGDuplicateKey(row);
+
+        snap.forEach((docSnap) => {
+          const dbRow = docSnap.data();
+
+          const dbKey = [
+            normalizeExcelDate(dateKey),
+            dbRow.dgNumber,
+            dbRow.startTime,
+            dbRow.stopTime,
+            Number(dbRow.hrMeterStart) || 0,
+            Number(dbRow.hrMeterEnd) || 0,
+          ].join("|");
+
+          if (dbKey === excelKey) {
+            duplicateErrors.push({
+              row: index + 2,
+              message:
+                "Exact DG run already exists (Date + DG + Time + HR Meter)",
+            });
+          }
+        });
+      }
+    }
+
+    return duplicateErrors;
+  };
+
+  const handleBulkExcelUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = async (evt) => {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets["DG_LOGS"];
+
+      if (!sheet) {
+        alert("DG_LOGS sheet not found");
+        return;
+      }
+
+      const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+      const rows = rawRows.map((row) => ({
+        ...row,
+        Date: normalizeExcelDate(row.Date),
+        "Start Time (HH:mm)": normalizeExcelTime(row["Start Time (HH:mm)"]),
+        "Stop Time (HH:mm)": normalizeExcelTime(row["Stop Time (HH:mm)"]),
+      }));
+
+      const errors = [];
+
+      const seenKeys = new Set();
+
+      rows.forEach((row, index) => {
+        const excelRow = index + 2;
+
+        // Required fields check (keep existing)
+        if (
+          !row.Date ||
+          !row["DG No"] ||
+          !row["Start Time (HH:mm)"] ||
+          !row["Stop Time (HH:mm)"]
+        ) {
+          errors.push({
+            row: excelRow,
+            message: "Missing required fields",
+          });
+          return;
+        }
+
+        // HR meter validation
+        const hrStart = Number(row["HR Meter Start"]);
+        const hrEnd = Number(row["HR Meter End"]);
+
+        if (isNaN(hrStart) || isNaN(hrEnd) || hrEnd < hrStart) {
+          errors.push({
+            row: excelRow,
+            message: "Invalid HR Meter values",
+          });
+          return;
+        }
+
+        // 🔁 Excel duplicate check
+        const key = getDGDuplicateKey(row);
+
+
+        if (seenKeys.has(key)) {
+          errors.push({
+            row: excelRow,
+            message: "Duplicate DG run found in Excel",
+          });
+          return;
+        }
+
+        seenKeys.add(key);
+      });
+      // ✅ THIS NOW WORKS
+      setCheckingDuplicates(true);
+      try {
+        const firestoreDuplicates = await checkFirestoreDuplicates(rows);
+        setExcelErrors([...errors, ...firestoreDuplicates]);
+      } finally {
+        setCheckingDuplicates(false);
+      }
+
+
+      setExcelPreviewRows(rows);
+      setExcelErrors([...errors]);
+      setShowExcelPreview(true);
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+
+  const calculateRunHoursFromHrMeter = (start, end) => {
+    const s = Number(start);
+    const e = Number(end);
+
+    if (isNaN(s) || isNaN(e) || e < s) return 0;
+
+    return Number((e - s).toFixed(2));
+  };
+
+  const uploadExcelData = async (rows) => {
+    for (const row of rows) {
+      if (
+        !row.Date ||
+        !row["DG No"] ||
+        !row["Start Time (HH:mm)"] ||
+        !row["Stop Time (HH:mm)"] ||
+        !row.Remarks
+      ) {
+        continue; // ❌ skip invalid
+      }
+
+      const dateObj = new Date(row.Date);
+      const monthKey = format(dateObj, "MMM-yyyy");
+      const dateKey = format(dateObj, "yyyy-MM-dd");
+
+      const runsRef = collection(
+        db,
+        "dgLogs",
+        siteName,
+        monthKey,
+        dateKey,
+        "runs"
+      );
+
+      const hrMeterStart = Number(row["HR Meter Start"]) || 0;
+      const hrMeterEnd = Number(row["HR Meter End"]) || 0;
+
+      const totalRunHours = calculateRunHoursFromHrMeter(
+        hrMeterStart,
+        hrMeterEnd
+      );
+
+      await addDoc(runsRef, {
+        dgNumber: row["DG No"],
+        startTime: row["Start Time (HH:mm)"],
+        stopTime: row["Stop Time (HH:mm)"],
+        hrMeterStart,
+        hrMeterEnd,
+        totalRunHours,
+        fuelConsumption: Number(row["Fuel Consumption"]) || 0,
+        fuelFill: Number(row["Fuel Filled"]) || 0,
+        oemCPH: Number(row["OEM CPH"]) || 0,
+        cph: Number(row["Achieved CPH"]) || 0,
+        segr: Number(row["SEGR"]) || 0,
+        dgRunPercentage: Number(row["DG Run %"]) || 0,
+        remarks: row.Remarks,
+        kWHReading: Number(row["kWH Reading"]) || 0,
+        createdAt: new Date(),
+        createdBy: userData?.email,
+        uploadSource: "EXCEL",
+      });
+    }
+
+    alert("✅ Excel data uploaded successfully");
+    fetchLogs();
+    fetchMonthlySummary();
+  };
+
+  const confirmExcelUpload = async () => {
+    if (!excelPreviewRows.length) return;
+
+    if (
+      userData?.role === "User" ||
+      (userData?.role === "Super User" &&
+        userData?.designation === "Vertiv Technician")
+    ) {
+      alert("Not Authorized");
+      return;
+    }
+
+    if (
+      excelErrors.length &&
+      !window.confirm(
+        `⚠️ ${excelErrors.length} rows have errors.\nThey will be skipped.\n\nContinue upload?`
+      )
+    ) {
+      return;
+    }
+
+    const hasExactDuplicates = excelErrors.some(e =>
+      e.message.includes("Exact DG run")
+    );
+
+    if (hasExactDuplicates) {
+      alert(
+        "❌ Exact duplicate DG runs detected.\n\nPlease remove duplicate rows and re-upload."
+      );
+      return;
+    }
+    setIsUploadingExcel(true);
+
+    await uploadExcelData(excelPreviewRows);
+
+    resetExcelInput(); // ✅ reset file input
+    setIsUploadingExcel(false);
+    setShowExcelPreview(false);
+    setExcelPreviewRows([]);
+    setExcelErrors([]);
+  };
+
+
 
   return (
     <div className="daily-log-container">
@@ -368,6 +822,89 @@ const DGLogTable = ({ userData }) => {
           <h3><strong>Loading.......</strong></h3>
         )}
       </div>
+      {/* Bulk Upload Section */}
+      {userData?.role !== "User" && !(userData?.role === "Super User" && userData?.designation === "Vertiv Technician") && (
+        <div className="child-container" style={{ border: "1px solid #000", borderRadius: "15px", marginTop: "2rem", padding: "1rem" }}>
+          <h2>📥 Bulk Upload DG Logs (Excel)</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <label><strong>📥 Bulk Upload Template: </strong></label>
+            <b onClick={downloadDGBulkUploadTemplate}
+              style={{ fontSize: "12px", height: "fit-content", cursor: "pointer", color: "blue", textDecoration: "underline" }}>
+              📥 Download Excel Upload Template
+            </b>
+          </div>
+          <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
+            <label><strong>⬆️ Upload Filled Excel File: </strong></label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx"
+              onChange={handleBulkExcelUpload}
+              disabled={checkingDuplicates || isUploadingExcel}
+            />
+            {checkingDuplicates && <span style={{ color: "orange" }}>Checking for duplicates...</span>}
+          </div>
+          {showExcelPreview && (
+            <div className="modal-backdrop">
+              <div className="modal-content" style={{ maxWidth: "90%" }}>
+                <h2>📊 Excel Upload Preview</h2>
+
+                <p>
+                  Total Rows: <b>{excelPreviewRows.length}</b> | Errors:{" "}
+                  <b style={{ color: "red" }}>{excelErrors.length}</b>
+                </p>
+
+                <div style={{ maxHeight: "400px", overflow: "auto" }}>
+                  <table border="1" cellPadding="6" width="100%">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        {Object.keys(excelPreviewRows[0] || {}).map((key) => (
+                          <th key={key}>{key}</th>
+                        ))}
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {excelPreviewRows.map((row, i) => {
+                        const hasError = excelErrors.some(e => e.row === i + 2);
+
+                        return (
+                          <tr key={i} style={hasError ? { background: "#ffe6e6" } : {}}>
+                            <td>{i + 1}</td>
+                            {Object.keys(excelPreviewRows[0] || {}).map((key) => (
+                              <td key={key}>{row[key]}</td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ marginTop: "15px", display: "flex", gap: "10px" }}>
+                  <button
+                    onClick={() => {
+                      setShowExcelPreview(false);
+                      setExcelPreviewRows([]);
+                      setExcelErrors([]);
+                      resetExcelInput(); // ✅ reset on cancel
+                    }}
+                  >
+                    ❌ Cancel
+                  </button>
+                  <button
+                    onClick={confirmExcelUpload}
+                    disabled={isUploadingExcel}
+                  >
+                    {isUploadingExcel ? "Uploading..." : "✅ Confirm Upload"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Date selector & DHR Preview Button */}
       <div style={{ margin: "1rem 0", display: "flex", alignItems: "center", gap: "15px" }}>
@@ -383,13 +920,19 @@ const DGLogTable = ({ userData }) => {
             href={hsdLogs.find(h => h.date === selectedDate).hsdPdfUrl}
             target="_blank"
             rel="noreferrer"
-            style={{cursor:"pointer"}}
+            style={{ cursor: "pointer" }}
           >
             📄 View PDF
           </a>
         ) : (
           ""
         )}
+        <button
+          onClick={exportMonthlyDGLogsToExcel}
+          className="segr-manage-btn success"
+        >
+          {downloading ? "📤 Downloading......" : "📤 Export Monthly DG Logs (Excel)"}
+        </button>
       </div>
 
       {logs.length === 0 ? (
@@ -425,13 +968,27 @@ const DGLogTable = ({ userData }) => {
                   <td>{log.stopTime} Hrs</td>
                   <td>{log.hrMeterStart}</td>
                   <td>{log.hrMeterEnd}</td>
-                  <td>{log.totalRunHours?.toFixed(1)} <span style={{ fontSize: "10px" }}>({`${log.totalRunHours.toFixed(2) * 60}_Min`})</span></td>
+                  <td>
+                    {typeof log.totalRunHours === "number"
+                      ? log.totalRunHours.toFixed(1)
+                      : "0.0"}
+                    <span style={{ fontSize: "10px" }}>
+                      (
+                      {typeof log.totalRunHours === "number"
+                        ? `${(log.totalRunHours * 60).toFixed(0)}_Min`
+                        : "0_Min"}
+                      )
+                    </span>
+                  </td>
+
                   <td>{log.fuelConsumption || 0}</td>
                   <td>{log.kWHReading || 0}</td>
                   <td>{log.remarks}</td>
-                  <td>{log.fuelFill}</td>
-                  <td>{log.oemCPH ? log.oemCPH?.toFixed(2) : "N/A"}</td>
-                  <td>{log.cph?.toFixed(2)}</td>
+                  <td>{log.fuelFill ? log.fuelFill : 0}</td>
+                  <td>{log.oemCPH ? log.oemCPH : "N/A"}</td>
+                  <td style={log.cph > log.oemCPH ? { color: "Red" } : log.cph?.toFixed(0) === log.oemCPH ? { color: "orange" } : { color: "Green" }}
+                    title={log.cph > log.oemCPH ? "High" : log.cph?.toFixed(0) === log.oemCPH ? "In-Line" : "Low"}
+                  >{log.cph?.toFixed(2)}<span style={log.cph > log.oemCPH ? { color: "Red", fontSize:"10px" } : log.cph?.toFixed(0) === log.oemCPH ? { color: "orange", fontSize:"10px" } : { color: "Green", fontSize:"10px" }}>{log.cph > log.oemCPH ? "High" : log.cph?.toFixed(0) === log.oemCPH ? "In-Line" : "Low"}</span></td>
                   <td style={log.segr < 3 ? { color: "red" } : { color: "green" }}>{log.segr}</td>
                   <td>{log.dgRunPercentage}%</td>
                   <td>
@@ -449,7 +1006,7 @@ const DGLogTable = ({ userData }) => {
                     <button onClick={() => handleEdit(log)}>Edit</button>
                     <button
                       style={{ marginLeft: "8px", color: "red" }}
-                      onClick={() => handleDelete(log.id)}
+                      onClick={() => handleDelete(log)}
                     >
                       ❌
                     </button>

@@ -613,7 +613,6 @@
 
 }
 
-
 /* Responsive tweaks */
 @media (max-width: 768px) {
   .daily-log-form {
@@ -623,4 +622,9 @@
   .logs-table table {
     font-size: 0.8rem;
   }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

@@ -71,6 +71,7 @@ const SiteConfigEdit = ({ userData }) => {
   };
 
   const sections = [
+    { key: "overview", label: "Overview" },
     { key: "ccms", label: "CCMS / HSD Details" },
     { key: "equipment", label: "Site Equipment Details" },
     { key: "dhr", label: "DHR Status" },
@@ -145,6 +146,39 @@ const SiteConfigEdit = ({ userData }) => {
 
         {/* RIGHT SIDE CONTENT */}
         <div className="config-content">
+          {activeSection === "overview" && (
+            <div className="chart-container">
+              <h1>Site Details</h1>
+              <label>Site Address</label>
+              <input
+                type="text"
+                name="address"
+                value={config.address || "Address not set"}
+                onChange={handleChange}
+              />
+              <label>Ownership</label>
+              <select name="ownership" value={config.ownership || ""} onChange={handleChange}>
+                <option value="">Select Ownership</option>
+                <option value="Owned">Owned</option>
+                <option value="Leased">Leased</option>
+                <option value="Rental">Rental</option>
+              </select>
+              <label>Factory</label>  
+              <select name="factory" value={config.factory || ""} onChange={handleChange}>
+                <option value="">Select Factory</option>
+                <option value="MNG">MNG</option>
+                <option value="TNG">TNG</option>
+              </select>
+              <label>Running PF</label>
+              <input
+                type="number"
+                step="0.01"
+                name="pf"
+                value={config.pf || ""}
+                onChange={handleChange}
+              />
+            </div>
+          )}
           {activeSection === "ccms" && (
             <div className="chart-container">
               <h1>CCMS/HSD Details</h1>
@@ -428,6 +462,46 @@ const SiteConfigEdit = ({ userData }) => {
                 type="number"
                 name="dgCount"
                 value={config.dgCount || 0}
+                onChange={handleChange}
+              />
+
+              <lable>DG Manufacturing Date</lable>
+              <input
+                type="date"
+                name="dgMfgDate"
+                value={config.dgMfgDate || ""}
+                onChange={handleChange}
+              />
+
+              <label>SMPS Count</label>
+              <input
+                type="number"
+                name="smpsCount"
+                value={config.smpsCount || 0}
+                onChange={handleChange}
+              />
+
+              <label>PAC Count</label>
+              <input
+                type="number"
+                name="pacCount"
+                value={config.pacCount || 0}
+                onChange={handleChange}
+              />
+
+              <label>UPS Count</label>
+              <input
+                type="number"
+                name="upsCount"
+                value={config.upsCount || 0}
+                onChange={handleChange}
+              />
+
+              <label>CRV Count</label>
+              <input
+                type="number"
+                name="crvCount"
+                value={config.crvCount || 0}
                 onChange={handleChange}
               />
 

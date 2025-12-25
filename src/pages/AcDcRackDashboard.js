@@ -15,6 +15,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { styleEffect } from "framer-motion";
+import { filter } from "jszip";
 
 
 const AcDcRackDashboard = ({ userData }) => {
@@ -49,7 +50,8 @@ const AcDcRackDashboard = ({ userData }) => {
     const [previewData, setPreviewData] = useState(null);
     const [equipPopupOpen, setEquipPopupOpen] = useState(false);
     const [equipPopupData, setEquipPopupData] = useState(null);
-
+    const [loading, setLoading] = useState(false);
+    const rackTableRef = React.useRef(null);
 
     // 🔹 Fetch site data based on user role
     // useEffect(() => {
@@ -109,6 +111,7 @@ const AcDcRackDashboard = ({ userData }) => {
         if (!userData) return;
 
         const fetchData = async () => {
+            setLoading(true); // 🔄 START loading
             try {
                 let allRacks = [];
 
@@ -147,9 +150,12 @@ const AcDcRackDashboard = ({ userData }) => {
                 }
 
                 setRackData(allRacks);
+                // localStorage.setItem("acdcRackFilters", JSON.stringify(allRacks));
                 console.log("✅ Total racks fetched:", allRacks.length);
             } catch (err) {
                 console.error("❌ Fetch error:", err);
+            } finally {
+                setLoading(false); // ✅ STOP loading (important)
             }
         };
 
@@ -215,23 +221,38 @@ const AcDcRackDashboard = ({ userData }) => {
     };
 
 
+    useEffect(() => {
+        setFilters((prev) => ({ ...prev, location: "" }));
+    }, [filters.site]);
+
+    // 🔹 Filter Logic
+    const isLocationEnabled =
+        // Admin / Super Admin → only after site selected
+        (isPrivileged && !!filters.site) ||
+        // Normal user → always enabled (site is fixed)
+        (!isPrivileged && !!userData?.site);
+
     // 🔹 Derived filter options from loaded rackData
     const siteOptions = Array.from(
         new Set(rackData.map(d => d.siteName).filter(Boolean))
     ).sort();
 
     const locationOptions = Array.from(
-        new Set(rackData.map(d => d.equipmentLocation).filter(Boolean))
+        new Set(
+            rackData
+                .filter(d =>
+                    filters.site
+                        ? d.siteName === filters.site
+                        : true
+                )
+                .map(d => d.equipmentLocation)
+                .filter(Boolean)
+        )
     ).sort();
 
     // 🔹 Advanced Filter Logic
     // 🔹 Multi-field filter logic
     const filteredData = rackData.filter((d) => {
-        const isPrivileged =
-            userData?.role === "Admin" ||
-            userData?.role === "Super Admin" ||
-            userData?.designation === "Vertiv CIH" ||
-            userData?.designation === "Vertiv ZM";
 
         const siteMatch = filters.site
             ? d.siteName?.toLowerCase().includes(filters.site.toLowerCase())
@@ -516,7 +537,7 @@ const AcDcRackDashboard = ({ userData }) => {
         XLSX.utils.book_append_sheet(wb, ws, "Rack Data");
         XLSX.utils.book_append_sheet(wb, ws1, "Rack Equipments");
 
-        const wbout = XLSX.write(wb, { type: "array", bookType: "xlsx",  cellStyles: true });
+        const wbout = XLSX.write(wb, { type: "array", bookType: "xlsx", cellStyles: true });
         const blob = new Blob([wbout], { type: "application/octet-stream" });
         saveAs(blob, `ACDC_RackData_${new Date().toISOString().split("T")[0]}.xlsx`);
         // XLSX.writeFile(wb, `ACDC_RackData_${new Date().toISOString().split("T")[0]}.xlsx`);
@@ -552,12 +573,85 @@ const AcDcRackDashboard = ({ userData }) => {
         };
     };
 
+    const handleSiteRowClick = (site) => {
+        setFilters((prev) => ({
+            ...prev,
+            site,
+            location: "",
+            equipNo: "",
+            rackName: "",
+        }));
+
+        // smooth scroll to table
+        setTimeout(() => {
+            rackTableRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        }, 100);
+    };
+
+    const thStyle = {
+        padding: "10px",
+        borderBottom: "2px solid #334155",
+        fontWeight: "bold",
+        textAlign: "center",
+    };
+
+    const tdStyle = {
+        padding: "8px",
+        textAlign: "center",
+    };
+
+
     return (
         <div className="daily-log-container">
+            {loading && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.6)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                    }}
+                >
+                    <div
+                        style={{
+                            background: "#0f172a",
+                            padding: "30px 40px",
+                            borderRadius: "12px",
+                            textAlign: "center",
+                            color: "white",
+                            boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: "40px",
+                                height: "40px",
+                                border: "4px solid #334155",
+                                borderTop: "4px solid #38bdf8",
+                                borderRadius: "50%",
+                                margin: "0 auto 15px",
+                                animation: "spin 1s linear infinite",
+                            }}
+                        />
+                        <div style={{ fontSize: "15px", fontWeight: "bold" }}>
+                            Fetching Rack Data…
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "4px" }}>
+                            Please wait
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <h1 style={{ color: "white", textAlign: "center", paddingBottom: "20px" }}>
                 <strong>🗄️AC/DC Rack Dashboard</strong>
             </h1>
-
 
             {/* 🔹 Site-wise Rack Summary */}
             <div
@@ -608,6 +702,73 @@ const AcDcRackDashboard = ({ userData }) => {
                     </p>
                 )}
             </div>
+
+            {/* 🔹 Site-wise Summary Table */}
+            <div style={{ marginTop: "20px", overflowX: "auto" }}>
+                <table
+                    style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        fontSize: "13px",
+                        background: "#020617",
+                        color: "#e5e7eb",
+                        borderRadius: "8px",
+                        overflow: "hidden",
+                    }}
+                >
+                    <thead>
+                        <tr style={{ background: "#0f172a" }}>
+                            <th style={thStyle}>Site</th>
+                            <th style={thStyle}>Installed</th>
+                            <th style={thStyle}>Active</th>
+                            <th style={thStyle}>Passive</th>
+                            <th style={thStyle}>Core</th>
+                            <th style={thStyle}>TNG</th>
+                            <th style={thStyle}>Other</th>
+                            <th style={thStyle}>Switch Off</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {siteSummaryChartData.map((row) => (
+                            <tr
+                                key={row.site}
+                                onClick={() => handleSiteRowClick(row.site)}
+                                style={{
+                                    textAlign: "center",
+                                    cursor: "pointer",
+                                    background:
+                                        filters.site === row.site ? "#1e293b" : "#020617",
+                                    borderBottom: "1px solid #1e293b",
+                                    transition: "background 0.2s",
+                                }}
+                                onMouseEnter={(e) =>
+                                    e.currentTarget.style.backgroundColor = "#0f172a"
+                                }
+                                onMouseLeave={(e) =>
+                                    e.currentTarget.style.backgroundColor =
+                                    filters.site === row.site ? "#1e293b" : "#020617"
+                                }
+                            >
+
+                                <td style={{ ...tdStyle, textAlign: "left", fontWeight: "bold" }}>
+                                    {row.site}
+                                </td>
+                                <td style={tdStyle}>{row.totalInstalled}</td>
+                                <td style={{ ...tdStyle, color: "#60a5fa" }}>{row.totalActive}</td>
+                                <td style={{ ...tdStyle, color: "#94a3b8" }}>{row.totalPassive}</td>
+                                <td style={{ ...tdStyle, color: "#fb923c" }}>{row.totalCore}</td>
+                                <td style={{ ...tdStyle, color: "#c084fc" }}>{row.totalTNG}</td>
+                                <td style={{ ...tdStyle, color: "#9ca3af" }}>{row.totalOther}</td>
+                                <td style={{ ...tdStyle, color: "#ef4444", fontWeight: "bold" }}>
+                                    {row.totalSwitchOff}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            {/* 🔹 Action Buttons */}
 
             <div style={{ marginBottom: "10px" }}>
                 <button
@@ -666,6 +827,7 @@ const AcDcRackDashboard = ({ userData }) => {
                         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                             {(userData?.role === "Admin" ||
                                 userData?.role === "Super Admin" ||
+                                userData?.isAdminAssigned ||
                                 userData?.designation === "Vertiv CIH" ||
                                 userData?.designation === "Vertiv ZM") && (
                                     <select
@@ -685,17 +847,30 @@ const AcDcRackDashboard = ({ userData }) => {
 
                             <select
                                 value={filters.location}
+                                disabled={!isLocationEnabled}
                                 onChange={(e) =>
                                     setFilters((prev) => ({ ...prev, location: e.target.value }))
                                 }
-                                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                                style={{
+                                    padding: "8px",
+                                    borderRadius: "6px",
+                                    border: "1px solid #ccc",
+                                    backgroundColor: isLocationEnabled ? "#fff" : "#f3f4f6",
+                                    cursor: isLocationEnabled ? "pointer" : "not-allowed",
+                                }}
                             >
-                                <option value="">📍 Select Equipment Location</option>
-                                {locationOptions.map(loc => (
-                                    <option key={loc} value={loc}>{loc}</option>
+                                <option value="">
+                                    {isLocationEnabled
+                                        ? "📍 Select Equipment Location"
+                                        : "🔒 Select Site First"}
+                                </option>
+
+                                {locationOptions.map((loc) => (
+                                    <option key={loc} value={loc}>
+                                        {loc}
+                                    </option>
                                 ))}
                             </select>
-
 
                             <input
                                 type="text"
@@ -835,7 +1010,7 @@ const AcDcRackDashboard = ({ userData }) => {
                     </p>)}
             </div>
 
-            <div className="table-container" style={{ maxHeight: "600px" }}>
+            <div ref={rackTableRef} className="table-container" style={{ maxHeight: "600px" }}>
                 <table border="1" cellPadding="6" style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead style={{ background: "#e8e8e8" }}>
                         <tr>
@@ -1311,8 +1486,8 @@ const AcDcRackDashboard = ({ userData }) => {
                         </table>
 
                         <div style={{ marginTop: "15px", textAlign: "center" }}>
-                            {(userData?.site?.toLowerCase() === previewData.siteName?.toLowerCase()) && (userData?.designation == "Vertiv Site Infra Engineer" || userData?.designation == "Vertiv CIH" || userData?.designation == "Vertiv ZM" || userData?.designation == "Vertiv Supervisor" || userData?.role == "Super User" || userData?.role == "Super Admin" || userData?.role == "Admin") && (
-                                <>
+                            {(userData?.site?.toLowerCase() === previewData.siteName?.toLowerCase() || userData.role === "Super Admin" || userData.role === "Admin" || userData.isAdminAssigned) && (
+                                <div style={{ display: "inline-flex", gap: "10px" }}>
                                     <button
                                         onClick={() => {
                                             setPreviewOpen(false);
@@ -1342,7 +1517,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                             cursor: "pointer",
                                         }}
                                     >🗑️</button>
-                                </>
+                                </div>
                             )}
                         </div>
                     </div>
