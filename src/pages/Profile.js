@@ -17,6 +17,7 @@ import {
 } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
 import "../assets/Profile.css";
+import { updateLocalUserData } from "../utils/userStorage";
 
 const ProfilePage = ({ userData }) => {
   const [editMode, setEditMode] = useState(false);
@@ -102,6 +103,20 @@ const ProfilePage = ({ userData }) => {
         photoURL
       });
 
+      const updatedUser = updateLocalUserData({
+        name: form.name,
+        designation: form.designation,
+        site: form.site,
+        siteId: form.siteId,
+        empId: form.empId,
+        photoURL,
+      });
+
+      if (updatedUser) {
+        // optional: update parent state if passed
+        // setUserData(updatedUser);
+      }
+
       alert("Profile updated!");
       setEditMode(false);
       setPhoto(null);
@@ -132,7 +147,7 @@ const ProfilePage = ({ userData }) => {
           className="profile-avatar"
           style={{ width: "300px", height: "300px", borderRadius: "50%" }}
         />
-        <p style={{color: "whitesmoke", background: `${userData?.isActive ? "Green" : "Red"}`, height:"fit-content", borderRadius:"6px", borderBottom:"1px solid"}}>{userData?.isActive ? "Active" : "Inactive"}</p>
+        <p style={{ color: "whitesmoke", background: `${userData?.isActive ? "Green" : "Red"}`, height: "fit-content", borderRadius: "6px", borderBottom: "1px solid" }}>{userData?.isActive ? "Active" : "Inactive"}</p>
       </div>
 
       {editMode && (
@@ -196,13 +211,22 @@ const ProfilePage = ({ userData }) => {
       {/* Site */}
       <div className="profile-row">
         <label>🏢 Site:</label>
-        <span>{form.site || "N/A"}</span>
+        {editMode && userData?.role === "Admin" ? (
+          <input
+            type="text"
+            name="site"
+            value={form.site}
+            onChange={handleChange}
+          />
+        ) : (
+          <span>{form.site || "N/A"}</span>
+        )}
       </div>
 
       {/* Site ID */}
       <div className="profile-row">
         <label>🆔 Site ID:</label>
-        {editMode ? (
+        {editMode && userData?.role === "Admin" ? (
           <input
             type="text"
             name="siteId"

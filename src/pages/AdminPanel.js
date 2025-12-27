@@ -13,6 +13,7 @@ import {
 import "../assets/AdminPanel.css";
 import { siteIdMap } from "./Register";
 // import { getFunctions, httpsCallable } from "firebase/functions";
+import { updateLocalUserData } from "../utils/userStorage";
 
 
 const AdminPanel = ({ userData }) => {
@@ -20,6 +21,7 @@ const AdminPanel = ({ userData }) => {
   const [userSiteFilter, setUserSiteFilter] = useState("");
   const [editingUserId, setEditingUserId] = useState(null);
   const [cardFilter, setCardFilter] = useState("");
+  const [onlineCount, setOnlineCount] = useState(0);
 
   const [roleCounts, setRoleCounts] = useState({
     "Super Admin": 0,
@@ -33,6 +35,16 @@ const AdminPanel = ({ userData }) => {
     from: "",
     to: ""
   });
+
+  const isUserOnline = (user) => {
+    if (!user.lastActiveAt) return false;
+    const last = user.lastActiveAt.toDate
+      ? user.lastActiveAt.toDate()
+      : new Date(user.lastActiveAt);
+
+    return (Date.now() - last.getTime()) < 5 * 60 * 1000; // 5 min
+  };
+
 
   const validateTempAdminPeriod = (from, to) => {
     if (!from || !to) return "From and To dates are required";
@@ -110,6 +122,9 @@ const AdminPanel = ({ userData }) => {
       };
     });
     setUsers(data);
+    // count online users
+    const online = data.filter((u) => isUserOnline(u)).length;
+    setOnlineCount(online);
     updateRoleCounts(data);
 
     const today = new Date();
@@ -257,6 +272,9 @@ const AdminPanel = ({ userData }) => {
           <h3 className="admin-subtitle">👥 User Role Management</h3>
 
           {/* User Count Statistics */}
+          <div className="summary-card">
+            <h3>🟢 Online Users: {onlineCount}</h3>
+          </div>
 
           <div className="user-stats-container">
             <div
@@ -339,6 +357,8 @@ const AdminPanel = ({ userData }) => {
             <table className="admin-table">
               <thead>
                 <tr>
+                  <th>Status</th>
+                  <th>Photo</th>
                   <th>Name</th>
                   <th>Designation</th>
                   <th>EMP ID</th>
@@ -379,6 +399,54 @@ const AdminPanel = ({ userData }) => {
 
                     return (
                       <tr key={user.id}>
+                        <td>
+                          {isUserOnline(user) ? (
+                            <span style={{ color: "green" }}>🟢 Online</span>
+                          ) : (
+                            <span style={{ color: "gray" }}>⚫ Offline</span>
+                          )}
+                        </td>
+                        <td data-label="Photo">
+                          {user.photoURL ? (
+                            <img
+                              src={user.photoURL}
+                              alt="User Avatar"
+                              className="user-avatar"
+                              style={{
+                                width: "50px",
+                                height: "50px",
+                                borderRadius: "50%",
+                                border: "2px solid black",
+                                cursor: "pointer",
+                                transition: "transform 0.2s ease-in-out",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = "scale(3.0)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "scale(1)";
+                              }}
+                              onClick={() => window.open(user.photoURL, "_blank")}
+                            />
+                          ) : (
+                            <div className="profile-avatar"
+                              style={{
+                                width: "50px",
+                                height: "50px",
+                                borderRadius: "50%",
+                                border: "2px solid black",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                backgroundColor: "#ccc",
+                                fontWeight: "bold",
+                                fontSize: "20px",
+                                color: "#333",
+                              }}>
+                              {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                            </div>
+                          )}
+                        </td>
                         <td data-label="Name">
                           {userData.role === "Super Admin" ? (
                             isEditable(user.id) ? (

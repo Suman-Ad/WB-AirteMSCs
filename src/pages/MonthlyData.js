@@ -116,11 +116,11 @@ export default function MonthlyData({ userData }) {
     useEffect(() => {
         const cached = localStorage.getItem("summary");
         if (cached) {
-          setSummary(JSON.parse(cached));
+            setSummary(JSON.parse(cached));
         }
         fetchMonthlySummary();
 
-      }, [userData, selectedMonth]);
+    }, [userData, selectedMonth]);
 
     // 🔹 Auto calculations (like Excel)
     const calculateFields = (data) => {
@@ -379,7 +379,6 @@ export default function MonthlyData({ userData }) {
             };
         });
     };
-
 
 
     useEffect(() => {

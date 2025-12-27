@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; // <-- CHANGE: import sendPasswordResetEmail
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import "../assets/Login.css";
 import Vertiv from "../assets/vertiv.png";
@@ -58,6 +58,9 @@ const Login = ({ setUserData }) => {
         };
         localStorage.setItem("userData", JSON.stringify(userData));
         setUserData(userData);
+        await updateDoc(doc(db, "users", user.uid), {
+          lastActiveAt: new Date()
+        });
         navigate("/");
       } else {
         setError("User data not found in Firestore.");
