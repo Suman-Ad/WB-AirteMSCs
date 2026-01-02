@@ -3,7 +3,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 
-const Sidebar = ({ userData, collapsed, setCollapsed }) => {
+const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
   const role = userData?.role;
   const site = userData?.site;
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed }) => {
   };
 
   return (
-    <div className={`sidebar ${collapsed ? "collapsed" : "expanded"}`}>
+    <div className={`sidebar ${collapsed ? "collapsed" : "expanded"}`} style={{background: powerSource === "EB" ? "" : "#db1e1ef3"}}>
       {/* Sidebar Header with Collapse Toggle */}
       <div className="sidebar-header">
         <button

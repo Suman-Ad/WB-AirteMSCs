@@ -35,11 +35,11 @@ export default function NotificationBell({ user }) {
             const oldUnread = items.filter(n => !n.read).length;
 
             const newBackupReq = arr.filter(
-                n => !n.read && (n.actionType === "backup_request" || n.actionType === "registration_request")
+                n => !n.read && (n.actionType === "backup_request" || n.actionType === "registration_request" || n.actionType === "change_power_source")
             ).length;
 
             const oldBackupReq = items.filter(
-                n => !n.read && (n.actionType === "backup_request" || n.actionType === "registration_request")
+                n => !n.read && (n.actionType === "backup_request" || n.actionType === "registration_request" || n.actionType === "change_power_source")
             ).length;
 
             // Play sound ONLY for new backup requests
@@ -217,10 +217,12 @@ export default function NotificationBell({ user }) {
     }
 
     function getNotificationColor(n) {
-        if (n.actionType === "backup_request") {
+        if (n.actionType === "backup_request" || n.actionType === "change_power_source") {
             if (n.backupStatus === "accepted") return "#dcfce7";  // light green
             if (n.backupStatus === "rejected") return "#fee2e2";  // light red
-            return "#fef9c3"; // pending - light yellow
+            if (n.siteStatus === "EB") return "#a9fcc6ff";  // light green
+            if (n.siteStatus === "DG") return "#faababff"; // light red
+            return "#e8ee9dff"; // pending - light yellow
         }
 
         // default for other notifications

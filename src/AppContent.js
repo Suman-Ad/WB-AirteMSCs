@@ -57,6 +57,7 @@ import CLCalendar from "./pages/CLCalendar";
 import MyLeaveStatus from "./pages/MyLeaveStatus";
 import MonthlyCLSummary from "./pages/MonthlyCLSummary";
 import MyDutySchedule from "./components/MyDutySchedule";
+import DGRunHistory from "./pages/DGRunHistory";
 
 export default function AppContent() {
     const [userData, setUserData] = useState(null);
@@ -496,6 +497,13 @@ export default function AppContent() {
                     <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
                         <Layout userData={userData}>
                             <MyDutySchedule currentUser={userData} />
+                        </Layout>
+                    </RoleProtectedRoute>} />
+
+                <Route path="/dg-run-history" element={
+                    <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+                        <Layout userData={userData}>
+                            <DGRunHistory userData={userData} />
                         </Layout>
                     </RoleProtectedRoute>} />
 

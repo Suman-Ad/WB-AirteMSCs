@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collectionGroup, getDocs, getDoc, doc } from "firebase/firestore";
+import { collectionGroup, getDocs, getDoc, doc, collection } from "firebase/firestore";
 import { db } from "../firebase";
 import "../assets/DailyDGLog.css"; // reuse your log CSS
 import { useNavigate, useLocation } from "react-router-dom";
@@ -16,10 +16,135 @@ const AllSitesDGLogs = ({ userData }) => {
     const location = useLocation();
     const [siteConfigs, setSiteConfigs] = useState({});
     const [fuelRates, setFuelRates] = useState({});
+    const [ebRate, setEbRate] = useState({});
     const { monthKey } = location.state; // default month
     // You need to provide correct siteConfig for each site (dgCount, ebCount, solarCount)
     const calculatedLogs = logs.map(log => calculateFields(log, siteConfigs[log.site.toUpperCase()] || {}));
     const [popupSite, setPopupSite] = useState(null);
+    const [sitePowerStatus, setSitePowerStatus] = useState({});
+    const [loadingPower, setLoadingPower] = useState(true);
+    const [showOnlyDG, setShowOnlyDG] = useState(false);
+    const [dgLogs, setDgLogs] = useState([]);
+    const todayKey = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const todayDGLogs = dgLogs.filter(
+        log => log.date === todayKey
+    );
+
+    const normalizeSiteId = (raw) => {
+        if (!raw) return "";
+        const lower = raw.toLowerCase();     // "asansol"
+        return lower.charAt(0).toUpperCase() + lower.slice(1); // "Asansol"
+    };
+
+    const normalizeMonthKey = (isoMonth) => {
+        if (!isoMonth || !isoMonth.includes('-')) return isoMonth;
+
+        const [year, month] = isoMonth.split('-');
+        const monthNames = [
+            '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+
+        return `${monthNames[parseInt(month)]}-${year}`;
+    };
+
+
+    const fetchDgLogs = async () => {
+        try {
+            const logs = [];
+
+            const siteSnap = await getDocs(collection(db, "siteConfigs"));
+
+            for (const siteDoc of siteSnap.docs) {
+                const site = normalizeSiteId(siteDoc.id);
+                const normalizedMonthKey = normalizeMonthKey(monthKey);
+
+                const monthRef = collection(db, "dgLogs", site, normalizedMonthKey);
+                const monthSnap = await getDocs(monthRef);
+
+                for (const dateDoc of monthSnap.docs) {
+                    const date = dateDoc.id;
+
+                    const runsRef = collection(
+                        db,
+                        "dgLogs",
+                        site,
+                        normalizedMonthKey,
+                        date,
+                        "runs"
+                    );
+
+                    const runsSnap = await getDocs(runsRef);
+
+                    runsSnap.forEach((runDoc) => {
+                        logs.push({
+                            id: runDoc.id,
+                            site,
+                            date,
+                            ...runDoc.data(),
+                        });
+                    });
+                }
+            }
+
+            setDgLogs(logs);
+            console.log("✅ dgLogs fetched:", logs);
+
+        } catch (err) {
+            console.error("dgLogs fetch error:", err);
+        }
+    };
+
+    useEffect(() => {
+        if (!monthKey) return;
+
+        fetchDgLogs();   // 👈 additional only
+    }, [monthKey]);
+
+    useEffect(() => {
+        const fetchSitePowerStatus = async () => {
+            try {
+                const snap = await getDocs(collection(db, "sitePowerStatus"));
+                const statusMap = {};
+
+                snap.forEach((doc) => {
+                    statusMap[doc.id.toUpperCase()] = doc.data();
+                });
+
+                setSitePowerStatus(statusMap);
+            } catch (err) {
+                console.error("Failed to fetch sitePowerStatus", err);
+            } finally {
+                setLoadingPower(false);
+            }
+        };
+
+        fetchSitePowerStatus();
+    }, []);
+
+    const fuelConsumptionBySiteDG = todayDGLogs.reduce((acc, log) => {
+        const site = log.siteName || log.site;
+        const dg = log.dgNumber;
+        const fuel = Number(log.fuelConsumption) || 0;
+
+        if (!acc[site]) acc[site] = {};
+        if (!acc[site][dg]) {
+            acc[site][dg] = {
+                fuel: 0,
+                runs: [],
+            };
+        }
+
+        acc[site][dg].fuel += fuel;
+        acc[site][dg].runs.push({
+            startTime: log.startTime,
+            stopTime: log.stopTime,
+            remarks: log.remarks,
+            runHours: log.totalRunHours,
+        });
+
+        return acc;
+    }, {});
 
 
     const groupedLogs = logs.reduce((groups, log, idx) => {
@@ -28,6 +153,20 @@ const AllSitesDGLogs = ({ userData }) => {
         groups[siteKey].push({ ...log, __calc: calculatedLogs[idx] });
         return groups;
     }, {});
+
+    const filteredSites = Object.entries(groupedLogs).filter(
+        ([site]) => {
+            if (!showOnlyDG) return true;
+            return sitePowerStatus[site]?.powerSource === "DG";
+        }
+    );
+
+    const totalSites = filteredSites.length;
+
+    const dgSitesCount = filteredSites.filter(
+        ([site]) => sitePowerStatus[site]?.powerSource === "DG"
+    ).length;
+
 
     function getMonthlySummary(siteLogs, siteConfig) {
         if (!siteLogs.length) return {};
@@ -68,6 +207,8 @@ const AllSitesDGLogs = ({ userData }) => {
 
         // Totals
         const totalKwh = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG KWH"] || 0), 0);
+        const totalEBKWH = calculatedLogs.reduce((sum, cl) => sum + (cl["Total EB KWH"] || 0), 0);
+        const totalSolarKWH = calculatedLogs.reduce((sum, cl) => sum + (cl["Total Solar KWH"] || 0), 0);
         const totalFuel = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Fuel"] || 0), 0);
         const totalHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Hours"] || 0), 0);
         const totalFilling = calculatedLogs.reduce((sum, cl) => sum + (cl["Total Fuel Filling"] || 0), 0);
@@ -125,6 +266,8 @@ const AllSitesDGLogs = ({ userData }) => {
             monthlyAvgDG1SEGR,
             monthlyAvgDG2SEGR,
             totalKwh,
+            totalEBKWH,
+            totalSolarKWH,
             totalFuel,
             totalHrs,
             totalFilling,
@@ -360,6 +503,28 @@ const AllSitesDGLogs = ({ userData }) => {
                 }
             });
         };
+
+        const fetchEBRate = async () => {
+            const siteKeys = [...new Set(logs.map(log => (log.site || "Unknown Site")))];
+            if (!siteKeys.length) return;
+
+            siteKeys.forEach(async (siteKey) => {
+                try {
+                    const docRef = doc(db, "EBRates", siteKey);
+                    const docSnap = await getDoc(docRef);
+                    const key = siteKey.toUpperCase();
+                    if (docSnap.exists()) {
+                        setEbRate(prev => ({ ...prev, [key]: docSnap.data().rate || 10 }));
+                    } else {
+                        setEbRate(prev => ({ ...prev, [key]: 10 })); // default if no rate stored
+                    }
+                } catch (err) {
+                    console.error("Error fetching fuel rate", err);
+                }
+            });
+        };
+
+        fetchEBRate();
         fetchFuelRate();
     }, [logs]);
 
@@ -385,9 +550,77 @@ const AllSitesDGLogs = ({ userData }) => {
     return (
         <div className="daily-log-container">
             <h2>All Sites DG Logs Monthly Summary - <strong>{monthKey}</strong> </h2>
-            {Object.entries(groupedLogs).map(([site, siteLogs]) => {
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    marginBottom: "14px",
+                    padding: "10px",
+                    background: "#0f172a",
+                    borderRadius: "10px",
+                    color: "#fff",
+                }}
+            >
+                <strong>⚡ Power Filter:</strong>
+
+                <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <input
+                        type="checkbox"
+                        checked={showOnlyDG}
+                        onChange={(e) => setShowOnlyDG(e.target.checked)}
+                    />
+                    Show only DG sites
+                </label>
+
+                {showOnlyDG && (
+                    <span
+                        style={{
+                            background: "#7f1d1d",
+                            padding: "2px 10px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                        }}
+                    >
+                        DG MODE
+                    </span>
+                )}
+                <div
+                    style={{
+                        marginLeft: "auto",
+                        background: "#020617",
+                        padding: "6px 14px",
+                        borderRadius: "8px",
+                        fontWeight: "600",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        border: "1px solid #334155",
+                    }}
+                >
+                    <span style={{ color: "#e5e7eb" }}>⚡ DG Sites:</span>
+
+                    <span
+                        style={{
+                            color: dgSitesCount > 0 ? "#f87171" : "#22c55e",
+                            fontSize: "16px",
+                        }}
+                    >
+                        {dgSitesCount}
+                    </span>
+
+                    <span style={{ color: "#94a3b8" }}>/ {totalSites}</span>
+                </div>
+
+            </div>
+
+            {filteredSites.map(([site, siteLogs]) => {
                 const siteKey = site.toUpperCase();
                 const thisConfig = siteConfigs[siteKey];
+                const powerInfo = sitePowerStatus[site];
+                const powerSource = powerInfo?.powerSource || "N/A";
+                const dgNumber = powerInfo?.selectedDG;
+
                 if (!thisConfig) return <div key={siteKey}>⏳ Loading config for {siteKey}...</div>;
 
                 // Get monthly summary for the card (pass siteConfig each time)
@@ -398,6 +631,7 @@ const AllSitesDGLogs = ({ userData }) => {
 
                 // Get site-specific fuel rate (default to 90 if not found)
                 const currentFuelRate = fuelRates[site] || 90;
+                const currentEBRate = ebRate[site] || 10;
 
                 // Handler for this specific site's fuel rate
                 const handleFuelChange = (e) => {
@@ -413,9 +647,54 @@ const AllSitesDGLogs = ({ userData }) => {
                 const totalHrsMin = ((summary.totalHrs || 0) * 60).toFixed(0);
 
                 return (
-                    <div className="chart-container" key={site}>
+                    <div className="chart-container" key={site}
+                        style={{
+                            border:
+                                powerSource === "DG"
+                                    ? "2px solid #dc2626"
+                                    : "1px solid #e5e7eb",
+                            background:
+                                powerSource === "DG"
+                                    ? "#fee2e2"
+                                    : "",
+                        }}
+                    >
+
+                        <span
+                            style={{
+                                marginLeft: "8px",
+                                padding: "2px 10px",
+                                borderRadius: "6px",
+                                fontSize: "12px",
+                                fontWeight: "600",
+                                color: "#fff",
+                                background:
+                                    powerSource === "DG"
+                                        ? "#dc2626"
+                                        : powerSource === "EB"
+                                            ? "#16a34a"
+                                            : "#6b7280",
+                            }}
+                        >
+                            Site Live On:- <strong>{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
+                        </span>
+
+                        {fuelConsumptionBySiteDG[site] &&
+                            Object.entries(fuelConsumptionBySiteDG[site]).map(
+                                ([dg, data]) => (
+                                    <div key={dg}>
+                                        <strong>{dg}</strong> — {data.fuel.toFixed(2)} L
+
+                                        {data.runs.map((r, i) => (
+                                            <div key={i} style={{ fontSize: "12px", color: "#6b7280" }}>
+                                                {r.startTime}–{r.stopTime} • {r.remarks}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
+                            )}
                         {/* Fuel, load, backups */}
-                        <h2>{site} MSC</h2>
+                        <h2 style={{ color: powerSource == "DG" ? "RED" : "", fontWeight: "bold" }}>{site} MSC</h2>
                         <h1 style={{ fontSize: "20px", color: "green", textAlign: "left" }}>
                             <strong>⛽ Present Stock – {fmt(availableFuel)} ltrs</strong>
                         </h1>
@@ -480,15 +759,15 @@ const AllSitesDGLogs = ({ userData }) => {
                         </div>
 
                         <h4 style={{ borderTop: "3px solid #eee", textAlign: "center" }}>
-                            📊 Summary – {summary.totalDays} Days
+                            📊 Summary – of Last {summary.totalDays} Days Logs
                         </h4>
                         {/* Average PUE */}
                         <p className={summary.monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
-                            Average PUE – <strong>{summary.monthlyAvgPUE}</strong>
+                            <strong>Average PUE – {summary.monthlyAvgPUE}</strong>
                         </p>
                         {/* Average SEGR */}
                         <p className={(summary.totalKwh / summary.totalOnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"}>
-                            Average SEGR – <strong>{(summary.totalKwh / summary.totalOnLoadCon).toFixed(2)}</strong>
+                            <strong>Average SEGR – {(summary.totalKwh / summary.totalOnLoadCon).toFixed(2)}</strong>
                         </p>
                         <p className={(summary.totalDG1Kw / summary.totalDG1OnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
                             DG-1 Average SEGR – {(summary.totalDG1Kw / summary.totalDG1OnLoadCon).toFixed(2)}
@@ -497,13 +776,15 @@ const AllSitesDGLogs = ({ userData }) => {
                             DG-2 Average SEGR – {(summary.totalDG2Kw / summary.totalDG2OnLoadCon).toFixed(2)}
                         </p>
                         {/* <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p> */}
-                        <div style={{ display: "flex" }}>
+                        <p style={{ color: "#302f74ff" }}><strong>[Total Cost (EB + DG) – ₹{fmt((summary.totalEBKWH * currentEBRate) + (summary.totalFuel * currentFuelRate))}]</strong></p>
+
+                        <div style={{ display: "flex", borderTop: "3px solid #eee" }}>
                             <div>
-                                <p>⚡ Site Running Load – <strong>{summary.totalSiteRuningLoad} kWh</strong></p>
-                                <p>📡 Avg IT Load – <strong>{summary.monthlyAvgITLoad} kWh</strong></p>
-                                <p>❄️ Avg Cooling Load – <strong>{summary.monthlyAvgCoolingLoad} kWh</strong></p>
-                                <p>🏢 Avg Office Load – <strong>{summary.monthlyAvgOfficeLoad} kWh</strong></p>
-                                <p>⛽ Avg DG CPH – <strong>{fmt1(summary.totalOnLoadCon / summary.totalOnLoadHrs)} Ltrs/Hrs</strong></p>
+                                <p><strong>⚡ Site Running Load – {summary.totalSiteRuningLoad} kWh</strong></p>
+                                <p><strong>📡 Avg IT Load – {summary.monthlyAvgITLoad} kWh</strong></p>
+                                <p><strong>❄️ Avg Cooling Load – {summary.monthlyAvgCoolingLoad} kWh</strong></p>
+                                <p><strong>🏢 Avg Office Load – {summary.monthlyAvgOfficeLoad} kWh</strong></p>
+                                <p><strong>⛽ Avg DG CPH – {fmt1(summary.totalOnLoadCon / summary.totalOnLoadHrs)} Ltrs/Hrs</strong></p>
                             </div>
                             <div style={{ fontSize: "10px" }}>
                                 <p>⛽DG-1 OEM CPH – <strong>{thisConfig.designCph?.["DG-1" || ""]}Ltrs/⏱️</strong></p>
@@ -511,8 +792,22 @@ const AllSitesDGLogs = ({ userData }) => {
                                 <p>⛽DG-2 OEM CPH – <strong>{thisConfig.designCph?.["DG-2"] || ""}Ltrs/⏱️</strong></p>
                             </div>
                         </div>
+                        {summary.totalEBKWH > 0 && (
+                        <p style={{ borderTop: "1px solid #eee" }}>Total EB Unit Generation - <strong>{fmt(summary.totalEBKWH)} Units </strong>
+                            ₹<input
+                                type="number"
+                                step="0.01"
+                                value={currentEBRate}
+                                onChange={handleFuelChange}
+                                style={{ width: "70px", marginLeft: "4px", height: "20px" }}
+                            /><strong style={{ fontSize: "10px" }}>/Ltr. = ₹{fmt(summary.totalEBKWH * currentEBRate)}</strong>
+                        </p>
+                        )}
+                        {summary.totalSolarKWH > 0 && (
+                            <p style={{ borderTop: "1px solid #eee" }}><strong>Total Solar Unit Generation - {fmt(summary.totalSolarKWH)} Units</strong></p>
+                        )}
 
-                        <p style={{ borderTop: "1px solid #eee" }}>⚡ Total DG KW Generation – <strong>{fmt(summary.totalKwh)} kW</strong></p>
+                        <p style={{ borderTop: "1px solid #eee" }}><strong>⚡ Total DG KW Generation – {fmt(summary.totalKwh)} kW</strong></p>
                         <div style={{ display: "flex" }}>
                             <p style={{ marginLeft: "20px" }}>
                                 • DG-1: <strong>{fmt1(summary.totalDG1Kw)} kW</strong>
@@ -522,7 +817,7 @@ const AllSitesDGLogs = ({ userData }) => {
                             </p>
                         </div>
                         <p style={{ borderTop: "1px solid #eee" }}>
-                            ⛽ Total Fuel Filling – <strong>{fmt(summary.totalFilling)}Ltrs. x </strong>
+                            <strong>⛽ Total Fuel Filling – {fmt(summary.totalFilling)}Ltrs. x </strong>
                             ₹<input
                                 type="number"
                                 step="0.01"
@@ -540,7 +835,7 @@ const AllSitesDGLogs = ({ userData }) => {
                             </p>
                         </div>
 
-                        <p style={{ borderTop: "1px solid #eee" }}>⛽ Total Fuel Consumption – <strong>{fmt(summary.totalFuel)} Ltrs</strong></p>
+                        <p style={{ borderTop: "1px solid #eee" }}><strong>⛽ Total Fuel Consumption – {fmt(summary.totalFuel)} Ltrs</strong></p>
                         <div style={{ display: "flex" }}>
                             <p style={{ marginLeft: "20px" }}>
                                 • DG-1: <strong>{fmt1(summary.totalDG1OnLoadCon + summary.totalDG1OffLoadCon)} Ltrs</strong>
@@ -563,7 +858,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                 - OFF Load: <strong>{fmt1(summary.totalDG2OffLoadCon)} Ltrs</strong>
                             </p>
                         </div>
-                        <p style={{ borderTop: "1px solid #eee" }}>⏱️ Total DG Run Hours – <strong>{fmt1(summary.totalHrs)} Hour</strong> ({totalHrsMin} min)</p>
+                        <p style={{ borderTop: "1px solid #eee" }}><strong>⏱️ Total DG Run Hours – {fmt1(summary.totalHrs)} Hour</strong> ({totalHrsMin} min)</p>
                         <div style={{ display: "flex" }}>
                             <p style={{ marginLeft: "20px" }}>
                                 • DG-1: <strong>{fmt1(summary.totalDG1OnLoadHrs + summary.totalDG1OffLoadHrs)} hrs</strong> ({summary.totalDG1HrsMin} min)

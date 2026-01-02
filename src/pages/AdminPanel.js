@@ -11,7 +11,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import "../assets/AdminPanel.css";
-import { siteIdMap } from "./Register";
+import { siteIdMap } from "../config/siteConfigs";
 // import { getFunctions, httpsCallable } from "firebase/functions";
 import { updateLocalUserData } from "../utils/userStorage";
 
@@ -362,6 +362,7 @@ const AdminPanel = ({ userData }) => {
                   <th>Name</th>
                   <th>Designation</th>
                   <th>EMP ID</th>
+                  <th>Mobile No.</th>
                   <th>Email ID</th>
                   <th>Site ID</th>
                   <th>Site Name</th>
@@ -488,6 +489,7 @@ const AdminPanel = ({ userData }) => {
                           ) : user.empId}
                         </td>
 
+                        <td data-label="Mobile No">{user.mobileNo}</td>
                         <td data-label="Email">{user.email}</td>
 
                         <td data-label="Site ID">

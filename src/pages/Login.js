@@ -47,6 +47,7 @@ const Login = ({ setUserData }) => {
           region: data.region,
           siteId: data.siteId,
           empId: data.empId,
+          mobileNo: data.mobileNo,
           name: data.name,
           role: data.role,
           site: data.site,

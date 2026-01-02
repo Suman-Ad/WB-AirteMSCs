@@ -618,10 +618,10 @@ export default function DutyTrackerPage({ currentUser }) {
               );
             })}
           </div>
-          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b" }} onClick={() => navigate("/cl-approve")}>Check <strong>"CL"</strong> Status</p>
-          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b" }} onClick={() => navigate("/cl-calendar")}>CL Calendar</p>
-          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b" }} onClick={() => navigate("/my-leave")}>My Leave</p>
-          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b" }} onClick={() => navigate("/monthly-cl-summary")}>Monthly CL Summary</p>
+          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-approve")}>1) Check <strong>"CL"</strong> Status</p>
+          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-calendar")}>2) CL Calendar</p>
+          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/my-leave")}>3) My Leave</p>
+          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/monthly-cl-summary")}>4) Monthly CL Summary</p>
         </div>
 
         {/* Right side panel: date editor */}
@@ -797,7 +797,7 @@ function UserSelect({ siteUsers, onSelect }) {
             <div>
               <div style={{ fontWeight: "500" }}>{u?.name || ""}</div>
               <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                {u.designation} • {u.empId}
+                {u.designation} • {u.empId} • {u.mobileNo}
               </div>
             </div>
             <button

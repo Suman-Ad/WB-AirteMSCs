@@ -29,6 +29,8 @@ const DGLogForm = ({ userData }) => {
         stopTime: "",
         hrMeterStart: "",
         hrMeterEnd: "",
+        kwhMeterStart: "",
+        kwhMeterEnd: "",
         remarks: "On Load",
         fuelConsumption: "",
         kWHReading: "",
@@ -263,6 +265,8 @@ const DGLogForm = ({ userData }) => {
             "hrMeterStart",
             "hrMeterEnd",
             "fuelConsumption",
+            "kwhMeterStart",
+            "kwhMeterEnd",
             "kWHReading",
             "fuelFill",
         ];
@@ -380,33 +384,6 @@ const DGLogForm = ({ userData }) => {
                     }
                 }
 
-                // if (form.remarks === "Fuel Filling Only" && (isLastDGFill || isEditMode)) {
-                //     await addDoc(
-                //         collection(db, "dgHsdLogs", userData.site, "entries"),
-                //         {
-                //             date: form.date,
-                //             siteId: userData.siteId,
-                //             siteName: userData.site,
-                //             inTime: hsdForm.inTime,
-                //             informTime: hsdForm.informTime,
-                //             parkingTime: hsdForm.parkingTime,
-                //             fillingStartTime: hsdForm.fillingStartTime,
-                //             outTime: hsdForm.outTime,
-                //             securityId: hsdForm.securityId,        // ✅ ADD THIS
-                //             securityName: hsdForm.securityName,
-                //             density: hsdForm.density,
-                //             temperature: hsdForm.temperature,
-                //             ltrs: hsdForm.ltrs,
-                //             dillerInvoice: hsdForm.dillerInvoice,
-                //             securitySign: hsdForm.securitySign,
-                //             omSign: hsdForm.omSign,
-                //             managerSign: hsdForm.managerSign,
-                //             createdBy: uploadedBy,
-                //             createdAt: serverTimestamp(),
-                //         }
-                //     );
-                // }
-
                 // ✅ SAVE / UPDATE HSD ENTRY (SEPARATE COLLECTION)
                 if (
                     form.remarks === "Fuel Filling Only" &&
@@ -519,38 +496,6 @@ const DGLogForm = ({ userData }) => {
                             }
                         );
                     }
-
-                    // await addDoc(
-                    //     collection(db, "dgHsdLogs", userData.site, "entries"),
-                    //     // {
-                    //     //     date: form.date,
-                    //     //     siteId: userData.siteId,
-                    //     //     siteName: userData.site,
-                    //     //     inTime: hsdForm.inTime,
-                    //     //     informTime: hsdForm.informTime,
-                    //     //     parkingTime: hsdForm.parkingTime,
-                    //     //     fillingStartTime: hsdForm.fillingStartTime,
-                    //     //     outTime: hsdForm.outTime,
-                    //     //     securityId: hsdForm.securityId,        // ✅ ADD THIS
-                    //     //     securityName: hsdForm.securityName,
-                    //     //     density: hsdForm.density,
-                    //     //     temperature: hsdForm.temperature,
-                    //     //     ltrs: hsdForm.ltrs,
-                    //     //     dillerInvoice: hsdForm.dillerInvoice,
-                    //     //     securitySign: hsdForm.securitySign,
-                    //     //     omSign: hsdForm.omSign,
-                    //     //     managerSign: hsdForm.managerSign,
-                    //     //     createdBy: uploadedBy,
-                    //     //     createdAt: serverTimestamp()
-                    //     // }
-                    //     {
-                    //         ...hsdForm,
-                    //         date: form.date,
-                    //         siteName: userData.site,
-                    //         createdAt: serverTimestamp(),
-                    //         createdBy: uploadedBy,
-                    //     }
-                    // );
                 }
 
                 await setDoc(doc(runsCollectionRef, runId), {
@@ -585,6 +530,8 @@ const DGLogForm = ({ userData }) => {
                     stopTime: "",
                     hrMeterStart: "",
                     hrMeterEnd: "",
+                    kwhMeterStart: "",
+                    kwhMeterEnd: "",
                     remarks: "On Load",
                     fuelConsumption: "",
                     kWHReading: "",
@@ -660,7 +607,7 @@ const DGLogForm = ({ userData }) => {
                     ...prev,
                     segr: Number(segr.toFixed(2)),
                     cph: Number(cph.toFixed(2)),
-                    oemCPH : `N/A for ${roundedPercent}%`
+                    oemCPH: `N/A for ${roundedPercent}%`
                 }));
                 result += `❓ As per Load % OEM Diesel CPH: OEM CPH Data Not Available for ${roundedPercent}% Load....\n`;
                 result += `✅ Achieve CPH (Actual / User): ${(cph).toFixed(2)} ltrs/Hour....\n`;
@@ -680,7 +627,7 @@ const DGLogForm = ({ userData }) => {
                         ...prev,
                         segr: Number(finalSegr.toFixed(2)),
                         cph: Number(adjustableCPH.toFixed(2)),
-                        oemCPH : `N/A for ${roundedPercent}%`
+                        oemCPH: `N/A for ${roundedPercent}%`
                     }));
 
                     result += `❓ As per Load % OEM Diesel CPH: OEM CPH Data Not Available for ${roundedPercent}% Load....\n`;
@@ -794,7 +741,7 @@ const DGLogForm = ({ userData }) => {
                 });
 
                 if (found) {
-                    setForm((prev) => ({ ...prev, hrMeterStart: found.hrMeterEnd }));
+                    setForm((prev) => ({ ...prev, hrMeterStart: found.hrMeterEnd, kwhMeterStart: found.kwhMeterEnd }));
                     return;
                 }
 
@@ -828,7 +775,7 @@ const DGLogForm = ({ userData }) => {
                 });
 
                 if (yfound) {
-                    setForm((prev) => ({ ...prev, hrMeterStart: yfound.hrMeterEnd }));
+                    setForm((prev) => ({ ...prev, hrMeterStart: yfound.hrMeterEnd, kwhMeterStart: yfound.kwhMeterEnd }));
                 }
             } catch (err) {
                 console.error("Error fetching prev hrMeterStart:", err);
@@ -885,6 +832,28 @@ const DGLogForm = ({ userData }) => {
         }));
     };
 
+    useEffect(() => {
+        if (state?.autoFromDgStop) {
+            setForm((prev) => ({
+                ...prev,
+                date: state.date || prev.date,
+                dgNumber: state.dgNumber || prev.dgNumber,
+                startTime: state.startTime || "",
+                stopTime: state.stopTime || "",
+                remarks: "On Load",
+            }));
+
+            setDgNumber(state.dgNumber || "DG-1");
+        }
+    }, [state]);
+
+    useEffect(() => {
+        if (state?.autoFromDgStop) {
+            window.history.replaceState({}, document.title);
+        }
+    }, []);
+
+
     return (
         <div className="daily-log-container">
             <h2 className="dashboard-header">
@@ -908,7 +877,7 @@ const DGLogForm = ({ userData }) => {
 
                 </label>
 
-                <label className="form-label">Remarks:
+                <label className="form-label">Operation Remarks:
                     <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- ON/NO Load & Fuel Filling Only)</span>
                     <select
                         name="remarks"
@@ -988,7 +957,7 @@ const DGLogForm = ({ userData }) => {
                     </div>
                 )}
 
-
+                {/* Hr Meter/ kWH Meter */}
                 <div className="grid grid-cols-2 gap-2">
                     <label className="form-label">Hr Meter Start:
                         <span style={{ fontSize: "10px", color: "#030a44ff" }}>(e.g.:- '1800.00', It fetch auto only check during fill)</span>
@@ -1019,23 +988,74 @@ const DGLogForm = ({ userData }) => {
 
                         </label>
                     )}
-                </div>
 
-                {(form.remarks === "On Load" || form.remarks === "No Load") && (
-                    <label className="form-label">Reading (kWH):
-                        <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Closing kWh - Opening kWh = Reading)</span>
-                        <input
-                            type="number"
-                            step="0.1"
-                            name="kWHReading"
-                            value={form.remarks === "Fuel Filling Only" ? 0 : form.kWHReading}
-                            onChange={handleChange}
-                            placeholder="Generated kWH"
-                            className="w-full p-2 border rounded"
-                            required
-                        />
-                    </label>
-                )}
+                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
+                        <label className="form-label">Total Hr Meter:
+                            <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- '1.0')</span>
+                            <input
+                                type="number"
+                                step="0.1"
+                                name="totalHRMeter"
+                                value={(form.hrMeterEnd - form.hrMeterStart).toFixed(1)}
+                                onChange={handleChange}
+                                placeholder="Hr meter end"
+                                className="p-2 border rounded"
+                                required
+                                disabled
+                            />
+
+                        </label>
+                    )}
+
+                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
+                        <label className="form-label">Start Reading (kWH):
+                            <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Opening kWh)</span>
+                            <input
+                                type="number"
+                                step="0.1"
+                                name="kwhMeterStart"
+                                value={form.remarks === "Fuel Filling Only" ? 0 : form.kwhMeterStart}
+                                onChange={handleChange}
+                                placeholder="Start kwh reading"
+                                className="w-full p-2 border rounded"
+                                required
+                            />
+                        </label>
+                    )}
+
+                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
+                        <label className="form-label">Emd Reading (kWH):
+                            <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Closing kWh)</span>
+                            <input
+                                type="number"
+                                step="0.1"
+                                name="kwhMeterEnd"
+                                value={form.remarks === "Fuel Filling Only" ? 0 : form.kwhMeterEnd}
+                                onChange={handleChange}
+                                placeholder="End kwh reading"
+                                className="w-full p-2 border rounded"
+                                required
+                            />
+                        </label>
+                    )}
+
+                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
+                        <label className="form-label">Reading (kWH):
+                            <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Closing kWh - Opening kWh = Reading)</span>
+                            <input
+                                type="number"
+                                step="0.1"
+                                name="kWHReading"
+                                value={form.remarks === "Fuel Filling Only" ? 0 : form.kWHReading = Number(form.kwhMeterEnd - form.kwhMeterStart)}
+                                onChange={handleChange}
+                                placeholder="Generated kWH"
+                                className="w-full p-2 border rounded"
+                                required
+                                disabled
+                            />
+                        </label>
+                    )}
+                </div>
 
                 {(form.remarks === "On Load" || form.remarks === "No Load") && (
                     <label className="form-label">Fuel Consumption (Liters):
@@ -1068,7 +1088,7 @@ const DGLogForm = ({ userData }) => {
                         />
                     </label>)}
 
-                {form.remarks === "Fuel Filling Only" && (isLastDGFill || (isEditMode && fuelFilledDGs.length === fieldDGNumbers.length )) && (
+                {form.remarks === "Fuel Filling Only" && (isLastDGFill || (isEditMode && fuelFilledDGs.length === fieldDGNumbers.length)) && (
                     <div className="child-container" style={{ padding: "10px", border: "1px solid #ccc", borderRadius: "10px", marginBottom: "10px" }}>
                         <h3>🛢️ HSD Receiving Info</h3>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px" }}>

@@ -30,6 +30,7 @@ const ProfilePage = ({ userData }) => {
     circle: "",
     siteId: "",
     empId: "",
+    mobileNo: "",
   });
   const [photo, setPhoto] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -52,6 +53,7 @@ const ProfilePage = ({ userData }) => {
         circle: userData.circle || "",
         siteId: userData.siteId || "",
         empId: userData.empId || "",
+        mobileNo: userData.mobileNo || "",
       });
     }
   }, [userData]);
@@ -94,6 +96,7 @@ const ProfilePage = ({ userData }) => {
         circle: form.circle,
         siteId: form.siteId,
         empId: form.empId,
+        mobileNo: form.mobileNo,
         photoURL
       });
 
@@ -109,6 +112,7 @@ const ProfilePage = ({ userData }) => {
         site: form.site,
         siteId: form.siteId,
         empId: form.empId,
+        mobileNo:form.mobileNo,
         photoURL,
       });
 
@@ -199,6 +203,21 @@ const ProfilePage = ({ userData }) => {
           />
         ) : (
           <span className="profile-row span">{form.empId}</span>
+        )}
+      </div>
+
+      {/* Mobile No */}
+      <div className="profile-row">
+        <label>📇 Mobile No.:</label>
+        {editMode ? (
+          <input
+            type="number"
+            name="mobileNo"
+            value={form.mobileNo}
+            onChange={handleChange}
+          />
+        ) : (
+          <span className="profile-row span">{form.mobileNo}</span>
         )}
       </div>
 

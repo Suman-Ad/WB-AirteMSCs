@@ -11,7 +11,8 @@ import {
   sum,
   query,
   where,
-  limit
+  limit,
+  onSnapshot
 } from "firebase/firestore";
 import { db } from "../firebase";
 import "../assets/DailyDGLog.css";
@@ -108,7 +109,6 @@ const findLastFillingInDGLogs = async (site, monthsToCheck = 3) => {
 };
 
 
-
 const calculateMonthlySummary = (logs, calculateFields) => {
   if (!logs?.length) return null;
 
@@ -165,7 +165,12 @@ const DailyDGLog = ({ userData }) => {
   const [previousSummary, setPreviousSummary] = useState(null);
   const [multiYearData, setMultiYearData] = useState([]);
   const [loadingTrend, setLoadingTrend] = useState(false);
-
+  // Fetch Power Source Status
+  const [powerSource, setPowerSource] = useState("EB");
+  const [updatedByName, setUpdatedByName] = useState("");
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [loadingPower, setLoadingPower] = useState(true);
+  const [dgSeconds, setDgSeconds] = useState(0);
 
   /** permissions */
   const isAdmin =
@@ -530,29 +535,81 @@ const DailyDGLog = ({ userData }) => {
       setLastFilling(JSON.parse(cached1));
     }
 
-  }, [form?.Date]);
+  }, []);
 
+
+  const getNextUnfilledDate = async () => {
+    if (!siteName) return getFormattedDate();
+
+    try {
+      const todayStr = getFormattedDate();
+      const today = new Date(todayStr);
+
+      const y = new Date(today);
+      y.setDate(y.getDate() - 1);
+      const yesterdayStr = y.toISOString().split("T")[0];
+      const monthKey = y.toISOString().slice(0, 7);
+
+      // 🔍 Check if yesterday log exists
+      const q = query(
+        collection(db, "dailyDGLogs", siteName, monthKey),
+        where("Date", "==", yesterdayStr),
+        limit(1)
+      );
+
+      const snap = await getDocs(q);
+
+      // ❌ Yesterday NOT filled → return yesterday
+      if (snap.empty) {
+        return yesterdayStr;
+      }
+
+      // ✅ Yesterday already filled → return today
+      return todayStr;
+
+    } catch (err) {
+      console.error("getNextUnfilledDate error:", err);
+      return getFormattedDate();
+    }
+  };
+
+
+  useEffect(() => {
+    const initDate = async () => {
+      const nextDate = await getNextUnfilledDate();
+
+      setForm(prev => ({
+        ...prev,
+        Date: nextDate
+      }));
+
+      // 🔁 Keep month in sync
+      setSelectedMonth(nextDate.slice(0, 7));
+    };
+
+    initDate();
+  }, [siteName]);
 
   // After logs are fetched, set last submitted date
   useEffect(() => {
-    if (logs.length > 0) {
-      // Find the latest available date in logs
-      const latest = logs.reduce((max, entry) => {
-        return entry.Date > max ? entry.Date : max;
-      }, logs[0].Date);
+    // if (logs.length > 0) {
+    //   // Find the latest available date in logs
+    //   const latest = logs.reduce((max, entry) => {
+    //     return entry.Date > max ? entry.Date : max;
+    //   }, logs[0].Date);
 
-      // Add 1 day to latest
-      const nextDate = new Date(latest);
-      nextDate.setDate(nextDate.getDate() + 1);
+    //   // Add 1 day to latest
+    //   const nextDate = new Date(latest);
+    //   nextDate.setDate(nextDate.getDate() + 1);
 
-      // Format back to your expected string
-      const formattedNext = getFormattedDate(nextDate);
+    //   // Format back to your expected string
+    //   const formattedNext = getFormattedDate(nextDate);
 
-      setForm((prev) => ({ ...prev, Date: formattedNext }));
-    } else {
-      // fallback → today if no logs
-      setForm({ Date: getFormattedDate() });
-    }
+    //   setForm((prev) => ({ ...prev, Date: formattedNext }));
+    // } else {
+    //   // fallback → today if no logs
+    //   setForm({ Date: getFormattedDate() });
+    // }
 
     // Fetch EB rate from Firestore
     const fetchEBRate = async () => {
@@ -637,34 +694,28 @@ const DailyDGLog = ({ userData }) => {
   }, [logs, userData?.site, siteKey]);
 
 
-  const getYesterdayData = () => {
-    if (!logs.length || !form.Date) return null;
+  // const getYesterdayData = () => {
+  //   if (!logs.length || !form.Date) return null;
 
-    const selected = new Date(form.Date);     // use selected date
-    const yesterdayDate = new Date(selected);
-    yesterdayDate.setDate(selected.getDate() - 1);
+  //   const selected = new Date(form.Date);     // use selected date
+  //   const yesterdayDate = new Date(selected);
+  //   yesterdayDate.setDate(selected.getDate() - 1);
 
-    const ymd = yesterdayDate.toISOString().split("T")[0];
-    return logs.find((entry) => entry.Date === ymd) || null;
-  };
+  //   const ymd = yesterdayDate.toISOString().split("T")[0];
+  //   return logs.find((entry) => entry.Date === ymd) || null;
+  // };
 
-  const getYesterdayLog = async (date) => {
-    if (!date || !siteName) return null;
+  const getYesterdayLog = async (currentDate) => {
+    if (!currentDate || !siteName) return null;
 
-    const selected = new Date(date);
-    selected.setDate(selected.getDate() - 1);
+    // Always compute yesterday safely
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() - 1);
 
-    const ymd = selected.toISOString().split("T")[0];
-    const monthKey = selected.toISOString().slice(0, 7); // YYYY-MM
-
-    // 1️⃣ Try already-loaded logs (fast)
-    if (logs?.length) {
-      const local = logs.find(l => l.Date === ymd);
-      if (local) return local;
-    }
+    const ymd = d.toISOString().split("T")[0];   // YYYY-MM-DD
+    const monthKey = d.toISOString().slice(0, 7); // YYYY-MM
 
     try {
-      // 2️⃣ Query by Date FIELD (not document ID)
       const q = query(
         collection(db, "dailyDGLogs", siteName, monthKey),
         where("Date", "==", ymd),
@@ -672,10 +723,10 @@ const DailyDGLog = ({ userData }) => {
       );
 
       const snap = await getDocs(q);
-      return !snap.empty ? snap.docs[0].data() : null;
+      return snap.empty ? null : snap.docs[0].data();
 
     } catch (err) {
-      console.error("getYesterdayLog error:", err);
+      console.error("getYesterdayLog failed:", err);
       return null;
     }
   };
@@ -817,6 +868,7 @@ const DailyDGLog = ({ userData }) => {
 
   useEffect(() => {
     if (logs.length > 0 && form.Date) {
+      // if (!yesterdayLog) return;
       const yesterday = yesterdayLog;
       // ✅ CALL THE NEW FUNCTION HERE
       fetchAndAggregateRuns(form.Date);
@@ -976,7 +1028,10 @@ const DailyDGLog = ({ userData }) => {
 
   const handleDateChange = async (newDate) => {
     if (!newDate) return;
-
+    if (newDate > getFormattedDate()) {
+      alert("Future date entry not allowed");
+      return;
+    }
     const newMonth = getMonthFromDate(newDate);
 
     // 🔁 Sync Month when Date changes
@@ -1019,6 +1074,11 @@ const DailyDGLog = ({ userData }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.Date) return alert("Date is required");
+    if (form.Date !== await getNextUnfilledDate()) {
+      return alert("Please fill logs sequentially. Skipped date detected.");
+    }
+
+    const nextDate = await getNextUnfilledDate();
 
     // check all required input fields
     for (const field of inputFields) {
@@ -1065,6 +1125,10 @@ const DailyDGLog = ({ userData }) => {
           return alert(`DG-${i} Fuel Closing cannot be greater than Opening (no fuel filling)`);
         }
       }
+      if (form.Date !== await getNextUnfilledDate()) {
+        alert("Please fill previous pending date first");
+        return;
+      }
     }
 
     // EB validation
@@ -1097,7 +1161,8 @@ const DailyDGLog = ({ userData }) => {
 
     await setDoc(docRef, { ...form, updatedBy: userData?.name, updatedAt: serverTimestamp() }, { merge: true });
 
-    setForm({ Date: getFormattedDate() });
+    setForm({ Date: nextDate });
+    setSelectedMonth(nextDate.slice(0, 7));
     fetchLogs();
     setShowEditModal(false);
   };
@@ -1765,6 +1830,45 @@ const DailyDGLog = ({ userData }) => {
     return { backgroundColor: "#FFFFFF", color: "#000" };
   };
 
+  // Power Source Listener
+  useEffect(() => {
+    if (!userData?.site) return;
+
+    const powerRef = doc(db, "sitePowerStatus", userData.site);
+
+    const unsub = onSnapshot(powerRef, (snap) => {
+      if (!snap.exists()) return;
+
+      const data = snap.data();
+      setPowerSource(data.powerSource);
+      setUpdatedByName(data.updatedByName || "");
+      setUpdatedAt(data.updatedAt ? data.updatedAt.toDate() : null);
+
+      if (data.powerSource === "DG" && data.dgStartTime) {
+        const start = data.dgStartTime.toDate();
+
+        const tick = () => {
+          const now = new Date();
+          const liveSeconds =
+            Math.floor((now - start) / 1000) + (data.dgTotalSeconds || 0);
+          setDgSeconds(liveSeconds);
+        };
+
+        tick();
+        const interval = setInterval(tick, 1000);
+        return () => clearInterval(interval);
+
+      } else {
+        // default EB if doc not exists
+        setPowerSource("EB");
+        setDgSeconds(data.dgTotalSeconds || 0);
+      }
+      setLoadingPower(false);
+    });
+
+    return () => unsub();
+  }, [userData?.site]);
+
   return (
     <div className="daily-log-container" style={{ overflowX: "hidden" }}>
       <h1 style={{ color: "white", textAlign: "center", paddingBottom: "20px" }}> {/* dashboard-header */}
@@ -1948,7 +2052,40 @@ const DailyDGLog = ({ userData }) => {
         return (
           <div className="chart-container" >
             <div className="status-header">
-              <h1 style={{ background: "#6ce9e35d", borderBottom: "3px solid #fff", borderTop: "3px solid #fff", borderRadius: "10px", color: "#746212ff" }}><span onClick={() => window.location.reload()} style={{cursor:"pointer"}} title="Refresh">🔄</span> Current Site Status</h1>
+              {(userData.role === 'Admin' || userData.role === 'Super Admin') && (
+                <h2
+                  className={`month ${formatMonthName(selectedMonth)}`}
+                  style={{ cursor: "pointer", textAlign: "center" }}
+                  onClick={() => navigate("/all-sites-dg-logs",
+                    { state: { monthKey: selectedMonth } })}
+                >
+                  <b style={{ textDecoration: 'underline dotted blue' }}>
+                    🖥️ All Sites DG Logs ⭆
+                  </b>
+                </h2>
+              )}
+              <h1 style={{ background: powerSource === "DG" ? "#d17272ff" : "#6ce9e35d", borderBottom: "3px solid #fff", borderTop: "3px solid #fff", borderRadius: "10px", color: "#746212ff" }}>
+                <span onClick={() => window.location.reload()} style={{ cursor: "pointer" }} title="Refresh">🔄</span>
+                Current Site Status
+                <span
+                  style={{
+                    marginLeft: "8px",
+                    padding: "2px 10px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: "#fff",
+                    background:
+                      powerSource === "DG"
+                        ? "#dc2626"
+                        : powerSource === "EB"
+                          ? "#16a34a"
+                          : "#6b7280",
+                  }}
+                >
+                  Site Live On:- <strong>{powerSource || "N/A"}</strong> Source
+                </span>
+              </h1>
               <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}><strong>⛽Present Stock – {currentFuel} ltrs. </strong></h1>
               <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
               {/* ✅ Fuel Level Bar */}
@@ -2182,9 +2319,7 @@ const DailyDGLog = ({ userData }) => {
             />
           </label>
         </h1>
-        {(userData.role === 'Admin' || userData.role === 'Super Admin') && (
-          <p className={`month ${formatMonthName(selectedMonth)}`} style={{ cursor: "pointer", textAlign: "center" }} onClick={() => navigate("/all-sites-dg-logs", { state: { monthKey: selectedMonth } })}>🖥️ All Sites DG Logs ⭆</p>
-        )}
+
         {/* 🔹 Last Fuel Filling */}
         {loadingFilling ? (
           <p style={{ fontSize: "10px", color: "gray" }}>⏳ Loading last fuel filling...</p>
@@ -2315,7 +2450,7 @@ const DailyDGLog = ({ userData }) => {
                         value={form[field] > 0 ? form[field] : 0}
                         onChange={handleChange}
                         className={`${form[field] === "" || form[field] === undefined ? "input-missing" : ""} ${getFieldClass(field)}`}
-                      // disabled={disabled}
+                        disabled={disabled}
                       />
                     </label>
                   );
@@ -2505,10 +2640,10 @@ const DailyDGLog = ({ userData }) => {
           )}
 
           {currentSummary && previousSummary && (
-            <div className="compare-summary">
+            <div className="table-container" style={{ scrollbarWidth: "thin" }}>
               <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>
 
-              <table className="table-container">
+              <table >
                 <thead>
                   <tr>
                     <th>Metric</th>

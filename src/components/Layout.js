@@ -6,9 +6,13 @@ import "../assets/Layout.css";
 import Vertiv from "../assets/Vertiv1.png";
 import { FaArrowLeft } from "react-icons/fa"; // Using react-icons for the arrow
 import NotificationBell from "./NotificationBell";
-import { doc, getDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp, setDoc, addDoc } from "firebase/firestore";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { db } from "../firebase";
+import { useRef } from "react";
+import Modal from "./Modal";
+import AsansolOperationSimulator from "./SOP/AsansolOperationSimulator";
+
 
 // Fetch today's shift
 export async function getTodayDuty(siteId, uid) {
@@ -105,15 +109,82 @@ const Layout = ({ userData, children }) => {
   const [todayManpower, setTodayManpower] = useState(null);
   const [shiftUsers, setShiftUsers] = useState({});
   const [activeShift, setActiveShift] = useState(null);
-  // Mobile Detection
+  // Mobile Detection for Shift details
   const isMobile = window.innerWidth <= 568;
   const [showDrawer, setShowDrawer] = useState(false);
   const [drawerShift, setDrawerShift] = useState(null);
-
+  // Power Source Change
   const [powerSource, setPowerSource] = useState("EB");
   const [updatedByName, setUpdatedByName] = useState("");
   const [updatedAt, setUpdatedAt] = useState(null);
   const [loadingPower, setLoadingPower] = useState(true);
+  const [dgSeconds, setDgSeconds] = useState(0);
+  // Timer Count
+  const formatDuration = (sec) => {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${h}h ${m}m ${s}s`;
+  };
+
+  // Change Toggle
+  const [canTogglePower, setCanTogglePower] = useState(false);
+  const powerLockRef = useRef(false);
+
+  // For Show Simulator
+  const [showSimulator, setShowSimulator] = useState(false);
+  const [simMinimized, setSimMinimized] = useState(false);
+  const prevPowerSourceRef = useRef(null);
+
+
+  // Fetch Site Config
+  const [siteConfig, setSiteConfig] = useState({});
+  const siteKey = userData?.site?.toUpperCase();
+  const [selectedDG, setSelectedDG] = useState(null);
+
+  const callUser = (mobile) => {
+    if (!mobile || mobile === "N/A") return;
+    window.location.href = `tel:${mobile}`;
+  };
+
+
+  const fetchConfig = async () => {
+    if (!siteKey) return;
+    const snap = await getDoc(doc(db, "siteConfigs", siteKey));
+    if (snap.exists()) {
+      setSiteConfig(snap.data());
+    }
+  };
+
+  useEffect(() => {
+    fetchConfig();
+  }, [siteKey])
+
+  useEffect(() => {
+    if (!powerSource) return;
+
+    if (
+      prevPowerSourceRef.current &&
+      prevPowerSourceRef.current !== powerSource
+    ) {
+      setShowSimulator(true);
+      setSimMinimized(false); // open full on change
+    }
+
+    prevPowerSourceRef.current = powerSource;
+  }, [powerSource]);
+
+  // useEffect(() => {
+  //   if (showSimulator && !simMinimized) {
+  //     document.body.style.overflow = "hidden";
+  //   } else {
+  //     document.body.style.overflow = "";
+  //   }
+
+  //   return () => {
+  //     document.body.style.overflow = "";
+  //   };
+  // }, [showSimulator, simMinimized]);
 
   // Screen Resize Listener
   useEffect(() => {
@@ -206,24 +277,31 @@ const Layout = ({ userData, children }) => {
         ["G", "M", "E", "N", "WO"].flatMap(s => shifts[s] || [])
       )];
 
-      // 🔹 Fetch user details
+      // 🔹 Fetch user details (name + mobile)
       const userMap = {};
       await Promise.all(
         allUids.map(async (uid) => {
           const uSnap = await getDoc(doc(db, "users", uid));
           if (uSnap.exists()) {
-            userMap[uid] = uSnap.data().name;
+            const u = uSnap.data();
+            userMap[uid] = {
+              name: u.name || "Unknown",
+              mobile: u.mobileNo || u.phone || "N/A", // support old fields
+            };
           }
         })
       );
 
-      // 🔹 Map shift → user names
+      // 🔹 Map shift → user objects
       const shiftUserMap = {};
       ["G", "M", "E", "N", "WO"].forEach((s) => {
-        shiftUserMap[s] = (shifts[s] || []).map(
-          uid => userMap[uid] || uid.slice(0, 6)
-        );
+        shiftUserMap[s] = (shifts[s] || []).map((uid) => ({
+          uid,
+          name: userMap[uid]?.name || uid.slice(0, 6),
+          mobile: userMap[uid]?.mobile || "N/A",
+        }));
       });
+
 
       setTodayManpower({
         G: shiftUserMap.G.length,
@@ -251,13 +329,30 @@ const Layout = ({ userData, children }) => {
     const powerRef = doc(db, "sitePowerStatus", userData.site);
 
     const unsub = onSnapshot(powerRef, (snap) => {
-      if (snap.exists()) {
-        setPowerSource(snap.data().powerSource);
-        setUpdatedByName(snap.data().updatedByName || "");
-        setUpdatedAt(snap.data().updatedAt ? snap.data().updatedAt.toDate() : null);
+      if (!snap.exists()) return;
+
+      const data = snap.data();
+      setPowerSource(data.powerSource);
+      setUpdatedByName(data.updatedByName || "");
+      setUpdatedAt(data.updatedAt ? data.updatedAt.toDate() : null);
+
+      if (data.powerSource === "DG" && data.dgStartTime) {
+        const start = data.dgStartTime.toDate();
+
+        const tick = () => {
+          const now = new Date();
+          const liveSeconds = Math.floor((now - start) / 1000);
+          setDgSeconds(liveSeconds);
+        };
+
+        tick();
+        const interval = setInterval(tick, 1000);
+        return () => clearInterval(interval);
+
       } else {
         // default EB if doc not exists
         setPowerSource("EB");
+        setDgSeconds(data.dgTotalSeconds || 0);
       }
       setLoadingPower(false);
     });
@@ -265,35 +360,285 @@ const Layout = ({ userData, children }) => {
     return () => unsub();
   }, [userData?.site]);
 
+  const canChangePowerSource = async () => {
+    // Admin override
+    if (["Admin", "Super Admin", "Super User", "User"].includes(userData?.role)) {
+      return true;
+    }
+
+    if (!userData?.site || !userData?.uid) return false;
+
+    const todayISO = format(new Date(), "yyyy-MM-dd");
+    const ref = doc(db, "dutyRoster", `${userData.site}_${todayISO}`);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) return false;
+
+    const shifts = snap.data().shifts || {};
+
+    // find current shift
+    const currentShift = Object.keys(shifts).find(s =>
+      (shifts[s] || []).includes(userData.uid)
+    );
+
+    if (!currentShift) return false;
+
+    // ✅ In-charge rule (FIRST UID)
+    const inChargeUid = shifts[currentShift]?.[0];
+
+    return inChargeUid === userData.uid;
+  };
+
+  useEffect(() => {
+    if (!userData?.uid || !userData?.site) return;
+
+    const checkPermission = async () => {
+      const allowed = await canChangePowerSource();
+      setCanTogglePower(allowed);
+    };
+
+    checkPermission();
+
+    // re-check every minute (shift may change)
+    const interval = setInterval(checkPermission, 60000);
+    return () => clearInterval(interval);
+
+  }, [userData?.uid, userData?.site]);
+
   // Update Power Source
   const updatePowerSource = async () => {
-    // if (userData?.designation !== "Vertiv Site Infra Engineer", ) return;
-    const newSource = powerSource === "EB" ? "DG" : "EB";
+    if (powerLockRef.current) return;
 
-    const powerRef = doc(db, "sitePowerStatus", userData.site);
+    if (!canTogglePower) {
+      alert("Only shift in-charge can change power source");
+      return;
+    }
 
-    await setDoc(
-      powerRef,
-      {
+    powerLockRef.current = true;
+    try {
+      const now = new Date();
+      const powerRef = doc(db, "sitePowerStatus", userData.site);
+      const snap = await getDoc(powerRef);
+
+      const prev = snap.exists() ? snap.data() : {};
+      const newSource = powerSource === "EB" ? "DG" : "EB";
+
+      let updateData = {
         powerSource: newSource,
+        dgNumber: selectedDG,
         updatedBy: userData.uid,
         updatedByName: userData.name || "",
         updatedByEmpId: userData.empId || "",
         updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+      };
+
+      // ▶️ DG START
+      if (newSource === "DG") {
+        updateData.dgStartTime = now;
+        updateData.currentDgRunSeconds = 0; // 🔥 reset
+      }
+
+      // ⏹ DG STOP → calculate run time
+      // if (newSource === "EB" && prev.dgStartTime) {
+      //   const start = prev.dgStartTime.toDate();
+      //   const end = now;
+      //   const runSeconds = Math.floor((end - start) / 1000);
+
+      //   updateData.lastDgRunSeconds = runSeconds; // optional log
+      //   updateData.dgStartTime = null;
+
+      //   // optional: keep cumulative if you need reports
+      //   updateData.dgTotalSeconds =
+      //     (prev.dgTotalSeconds || 0) + runSeconds;
+      // }
+
+      // ⏹ DG STOP → log per run
+      if (newSource === "EB" && prev.dgStartTime) {
+        const start = prev.dgStartTime.toDate();
+        const end = new Date();
+
+        const runSeconds = Math.floor((end - start) / 1000);
+        const runMinutes = Math.ceil(runSeconds / 60);
+        // format HH:mm for form inputs
+        const formatTime = (d) =>
+          d.toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          });
+
+        updateData.dgStartTime = null;
+
+        // optional cumulative (keep if you want monthly reports)
+        updateData.dgTotalSeconds =
+          (prev.dgTotalSeconds || 0) + runSeconds;
+
+        // 🔥 SAVE DG RUN LOG ENTRY
+        await addDoc(
+          collection(db, "dgRunLogs", userData.site, "entries"),
+          {
+            site: userData.site,
+            siteId: userData.siteId || "",
+            dgNumber: selectedDG, // or dynamic later
+            startTime: formatTime(start),
+            endTime: formatTime(end),
+            runSeconds,
+            runMinutes,
+            startedBy: userData.name || "",
+            empId: userData.empId || "",
+            designation: userData.designation || "",
+            date: format(new Date(), "yyyy-MM-dd"),
+            createdAt: serverTimestamp(),
+          }
+        );
+        // 🔥 NAVIGATE to DG Log Form with auto times
+        navigate("/dg-log-entry", {
+          state: {
+            autoFromDgStop: true,
+            dgNumber: selectedDG, // later make dynamic
+            startTime: formatTime(start),
+            stopTime: formatTime(end),
+            date: format(new Date(), "yyyy-MM-dd"),
+          },
+        });
+        // optional: keep cumulative seconds
+        updateData.dgStartTime = null;
+        updateData.dgTotalSeconds =
+          (prev.dgTotalSeconds || 0) +
+          Math.floor((end - start) / 1000);
+
+      }
+
+      await setDoc(powerRef, updateData, { merge: true });
+
+      // Notify All Site User
+      const allUserQuery = query(
+        collection(db, "users"),
+        where("role", "in", ["Super User", "User"]),
+        where("site", "==", userData?.site)
+      );
+
+      const allUserSnap = await getDocs(allUserQuery);
+      const todayISO = new Date().toISOString().split("T")[0];
+      const message = newSource === "DG" ?
+        `${userData.site} MSC Power fail from ${now.toLocaleString()}, Site On ${newSource} (${selectedDG}) Source. 
+    Reported By:\nName: ${userData?.name}.
+    Emp ID: ${userData?.empId}
+    Designation: ${userData?.designation}`
+        :
+        `${userData.site} MSC Power Restored At ${now.toLocaleString()}, Site On ${newSource} Source. 
+    Reported By:\nName: ${userData?.name}.
+    Emp ID: ${userData?.empId}
+    Designation: ${userData?.designation}`
+
+      for (const allUserDoc of allUserSnap.docs) {
+        await addDoc(
+          collection(db, "notifications", allUserDoc.id, "items"),
+          {
+            title: `${userData?.site} MSC Site Status`,
+            message,
+            date: todayISO,
+            createdAt: serverTimestamp(),
+            siteStatus: newSource,
+            site: userData?.site,
+            siteId: userData?.siteId,
+            actionType: "change_power_source",
+            requesterId: userData?.uid,
+            roleRequested: userData?.role,
+            designation: userData?.designation,
+
+            read: false
+          }
+        );
+      }
+      // Notify All Admin
+      const adminQuery = query(
+        collection(db, "users"),
+        where("role", "in", ["Admin", "Super Admin"]),
+        // where("site", "==", userData?.site)
+      );
+
+      const adminSnap = await getDocs(adminQuery);
+      for (const adminDoc of adminSnap.docs) {
+        await addDoc(
+          collection(db, "notifications", adminDoc.id, "items"),
+          {
+            title: `${userData?.site} MSC Site Status`,
+            message,
+            date: todayISO,
+            createdAt: serverTimestamp(),
+            siteStatus: newSource,
+            site: userData?.site,
+            siteId: userData?.siteId,
+            actionType: "change_power_source",
+            requesterId: userData?.uid,
+            roleRequested: userData?.role,
+            designation: userData?.designation,
+
+            read: false
+          }
+        );
+      }
+    } finally {
+      powerLockRef.current = false;
+    }
   };
+
+  const saveSelectedDG = async (dg) => {
+    try {
+      await setDoc(
+        doc(db, "sitePowerStatus", userData.site),
+        {
+          selectedDG: dg,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.error("Failed to save selected DG", err);
+    }
+  };
+
+  useEffect(() => {
+    if (!userData?.site) return;
+
+    const unsub = onSnapshot(
+      doc(db, "sitePowerStatus", userData.site),
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+
+          if (data.selectedDG) {
+            setSelectedDG(data.selectedDG);
+          }
+        }
+      }
+    );
+
+    return () => unsub();
+  }, [userData.site]);
+
+  useEffect(() => {
+    if (!siteConfig?.dgCount || !selectedDG) return;
+
+    const maxDG = siteConfig.dgCount;
+    const dgIndex = Number(selectedDG.split("-")[1]);
+
+    if (dgIndex > maxDG) {
+      setSelectedDG("DG-1");
+      saveSelectedDG("DG-1");
+    }
+  }, [siteConfig, selectedDG]);
 
 
   return (
     <div className="layout">
       {/* Sidebar */}
-      <Sidebar userData={userData} collapsed={collapsed} setCollapsed={setCollapsed} />
+      <Sidebar userData={userData} collapsed={collapsed} setCollapsed={setCollapsed} powerSource={powerSource} />
       {/* Main Area */}
       <div className="main" >
         {/* Navbar */}
-        <div className="navbar" >
+        <div className="navbar" style={{ background: powerSource === "EB" ? "" : "#db1e1eff" }} >
           <button
             className="toggle-btn"
             onClick={() => setCollapsed(!collapsed)}
@@ -348,11 +693,247 @@ const Layout = ({ userData, children }) => {
                   }}
                   onClick={() => navigate("/")}
                 />
+                {/* ⚡ Power Source Toggle */}
+                {isMobile && (
+                  <div>
+                    <b
+                      style={{ color: "white", background: powerSource === "EB" ? "#429e4eff" : "#b95e5eff", padding: "0px 10px", borderRadius: "6px" }}
+                      onClick={() => navigate("/dg-run-history")}
+                    >
+                      Site Status:
+                    </b>
+                    {siteConfig?.dgCount > 0 && (
+                      <div style={{ display: "flex", marginTop: "4px", gap: "2px", justifyContent: "center" }}>
+                        {Array.from({ length: siteConfig.dgCount }, (_, i) => {
+                          const dg = `DG-${i + 1}`;
+                          return (
+                            <button
+                              key={dg}
+                              onClick={() => {
+                                setSelectedDG(dg);
+                                saveSelectedDG(dg);
+                              }}
+                              style={{
+                                padding: "1px 2px",
+                                borderRadius: "6px",
+                                border: "1px solid #ccc",
+                                background: selectedDG === dg ? "#2563eb" : "#f3f4f6",
+                                color: selectedDG === dg ? "#fff" : "#000",
+                                cursor: powerSource === "DG" ? "not-allowed" : "pointer",
+                                height: "fit-content",
+                                fontSize: "12px"
+                              }}
+                              disabled={powerSource === "DG"}
+                            >
+                              {dg}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div
+                      title="Click to toggle power source state"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        background: "#0f172aff",
+                        borderRadius: "10px",
+                        fontSize: "13px",
+                        padding: "3px 3px"
+                      }}
+                    >
+                      <span style={{ opacity: powerSource === "EB" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "EB" ? "#ffffffff" : "#ffffffaa" }}>
+                        <strong>⚡EB</strong>
+                      </span>
+
+                      <div
+                        onClick={powerLockRef.current || !canTogglePower ? undefined : updatePowerSource}
+                        style={{
+                          width: "42px",
+                          height: "22px",
+                          background: powerSource === "DG" ? "#dc2626" : "#16a34a",
+                          borderRadius: "12px",
+                          position: "relative",
+                          cursor:
+                            !canTogglePower
+                              ? "not-allowed"
+                              : "pointer",
+                          pointerEvents: powerLockRef.current ? "none" : "auto",
+                          opacity: powerLockRef.current ? 0.5 : 1,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            background: "#fff",
+                            borderRadius: "50%",
+                            position: "absolute",
+                            top: "2px",
+                            left: powerSource === "DG" ? "22px" : "2px",
+                            transition: "left 0.2s",
+                          }}
+                        />
+                      </div>
+
+                      <span style={{ opacity: powerSource === "DG" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "DG" ? "#ffffffff" : "#ffffffaa" }}>
+                        <strong>⛽DG</strong>
+                      </span>
+                    </div>
+                    {powerSource === "DG" && (
+                      <div style={{
+                        background: "#7f1d1d",
+                        color: "#fff",
+                        padding: "2px 10px",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        cursor: 'pointer'
+                      }}
+                        onClick={() => navigate("/dg-run-history")}
+                      >
+                        ⛽ DG Running: {formatDuration(dgSeconds)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <Modal
+                  isOpen={showSimulator}
+                  isMinimized={simMinimized}
+                  onMinimize={() => setSimMinimized((p) => !p)}
+                >
+                  <AsansolOperationSimulator
+                    triggeredBy={powerSource}
+                    site={userData.site}
+                    selectedDG={selectedDG}
+                  />
+                </Modal>
+
+
               </div>
 
               <p className="dashboard-subinfo">
                 <strong>🏢{userData?.site || "All"}</strong>|&nbsp;<strong>🆔{userData.siteId || "All"}</strong>|&nbsp;<strong style={{ color: "whitesmoke", background: `${userData?.isActive ? "#3f8a2985" : "#8a0f0f85"}`, height: "fit-content", borderRadius: "6px", borderBottom: "1px solid" }}>{userData?.isActive ? "Active" : "Inactive"}</strong>
                 <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+                  {!isMobile && (
+                    <div>
+                      <b
+                        style={{ color: "white", background: powerSource === "EB" ? "#429e4eff" : "#b95e5eff", padding: "0px 10px", borderRadius: "6px" }}
+                        onClick={() => navigate("/dg-run-history")}
+                      >
+                        Site Status:
+                      </b>
+                      {siteConfig?.dgCount > 0 && (
+                        <div style={{ display: "flex", gap: "4px", marginTop: "4px", justifyContent: "center" }}>
+                          {Array.from({ length: siteConfig.dgCount }, (_, i) => {
+                            const dg = `DG-${i + 1}`;
+                            return (
+                              <button
+                                key={dg}
+                                onClick={() => {
+                                  setSelectedDG(dg);
+                                  saveSelectedDG(dg);
+                                }}
+                                style={{
+                                  padding: "6px 12px",
+                                  borderRadius: "6px",
+                                  border: "1px solid #ccc",
+                                  background: selectedDG === dg ? "#2563eb" : "#f3f4f6",
+                                  color: selectedDG === dg ? "#fff" : "#000",
+                                  cursor: powerSource === "DG" ? "not-allowed" : "pointer",
+                                  height: "fit-contect",
+                                  fontSize: "12px"
+                                }}
+                                disabled={powerSource === "DG"}
+                              >
+                                {dg}
+                              </button>
+
+                            );
+                          })}
+                        </div>
+                      )}
+                      <div
+                        title="Click to toggle power source state"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          background: "#0f172aff",
+                          borderRadius: "10px",
+                          fontSize: "13px",
+                          padding: "2px 6px"
+                        }}
+                      >
+                        <span style={{ opacity: powerSource === "EB" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "EB" ? "#ffffffff" : "#ffffffaa" }}>
+                          <strong>⚡EB</strong>
+                        </span>
+
+                        <div
+                          onClick={powerLockRef.current || !canTogglePower ? undefined : updatePowerSource}
+                          style={{
+                            width: "42px",
+                            height: "22px",
+                            background: powerSource === "DG" ? "#dc2626" : "#16a34a",
+                            borderRadius: "12px",
+                            position: "relative",
+                            cursor:
+                              !canTogglePower
+                                ? "not-allowed"
+                                : "pointer",
+                            pointerEvents: powerLockRef.current ? "none" : "auto",
+                            opacity: powerLockRef.current ? 0.5 : 1,
+                          }}
+                        >
+
+                          <div
+                            style={{
+                              width: "18px",
+                              height: "18px",
+                              background: "#fff",
+                              borderRadius: "50%",
+                              position: "absolute",
+                              top: "2px",
+                              left: powerSource === "DG" ? "22px" : "2px",
+                              transition: "left 0.2s",
+                            }}
+                          />
+                        </div>
+
+                        <span style={{ opacity: powerSource === "DG" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "DG" ? "#ffffffff" : "#ffffffaa" }}>
+                          <strong>⛽DG</strong>
+                        </span>
+                        {powerSource === "DG" && (
+                          <div style={{
+                            background: "#7f1d1d",
+                            color: "#fff",
+                            padding: "2px 10px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                            cursor: 'pointer'
+                          }}
+                            onClick={() => navigate("/dg-run-history")}
+                          >
+                            ⛽ DG Running: {formatDuration(dgSeconds)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <Modal
+                    isOpen={showSimulator}
+                    isMinimized={simMinimized}
+                    onMinimize={() => setSimMinimized((p) => !p)}
+                  >
+                    <AsansolOperationSimulator
+                      triggeredBy={powerSource}
+                      site={userData.site}
+                      selectedDG={selectedDG}
+                    />
+                  </Modal>
+
                   <div>
                     {/* Today's Duty Info */}
                     {todayDuty ? (
@@ -397,7 +978,7 @@ const Layout = ({ userData, children }) => {
                           style={{
                             display: "flex",
                             gap: "4px",
-                            padding: "6px 12px",
+                            padding: "2px 10px",
                             background: "#0f172a",
                             color: "#fff",
                             borderRadius: "8px",
@@ -463,8 +1044,13 @@ const Layout = ({ userData, children }) => {
 
                             <ul style={{ marginTop: "6px", paddingLeft: "16px", maxHeight: "150px", overflowY: "auto", background: "#f1f5f9", borderRadius: "6px" }}>
                               {shiftUsers[activeShift]?.length ? (
-                                shiftUsers[activeShift].map((name, i) => (
-                                  <li key={i} style={{ color: "#2ac43eff" }}>{name}</li>
+                                shiftUsers[activeShift]?.map((u, i) => (
+                                  <li key={i} style={{ marginBottom: "6px" }}>
+                                    <strong style={{ color: "#16a34a" }}>{u.name}</strong>
+                                    <div style={{ fontSize: "12px", color: "#475569" }}>
+                                      📞 {u.mobile}
+                                    </div>
+                                  </li>
                                 ))
                               ) : (
                                 <li style={{ color: "#64748b" }}>No manpower</li>
@@ -476,8 +1062,6 @@ const Layout = ({ userData, children }) => {
                     )}
 
                   </div>
-
-
                   <NotificationBell user={userData} />
                   <button
                     onClick={() => navigate(-1)}
@@ -487,20 +1071,16 @@ const Layout = ({ userData, children }) => {
                   </button>
                 </p>
               </p>
+              <small style={{ fontSize: "9px", color: "#94a3b8" }}>
+                <b>{loadingPower ? "Loading..." : `Updated By: ${updatedByName} on ${updatedAt ? updatedAt.toLocaleString() : "N/A"} Site on "${powerSource}" Source (Live) `}</b>
+              </small>
             </header>
+
           </div>
         </div>
 
         {/* Page Content */}
         <div className="main-content" onClick={() => setCollapsed(true)}>
-          {/* <div className="border p-3 rounded mt-4">
-            <h3 className="font-semibold mb-2">Duty Summary (This Month)</h3>
-
-            <p>🌅 Morning: <strong>{dutySummary.M}</strong></p>
-            <p>🌇 Evening: <strong>{dutySummary.E}</strong></p>
-            <p>🌙 Night: <strong>{dutySummary.N}</strong></p>
-          </div> */}
-
           {/* {todayDuty && (
             <div
               style={{
@@ -528,57 +1108,6 @@ const Layout = ({ userData, children }) => {
               )}
             </div>
           )} */}
-          {/* ⚡ Power Source Toggle */}
-          <div
-            title="Click to toggle power source state"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              background: "#0f172aff",
-              borderRadius: "10px",
-              fontSize: "13px",
-              position: "fixed",
-              width: "100%",
-              zIndex: 1000,
-            }}
-          >
-            <span style={{ opacity: powerSource === "EB" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "EB" ? "#ffffffff" : "#ffffffaa" }}>
-              <strong>⚡EB</strong>
-            </span>
-
-            <div
-              onClick={updatePowerSource}
-              style={{
-                width: "42px",
-                height: "22px",
-                background: powerSource === "DG" ? "#dc2626" : "#16a34a",
-                borderRadius: "12px",
-                position: "relative",
-                cursor: "pointer",
-                transition: "background 0.2s",
-              }}
-            >
-              <div
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  background: "#fff",
-                  borderRadius: "50%",
-                  position: "absolute",
-                  top: "2px",
-                  left: powerSource === "DG" ? "22px" : "2px",
-                  transition: "left 0.2s",
-                }}
-              />
-            </div>
-
-            <span style={{ opacity: powerSource === "DG" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "DG" ? "#ffffffff" : "#ffffffaa" }}>
-              <strong>⛽DG</strong>
-            </span>
-            <small style={{ fontSize: "9px", color: "#94a3b8", marginLeft: "8px" }}>
-              <b>({loadingPower ? "Loading..." : `Last Updated by: ${updatedByName} Site on "${powerSource}" at ${updatedAt ? updatedAt.toLocaleString() : "N/A"}`})</b>
-            </small>
-          </div>
           {children}
         </div>
         <div style={{ background: "#55b3ab" }}>
@@ -652,17 +1181,17 @@ const Layout = ({ userData, children }) => {
                   {drawerShift === "G"
                     ? "General Shift"
                     : drawerShift === "M"
-                      ? "Morning Shift"
+                      ? "🌅 Morning Shift"
                       : drawerShift === "E"
-                        ? "Evening Shift"
+                        ? "🌇 Evening Shift"
                         : drawerShift === "N"
-                          ? "Night Shift"
+                          ? "🌙 Night Shift"
                           : "Weekly Off"}
                 </h3>
 
                 <ul style={{ listStyle: "none", padding: 0 }}>
                   {shiftUsers[drawerShift]?.length ? (
-                    shiftUsers[drawerShift].map((name, i) => (
+                    shiftUsers[drawerShift]?.map((u, i) => (
                       <li
                         key={i}
                         style={{
@@ -671,7 +1200,17 @@ const Layout = ({ userData, children }) => {
                           fontSize: "15px",
                         }}
                       >
-                        👷 {name}
+                        👷 <strong>{u.name}</strong>
+                        <div style={{ fontSize: "13px", color: "#475569" }}>
+                          {u.mobile !== "N/A" && (
+                            <b 
+                            onClick={() => callUser(u.mobile)}
+                            title={`Call ${u.name}`}
+                            style={{cursor:"pointer"}}
+                            >📞</b>
+                          )}
+                          {u.mobile}
+                        </div>
                       </li>
                     ))
                   ) : (

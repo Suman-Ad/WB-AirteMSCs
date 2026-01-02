@@ -948,8 +948,10 @@ const DGLogTable = ({ userData }) => {
                 <th>Hr Meter Start</th>
                 <th>Hr Meter End</th>
                 <th>Total Run Hours</th>
-                <th>Fuel Consumption (Ltrs)</th>
+                <th>Opening kWH</th>
+                <th>Closing kWH</th>
                 <th>kWH Reading</th>
+                <th>Fuel Consumption (Ltrs)</th>
                 <th>Remarks</th>
                 <th>Fuel Filling (Ltrs)</th>
                 <th>OEM CPH (Ltrs)</th>
@@ -958,6 +960,8 @@ const DGLogTable = ({ userData }) => {
                 <th>DG Run %</th>
                 <th>HSD Template</th>
                 <th>Actions</th>
+                <th>Entry By</th>     {/* ✅ */}
+                <th>Updated By</th>   {/* ✅ */}
               </tr>
             </thead>
             <tbody>
@@ -980,15 +984,16 @@ const DGLogTable = ({ userData }) => {
                       )
                     </span>
                   </td>
-
-                  <td>{log.fuelConsumption || 0}</td>
+                  <td>{log.kwhMeterStart}</td>
+                  <td>{log.kwhMeterEnd}</td>
                   <td>{log.kWHReading || 0}</td>
+                  <td>{log.fuelConsumption || 0}</td>
                   <td>{log.remarks}</td>
                   <td>{log.fuelFill ? log.fuelFill : 0}</td>
                   <td>{log.oemCPH ? log.oemCPH : "N/A"}</td>
                   <td style={log.cph > log.oemCPH ? { color: "Red" } : log.cph?.toFixed(0) === log.oemCPH ? { color: "orange" } : { color: "Green" }}
                     title={log.cph > log.oemCPH ? "High" : log.cph?.toFixed(0) === log.oemCPH ? "In-Line" : "Low"}
-                  >{log.cph?.toFixed(2)}<span style={log.cph > log.oemCPH ? { color: "Red", fontSize:"10px" } : log.cph?.toFixed(0) === log.oemCPH ? { color: "orange", fontSize:"10px" } : { color: "Green", fontSize:"10px" }}>{log.cph > log.oemCPH ? "High" : log.cph?.toFixed(0) === log.oemCPH ? "In-Line" : "Low"}</span></td>
+                  >{log.cph?.toFixed(2)}<span style={log.cph > log.oemCPH ? { color: "Red", fontSize: "10px" } : log.cph?.toFixed(0) === log.oemCPH ? { color: "orange", fontSize: "10px" } : { color: "Green", fontSize: "10px" }}>{log.cph > log.oemCPH ? "High" : log.cph?.toFixed(0) === log.oemCPH ? "In-Line" : "Low"}</span></td>
                   <td style={log.segr < 3 ? { color: "red" } : { color: "green" }}>{log.segr}</td>
                   <td>{log.dgRunPercentage}%</td>
                   <td>
@@ -1011,6 +1016,30 @@ const DGLogTable = ({ userData }) => {
                       ❌
                     </button>
                   </td>
+                  <td>
+                    {log.enteredBy ? (
+                      <>
+                        <strong>{log.enteredBy.name}</strong>
+                        <br />
+                        <small style={{ color: "#666" }}>{log.enteredBy.empId}</small>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+
+                  <td>
+                    {log.updatedBy ? (
+                      <>
+                        <strong>{log.updatedBy.name}</strong>
+                        <br />
+                        <small style={{ color: "#666" }}>{log.updatedBy.empId}</small>
+                      </>
+                    ) : (
+                      <span style={{ color: "#999" }}>Not Updated</span>
+                    )}
+                  </td>
+
                 </tr>
               ))}
             </tbody>

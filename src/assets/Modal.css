@@ -1,0 +1,63 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  /* ❗ prevent background scroll */
+  overflow: hidden;
+}
+
+.modal-container {
+  width: 95%;
+  max-width: 1600px;
+  height: 70vh;
+
+  background: #fff;
+  border-radius: 12px;
+
+  display: flex;
+  flex-direction: column;
+
+  /* ❗ THIS enables scroll */
+  overflow: hidden;
+}
+
+/* Header stays fixed */
+.modal-header {
+  padding: 10px 14px;
+  background: #f3f4f6;
+  border-bottom: 1px solid #ddd;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* Scrollable content area */
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+/* Minimized state */
+.modal-container.minimized {
+  width: 300px;
+  height: 48px;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  overflow: hidden;
+}
+
+.modal-overlay.minimized {
+  background: transparent;
+  pointer-events: none;
+}
+
+.modal-container.minimized {
+  pointer-events: auto;
+}
