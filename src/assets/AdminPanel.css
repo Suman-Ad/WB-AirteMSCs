@@ -175,14 +175,45 @@ select {
 
 /* Add data-labels for mobile view */
 @media (max-width: 768px) {
-  .admin-table td:nth-child(1)::before { content: "Name"; }
-  .admin-table td:nth-child(2)::before { content: "Designation"; }
-  .admin-table td:nth-child(3)::before { content: "EMP ID"; }
-  .admin-table td:nth-child(4)::before { content: "Email ID"; }
-  .admin-table td:nth-child(5)::before { content: "Site ID"; }
-  .admin-table td:nth-child(6)::before { content: "Site"; }
-  .admin-table td:nth-child(7)::before { content: "Role"; }
-  .admin-table td:nth-child(8)::before { content: "Actions"; }
+  .admin-table thead {
+    display: none;
+  }
+
+  .admin-table,
+  .admin-table tbody,
+  .admin-table tr,
+  .admin-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-table tr {
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 10px;
+    background: #fff;
+  }
+
+  .admin-table td {
+    text-align: right;
+    padding-left: 45%;
+    position: relative;
+    border-bottom: 1px solid #eee;
+  }
+
+  .admin-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 10px;
+    top: 8px;
+    font-weight: bold;
+    color: #374151;
+  }
+
+  .admin-table td:last-child {
+    border-bottom: none;
+  }
 }
 
 /* Add these to your existing AdminPanel.css */
@@ -319,7 +350,7 @@ select {
 }
 
 
-@media (max-width: 768px) {
+@media (max-width: 500px) {
   .user-stats-container {
     gap: 10px;
   }

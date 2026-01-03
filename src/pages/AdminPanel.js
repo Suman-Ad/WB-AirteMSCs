@@ -357,7 +357,7 @@ const AdminPanel = ({ userData }) => {
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Status</th>
+                  <th>Live Status</th>
                   <th>Photo</th>
                   <th>Name</th>
                   <th>Designation</th>

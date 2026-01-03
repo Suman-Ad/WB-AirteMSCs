@@ -35,11 +35,11 @@ export default function NotificationBell({ user }) {
             const oldUnread = items.filter(n => !n.read).length;
 
             const newBackupReq = arr.filter(
-                n => !n.read && (n.actionType === "backup_request" || n.actionType === "registration_request" || n.actionType === "change_power_source")
+                n => !n.read && (n.actionType === "backup_request" || n.actionType === "registration_request" || n.actionType === "change_power_source" || n.actionType === "change_dg_select")
             ).length;
 
             const oldBackupReq = items.filter(
-                n => !n.read && (n.actionType === "backup_request" || n.actionType === "registration_request" || n.actionType === "change_power_source")
+                n => !n.read && (n.actionType === "backup_request" || n.actionType === "registration_request" || n.actionType === "change_power_source" || n.actionType === "change_dg_select")
             ).length;
 
             // Play sound ONLY for new backup requests

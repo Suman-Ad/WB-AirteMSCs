@@ -136,6 +136,7 @@ const Layout = ({ userData, children }) => {
   const [simMinimized, setSimMinimized] = useState(false);
   const prevPowerSourceRef = useRef(null);
 
+  const [unaddCount, setUnaddCount] = useState(0);
 
   // Fetch Site Config
   const [siteConfig, setSiteConfig] = useState({});
@@ -489,6 +490,7 @@ const Layout = ({ userData, children }) => {
             designation: userData.designation || "",
             date: format(new Date(), "yyyy-MM-dd"),
             createdAt: serverTimestamp(),
+            dgLogAdded: false,
           }
         );
         // 🔥 NAVIGATE to DG Log Form with auto times
@@ -594,6 +596,43 @@ const Layout = ({ userData, children }) => {
         },
         { merge: true }
       );
+
+      // Notify All Site User
+      const allUserQuery = query(
+        collection(db, "users"),
+        where("role", "in", ["Super User", "User", "Admin", "Super Admin"]),
+        where("site", "==", userData?.site)
+      );
+
+      const allUserSnap = await getDocs(allUserQuery);
+      const todayISO = new Date().toISOString().split("T")[0];
+      const message = dg &&
+        `${userData.site} MSC Selected On (${dg}) for Backup Source. 
+    Reported By:\nName: ${userData?.name}.
+    Emp ID: ${userData?.empId}
+    Designation: ${userData?.designation}`
+
+      for (const allUserDoc of allUserSnap.docs) {
+        await addDoc(
+          collection(db, "notifications", allUserDoc.id, "items"),
+          {
+            title: `${userData?.site} MSC Site DG Selection Status`,
+            message,
+            date: todayISO,
+            createdAt: serverTimestamp(),
+            selectedDG: dg,
+            site: userData?.site,
+            siteId: userData?.siteId,
+            actionType: "change_dg_select",
+            requesterId: userData?.uid,
+            roleRequested: userData?.role,
+            designation: userData?.designation,
+
+            read: false
+          }
+        );
+      }
+
     } catch (err) {
       console.error("Failed to save selected DG", err);
     }
@@ -629,6 +668,21 @@ const Layout = ({ userData, children }) => {
       saveSelectedDG("DG-1");
     }
   }, [siteConfig, selectedDG]);
+
+  useEffect(() => {
+    if (!userData?.site) return;
+
+    const q = query(
+      collection(db, "dgRunLogs", userData.site, "entries"),
+      where("dgLogAdded", "==", false)
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      setUnaddCount(snap.size); // 🔥 count of pending DG logs
+    });
+
+    return () => unsub();
+  }, [userData?.site]);
 
 
   return (
@@ -696,14 +750,8 @@ const Layout = ({ userData, children }) => {
                 {/* ⚡ Power Source Toggle */}
                 {isMobile && (
                   <div>
-                    <b
-                      style={{ color: "white", background: powerSource === "EB" ? "#429e4eff" : "#b95e5eff", padding: "0px 10px", borderRadius: "6px" }}
-                      onClick={() => navigate("/dg-run-history")}
-                    >
-                      Site Status:
-                    </b>
                     {siteConfig?.dgCount > 0 && (
-                      <div style={{ display: "flex", marginTop: "4px", gap: "2px", justifyContent: "center" }}>
+                      <div style={{ display: "flex", marginTop: "2px", gap: "2px", justifyContent: "center", alignItems: "center" }}>
                         {Array.from({ length: siteConfig.dgCount }, (_, i) => {
                           const dg = `DG-${i + 1}`;
                           return (
@@ -714,18 +762,19 @@ const Layout = ({ userData, children }) => {
                                 saveSelectedDG(dg);
                               }}
                               style={{
-                                padding: "1px 2px",
+                                padding: "1px 8px",
                                 borderRadius: "6px",
                                 border: "1px solid #ccc",
-                                background: selectedDG === dg ? "#2563eb" : "#f3f4f6",
-                                color: selectedDG === dg ? "#fff" : "#000",
+                                background: "#0c2046ff",
+                                color: selectedDG === dg ? "#62db3dff" : "#fff",
                                 cursor: powerSource === "DG" ? "not-allowed" : "pointer",
                                 height: "fit-content",
-                                fontSize: "12px"
+                                fontWeight: selectedDG === dg ? "bold" : "normal",
+                                opacity: selectedDG === dg ? 1 : 0.5,
                               }}
                               disabled={powerSource === "DG"}
                             >
-                              {dg}
+                              <p style={{ fontSize: selectedDG === dg ? "18px" : "11px" }}>{dg}</p>
                             </button>
                           );
                         })}
@@ -815,46 +864,116 @@ const Layout = ({ userData, children }) => {
               </div>
 
               <p className="dashboard-subinfo">
-                <strong>🏢{userData?.site || "All"}</strong>|&nbsp;<strong>🆔{userData.siteId || "All"}</strong>|&nbsp;<strong style={{ color: "whitesmoke", background: `${userData?.isActive ? "#3f8a2985" : "#8a0f0f85"}`, height: "fit-content", borderRadius: "6px", borderBottom: "1px solid" }}>{userData?.isActive ? "Active" : "Inactive"}</strong>
+                <strong>🏢{userData?.site || "All"}</strong>
+                |&nbsp;<strong>🆔{userData.siteId || "All"}</strong>
+                |&nbsp;<strong style={{ color: "whitesmoke", background: `${userData?.isActive ? "#3f8a2985" : "#8a0f0f85"}`, height: "fit-content", borderRadius: "6px", borderBottom: "1px solid" }}>{userData?.isActive ? "Active" : "Inactive"}</strong>
+                |&nbsp;
+                {isMobile && (
+                  <strong
+                    onClick={() => navigate("/dg-run-history")}
+                    style={{
+                      position: "relative",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      background: "#8685be0a",
+                    }}
+                    title="DG Run Logs"
+                    onMouseMove={(e) => e.currentTarget.style.backgroundColor = "#4660aa98"}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#8685be0a"}
+                  >
+                    <strong style={{ textDecoration: "underline", color: "blue", opacity: 100 }}>
+                      🔗
+                    </strong>
+
+                    {unaddCount > 0 && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: "-6px",
+                          right: "-10px",
+                          background: "#dc2626",
+                          color: "#fff",
+                          borderRadius: "999px",
+                          padding: "2px 6px",
+                          fontSize: "10px",
+                          fontWeight: "bold",
+                          lineHeight: 1,
+                        }}
+                      >
+                        {unaddCount}
+                      </span>
+                    )}
+                  </strong>
+                )}
                 <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+                  {siteConfig?.dgCount > 0 && !isMobile && (
+                    <div style={{ display: "flex", gap: "4px", marginTop: "2px", justifyContent: "center", alignItems: "center" }}>
+                      <label style={{ color: "ButtonShadow" }}>Select DG: </label>
+                      {Array.from({ length: siteConfig.dgCount }, (_, i) => {
+                        const dg = `DG-${i + 1}`;
+                        return (
+                          <button
+                            key={dg}
+                            onClick={() => {
+                              setSelectedDG(dg);
+                              saveSelectedDG(dg);
+                            }}
+                            style={{
+                              padding: selectedDG === dg ? "5px 12px" : "4px 10px",
+                              borderRadius: "6px",
+                              border: "1px solid #ccc",
+                              background: "#0c2046ff",
+                              color: selectedDG === dg ? "#62db3dff" : "#fff",
+                              cursor: powerSource === "DG" ? "not-allowed" : "pointer",
+                              height: "fit-contect",
+                              fontSize: "12px",
+                              fontWeight: selectedDG === dg ? "bold" : "normal",
+                              opacity: selectedDG === dg ? 1 : 0.5,
+                            }}
+                            disabled={powerSource === "DG"}
+                          >
+                            <p style={{ fontSize: selectedDG === dg ? "18px" : "12px" }}>{dg}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   {!isMobile && (
                     <div>
                       <b
-                        style={{ color: "white", background: powerSource === "EB" ? "#429e4eff" : "#b95e5eff", padding: "0px 10px", borderRadius: "6px" }}
-                        onClick={() => navigate("/dg-run-history")}
+                        style={{ color: "white", background: powerSource === "EB" ? "#429e4eff" : "#b95e5eff", padding: "0px 2px", borderRadius: "6px", cursor: "pointer", alignItems: "center" }}
                       >
-                        Site Status:
+                        ℹ️Site Status:
+                        <strong onClick={() => navigate("/dg-run-history")} style={{
+                          position: "relative",
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          background: "#00000010",
+                        }}>
+                          🔗
+                          {unaddCount > 0 && (
+                            <span
+                              style={{
+                                position: "absolute",
+                                top: "-6px",
+                                right: "-10px",
+                                background: "#dc2626",
+                                color: "#fff",
+                                borderRadius: "999px",
+                                padding: "2px 6px",
+                                fontSize: "10px",
+                                fontWeight: "bold",
+                                lineHeight: 1,
+                              }}
+                            >
+                              {unaddCount}
+                            </span>
+                          )}
+                        </strong>
                       </b>
-                      {siteConfig?.dgCount > 0 && (
-                        <div style={{ display: "flex", gap: "4px", marginTop: "4px", justifyContent: "center" }}>
-                          {Array.from({ length: siteConfig.dgCount }, (_, i) => {
-                            const dg = `DG-${i + 1}`;
-                            return (
-                              <button
-                                key={dg}
-                                onClick={() => {
-                                  setSelectedDG(dg);
-                                  saveSelectedDG(dg);
-                                }}
-                                style={{
-                                  padding: "6px 12px",
-                                  borderRadius: "6px",
-                                  border: "1px solid #ccc",
-                                  background: selectedDG === dg ? "#2563eb" : "#f3f4f6",
-                                  color: selectedDG === dg ? "#fff" : "#000",
-                                  cursor: powerSource === "DG" ? "not-allowed" : "pointer",
-                                  height: "fit-contect",
-                                  fontSize: "12px"
-                                }}
-                                disabled={powerSource === "DG"}
-                              >
-                                {dg}
-                              </button>
 
-                            );
-                          })}
-                        </div>
-                      )}
                       <div
                         title="Click to toggle power source state"
                         style={{
@@ -1203,10 +1322,10 @@ const Layout = ({ userData, children }) => {
                         👷 <strong>{u.name}</strong>
                         <div style={{ fontSize: "13px", color: "#475569" }}>
                           {u.mobile !== "N/A" && (
-                            <b 
-                            onClick={() => callUser(u.mobile)}
-                            title={`Call ${u.name}`}
-                            style={{cursor:"pointer"}}
+                            <b
+                              onClick={() => callUser(u.mobile)}
+                              title={`Call ${u.name}`}
+                              style={{ cursor: "pointer" }}
                             >📞</b>
                           )}
                           {u.mobile}

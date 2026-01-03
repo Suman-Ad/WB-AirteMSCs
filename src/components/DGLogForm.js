@@ -88,6 +88,7 @@ const DGLogForm = ({ userData }) => {
     const [fieldDGNumbers, setFieldDGNumbers] = useState([]);
     const [fuelFilledDGs, setFuelFilledDGs] = useState([]);
     const dgFillProgress = `${fuelFilledDGs.length} / ${fieldDGNumbers.length}`;
+    const fromHistoryRunId = state?.runId;
 
     const isLastDGFill =
         form.remarks === "Fuel Filling Only" &&
@@ -520,8 +521,26 @@ const DGLogForm = ({ userData }) => {
                     lastUpdated: serverTimestamp()
                 }, { merge: true }); // Use merge:true to avoid overwriting other fields if you add them later
 
+
                 alert("Run log saved ✅");
                 // window.location.reload(); // Reload to reflect changes
+
+                if (fromHistoryRunId) {
+                    const historyRef = doc(
+                        db,
+                        "dgRunLogs",
+                        userData.site,
+                        "entries",
+                        fromHistoryRunId
+                    );
+
+                    await updateDoc(historyRef, {
+                        dgLogAdded: true,
+                        dgLogId: runId,               // link to dgLogs
+                        updatedAt: serverTimestamp(),
+                        updatedBy: uploadedBy,
+                    });
+                }
 
                 setForm({
                     date: "",
@@ -959,54 +978,6 @@ const DGLogForm = ({ userData }) => {
 
                 {/* Hr Meter/ kWH Meter */}
                 <div className="grid grid-cols-2 gap-2">
-                    <label className="form-label">Hr Meter Start:
-                        <span style={{ fontSize: "10px", color: "#030a44ff" }}>(e.g.:- '1800.00', It fetch auto only check during fill)</span>
-                        <input
-                            type="number"
-                            step="0.1"
-                            name="hrMeterStart"
-                            value={form.hrMeterStart}
-                            onChange={handleChange}
-                            placeholder="Hr meter start"
-                            className="p-2 border rounded"
-                            required
-                        />
-                    </label>
-                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
-                        <label className="form-label">Hr Meter End:
-                            <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- '1800.1')</span>
-                            <input
-                                type="number"
-                                step="0.1"
-                                name="hrMeterEnd"
-                                value={form.hrMeterEnd}
-                                onChange={handleChange}
-                                placeholder="Hr meter end"
-                                className="p-2 border rounded"
-                                required
-                            />
-
-                        </label>
-                    )}
-
-                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
-                        <label className="form-label">Total Hr Meter:
-                            <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- '1.0')</span>
-                            <input
-                                type="number"
-                                step="0.1"
-                                name="totalHRMeter"
-                                value={(form.hrMeterEnd - form.hrMeterStart).toFixed(1)}
-                                onChange={handleChange}
-                                placeholder="Hr meter end"
-                                className="p-2 border rounded"
-                                required
-                                disabled
-                            />
-
-                        </label>
-                    )}
-
                     {(form.remarks === "On Load" || form.remarks === "No Load") && (
                         <label className="form-label">Start Reading (kWH):
                             <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Opening kWh)</span>
@@ -1055,6 +1026,55 @@ const DGLogForm = ({ userData }) => {
                             />
                         </label>
                     )}
+                    <label className="form-label">Hr Meter Start:
+                        <span style={{ fontSize: "10px", color: "#030a44ff" }}>(e.g.:- '1800.00', It fetch auto only check during fill)</span>
+                        <input
+                            type="number"
+                            step="0.1"
+                            name="hrMeterStart"
+                            value={form.hrMeterStart}
+                            onChange={handleChange}
+                            placeholder="Hr meter start"
+                            className="p-2 border rounded"
+                            required
+                        />
+                    </label>
+                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
+                        <label className="form-label">Hr Meter End:
+                            <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- '1800.1')</span>
+                            <input
+                                type="number"
+                                step="0.1"
+                                name="hrMeterEnd"
+                                value={form.hrMeterEnd}
+                                onChange={handleChange}
+                                placeholder="Hr meter end"
+                                className="p-2 border rounded"
+                                required
+                            />
+
+                        </label>
+                    )}
+
+                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
+                        <label className="form-label">Total Hr Meter:
+                            <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- '1.0')</span>
+                            <input
+                                type="number"
+                                step="0.1"
+                                name="totalHRMeter"
+                                value={(form.hrMeterEnd - form.hrMeterStart).toFixed(1)}
+                                onChange={handleChange}
+                                placeholder="Hr meter end"
+                                className="p-2 border rounded"
+                                required
+                                disabled
+                            />
+
+                        </label>
+                    )}
+
+                    
                 </div>
 
                 {(form.remarks === "On Load" || form.remarks === "No Load") && (

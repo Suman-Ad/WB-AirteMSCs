@@ -37,7 +37,7 @@ body {
 .daily-log-container textarea {
     /* border rounded px-2 py-1 / w-full */
     border: 1px solid #d1d5db; /* Default border color */
-    border-radius: 0.25rem; /* 4px */
+    border-radius: "6px"; /* 4px */
     padding: 0.25rem 0.5rem; /* 4px 8px */
 }
 

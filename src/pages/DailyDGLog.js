@@ -23,6 +23,7 @@ import {
   BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
+import { calculateFields } from "../utils/calculatedDGLogs";
 
 // ✅ helper to format date as YYYY-MM-DD
 
@@ -109,10 +110,10 @@ const findLastFillingInDGLogs = async (site, monthsToCheck = 3) => {
 };
 
 
-const calculateMonthlySummary = (logs, calculateFields) => {
+const calculateMonthlySummary = (logs, calculateFields, siteConfig) => {
   if (!logs?.length) return null;
 
-  const calculated = logs.map(e => calculateFields(e));
+  const calculated = logs.map(e => calculateFields(e, siteConfig));
 
   const sum = (key) =>
     calculated.reduce((a, b) => a + (Number(b[key]) || 0), 0);
@@ -135,7 +136,14 @@ const calculateMonthlySummary = (logs, calculateFields) => {
 
 
 const DailyDGLog = ({ userData }) => {
+  const siteName = userData?.site || "UnknownSite";
+  const fmt = (val) => (val !== undefined && val !== null ? Number(val).toFixed(2) : "0.0");
+  const fmt1 = (val) => (val !== undefined && val !== null ? Number(val).toFixed(1) : "0.0");
+  const [selectedMonth, setSelectedMonth] = useState(
+    new Date().toISOString().slice(0, 7) // YYYY-MM
+  );
   const [logs, setLogs] = useState([]);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [totalkW, setTotalkW] = useState([]);
   const [fuelAlert, setFuelAlert] = useState(false);
   const [dayFuelCon, setDayFuelCon] = useState(0);
@@ -172,6 +180,7 @@ const DailyDGLog = ({ userData }) => {
   const [loadingPower, setLoadingPower] = useState(true);
   const [dgSeconds, setDgSeconds] = useState(0);
 
+
   /** permissions */
   const isAdmin =
     userData?.role === "Super Admin" ||
@@ -183,273 +192,8 @@ const DailyDGLog = ({ userData }) => {
     userData?.designation === "Vertiv ZM";
 
 
-  // Debounce helper (optional)
-  let timeoutEB;
-  const saveEBRate = (rate) => {
-    clearTimeout(timeoutEB);
-    timeoutEB = setTimeout(async () => {
-      try {
-        // Save fuel rate site-wise
-        await setDoc(doc(db, "EBRates", userData?.site), { rate }, { merge: true });
-        console.log("EB rate saved:", rate);
-      } catch (err) {
-        console.error("Error saving EB rate:", err);
-      }
-    }, 500); // wait 500ms after typing stops
-  };
-
-  // Debounce helper (optional)
-  let timeout;
-  const saveFuelRate = (rate) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(async () => {
-      try {
-        // Save fuel rate site-wise
-        await setDoc(doc(db, "fuelRates", userData?.site), { rate }, { merge: true });
-        console.log("Fuel rate saved:", rate);
-      } catch (err) {
-        console.error("Error saving fuel rate:", err);
-      }
-    }, 500); // wait 500ms after typing stops
-  };
-
-  const [selectedMonth, setSelectedMonth] = useState(
-    new Date().toISOString().slice(0, 7) // YYYY-MM
-  );
-
-  const handleFuelChange = (e) => {
-    const rate = parseFloat(e.target.value) || 0;
-    setFuelRate(rate);
-    saveFuelRate(rate);
-  };
-
-  const handleEBChange = (e) => {
-    const rate = parseFloat(e.target.value) || 0;
-    setEBRate(rate);
-    saveEBRate(rate);
-  };
-
-  // Current month logs - previous year same month
-  const fetchPreviousYearLogs = async () => {
-    if (!siteName || !selectedMonth) return [];
-
-    const [year, month] = selectedMonth.split("-");
-    const prevYearMonth = `${Number(year) - 1}-${month}`;
-
-    try {
-      const snap = await getDocs(
-        collection(db, "dailyDGLogs", siteName, prevYearMonth)
-      );
-
-      return snap.docs.map(d => d.data());
-    } catch (err) {
-      console.error("Previous year fetch failed", err);
-      return [];
-    }
-  };
-
-  const yoy = (current, previous) => {
-    if (!previous || previous === 0) return "N/A";
-    return (((current - previous) / previous) * 100).toFixed(1) + "%";
-  };
-
-  const buildYoYChartData = (current, previous) => [
-    {
-      name: "DG KWH",
-      Current: current.totalDGKWH,
-      Previous: previous.totalDGKWH,
-    },
-    {
-      name: "EB KWH",
-      Current: current.totalEBKWH,
-      Previous: previous.totalEBKWH,
-    },
-    {
-      name: "Solar KWH",
-      Current: current.totalSolarKWH,
-      Previous: previous.totalSolarKWH,
-    },
-  ];
-
-
-  const fetchMultiYearData = async (years = 5) => {
-    if (!siteName || !selectedMonth) return [];
-
-    const [year, month] = selectedMonth.split("-");
-    const result = [];
-
-    for (let i = 0; i < years; i++) {
-      const targetYear = Number(year) - i;
-      const ym = `${targetYear}-${month}`;
-
-      try {
-        const snap = await getDocs(
-          collection(db, "dailyDGLogs", siteName, ym)
-        );
-
-        const logs = snap.docs.map(d => d.data());
-        const summary = calculateMonthlySummary(logs, calculateFields);
-
-        if (summary) {
-          result.push({
-            year: targetYear,
-            DG_KWH: summary.totalDGKWH,
-            Fuel: summary.totalFuel,
-            PUE: Number(summary.avgPUE.toFixed(2)),
-          });
-        }
-      } catch (err) {
-        console.error("Trend fetch failed:", ym, err);
-      }
-    }
-
-    return result.reverse(); // Old → New
-  };
-
-
-
-  const siteName = userData?.site || "UnknownSite";
-
-  const [showEditModal, setShowEditModal] = useState(false);
-
-
-  const fmt = (val) => (val !== undefined && val !== null ? Number(val).toFixed(2) : "0.0");
-  const fmt1 = (val) => (val !== undefined && val !== null ? Number(val).toFixed(1) : "0.0");
-
-
-  // 🔹 Auto calculations (like Excel)
-  const calculateFields = (data) => {
-    const result = { ...data };
-
-    // DG Calculations
-    for (let i = 1; i <= siteConfig.dgCount; i++) {
-      const kwhOpen = parseFloat(result[`DG-${i} KWH Opening`]) || 0;
-      const kwhClose = parseFloat(result[`DG-${i} KWH Closing`]) || 0;
-      const fuelOpen = parseFloat(result[`DG-${i} Fuel Opening`]) || 0;
-      const fuelClose = parseFloat(result[`DG-${i} Fuel Closing`]) || 0;
-      const hrOpen = parseFloat(result[`DG-${i} Hour Opening`]) || 0;
-      const hrClose = parseFloat(result[`DG-${i} Hour Closing`]) || 0;
-      const fuelFill = parseFloat(result[`DG-${i} Fuel Filling`]) || 0;
-      const offLoadFuelCon = parseFloat(result[`DG-${i} Off Load Fuel Consumption`]) || 0;
-      const offLoadHrs = parseFloat(result[`DG-${i} Off Load Hour`]) || 0;
-      const totalFuelCon = fuelOpen - fuelClose + fuelFill;
-
-
-      result[`DG-${i} KWH Generation`] = kwhClose - kwhOpen;
-      result[`DG-${i} Fuel Consumption`] = totalFuelCon;
-      result[`DG-${i} Running Hrs`] = hrClose - hrOpen;
-      result[`DG-${i} CPH`] = hrClose > hrOpen && totalFuelCon - offLoadFuelCon > 0 ? (totalFuelCon - offLoadFuelCon) / (hrClose - hrOpen - offLoadHrs) : 0;
-      result[`DG-${i} SEGR`] = totalFuelCon - offLoadFuelCon > 0 ? (kwhClose - kwhOpen) / (totalFuelCon - offLoadFuelCon) : 0;
-      result[`DG-${i} Run Min`] = (hrClose - hrOpen) * 60;
-      result[`DG-${i} ON Load Consumption`] = Math.max(totalFuelCon - offLoadFuelCon, 0);
-      result[`DG-${i} OFF Load Consumption`] = offLoadFuelCon;
-      result[`DG-${i} ON Load Hour`] = (hrClose - hrOpen - offLoadHrs);
-      result[`DG-${i} OFF Load Hour`] = (offLoadHrs);
-      result[`DG-${i} Fuel Filling`] = (fuelFill);
-
-
-      result[`DG-${i} Avg Fuel/Hr`] =
-        result[`DG-${i} Running Hrs`] > 0
-          ? Number(
-            (result[`DG-${i} Fuel Consumption`] /
-              result[`DG-${i} Running Hrs`]).toFixed(2)
-          )
-          : 0;
-    }
-
-    // EB Calculations
-    for (let i = 1; i <= siteConfig.ebCount; i++) {
-      const ebOpen = parseFloat(result[`EB-${i} KWH Opening`]) || 0;
-      const ebClose = parseFloat(result[`EB-${i} KWH Closing`]) || 0;
-      result[`EB-${i} KWH Generation`] = ebClose - ebOpen;
-    }
-
-    //Solar
-    for (let i = 1; i <= siteConfig.solarCount; i++) {
-      const solarOpen = parseFloat(result[`Solar-${i} KWH Opening`]) || 0;
-      const solarClose = parseFloat(result[`Solar-${i} KWH Opening`]) || 0;
-      result[`Solar-${i} KWH Generation`] = solarClose - solarOpen;
-
-    }
-    // IT Load Calculations
-    const dcpsLoadAmps = parseFloat(result["DCPS Load Amps"]) || 0;
-    const upsLoadKwh = parseFloat(result["UPS Load KWH"]) || 0;
-    result["DCPS Load KWH"] = (dcpsLoadAmps * 54.2) / 1000; // assuming 48V system
-    result["UPS Load KWH"] = upsLoadKwh;
-    result["Total IT Load KWH"] = result["DCPS Load KWH"] + result["UPS Load KWH"];
-
-    // Office Load Consumption(kW)
-    const officeLoad = parseFloat(result["Office kW Consumption"]) || 0;
-    result["Office kW Consumption"] = officeLoad;
-
-
-    // Totals
-    result["Total DG KWH"] =
-      (result["DG-1 KWH Generation"] || 0) +
-      (result["DG-2 KWH Generation"] || 0) +
-      (result["DG-3 KWH Generation"] || 0) +
-      (result["DG-4 KWH Generation"] || 0);
-
-    result["Total EB KWH"] =
-      (result["EB-1 KWH Generation"] || 0) +
-      (result["EB-2 KWH Generation"] || 0) +
-      (result["EB-3 KWH Generation"] || 0) +
-      (result["EB-4 KWH Generation"] || 0);
-
-    result["Total Solar KWH"] =
-      (result["Solar-1 KWH Generation"] || 0) +
-      (result["Solar-2 KWH Generation"] || 0) +
-      (result["Solar-3 KWH Generation"] || 0) +
-      (result["Solar-4 KWH Generation"] || 0);
-
-    result["Total DG Fuel"] =
-      (result["DG-1 Fuel Consumption"] || 0) +
-      (result["DG-2 Fuel Consumption"] || 0) +
-      (result["DG-3 Fuel Consumption"] || 0) +
-      (result["DG-4 Fuel Consumption"] || 0);
-
-    result["Total DG Hours"] =
-      (result["DG-1 Running Hrs"] || 0) +
-      (result["DG-2 Running Hrs"] || 0) +
-      (result["DG-3 Running Hrs"] || 0) +
-      (result["DG-4 Running Hrs"] || 0);
-
-    result["Total Unit Consumption"] =
-      (result["DG-1 KWH Generation"] || 0) +
-      (result["DG-2 KWH Generation"] || 0) +
-      (result["DG-3 KWH Generation"] || 0) +
-      (result["DG-4 KWH Generation"] || 0) +
-      (result["EB-1 KWH Generation"] || 0) +
-      (result["EB-2 KWH Generation"] || 0) +
-      (result["EB-3 KWH Generation"] || 0) +
-      (result["EB-4 KWH Generation"] || 0) +
-      (result["Solar-1 KWH Generation"] || 0) +
-      (result["Solar-2 KWH Generation"] || 0) +
-      (result["Solar-3 KWH Generation"] || 0) +
-      (result["Solar-4 KWH Generation"] || 0);
-
-    result["Site Running kW"] =
-      (result["Total Unit Consumption"] || 0) / 24;
-
-    result["Total Fuel Filling"] =
-      (result["DG-1 Fuel Filling"] || 0) +
-      (result["DG-2 Fuel Filling"] || 0) +
-      (result["DG-3 Fuel Filling"] || 0) +
-      (result["DG-4 Fuel Filling"] || 0);
-
-    //PUE Calculation
-    result["PUE"] = result["Office kW Consumption"] > 0 ? (((result["Total Unit Consumption"] - result["Office kW Consumption"]) / 24) / result["Total IT Load KWH"]).toFixed(2) : "0.00";
-
-    // Cooling Load Calculations
-    const coolingLoad = result["Site Running kW"] - (result["Total IT Load KWH"] + (result["Office kW Consumption"] / 24)) || 0;
-    result["Cooling kW Consumption"] = coolingLoad;
-
-    return result;
-  };
-
-
   // compute individual DG averages
-  const allValues = logs.flatMap((entry) => calculateFields(entry));
+  const allValues = logs.flatMap((entry) => calculateFields(entry, siteConfig));
 
   const totalDG1Kwh = allValues.reduce((sum, cl) => sum + (cl["DG-1 KWH Generation"] || 0), 0);
   const totalDG1OnLoadCon =
@@ -479,7 +223,7 @@ const DailyDGLog = ({ userData }) => {
 
   const monthlyAvgSEGR = (totalKwh / totalOnLoadCon).toFixed(2);
   const pueValues = logs
-    .map((entry) => calculateFields(entry)["PUE"])
+    .map((entry) => calculateFields(entry, siteConfig)["PUE"])
     .filter((val) => val > 0);
   const monthlyAvgPUE = pueValues.length > 0
     ? (
@@ -507,6 +251,52 @@ const DailyDGLog = ({ userData }) => {
     return ym.split("-")[0]; // just the YYYY part
   };
 
+  // Debounce helper (optional) For EB Rate Fetch
+  let timeoutEB;
+  const saveEBRate = (rate) => {
+    clearTimeout(timeoutEB);
+    timeoutEB = setTimeout(async () => {
+      try {
+        // Save fuel rate site-wise
+        await setDoc(doc(db, "EBRates", userData?.site), { rate }, { merge: true });
+        console.log("EB rate saved:", rate);
+      } catch (err) {
+        console.error("Error saving EB rate:", err);
+      }
+    }, 500); // wait 500ms after typing stops
+  };
+
+  // Debounce helper (optional) Fuel Rate Fetch
+  let timeout;
+  const saveFuelRate = (rate) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(async () => {
+      try {
+        // Save fuel rate site-wise
+        await setDoc(doc(db, "fuelRates", userData?.site), { rate }, { merge: true });
+        console.log("Fuel rate saved:", rate);
+      } catch (err) {
+        console.error("Error saving fuel rate:", err);
+      }
+    }, 500); // wait 500ms after typing stops
+  };
+
+
+
+  // Change Function For Fuel Rate
+  const handleFuelChange = (e) => {
+    const rate = parseFloat(e.target.value) || 0;
+    setFuelRate(rate);
+    saveFuelRate(rate);
+  };
+
+  // Change Function For EB Rate
+  const handleEBChange = (e) => {
+    const rate = parseFloat(e.target.value) || 0;
+    setEBRate(rate);
+    saveEBRate(rate);
+  };
+
 
   // 🔹 Fetch logs
   const fetchLogs = async () => {
@@ -524,6 +314,11 @@ const DailyDGLog = ({ userData }) => {
     localStorage.setItem("dailyLogs", JSON.stringify(data));
   };
 
+  // 🔹 Refetch logs on month/site change
+  useEffect(() => {
+    fetchLogs();
+  }, [selectedMonth, siteName]);
+
   useEffect(() => {
     const cached = localStorage.getItem("dailyLogs");
     if (cached) {
@@ -537,212 +332,7 @@ const DailyDGLog = ({ userData }) => {
 
   }, []);
 
-
-  const getNextUnfilledDate = async () => {
-    if (!siteName) return getFormattedDate();
-
-    try {
-      const todayStr = getFormattedDate();
-      const today = new Date(todayStr);
-
-      const y = new Date(today);
-      y.setDate(y.getDate() - 1);
-      const yesterdayStr = y.toISOString().split("T")[0];
-      const monthKey = y.toISOString().slice(0, 7);
-
-      // 🔍 Check if yesterday log exists
-      const q = query(
-        collection(db, "dailyDGLogs", siteName, monthKey),
-        where("Date", "==", yesterdayStr),
-        limit(1)
-      );
-
-      const snap = await getDocs(q);
-
-      // ❌ Yesterday NOT filled → return yesterday
-      if (snap.empty) {
-        return yesterdayStr;
-      }
-
-      // ✅ Yesterday already filled → return today
-      return todayStr;
-
-    } catch (err) {
-      console.error("getNextUnfilledDate error:", err);
-      return getFormattedDate();
-    }
-  };
-
-
-  useEffect(() => {
-    const initDate = async () => {
-      const nextDate = await getNextUnfilledDate();
-
-      setForm(prev => ({
-        ...prev,
-        Date: nextDate
-      }));
-
-      // 🔁 Keep month in sync
-      setSelectedMonth(nextDate.slice(0, 7));
-    };
-
-    initDate();
-  }, [siteName]);
-
-  // After logs are fetched, set last submitted date
-  useEffect(() => {
-    // if (logs.length > 0) {
-    //   // Find the latest available date in logs
-    //   const latest = logs.reduce((max, entry) => {
-    //     return entry.Date > max ? entry.Date : max;
-    //   }, logs[0].Date);
-
-    //   // Add 1 day to latest
-    //   const nextDate = new Date(latest);
-    //   nextDate.setDate(nextDate.getDate() + 1);
-
-    //   // Format back to your expected string
-    //   const formattedNext = getFormattedDate(nextDate);
-
-    //   setForm((prev) => ({ ...prev, Date: formattedNext }));
-    // } else {
-    //   // fallback → today if no logs
-    //   setForm({ Date: getFormattedDate() });
-    // }
-
-    // Fetch EB rate from Firestore
-    const fetchEBRate = async () => {
-      try {
-        const docRef = doc(db, "EBRates", userData?.site);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setEBRate(docSnap.data().rate || 0);
-        } else {
-          setEBRate(0); // default if no rate stored
-        }
-      } catch (err) {
-        console.error("Error fetching EB rate:", err);
-      }
-    };
-
-    // Fetch fuel rate from Firestore
-    const fetchFuelRate = async () => {
-      try {
-        const docRef = doc(db, "fuelRates", userData?.site);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setFuelRate(docSnap.data().rate || 0);
-        } else {
-          setFuelRate(0); // default if no rate stored
-        }
-      } catch (err) {
-        console.error("Error fetching fuel rate:", err);
-      }
-    };
-
-    const fetchConfig = async () => {
-      if (!siteKey) return;
-      const snap = await getDoc(doc(db, "siteConfigs", siteKey));
-      if (snap.exists()) {
-        setSiteConfig(snap.data());
-      }
-    };
-
-    const fetchLastFilling = async () => {
-      setLoadingFilling(true);
-      let lf = findLastFillingInDailyLogs(logs);
-
-      if (!lf) {
-        try {
-          const today = new Date();
-          const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-          const prevMonthKey =
-            prev.toLocaleString("en-US", { month: "short" }).toLowerCase() +
-            "-" +
-            prev.getFullYear();
-
-          const prevSnap = await getDocs(
-            collection(db, "dailyDGLogs", userData.site, prevMonthKey)
-          );
-
-          if (!prevSnap.empty) {
-            const prevLogs = prevSnap.docs.map((d) => d.data());
-            lf = findLastFillingInDailyLogs(prevLogs);
-          }
-        } catch (err) {
-          console.error("Error fetching previous month dailyDGLogs:", err);
-        }
-      }
-
-      if (!lf) {
-        lf = await findLastFillingInDGLogs(userData.site, 3);
-      }
-
-      setLastFilling(lf);
-      setLoadingFilling(false);
-      localStorage.setItem("lastFilling", JSON.stringify(lf))
-    };
-
-    fetchLastFilling();
-
-    fetchConfig();
-    // fetchLogs();
-    fetchEBRate();
-    fetchFuelRate();
-
-  }, [logs, userData?.site, siteKey]);
-
-
-  // const getYesterdayData = () => {
-  //   if (!logs.length || !form.Date) return null;
-
-  //   const selected = new Date(form.Date);     // use selected date
-  //   const yesterdayDate = new Date(selected);
-  //   yesterdayDate.setDate(selected.getDate() - 1);
-
-  //   const ymd = yesterdayDate.toISOString().split("T")[0];
-  //   return logs.find((entry) => entry.Date === ymd) || null;
-  // };
-
-  const getYesterdayLog = async (currentDate) => {
-    if (!currentDate || !siteName) return null;
-
-    // Always compute yesterday safely
-    const d = new Date(currentDate);
-    d.setDate(d.getDate() - 1);
-
-    const ymd = d.toISOString().split("T")[0];   // YYYY-MM-DD
-    const monthKey = d.toISOString().slice(0, 7); // YYYY-MM
-
-    try {
-      const q = query(
-        collection(db, "dailyDGLogs", siteName, monthKey),
-        where("Date", "==", ymd),
-        limit(1)
-      );
-
-      const snap = await getDocs(q);
-      return snap.empty ? null : snap.docs[0].data();
-
-    } catch (err) {
-      console.error("getYesterdayLog failed:", err);
-      return null;
-    }
-  };
-
-  useEffect(() => {
-
-    if (!form?.Date) return;
-
-    const loadYesterday = async () => {
-      const data = await getYesterdayLog(form.Date);
-      setYesterdayLog(data);
-    };
-
-    loadYesterday();
-  }, [form?.Date]);
-
+  // Fetch logs from dgLogs DB and set calculating data in log form 
   const fetchAndAggregateRuns = async (selectedDate) => {
     if (!userData.site || !selectedDate) return;
 
@@ -866,6 +456,266 @@ const DailyDGLog = ({ userData }) => {
     }
   };
 
+  // Current month logs - previous year same month
+  const fetchPreviousYearLogs = async () => {
+    if (!siteName || !selectedMonth) return [];
+
+    const [year, month] = selectedMonth.split("-");
+    const prevYearMonth = `${Number(year) - 1}-${month}`;
+
+    try {
+      const snap = await getDocs(
+        collection(db, "dailyDGLogs", siteName, prevYearMonth)
+      );
+
+      return snap.docs.map(d => d.data());
+    } catch (err) {
+      console.error("Previous year fetch failed", err);
+      return [];
+    }
+  };
+
+  // YOY Data
+  const yoy = (current, previous) => {
+    if (!previous || previous === 0) return "N/A";
+    return (((current - previous) / previous) * 100).toFixed(1) + "%";
+  };
+
+  // YOY Chart
+  const buildYoYChartData = (current, previous) => [
+    {
+      name: "DG KWH",
+      Current: current.totalDGKWH,
+      Previous: previous.totalDGKWH,
+    },
+    {
+      name: "EB KWH",
+      Current: current.totalEBKWH,
+      Previous: previous.totalEBKWH,
+    },
+    {
+      name: "Solar KWH",
+      Current: current.totalSolarKWH,
+      Previous: previous.totalSolarKWH,
+    },
+  ];
+
+  // Fetch Multy Year Data
+  const fetchMultiYearData = async (years = 5) => {
+    if (!siteName || !selectedMonth) return [];
+
+    const [year, month] = selectedMonth.split("-");
+    const result = [];
+
+    for (let i = 0; i < years; i++) {
+      const targetYear = Number(year) - i;
+      const ym = `${targetYear}-${month}`;
+
+      try {
+        const snap = await getDocs(
+          collection(db, "dailyDGLogs", siteName, ym)
+        );
+
+        const logs = snap.docs.map(d => d.data());
+        const summary = calculateMonthlySummary(logs, calculateFields, siteConfig);
+
+        if (summary) {
+          result.push({
+            year: targetYear,
+            DG_KWH: summary.totalDGKWH,
+            Fuel: summary.totalFuel,
+            PUE: Number(summary.avgPUE.toFixed(2)),
+          });
+        }
+      } catch (err) {
+        console.error("Trend fetch failed:", ym, err);
+      }
+    }
+
+    return result.reverse(); // Old → New
+  };
+
+  // Detect Next Unfilled Date Logs
+  const getNextUnfilledDate = async () => {
+    if (!siteName) return getFormattedDate();
+
+    try {
+      const todayStr = getFormattedDate();
+      const today = new Date(todayStr);
+
+      const y = new Date(today);
+      y.setDate(y.getDate() - 1);
+      const yesterdayStr = y.toISOString().split("T")[0];
+      const monthKey = y.toISOString().slice(0, 7);
+
+      // 🔍 Check if yesterday log exists
+      const q = query(
+        collection(db, "dailyDGLogs", siteName, monthKey),
+        where("Date", "==", yesterdayStr),
+        limit(1)
+      );
+
+      const snap = await getDocs(q);
+
+      // ❌ Yesterday NOT filled → return yesterday
+      if (snap.empty) {
+        return yesterdayStr;
+      }
+
+      // ✅ Yesterday already filled → return today
+      return todayStr;
+
+    } catch (err) {
+      console.error("getNextUnfilledDate error:", err);
+      return getFormattedDate();
+    }
+  };
+
+  const getYesterdayLog = async (currentDate) => {
+    if (!currentDate || !siteName) return null;
+
+    // Always compute yesterday safely
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() - 1);
+
+    const ymd = d.toISOString().split("T")[0];   // YYYY-MM-DD
+    const monthKey = d.toISOString().slice(0, 7); // YYYY-MM
+
+    try {
+      const q = query(
+        collection(db, "dailyDGLogs", siteName, monthKey),
+        where("Date", "==", ymd),
+        limit(1)
+      );
+
+      const snap = await getDocs(q);
+      return snap.empty ? null : snap.docs[0].data();
+
+    } catch (err) {
+      console.error("getYesterdayLog failed:", err);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const initDate = async () => {
+      const nextDate = await getNextUnfilledDate();
+
+      setForm(prev => ({
+        ...prev,
+        Date: nextDate
+      }));
+
+      // 🔁 Keep month in sync
+      setSelectedMonth(nextDate.slice(0, 7));
+    };
+
+    fetchLogs();
+    fetchAndAggregateRuns(form.Date)
+    initDate();
+  }, [siteName]);
+
+  // Fetch EB rate from Firestore / Fetch fuel rate from Firestore / Fetch Site Configs from Firestore / Fetch Last Fuel Filling from dailyDGLogs db from Firestore 
+  useEffect(() => {
+    // Fetch EB rate from Firestore
+    const fetchEBRate = async () => {
+      try {
+        const docRef = doc(db, "EBRates", userData?.site);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setEBRate(docSnap.data().rate || 0);
+        } else {
+          setEBRate(0); // default if no rate stored
+        }
+      } catch (err) {
+        console.error("Error fetching EB rate:", err);
+      }
+    };
+
+    // Fetch fuel rate from Firestore
+    const fetchFuelRate = async () => {
+      try {
+        const docRef = doc(db, "fuelRates", userData?.site);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setFuelRate(docSnap.data().rate || 0);
+        } else {
+          setFuelRate(0); // default if no rate stored
+        }
+      } catch (err) {
+        console.error("Error fetching fuel rate:", err);
+      }
+    };
+
+    // Fetch Site Configs from Firestore
+    const fetchConfig = async () => {
+      if (!siteKey) return;
+      const snap = await getDoc(doc(db, "siteConfigs", siteKey));
+      if (snap.exists()) {
+        setSiteConfig(snap.data());
+      }
+    };
+
+    // Fetch Last Fuel Filling from dailyDGLogs db from Firestore
+    const fetchLastFilling = async () => {
+      setLoadingFilling(true);
+      let lf = findLastFillingInDailyLogs(logs);
+
+      if (!lf) {
+        try {
+          const today = new Date();
+          const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          const prevMonthKey =
+            prev.toLocaleString("en-US", { month: "short" }).toLowerCase() +
+            "-" +
+            prev.getFullYear();
+
+          const prevSnap = await getDocs(
+            collection(db, "dailyDGLogs", userData.site, prevMonthKey)
+          );
+
+          if (!prevSnap.empty) {
+            const prevLogs = prevSnap.docs.map((d) => d.data());
+            lf = findLastFillingInDailyLogs(prevLogs);
+          }
+        } catch (err) {
+          console.error("Error fetching previous month dailyDGLogs:", err);
+        }
+      }
+
+      if (!lf) {
+        lf = await findLastFillingInDGLogs(userData.site, 3);
+      }
+
+      setLastFilling(lf);
+      setLoadingFilling(false);
+      localStorage.setItem("lastFilling", JSON.stringify(lf))
+    };
+
+    fetchLastFilling();
+
+    fetchConfig();
+    fetchEBRate();
+    fetchFuelRate();
+
+  }, [logs, userData?.site, siteKey]);
+
+
+  // Get Yesterday Log
+  useEffect(() => {
+
+    if (!form?.Date) return;
+
+    const loadYesterday = async () => {
+      const data = await getYesterdayLog(form.Date);
+      setYesterdayLog(data);
+    };
+
+    loadYesterday();
+  }, [form?.Date]);
+
+
+
   useEffect(() => {
     if (logs.length > 0 && form.Date) {
       // if (!yesterdayLog) return;
@@ -910,12 +760,6 @@ const DailyDGLog = ({ userData }) => {
   }, [logs, form.Date, dayFuelCon, dayFuelFill]);   // ✅ run also when Date changes
 
 
-
-  // 🔹 Refetch logs on month/site change
-  useEffect(() => {
-    fetchLogs();
-  }, [selectedMonth, siteName]);
-
   // 🔹 Year-over-Year comparison
   useEffect(() => {
 
@@ -925,11 +769,11 @@ const DailyDGLog = ({ userData }) => {
       const prevLogs = await fetchPreviousYearLogs();
 
       setCurrentSummary(
-        calculateMonthlySummary(logs, calculateFields)
+        calculateMonthlySummary(logs, calculateFields, siteConfig)
       );
 
       setPreviousSummary(
-        calculateMonthlySummary(prevLogs, calculateFields)
+        calculateMonthlySummary(prevLogs, calculateFields, siteConfig)
       );
     };
 
@@ -949,10 +793,11 @@ const DailyDGLog = ({ userData }) => {
 
   }, [selectedMonth, siteName, logs]);
 
+  // Refresh Current Fuel and Total Unit Consumption
   useEffect(() => {
     {
       logs.map((entry) => {
-        const calculated = calculateFields(entry);
+        const calculated = calculateFields(entry, siteConfig);
         const totalkW = calculated["Total Unit Consumption"];
         const currentFuel =
           allValues.reduce(
@@ -970,47 +815,6 @@ const DailyDGLog = ({ userData }) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
-
-
-  // const handleDateChange = (newDate) => {
-  //   setForm((prev) => ({ ...prev, Date: newDate }));
-
-  //   // ✅ CALL THE NEW FUNCTION HERE
-  //   fetchAndAggregateRuns(newDate);
-
-  //   // Check if entry already exists for this date
-  //   const existing = logs.find((entry) => entry.Date === newDate);
-
-  //   if (existing) {
-  //     // ✅ Populate with saved values
-  //     setForm({ ...existing, Date: newDate });
-  //   } else {
-  //     // ✅ If not found, fall back to yesterday’s data
-  //     const selected = new Date(newDate);
-  //     const yesterdayDate = new Date(selected);
-  //     yesterdayDate.setDate(selected.getDate() - 1);
-  //     const ymd = yesterdayDate.toISOString().split("T")[0];
-
-  //     const yesterday = logs.find((entry) => entry.Date === ymd);
-
-  //     if (yesterday) {
-  //       setForm({
-  //         Date: newDate,
-  //         "DG-1 KWH Opening": yesterday["DG-1 KWH Closing"] || "",
-  //         "DG-2 KWH Opening": yesterday["DG-2 KWH Closing"] || "",
-  //         "DG-1 Fuel Opening": yesterday["DG-1 Fuel Closing"] || "",
-  //         "DG-2 Fuel Opening": yesterday["DG-2 Fuel Closing"] || "",
-  //         "DG-1 Hour Opening": yesterday["DG-1 Hour Closing"] || "",
-  //         "DG-2 Hour Opening": yesterday["DG-2 Hour Closing"] || "",
-  //         "EB-1 KWH Opening": yesterday["EB-1 KWH Closing"] || "",
-  //         "EB-2 KWH Opening": yesterday["EB-2 KWH Closing"] || "",
-  //       });
-  //     } else {
-  //       // ✅ Empty form if neither current nor yesterday’s exists
-  //       setForm({ Date: newDate });
-  //     }
-  //   }
-  // };
 
   const getMonthFromDate = (dateStr) => dateStr?.slice(0, 7);
 
@@ -1074,9 +878,9 @@ const DailyDGLog = ({ userData }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.Date) return alert("Date is required");
-    if (form.Date !== await getNextUnfilledDate()) {
-      return alert("Please fill logs sequentially. Skipped date detected.");
-    }
+    // if (form.Date !== await getNextUnfilledDate()) {
+    //   return alert("Please fill logs sequentially. Skipped date detected.");
+    // }
 
     const nextDate = await getNextUnfilledDate();
 
@@ -1125,10 +929,10 @@ const DailyDGLog = ({ userData }) => {
           return alert(`DG-${i} Fuel Closing cannot be greater than Opening (no fuel filling)`);
         }
       }
-      if (form.Date !== await getNextUnfilledDate()) {
-        alert("Please fill previous pending date first");
-        return;
-      }
+      // if (form.Date !== await getNextUnfilledDate()) {
+      //   alert("Please fill previous pending date first");
+      //   return;
+      // }
     }
 
     // EB validation
@@ -1379,7 +1183,7 @@ const DailyDGLog = ({ userData }) => {
     window.location.reload();
   };
 
-
+  // Preview New data for uploading
   const handlePreviewDGExcel = async (file) => {
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: "array" });
@@ -1399,70 +1203,6 @@ const DailyDGLog = ({ userData }) => {
     setShowPreview(true);
   };
 
-
-  // const handleDGLogExcelUpload = async (e) => {
-  //   const file = e.target.files[0];
-  //   if (!file || !siteName) return;
-
-  //   try {
-  //     const buffer = await file.arrayBuffer();
-  //     const workbook = XLSX.read(buffer, { type: "array" });
-
-  //     const sheet = workbook.Sheets["DG_LOG"];
-  //     if (!sheet) {
-  //       alert("DG_LOG sheet not found");
-  //       return;
-  //     }
-
-  //     const rows = XLSX.utils.sheet_to_json(sheet, {
-  //       defval: "",
-  //       raw: false,
-  //     });
-
-  //     if (!rows.length) {
-  //       alert("Excel is empty");
-  //       return;
-  //     }
-
-  //     for (const row of rows) {
-  //       if (!row.Date) continue;
-
-  //       // 🔐 Validate date
-  //       if (!/^\d{4}-\d{2}-\d{2}$/.test(row.Date)) {
-  //         console.warn("Invalid Date format:", row.Date);
-  //         continue;
-  //       }
-
-  //       const monthKey = row.Date.slice(0, 7); // YYYY-MM
-  //       const docId = row.Date; // SAME AS YOUR DATA
-
-  //       // 🔒 Ensure all values stored as STRING (important)
-  //       const payload = {};
-  //       Object.keys(row).forEach((key) => {
-  //         payload[key] = row[key] === "" ? "" : String(row[key]);
-  //       });
-
-  //       payload.siteName = siteName;
-  //       payload.updatedBy = userData?.email || "";
-  //       payload.updatedAt = new Date();
-
-  //       await setDoc(
-  //         doc(db, "dailyDGLogs", siteName, monthKey, docId),
-  //         payload,
-  //         { merge: true } // ✅ safe overwrite
-  //       );
-  //     }
-
-  //     alert("DG Log Excel uploaded successfully");
-  //     fetchLogs(); // refresh UI
-
-  //   } catch (err) {
-  //     console.error("DG Excel upload failed:", err);
-  //     alert("Upload failed. Check console.");
-  //   }
-  // };
-
-
   // 🔹 Download logs as Excel (Dynamic as per site config)
   const handleDownloadExcel = () => {
     if (!logs.length) {
@@ -1472,7 +1212,7 @@ const DailyDGLog = ({ userData }) => {
 
     // 🔹 Dynamically map logs based on site configuration
     const exportData = logs.map((entry) => {
-      const calculated = calculateFields(entry);
+      const calculated = calculateFields(entry, siteConfig);
       const row = { "Location Name": siteConfig.siteName, "Site ID": siteConfig.siteId };
 
       row[`Date.......${formatMonthName(selectedMonth)}'${formatYear(selectedMonth)}`] = calculated.Date;
@@ -1637,7 +1377,6 @@ const DailyDGLog = ({ userData }) => {
     );
   };
 
-
   // 🔹 Download logs as Excel
   const handleDownloadExcelOnlyDGLogs = () => {
     if (!logs.length) {
@@ -1647,7 +1386,7 @@ const DailyDGLog = ({ userData }) => {
 
     // Map logs with calculations
     const exportData = logs.map((entry) => {
-      const calculated = calculateFields(entry);
+      const calculated = calculateFields(entry, siteConfig);
       return {
         "Location Name": siteConfig.siteName,
         "Site ID": siteConfig.siteId,
@@ -1722,7 +1461,6 @@ const DailyDGLog = ({ userData }) => {
         };
       }
     });
-
 
     // 🔹 Add borders to all data cells
     const range = XLSX.utils.decode_range(ws["!ref"]);
@@ -1799,7 +1537,7 @@ const DailyDGLog = ({ userData }) => {
     // We pass the specific log entry, the site config, and the current fuel rate
     navigate("/ccms-copy", {
       state: {
-        logData: calculateFields(entry), // Send the fully calculated data
+        logData: calculateFields(entry, siteConfig), // Send the fully calculated data
         siteConfig: siteConfig,
         fuelRate: fuelRate,
       },
@@ -1811,7 +1549,7 @@ const DailyDGLog = ({ userData }) => {
     // We pass the specific log entry, the site config, and the current fuel rate
     navigate("/ccms-copy", {
       state: {
-        logData: calculateFields(entry), // Send the fully calculated data
+        logData: calculateFields(entry, siteConfig), // Send the fully calculated data
         siteConfig: siteConfig,
         fuelRate: fuelRate,
       },
@@ -1878,10 +1616,44 @@ const DailyDGLog = ({ userData }) => {
 
       </h1>
 
-      <h1 className={`month ${formatMonthName(selectedMonth)}`}>
-        <strong>
-          {formatMonthName(selectedMonth)}-{formatYear(selectedMonth)}
-        </strong>
+      <h1 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "20px" }}>
+        <label style={{ fontSize: "12px"}}>
+          Select Month:
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => {
+              const newMonth = e.target.value;
+              setSelectedMonth(newMonth);
+
+              // 🔁 Sync Date with Month
+              setForm((prev) => ({
+                ...prev,
+                Date: clampDateToMonth(newMonth, prev.Date),
+              }));
+            }}
+            style={{fontSize:"12px"}}
+            required
+          />
+        </label>
+
+        <b className={`month ${formatMonthName(selectedMonth)}`}>
+          <strong style={{ fontSize:"12px" }}>
+            {formatMonthName(selectedMonth)}-{formatYear(selectedMonth)}
+          </strong>
+        </b>
+
+        <label style={{fontSize:"12px"}}>
+          Date:
+          <input
+            type="date"
+            name="Date"
+            value={form.Date || ""}
+            onChange={(e) => handleDateChange(e.target.value)}
+            style={{fontSize:"12px", borderRadius:"10px"}}
+            required
+          />
+        </label>
       </h1>
 
       {/* <div className="chart-container" > */}
@@ -1890,7 +1662,7 @@ const DailyDGLog = ({ userData }) => {
         if (!logs.length) return null;
 
         // calculate all fields
-        const calculatedLogs = logs.map((e) => calculateFields(e));
+        const calculatedLogs = logs.map((e) => calculateFields(e, siteConfig));
 
         // Average DG CPH (combined DG1+DG2)
         const cphValues = calculatedLogs.flatMap((cl) => [
@@ -1944,8 +1716,6 @@ const DailyDGLog = ({ userData }) => {
             (parseFloat(yesterday["DG-2 Fuel Closing"]) || 0)
           );
         })();
-
-
 
         // Indivisual DG Fuel Fill in Ltrs
         const totalDG1Kw =
@@ -2107,16 +1877,15 @@ const DailyDGLog = ({ userData }) => {
                 🛢️<p style={{ whiteSpace: "nowrap", color: "blue" }}>DG-1:</p><div className="fuel-bar-container" style={{ display: "flex" }}>
                   <p className="fuel-bar"
                     style={{
-                      width: `${(form?.["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100}%`,
+                      width: `${(form?.["DG-1 Fuel Closing"] / (tankCapacity / siteConfig?.dgCount)) * 100}%`,
                       background: `linear-gradient(to right, blue)`,
                       color: "white",
                       fontSize: "7px"
 
-                    }}>⛽{form?.["DG-1 Fuel Closing"]} ltrs.
+                    }}>⛽{form?.["DG-1 Fuel Closing"]}/{(tankCapacity / siteConfig?.dgCount).toFixed(2)} ltrs.
                   </p>
-                  <p style={{ textAlign: "right", color: "black", fontSize: "4px" }}><strong>/{tankCapacity / 2}ltrs.</strong></p>
                 </div>
-                <strong style={((form?.["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((form?.["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%</strong>
+                <strong style={((form?.["DG-1 Fuel Closing"] / (tankCapacity / siteConfig?.dgCount)) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((form?.["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%</strong>
               </div>
 
               <div style={{ display: "flex", marginTop: "0px", fontSize: "10px", maxWidth: "200px", height: "13px" }}>
@@ -2124,16 +1893,15 @@ const DailyDGLog = ({ userData }) => {
                 🛢️<p style={{ whiteSpace: "nowrap", color: "blue" }}>DG-2:</p><div className="fuel-bar-container" style={{ display: "flex" }}>
                   <p className="fuel-bar"
                     style={{
-                      width: `${(form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100}%`,
+                      width: `${(form?.["DG-2 Fuel Closing"] / (tankCapacity / siteConfig?.dgCount)) * 100}%`,
                       background: `linear-gradient(to right, blue)`,
                       color: "white",
                       fontSize: "7px"
 
 
-                    }}>⛽{form?.["DG-2 Fuel Closing"]} ltrs.</p>
-                  <p style={{ textAlign: "right", color: "black", fontSize: "4px" }}><strong>/{tankCapacity / 2}ltrs.</strong></p>
+                    }}>⛽{form?.["DG-2 Fuel Closing"]}/{(tankCapacity / siteConfig?.dgCount).toFixed(2)} ltrs.</p>
                 </div>
-                <strong style={((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%</strong>
+                <strong style={((form?.["DG-2 Fuel Closing"] / (tankCapacity / siteConfig?.dgCount)) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%</strong>
               </div>
               <div style={{ display: "flex", gap: "5px", marginTop: "10px" }}>
                 <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight: "bold", border: "1px solid #fff", borderRadius: "10px", background: "#6ce9e35d" }} ><p>Today Consumption </p> <span> <strong>{dayFuelCon} ltrs.</strong></span></p>
@@ -2288,37 +2056,7 @@ const DailyDGLog = ({ userData }) => {
             {formatMonthName(selectedMonth)}
           </strong>
         </h1>
-        <h1 style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <label>
-            Select Month:
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => {
-                const newMonth = e.target.value;
-                setSelectedMonth(newMonth);
 
-                // 🔁 Sync Date with Month
-                setForm((prev) => ({
-                  ...prev,
-                  Date: clampDateToMonth(newMonth, prev.Date),
-                }));
-              }}
-              required
-            />
-          </label>
-
-          <label>
-            Date:
-            <input
-              type="date"
-              name="Date"
-              value={form.Date || ""}
-              onChange={(e) => handleDateChange(e.target.value)}
-              required
-            />
-          </label>
-        </h1>
 
         {/* 🔹 Last Fuel Filling */}
         {loadingFilling ? (
@@ -2476,7 +2214,7 @@ const DailyDGLog = ({ userData }) => {
               <label>Upload DG Log Excel File:</label>
               <input
                 type="file"
-                accept=".xlsx,.xls"
+                accept=".xlsx, .xls, .csv"
                 onChange={(e) => handlePreviewDGExcel(e.target.files[0])}
               />
             </div>
@@ -2710,7 +2448,7 @@ const DailyDGLog = ({ userData }) => {
         const daysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
         const totalHours = daysInMonth * 24;
 
-        const calculatedLogs = logs.map((e) => calculateFields(e));
+        const calculatedLogs = logs.map((e) => calculateFields(e, siteConfig));
 
         const dgReco = [1, 2].map((dg) => {
           const runHrs = calculatedLogs.reduce(
@@ -2901,7 +2639,7 @@ const DailyDGLog = ({ userData }) => {
 
           <tbody>
             {logs.map((entry, rowIndex) => {
-              const calculated = calculateFields(entry);
+              const calculated = calculateFields(entry, siteConfig);
               // Only show site name and ID for the first row
               const showSiteInfo = rowIndex === 0;
 
