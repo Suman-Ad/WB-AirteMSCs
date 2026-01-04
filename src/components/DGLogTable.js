@@ -788,7 +788,7 @@ const DGLogTable = ({ userData }) => {
       </h2>
       <button
         className="segr-manage-btn warning"
-        onClick={() => Navigate("/dg-log-entry", { state: { siteConfig } })}
+        onClick={() => Navigate("/dg-log-entry", { state: { siteConfig , isDGOnLoad: false} })}
       >
         ✎ DG Run Log Entry
       </button>

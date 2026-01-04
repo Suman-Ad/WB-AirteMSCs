@@ -137,6 +137,8 @@ const Layout = ({ userData, children }) => {
   const prevPowerSourceRef = useRef(null);
 
   const [unaddCount, setUnaddCount] = useState(0);
+  const [dgRunCountMap, setDgRunCountMap] = useState({});
+
 
   // Fetch Site Config
   const [siteConfig, setSiteConfig] = useState({});
@@ -415,6 +417,15 @@ const Layout = ({ userData, children }) => {
       return;
     }
 
+    const nextSource = powerSource === "EB" ? "DG" : "EB";
+    const confirmMsg =
+      nextSource === "DG"
+        ? `⚠️ Confirm Power Change\n\nEB → DG\n\n• ${selectedDG} will start running\n• DG log entry will be created\n\nDo you want to continue?`
+        : `⚠️ Confirm Power Change\n\nDG → EB\n\n• ${selectedDG} will be stopped\n• DG run time will be logged\n\nDo you want to continue?`;
+
+    const confirmed = window.confirm(confirmMsg);
+    if (!confirmed) return; // ❌ stop toggle
+
     powerLockRef.current = true;
     try {
       const now = new Date();
@@ -439,20 +450,6 @@ const Layout = ({ userData, children }) => {
         updateData.currentDgRunSeconds = 0; // 🔥 reset
       }
 
-      // ⏹ DG STOP → calculate run time
-      // if (newSource === "EB" && prev.dgStartTime) {
-      //   const start = prev.dgStartTime.toDate();
-      //   const end = now;
-      //   const runSeconds = Math.floor((end - start) / 1000);
-
-      //   updateData.lastDgRunSeconds = runSeconds; // optional log
-      //   updateData.dgStartTime = null;
-
-      //   // optional: keep cumulative if you need reports
-      //   updateData.dgTotalSeconds =
-      //     (prev.dgTotalSeconds || 0) + runSeconds;
-      // }
-
       // ⏹ DG STOP → log per run
       if (newSource === "EB" && prev.dgStartTime) {
         const start = prev.dgStartTime.toDate();
@@ -475,7 +472,7 @@ const Layout = ({ userData, children }) => {
           (prev.dgTotalSeconds || 0) + runSeconds;
 
         // 🔥 SAVE DG RUN LOG ENTRY
-        await addDoc(
+        const historyRef = await addDoc(
           collection(db, "dgRunLogs", userData.site, "entries"),
           {
             site: userData.site,
@@ -497,6 +494,7 @@ const Layout = ({ userData, children }) => {
         navigate("/dg-log-entry", {
           state: {
             autoFromDgStop: true,
+            runId: historyRef.id,
             dgNumber: selectedDG, // later make dynamic
             startTime: formatTime(start),
             stopTime: formatTime(end),
@@ -616,7 +614,7 @@ const Layout = ({ userData, children }) => {
         await addDoc(
           collection(db, "notifications", allUserDoc.id, "items"),
           {
-            title: `${userData?.site} MSC Site DG Selection Status`,
+            title: `${userData?.site} MSC "DG" Selection Changed:`,
             message,
             date: todayISO,
             createdAt: serverTimestamp(),
@@ -636,6 +634,26 @@ const Layout = ({ userData, children }) => {
     } catch (err) {
       console.error("Failed to save selected DG", err);
     }
+  };
+
+  const confirmAndSelectDG = async (dg) => {
+    // If already selected, do nothing
+    if (selectedDG === dg) return;
+
+    // Block DG change if DG is already running
+    if (powerSource === "DG") {
+      alert("❌ Cannot change DG while DG is running.\n\nPlease switch to EB first.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `⚠️ Confirm DG Selection\n\nYou are about to select ${dg} as the backup DG.\n\nDo you want to continue?`
+    );
+
+    if (!confirmed) return;
+
+    setSelectedDG(dg);
+    await saveSelectedDG(dg);
   };
 
   useEffect(() => {
@@ -664,8 +682,8 @@ const Layout = ({ userData, children }) => {
     const dgIndex = Number(selectedDG.split("-")[1]);
 
     if (dgIndex > maxDG) {
-      setSelectedDG("DG-1");
-      saveSelectedDG("DG-1");
+      setSelectedDG(selectedDG);
+      saveSelectedDG(selectedDG);
     }
   }, [siteConfig, selectedDG]);
 
@@ -679,6 +697,32 @@ const Layout = ({ userData, children }) => {
 
     const unsub = onSnapshot(q, (snap) => {
       setUnaddCount(snap.size); // 🔥 count of pending DG logs
+    });
+
+    return () => unsub();
+  }, [userData?.site]);
+
+  useEffect(() => {
+    if (!userData?.site) return;
+
+    const today = format(new Date(), "yyyy-MM-dd");
+
+    const q = query(
+      collection(db, "dgRunLogs", userData.site, "entries"),
+      where("date", "==", today)
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      const countMap = {};
+
+      snap.docs.forEach((doc) => {
+        const { dgNumber } = doc.data();
+        if (!dgNumber) return;
+
+        countMap[dgNumber] = (countMap[dgNumber] || 0) + 1;
+      });
+
+      setDgRunCountMap(countMap);
     });
 
     return () => unsub();
@@ -704,15 +748,58 @@ const Layout = ({ userData, children }) => {
             <header className="main-header">
               <div className="header-top">
                 {isLargeScreen ? (
-                  <h1 className="title" title="Prepared By @Sumen Adhikari" >
-                    WB Airtel MSC Data Base Management System
-                  </h1>
+                  <>
+                    {/* 👤 Profile Avatar (image OR letter) – ONLY for large screen */}
+                    {userData?.photoURL ? (
+                      <img
+                        src={userData.photoURL}
+                        alt="Profile"
+                        className="profile-avatar"
+                        style={{
+                          width: "50px",
+                          height: "50px",
+                          borderRadius: "50%",
+                          border: "2px solid black",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => navigate("/profile")}
+                      />
+                    ) : userData?.name ? (
+                      <div
+                        className="profile-avatar"
+                        style={{
+                          width: "50px",
+                          height: "50px",
+                          borderRadius: "50%",
+                          border: "2px solid black",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "#ccc",
+                          fontWeight: "bold",
+                          fontSize: "20px",
+                          color: "#333",
+                          cursor: "pointer",
+                        }}
+                        title={userData.name}
+                        onClick={() => navigate("/profile")}
+                      >
+                        {userData.name.charAt(0).toUpperCase()}
+                      </div>
+                    ) : null}
+
+                    {/* 🏷️ Title */}
+                    <h1 className="title" title="Prepared By @Sumen Adhikari">
+                      WB Airtel MSC Data Base Management System
+                    </h1>
+                  </>
                 ) : userData?.photoURL ? (
                   <img
                     src={userData.photoURL}
                     alt="Profile"
                     className="profile-avatar"
-                    style={{ width: "50px", height: "50px", borderRadius: "50%", border: "2px solid black" }}
+                    style={{ width: "50px", height: "50px", borderRadius: "50%", border: "2px solid black", cursor: "pointer", }}
+                    onClick={() => navigate("/profile")}
                   />
                 ) : userData?.name ? (
                   <div
@@ -729,8 +816,10 @@ const Layout = ({ userData, children }) => {
                       fontWeight: "bold",
                       fontSize: "20px",
                       color: "#333",
+                      cursor: "pointer",
                     }}
                     title={userData.name}
+                    onClick={() => navigate("/profile")}
                   >
                     {userData.name.charAt(0).toUpperCase()}
                   </div>
@@ -754,28 +843,48 @@ const Layout = ({ userData, children }) => {
                       <div style={{ display: "flex", marginTop: "2px", gap: "2px", justifyContent: "center", alignItems: "center" }}>
                         {Array.from({ length: siteConfig.dgCount }, (_, i) => {
                           const dg = `DG-${i + 1}`;
+                          const runCount = dgRunCountMap[dg] || 0;
                           return (
                             <button
                               key={dg}
-                              onClick={() => {
-                                setSelectedDG(dg);
-                                saveSelectedDG(dg);
-                              }}
+                              onClick={() => confirmAndSelectDG(dg)}
                               style={{
-                                padding: "1px 8px",
+                                position: "relative",
+                                padding: selectedDG === dg ? "4px 8px" : "4px 8px",
                                 borderRadius: "6px",
                                 border: "1px solid #ccc",
-                                background: "#0c2046ff",
-                                color: selectedDG === dg ? "#62db3dff" : "#fff",
+                                background: selectedDG === dg && powerSource === "DG" ? "green" : "#0c2046ff",
+                                color: selectedDG === dg ? "#c9b71aff" : "#fff",
                                 cursor: powerSource === "DG" ? "not-allowed" : "pointer",
-                                height: "fit-content",
                                 fontWeight: selectedDG === dg ? "bold" : "normal",
-                                opacity: selectedDG === dg ? 1 : 0.5,
+                                opacity: selectedDG === dg ? 1 : 0.6,
                               }}
                               disabled={powerSource === "DG"}
                             >
-                              <p style={{ fontSize: selectedDG === dg ? "18px" : "11px" }}>{dg}</p>
+                              <span style={{ fontSize: selectedDG === dg ? "15px" : "10px" }}>{dg}</span>
+
+                              {/* 🔥 DG Run Count Badge */}
+                              {runCount > 0 && (
+                                <span
+                                  style={{
+                                    position: "absolute",
+                                    top: "-6px",
+                                    right: "-6px",
+                                    background: "#16a34a",
+                                    color: "#fff",
+                                    borderRadius: "999px",
+                                    padding: "2px 6px",
+                                    fontSize: "10px",
+                                    fontWeight: "bold",
+                                    lineHeight: 1,
+                                  }}
+                                  title={`Runs today: ${runCount}`}
+                                >
+                                  {runCount}
+                                </span>
+                              )}
                             </button>
+
                           );
                         })}
                       </div>
@@ -912,28 +1021,46 @@ const Layout = ({ userData, children }) => {
                       <label style={{ color: "ButtonShadow" }}>Select DG: </label>
                       {Array.from({ length: siteConfig.dgCount }, (_, i) => {
                         const dg = `DG-${i + 1}`;
+                        const runCount = dgRunCountMap[dg] || 0;
                         return (
                           <button
                             key={dg}
-                            onClick={() => {
-                              setSelectedDG(dg);
-                              saveSelectedDG(dg);
-                            }}
+                            onClick={() => confirmAndSelectDG(dg)}
                             style={{
+                              position: "relative",
                               padding: selectedDG === dg ? "5px 12px" : "4px 10px",
                               borderRadius: "6px",
                               border: "1px solid #ccc",
-                              background: "#0c2046ff",
-                              color: selectedDG === dg ? "#62db3dff" : "#fff",
+                              background: selectedDG === dg && powerSource === "DG" ? "green" : "#0c2046ff",
+                              color: selectedDG === dg ? "#c9b71aff" : "#fff",
                               cursor: powerSource === "DG" ? "not-allowed" : "pointer",
-                              height: "fit-contect",
-                              fontSize: "12px",
                               fontWeight: selectedDG === dg ? "bold" : "normal",
-                              opacity: selectedDG === dg ? 1 : 0.5,
+                              opacity: selectedDG === dg ? 1 : 0.6,
                             }}
                             disabled={powerSource === "DG"}
                           >
                             <p style={{ fontSize: selectedDG === dg ? "18px" : "12px" }}>{dg}</p>
+
+                            {/* 🔥 DG Run Count Badge */}
+                            {runCount > 0 && (
+                              <span
+                                style={{
+                                  position: "absolute",
+                                  top: "-6px",
+                                  right: "-6px",
+                                  background: "#16a34a",
+                                  color: "#fff",
+                                  borderRadius: "999px",
+                                  padding: "2px 6px",
+                                  fontSize: "10px",
+                                  fontWeight: "bold",
+                                  lineHeight: 1,
+                                }}
+                                title={`Runs today: ${runCount}`}
+                              >
+                                {runCount}
+                              </span>
+                            )}
                           </button>
                         );
                       })}

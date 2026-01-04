@@ -342,11 +342,13 @@ select {
 .btn-activate {
   background: #16a34a;
   color: white;
+  font-size: small;
 }
 
 .btn-deactivate {
   background: #dc2626;
   color: white;
+  font-size: small;
 }
 
 

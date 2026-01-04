@@ -534,7 +534,7 @@ const AdminPanel = ({ userData }) => {
                         {(userData.role === "Admin" || userData.role === "Super Admin") && (
                           <td data-label="UID">{user.uid}</td>
                         )}
-                        <td data-label="Actions">
+                        <td data-label="Actions" style={{ display:"flex"}}>
                           <div className="action-buttons">
                             {["Admin", "Super Admin"].includes(userData.role) && user.id !== userData.uid && (
                               <div className="temp-admin-box">

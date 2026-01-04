@@ -26,6 +26,7 @@ import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import { writeBatch } from "firebase/firestore";
 import "../assets/DutyTracker.css"; // optional
+import { regions, siteList as siteConfigList, siteIdMap } from "../config/siteConfigs";
 
 
 // ---------- Helper utils ----------
@@ -175,16 +176,19 @@ async function getAllUsersMap() {
 }
 // ---------- Main Page Component ----------
 export default function DutyTrackerPage({ currentUser }) {
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
-  const [regionList, setRegionList] = useState([]);
-  const [circleList, setCircleList] = useState([]);
-  const [siteList, setSiteList] = useState([]);
-  const [applingTemplate, setApplingTemplate] = useState(false);
-  const navigate = useNavigate();
-
   const [selectedRegion, setSelectedRegion] = useState(currentUser?.region || "");
   const [selectedCircle, setSelectedCircle] = useState(currentUser?.circle || "");
   const [selectedSite, setSelectedSite] = useState(currentUser?.site || "");
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const regionList = Object.keys(regions);
+  const circleList = selectedRegion ? regions[selectedRegion] : [];
+  const siteList =
+    selectedRegion && selectedCircle
+      ? siteConfigList[selectedRegion]?.[selectedCircle] || []
+      : [];
+
+  const [applingTemplate, setApplingTemplate] = useState(false);
+  const navigate = useNavigate();
 
   const { rosters, loading: rosterLoading, saveRosterForDate } = useDutyRoster(
     selectedSite,
@@ -245,12 +249,28 @@ export default function DutyTrackerPage({ currentUser }) {
         remarks: ""
       });
 
-    if (selectedSite) {
-      loadWeekdayTemplate(selectedSite).then((data) => {
-        if (data) setWeekdayTemplate(data);
-      });
-    }
   }, [rosters, activeDateISO, selectedSite]);
+
+  useEffect(() => {
+    if (!selectedSite) return;
+
+    // reset template to empty when site changes
+    setWeekdayTemplate({
+      Mon: { M: [], E: [], N: [], G: [], WO: [] },
+      Tue: { M: [], E: [], N: [], G: [], WO: [] },
+      Wed: { M: [], E: [], N: [], G: [], WO: [] },
+      Thu: { M: [], E: [], N: [], G: [], WO: [] },
+      Fri: { M: [], E: [], N: [], G: [], WO: [] },
+      Sat: { M: [], E: [], N: [], G: [], WO: [] },
+      Sun: { M: [], E: [], N: [], G: [], WO: [] },
+    });
+
+    // then load site-specific template
+    loadWeekdayTemplate(selectedSite).then((data) => {
+      if (data) setWeekdayTemplate(data);
+    });
+
+  }, [selectedSite]);
 
   async function handleSaveRoster(roster) {
     if (!currentUser) return alert("Not authenticated");
@@ -400,29 +420,45 @@ export default function DutyTrackerPage({ currentUser }) {
       <div className="flex filter-bar">
         <select
           value={selectedRegion}
-          onChange={(e) => setSelectedRegion(e.target.value)}
+          onChange={(e) => {
+            setSelectedRegion(e.target.value);
+            setSelectedCircle("");
+            setSelectedSite("");
+          }}
           className="border rounded px-2 py-1"
         >
           <option value="">Select Region</option>
+          {regionList.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
         </select>
 
         <select
           value={selectedCircle}
-          onChange={(e) => setSelectedCircle(e.target.value)}
+          onChange={(e) => {
+            setSelectedCircle(e.target.value);
+            setSelectedSite("");
+          }}
           className="border rounded px-2 py-1"
+          disabled={!selectedRegion}
         >
           <option value="">Select Circle</option>
+          {circleList.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
         </select>
+
 
         <select
           value={selectedSite}
           onChange={(e) => setSelectedSite(e.target.value)}
           className="border rounded px-2 py-1"
+          disabled={!selectedCircle}
         >
           <option value="">Select Site</option>
-          {siteList.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
+          {siteList.map((siteName) => (
+            <option key={siteName} value={siteName}>
+              {siteName}
             </option>
           ))}
         </select>
@@ -442,6 +478,7 @@ export default function DutyTrackerPage({ currentUser }) {
       <div className="grid">
         {/* Calendar (col-span 2) */}
         <div className="calendar-panel">
+          <b>{selectedSite} - {siteIdMap[selectedSite]}</b>
           <div className="calendar-days-header">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div key={d} style={{
@@ -711,7 +748,7 @@ function ShiftEditor({ shift, roster, siteUsers, onChange }) {
   const current = roster?.shifts?.[shift] || [];
 
   function addUser(uid) {
-    if (current.length >= 2) return alert("Max 2 users allowed");
+    if (current.length >= 3) return alert("Max 3 users allowed");
     if (current.includes(uid)) return;
     onChange([...current, uid]);
   }
@@ -724,7 +761,7 @@ function ShiftEditor({ shift, roster, siteUsers, onChange }) {
     <div className="shift-editor">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontWeight: "500" }}>Shift {shift}</div>
-        <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Max 2</div>
+        <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Max 3</div>
       </div>
 
       <div style={{ marginTop: "12px" }}>
@@ -762,16 +799,27 @@ function ShiftEditor({ shift, roster, siteUsers, onChange }) {
 
       <div style={{ marginTop: "0.5rem" }}>
         <label style={{ fontSize: "14px" }}>Add user</label>
-        <UserSelect siteUsers={siteUsers} onSelect={addUser} />
+        <UserSelect siteUsers={siteUsers} onSelect={addUser} disabled={!siteUsers.length} />
       </div>
     </div>
   );
 }
 
-function UserSelect({ siteUsers, onSelect }) {
+function UserSelect({ siteUsers, onSelect, disabled }) {
   const [q, setQ] = useState("");
+
+  if (disabled) {
+    return (
+      <div style={{ fontSize: "0.875rem", color: "#64748b" }}>
+        Select a site to load users
+      </div>
+    );
+  }
+
   const filtered = siteUsers.filter(
-    (u) => (u.name || "").toLowerCase().includes(q.toLowerCase()) || (u.empId || "").toLowerCase().includes(q.toLowerCase())
+    (u) =>
+      (u.name || "").toLowerCase().includes(q.toLowerCase()) ||
+      (u.empId || "").toLowerCase().includes(q.toLowerCase())
   );
 
   return (

@@ -123,7 +123,7 @@ const DGRunHistory = ({ userData }) => {
   }, [userData?.site, selectedDate]);
 
   return (
-    <div style={{ padding: "16px" }}>
+    <div className="daily-log-container" style={{ padding: "16px" }}>
       <h3>⛽ DG Run History</h3>
 
       <div style={{ marginBottom: "12px" }}>
@@ -276,7 +276,7 @@ const DGRunHistory = ({ userData }) => {
                       ) : (
                         <button
                           onClick={() => handleEdit(r)}
-                          disabled={r.dgLogAdded}
+                          disabled={r.dgLogAdded && userData.name !== "Suman Adhikari"}
                           style={{
                             marginRight: "6px",
                             padding: "4px 6px",
@@ -284,14 +284,14 @@ const DGRunHistory = ({ userData }) => {
                             color: "#fff",
                             borderRadius: "6px",
                             border: "none",
-                            cursor: r.dgLogAdded ? "not-allowed" : "pointer",
+                            cursor: r.dgLogAdded  && userData.name !== "Suman Adhikari" ? "not-allowed" : "pointer",
                           }}
                         >
                           ✏️ Edit
                         </button>
                       )}
                       <button
-                        disabled={isUpdated}
+                        disabled={isUpdated && userData.name !== "Suman Adhikari"}
                         onClick={() => handleDelete(r.id)}
                         style={{
                           padding: "4px 8px",

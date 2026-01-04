@@ -31,7 +31,7 @@ const DGLogForm = ({ userData }) => {
         hrMeterEnd: "",
         kwhMeterStart: "",
         kwhMeterEnd: "",
-        remarks: "On Load",
+        remarks: "No Load",
         fuelConsumption: "",
         kWHReading: "",
         fuelFill: "",
@@ -96,7 +96,7 @@ const DGLogForm = ({ userData }) => {
         fuelFilledDGs.length === fieldDGNumbers.length - 1;
 
     const isDGSelectionDisabled =
-        isEditMode || (form.remarks === "Fuel Filling Only" && isLastDGFill);
+        isEditMode || (form.remarks === "Fuel Filling Only" && isLastDGFill) || fromHistoryRunId;
 
     const fetchTotalFuelFilledForDate = async (date) => {
         if (!userData?.site || !date) return;
@@ -254,7 +254,7 @@ const DGLogForm = ({ userData }) => {
             // Optional: reset remarks to avoid invalid entry
             setForm((prev) => ({
                 ...prev,
-                remarks: "On Load",
+                remarks: "No Load",
             }));
         }
     }, [form.remarks, fuelFilledDGs, fieldDGNumbers, isEditMode]);
@@ -551,7 +551,7 @@ const DGLogForm = ({ userData }) => {
                     hrMeterEnd: "",
                     kwhMeterStart: "",
                     kwhMeterEnd: "",
-                    remarks: "On Load",
+                    remarks: "No Load",
                     fuelConsumption: "",
                     kWHReading: "",
                     fuelFill: "",
@@ -889,7 +889,7 @@ const DGLogForm = ({ userData }) => {
                         name="date"
                         value={form.date}
                         onChange={handleChange}
-                        disabled={isEditMode}
+                        disabled={isEditMode || fromHistoryRunId}
                         className={`w-full p-2 border rounded ${isEditMode ? "bg-gray-200 cursor-not-allowed" : ""}`}
                         required
                     />
@@ -901,11 +901,11 @@ const DGLogForm = ({ userData }) => {
                     <select
                         name="remarks"
                         value={form.remarks}
-                        disabled={isEditMode}
+                        disabled={isEditMode || fromHistoryRunId}
                         onChange={handleChange}
                         className="w-full p-2 border rounded"
                     >
-                        <option value="On Load">On Load</option>
+                        <option value="On Load" disabled={state.isDGOnLoad === false}>On Load</option>
                         <option value="No Load">No Load</option>
                         <option value="Fuel Filling Only">Fuel Filling Only</option>
                     </select>
@@ -978,7 +978,7 @@ const DGLogForm = ({ userData }) => {
 
                 {/* Hr Meter/ kWH Meter */}
                 <div className="grid grid-cols-2 gap-2">
-                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
+                    {(form.remarks === "On Load") && (
                         <label className="form-label">Start Reading (kWH):
                             <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Opening kWh)</span>
                             <input
@@ -994,8 +994,8 @@ const DGLogForm = ({ userData }) => {
                         </label>
                     )}
 
-                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
-                        <label className="form-label">Emd Reading (kWH):
+                    {(form.remarks === "On Load") && (
+                        <label className="form-label">End Reading (kWH):
                             <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Closing kWh)</span>
                             <input
                                 type="number"
@@ -1010,7 +1010,7 @@ const DGLogForm = ({ userData }) => {
                         </label>
                     )}
 
-                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
+                    {(form.remarks === "On Load") && (
                         <label className="form-label">Reading (kWH):
                             <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Closing kWh - Opening kWh = Reading)</span>
                             <input
@@ -1074,7 +1074,7 @@ const DGLogForm = ({ userData }) => {
                         </label>
                     )}
 
-                    
+
                 </div>
 
                 {(form.remarks === "On Load" || form.remarks === "No Load") && (
