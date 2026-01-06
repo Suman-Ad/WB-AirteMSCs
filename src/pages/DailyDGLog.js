@@ -146,9 +146,18 @@ const DailyDGLog = ({ userData }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [totalkW, setTotalkW] = useState([]);
   const [fuelAlert, setFuelAlert] = useState(false);
+  const [dayLogs, setDayLogs] = useState();
+  const [dayDG1FuelCon, setDayDG1FuelCon] = useState(0);
+  const [dayDG2FuelCon, setDayDG2FuelCon] = useState(0);
   const [dayFuelCon, setDayFuelCon] = useState(0);
+  const [dayDG1FuelFill, setDayDG1FuelFill] = useState(0);
+  const [dayDG2FuelFill, setDayDG2FuelFill] = useState(0);
   const [dayFuelFill, setDayFuelFill] = useState(0);
+  const [dayDG1RunningHrs, setDayDG1RunningHrs] = useState(0);
+  const [dayDG2RunningHrs, setDayDG2RunningHrs] = useState(0);
   const [dayRunningHrs, setDayRunningHrs] = useState(0);
+  const [dayDG1OnLoadRunHrs, setDayDG1OnLoadRunHrs] = useState(0)
+  const [dayDG2OnLoadRunHrs, setDayDG2OnLoadRunHrs] = useState(0)
   const [dayonLoadRunHrs, setDayOnLoadRunHrs] = useState(0);
   const [form, setForm] = useState({ Date: "" });
   const navigate = useNavigate();
@@ -161,6 +170,8 @@ const DailyDGLog = ({ userData }) => {
   const [fuelAvalable, setFuelAvalable] = useState();
   // For yesterday's log auto-fill
   const [yesterdayLog, setYesterdayLog] = useState(null);
+  const [yesterdayEBUnits, setYesterdayEBUnits] = useState(0);
+  const [yesterdayDGUnits, setYesterdayDGUnits] = useState(0);
   //for Bulk excel Upload
   const [previewRows, setPreviewRows] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -250,6 +261,19 @@ const DailyDGLog = ({ userData }) => {
   const formatYear = (ym) => {
     return ym.split("-")[0]; // just the YYYY part
   };
+
+  const addDays = (dateStr, days) => {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split("T")[0];
+  };
+
+  const addMonths = (ym, diff) => {
+    const [y, m] = ym.split("-").map(Number);
+    const d = new Date(y, m + diff, 1);
+    return d.toISOString().slice(0, 7);
+  };
+
 
   // Debounce helper (optional) For EB Rate Fetch
   let timeoutEB;
@@ -355,6 +379,18 @@ const DailyDGLog = ({ userData }) => {
       const snapshot = await getDocs(runsCollectionRef);
       if (snapshot.empty) {
         console.log("No DG runs found for this date.");
+        setDayDG1FuelCon(() => 0);
+        setDayDG2FuelCon(() => 0);
+        setDayFuelCon(() => 0);
+        setDayDG1FuelFill(() => 0);
+        setDayDG2FuelFill(() => 0);
+        setDayFuelFill(() => 0);
+        setDayDG1RunningHrs(() => 0);
+        setDayDG2RunningHrs(() => 0);
+        setDayRunningHrs(() => 0);
+        setDayDG1OnLoadRunHrs(() => 0);
+        setDayDG2OnLoadRunHrs(() => 0);
+        setDayOnLoadRunHrs(() => 0);
         return setForm((prevForm) => ({
           ...prevForm,
           // Only update if runs were found for that DG
@@ -367,11 +403,10 @@ const DailyDGLog = ({ userData }) => {
 
           "DG-2 Hour Closing": prevForm["DG-2 Hour Opening"],
 
-
           // Note: The form calculates total consumption from opening/closing fuel.
           // This aggregated value is useful for verification or other logic.
           // For now, we'll focus on populating meter readings.
-        }));; // No runs to process
+        })); // No runs to process
       }
 
       const runs = snapshot.docs.map((doc) => doc.data());
@@ -444,12 +479,21 @@ const DailyDGLog = ({ userData }) => {
         // For now, we'll focus on populating meter readings.
       }));
 
+
+      setDayDG1FuelCon(() => dg1TotalConsumption);
+      setDayDG2FuelCon(() => dg2TotalConsumption);
       setDayFuelCon(() => (dg1TotalConsumption + dg2TotalConsumption));
+      setDayDG1FuelFill(() => dg1FuelFill);
+      setDayDG2FuelFill(() => dg2FuelFill);
       setDayFuelFill(() => (dg1FuelFill + dg2FuelFill));
+      setDayDG1RunningHrs(() => dg1TotalRunHours);
+      setDayDG2RunningHrs(() => dg2TotalRunHours);
       setDayRunningHrs(() => (dg1TotalRunHours + dg2TotalRunHours));
+      setDayDG1OnLoadRunHrs(() => (dg1TotalRunHours - offLoadDG1Run));
+      setDayDG2OnLoadRunHrs(() => (dg2TotalRunHours - offLoadDG2Run));
       setDayOnLoadRunHrs(() => (dg1TotalRunHours + dg2TotalRunHours - offLoadDG1Run - offLoadDG2Run));
       if (dayFuelFill > 0) alert("View CCMS");
-      // setDayLogs(runs);
+      setDayLogs(runs);
 
     } catch (err) {
       console.error("Error fetching and aggregating run logs:", err);
@@ -715,10 +759,9 @@ const DailyDGLog = ({ userData }) => {
   }, [form?.Date]);
 
 
-
   useEffect(() => {
     if (logs.length > 0 && form.Date) {
-      // if (!yesterdayLog) return;
+      if (!yesterdayLog) return;
       const yesterday = yesterdayLog;
       // ✅ CALL THE NEW FUNCTION HERE
       fetchAndAggregateRuns(form.Date);
@@ -757,7 +800,22 @@ const DailyDGLog = ({ userData }) => {
 
     }
 
-  }, [logs, form.Date, dayFuelCon, dayFuelFill]);   // ✅ run also when Date changes
+  }, [logs, form.Date, dayFuelCon, dayFuelFill, yesterdayLog]);   // ✅ run also when Date changes
+
+  // fetch Yesterday EB & DG Units
+  useEffect(() => {
+    if (!yesterdayLog || !siteConfig?.siteName) return;
+
+    const calculatedYesterday = calculateFields(yesterdayLog, siteConfig);
+
+    setYesterdayEBUnits(
+      Number(calculatedYesterday["Total EB KWH"]) || 0
+    );
+
+    setYesterdayDGUnits(
+      Number(calculatedYesterday["Total DG KWH"]) || 0
+    );
+  }, [yesterdayLog, siteConfig]);
 
 
   // 🔹 Year-over-Year comparison
@@ -1617,42 +1675,104 @@ const DailyDGLog = ({ userData }) => {
       </h1>
 
       <h1 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "20px" }}>
-        <label style={{ fontSize: "12px"}}>
+        <label style={{ fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
           Select Month:
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => {
-              const newMonth = e.target.value;
-              setSelectedMonth(newMonth);
+          <div style={{ display: "flex" }}>
+            <span
+              type="button"
+              onClick={() => {
+                const prevMonth = addMonths(selectedMonth, -1);
+                setSelectedMonth(prevMonth);
+                setForm(prev => ({
+                  ...prev,
+                  Date: clampDateToMonth(prevMonth, prev.Date),
+                }));
+              }}
+              title="Previous Month"
+              style={{ width: "20px", alignItems: "center", fontSize: "20px" }}
+            >
+              ◀
+            </span>
 
-              // 🔁 Sync Date with Month
-              setForm((prev) => ({
-                ...prev,
-                Date: clampDateToMonth(newMonth, prev.Date),
-              }));
-            }}
-            style={{fontSize:"12px"}}
-            required
-          />
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => {
+                const newMonth = e.target.value;
+                setSelectedMonth(newMonth);
+                setForm(prev => ({
+                  ...prev,
+                  Date: clampDateToMonth(newMonth, prev.Date),
+                }));
+              }}
+              style={{ fontSize: "12px", borderRadius: "10px" }}
+              required
+            />
+
+            <span
+              type="button"
+              onClick={() => {
+                const nextMonth = addMonths(selectedMonth, 1);
+                if (nextMonth <= getFormattedDate().slice(0, 7)) {
+                  setSelectedMonth(nextMonth);
+                  setForm(prev => ({
+                    ...prev,
+                    Date: clampDateToMonth(nextMonth, prev.Date),
+                  }));
+                }
+              }}
+              disabled={selectedMonth >= getFormattedDate().slice(0, 7)}
+              title="Next Month"
+              style={{ width: "20px", alignItems: "center", fontSize: "20px", cursor: "pointer" }}
+            >
+              ▶
+            </span>
+          </div>
         </label>
 
         <b className={`month ${formatMonthName(selectedMonth)}`}>
-          <strong style={{ fontSize:"12px" }}>
+          <strong style={{ fontSize: "12px" }}>
             {formatMonthName(selectedMonth)}-{formatYear(selectedMonth)}
           </strong>
         </b>
 
-        <label style={{fontSize:"12px"}}>
+        <label style={{ fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}>
           Date:
-          <input
-            type="date"
-            name="Date"
-            value={form.Date || ""}
-            onChange={(e) => handleDateChange(e.target.value)}
-            style={{fontSize:"12px", borderRadius:"10px"}}
-            required
-          />
+          <div style={{ display: "flex" }}>
+            <span
+              type="button"
+              onClick={() => handleDateChange(addDays(form.Date, -1))}
+              disabled={!form.Date}
+              title="Previous Date"
+              style={{ width: "20px", alignItems: "center", fontSize: "20px", cursor: "pointer" }}
+            >
+              ◀
+            </span>
+
+            <input
+              type="date"
+              name="Date"
+              value={form.Date || ""}
+              onChange={(e) => handleDateChange(e.target.value)}
+              style={{ fontSize: "12px", borderRadius: "10px" }}
+              required
+            />
+
+            <span
+              type="button"
+              onClick={() => {
+                const nextDate = addDays(form.Date, 1);
+                if (nextDate <= getFormattedDate()) {
+                  handleDateChange(nextDate);
+                }
+              }}
+              disabled={!form.Date || form.Date >= getFormattedDate()}
+              title="Next Date"
+              style={{ width: "20px", alignItems: "center", fontSize: "20px", cursor: "pointer" }}
+            >
+              ▶
+            </span>
+          </div>
         </label>
       </h1>
 
@@ -1873,41 +1993,179 @@ const DailyDGLog = ({ userData }) => {
                 <strong style={((currentFuel / tankCapacity) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((currentFuel / tankCapacity) * 100).toFixed(0)}%</strong>
               </div>
               <p style={{ fontSize: "10px", textAlign: "left", color: "#5c3c6ece" }}>Total Stock Capacity (Day Tank + External Tank) : <strong>{tankCapacity}Ltrs.</strong></p>
-              <div style={{ display: "flex", marginTop: "0px", fontSize: "10px", maxWidth: "200px", height: "13px" }}>
-                🛢️<p style={{ whiteSpace: "nowrap", color: "blue" }}>DG-1:</p><div className="fuel-bar-container" style={{ display: "flex" }}>
-                  <p className="fuel-bar"
+              {Array.from({ length: siteConfig?.dgCount || 0 }).map((_, idx) => {
+                const dgNo = idx + 1;
+                const fuelClosing = Number(form?.[`DG-${dgNo} Fuel Closing`] || 0);
+                const perDgCapacity = tankCapacity / siteConfig.dgCount;
+                const percent = Math.min((fuelClosing / perDgCapacity) * 100, 100);
+
+                return (
+                  <div
+                    key={dgNo}
                     style={{
-                      width: `${(form?.["DG-1 Fuel Closing"] / (tankCapacity / siteConfig?.dgCount)) * 100}%`,
-                      background: `linear-gradient(to right, blue)`,
-                      color: "white",
-                      fontSize: "7px"
+                      display: "flex",
+                      alignItems: "center",
+                      marginTop: "0px",
+                      fontSize: "10px",
+                      maxWidth: "200px",
+                      height: "13px",
+                    }}
+                  >
+                    🛢️
+                    <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
+                      DG-{dgNo}:
+                    </p>
 
-                    }}>⛽{form?.["DG-1 Fuel Closing"]}/{(tankCapacity / siteConfig?.dgCount).toFixed(2)} ltrs.
-                  </p>
-                </div>
-                <strong style={((form?.["DG-1 Fuel Closing"] / (tankCapacity / siteConfig?.dgCount)) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((form?.["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%</strong>
-              </div>
+                    <div
+                      className="fuel-bar-container"
+                      style={{
+                        display: "flex",
+                        width: "120px",
+                        background: "#eee",
+                        borderRadius: "3px",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <p
+                        className="fuel-bar"
+                        style={{
+                          width: `${percent}%`,
+                          background: "linear-gradient(to right, blue)",
+                          color: "white",
+                          fontSize: "7px",
+                          margin: 0,
+                          textAlign: "center",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        ⛽{fuelClosing}/{perDgCapacity.toFixed(2)} ltrs.
+                      </p>
+                    </div>
 
-              <div style={{ display: "flex", marginTop: "0px", fontSize: "10px", maxWidth: "200px", height: "13px" }}>
+                    <strong
+                      style={{
+                        marginLeft: "4px",
+                        color: percent < 60 ? "red" : "blue",
+                      }}
+                    >
+                      {percent.toFixed(0)}%
+                    </strong>
+                  </div>
+                );
+              })}
 
-                🛢️<p style={{ whiteSpace: "nowrap", color: "blue" }}>DG-2:</p><div className="fuel-bar-container" style={{ display: "flex" }}>
-                  <p className="fuel-bar"
-                    style={{
-                      width: `${(form?.["DG-2 Fuel Closing"] / (tankCapacity / siteConfig?.dgCount)) * 100}%`,
-                      background: `linear-gradient(to right, blue)`,
-                      color: "white",
-                      fontSize: "7px"
-
-
-                    }}>⛽{form?.["DG-2 Fuel Closing"]}/{(tankCapacity / siteConfig?.dgCount).toFixed(2)} ltrs.</p>
-                </div>
-                <strong style={((form?.["DG-2 Fuel Closing"] / (tankCapacity / siteConfig?.dgCount)) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((form?.["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%</strong>
-              </div>
               <div style={{ display: "flex", gap: "5px", marginTop: "10px" }}>
-                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight: "bold", border: "1px solid #fff", borderRadius: "10px", background: "#6ce9e35d" }} ><p>Today Consumption </p> <span> <strong>{dayFuelCon} ltrs.</strong></span></p>
-                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight: "bold", border: "1px solid #fff", borderRadius: "10px", background: "#6ce9e35d" }} ><p>Today DG Run</p> <span> <strong>{(dayRunningHrs).toFixed(1)} Hrs.</strong> <p style={{ fontSize: "8px" }}>({(dayRunningHrs * 60).toFixed(2)} Min.)</p></span></p>
-                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight: "bold", border: "1px solid #fff", borderRadius: "10px", background: "#6ce9e35d" }} ><p>Total Power</p> <span> <strong>{(dayonLoadRunHrs).toFixed(1)} Hrs.</strong> <p style={{ fontSize: "8px" }}>({(dayonLoadRunHrs * 60).toFixed(2)} Min.)</p></span></p>
-                <p style={{ textAlign: "Center", color: "black", fontSize: "12px", fontWeight: "bold", border: "1px solid #fff", borderRadius: "10px", background: "#6ce9e35d" }} ><p>Total Fuel Filled</p> <span><strong>{dayFuelFill} ltrs.</strong></span></p>
+                <p
+                  style={{
+                    textAlign: "Center",
+                    color: "black", fontSize: "12px",
+                    fontWeight: "bold",
+                    border: "1px solid #fff",
+                    borderRadius: "10px",
+                    background: "#6ce9e35d"
+                  }}
+                >
+                  <p>Today Consumption </p>
+                  <span>
+                    <strong>{dayFuelCon} ltrs.</strong>
+                    <p style={{ fontSize: "9px" }}>DG-1 {dayDG1FuelCon} & DG-2 {dayDG2FuelCon}</p>
+                  </span>
+                </p>
+                <p
+                  style={{
+                    textAlign: "Center",
+                    color: "black",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    border: "1px solid #fff",
+                    borderRadius: "10px",
+                    background: "#6ce9e35d"
+                  }}
+                >
+                  <p>Today DG Run</p>
+                  <span>
+                    <strong>{(dayRunningHrs).toFixed(1)} Hrs.</strong>
+                    <p style={{ fontSize: "8px" }}>({(dayRunningHrs * 60).toFixed(2)} Min.)</p>
+                    <p style={{ fontSize: "9px" }}>
+                      DG-1 {(dayDG1RunningHrs).toFixed(1)} & DG-2 {(dayDG2RunningHrs).toFixed(1)}
+                    </p>
+                  </span>
+                </p>
+                <p
+                  style={{
+                    textAlign: "Center",
+                    color: "black",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    border: "1px solid #fff",
+                    borderRadius: "10px",
+                    background: "#6ce9e35d"
+                  }}
+                >
+                  <p>Total Power</p>
+                  <span>
+                    <strong>{(dayonLoadRunHrs).toFixed(1)} Hrs.</strong>
+                    <p style={{ fontSize: "8px" }}>({(dayonLoadRunHrs * 60).toFixed(2)} Min.)</p>
+                    <p style={{ fontSize: "9px" }}>
+                      DG-1 {(dayDG1OnLoadRunHrs).toFixed(1)} & DG-2 {(dayDG2OnLoadRunHrs).toFixed(1)}
+                    </p>
+                  </span>
+                </p>
+                <p
+                  style={{
+                    textAlign: "Center",
+                    color: "black",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    border: "1px solid #fff",
+                    borderRadius: "10px",
+                    background: "#6ce9e35d"
+                  }}
+                >
+                  <p>Total Fuel Filled</p>
+                  <span>
+                    <strong>{dayFuelFill} ltrs.</strong>
+                    <p style={{ fontSize: "9px" }}>
+                      DG-1 {dayDG1FuelFill} & DG-2 {dayDG2FuelFill}
+                    </p>
+                  </span>
+                </p>
+                <p
+                  style={{
+                    textAlign: "Center",
+                    color: "black",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    border: "1px solid #fff",
+                    borderRadius: "10px",
+                    background: "#6ce9e35d"
+                  }}
+                >
+                  <p>Yesterday EB Units</p>
+                  <span>
+                    <strong>{ yesterdayEBUnits } kW.</strong>
+                  </span>
+                  <p>Yesterday DG Units</p>
+                  <span>
+                    <strong>{ yesterdayDGUnits } kW.</strong>
+                  </span>
+                </p>
+                <p
+                  style={{
+                    textAlign: "Center",
+                    color: "black",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                    border: "1px solid #fff",
+                    borderRadius: "10px",
+                    background: "#6ce9e35d"
+                  }}
+                >
+                  <p>Yesterday Total Units</p>
+                  <span>
+                    <strong>{ yesterdayEBUnits + yesterdayDGUnits } kW.</strong>
+                  </span>
+                </p>
               </div>
             </div>
 

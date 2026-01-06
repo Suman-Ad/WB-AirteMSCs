@@ -3,38 +3,12 @@ import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import "../assets/PMCalendar.css";
+import { regions, siteList, siteIdMap } from "../config/siteConfigs";
 
 // Dynamic Year Generation (current year + next year)
 const currentYear = new Date().getFullYear();
 const years = [currentYear, currentYear + 1];
 
-// Region-Circle Structure
-const regions = {
-  East: ["BR & JH", "NESA", "OR", "WB"],
-  West: ["GUJ", "MPCG", "ROM"],
-  North: ["DEL", "HR", "PJ", "RJ", "UP", "UK"],
-  South: ["AP", "KA", "KL", "TN", "TS"]
-};
-
-// Site List Structure
-const siteList = {
-  "East": {
-    "BR & JH": ["Patna", "Jharkhand"],
-    "WB": ["Andaman", "Asansol", "Berhampore", "DLF", "Globsyn", "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower", "New Alipore", "SDF", "Siliguri"],
-  },
-  "West": {
-    "GUJ": ["Ahmedabad"],
-    "MPCG": ["Indore"]
-  },
-  "North": {
-    "DEL": ["DLF", "Mira Tower"],
-    "HR": ["GLOBSYN"]
-  },
-  "South": {
-    "KA": ["Infinity-I", "Infinity-II"],
-    "TS": ["Siliguri"]
-  }
-};
 
 // Equipment Categories
 const equipmentCategories = ["Power", "HVAC", "UPS", "Fire Safety"];

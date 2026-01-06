@@ -37,13 +37,13 @@
 .pm-controls select,
 .pm-controls input[type="text"],
 .pm-controls input[type="number"],
-.pm-controls input[type="date"] {
+/* .pm-controls input[type="date"] {
   padding: 8px 12px;
   border: 1px solid #bdc3c7;
   border-radius: 4px;
   font-size: 14px;
   min-width: 180px;
-}
+} */
 
 .pm-controls select:disabled {
   background-color: #f2f2f2;
@@ -126,11 +126,11 @@
   background-color: #e8f4fc;
 }
 
-.pm-table input[type="date"] {
+/* .pm-table input[type="date"] {
   padding: 5px;
   border: 1px solid #ced4da;
   border-radius: 4px;
-}
+} */
 
 .pm-table button {
   background-color: #e74c3c;

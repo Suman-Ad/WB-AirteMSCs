@@ -835,7 +835,7 @@ const AllSitesDGLogs = ({ userData }) => {
                             </p>
                         </div>
 
-                        <p style={{ borderTop: "1px solid #eee" }}><strong>⛽ Total Fuel Consumption – {fmt(summary.totalFuel)} Ltrs</strong></p>
+                        <p style={{ borderTop: "1px solid #eee" }}><strong>⛽ Total Fuel Consumption – {fmt(summary.totalFuel)}</strong><b style={{ fontSize: "10px" }}>Ltrs. = ₹{fmt(summary.totalFuel * currentFuelRate)}</b></p>
                         <div style={{ display: "flex" }}>
                             <p style={{ marginLeft: "20px" }}>
                                 • DG-1: <strong>{fmt1(summary.totalDG1OnLoadCon + summary.totalDG1OffLoadCon)} Ltrs</strong>

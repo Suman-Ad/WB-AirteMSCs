@@ -905,7 +905,7 @@ const DGLogForm = ({ userData }) => {
                         onChange={handleChange}
                         className="w-full p-2 border rounded"
                     >
-                        <option value="On Load" disabled={state.isDGOnLoad === false}>On Load</option>
+                        <option value="On Load" disabled={state.isDGOnLoad === false && !userData?.designation === "Vertiv Site Infra Engineer"}>On Load</option>
                         <option value="No Load">No Load</option>
                         <option value="Fuel Filling Only">Fuel Filling Only</option>
                     </select>

@@ -18,44 +18,8 @@ import {
   getDownloadURL,
 } from "firebase/storage";
 import "../assets/DHRStyle.css"; // uses your main style file
+import { regions, siteList, siteIdMap } from "../config/siteConfigs";
 
-// Region -> circles mapping
-const regions = {
-  East: ["BH & JH", "NESA", "OR", "WB"],
-  West: ["GUJ", "MPCG", "ROM"],
-  North: ["DEL", "HR", "PJ", "RJ", "UP", "UK"],
-  South: ["AP", "KA", "KL", "TN", "TS"],
-};
-
-// circle -> site list mapping (kept same as original)
-const siteList = {
-  East: {
-    "BH & JH": ["Patliputra", "Bhaglpur", "Muzaffarpur New", "Muzaffarpur Old", "Ranchi", "Ranchi telenor", "Marwari Awas"],
-    WB: ["Andaman", "Asansol", "Berhampore", "DLF", "Globsyn", "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower", "New Alipore", "SDF", "Siliguri"],
-    NESA: ["Aizwal", "Guwahati", "Jorabat New", "Jorhat", "Shillong"],
-    OR: ["Cuttack", "Sambalpur"],
-  },
-  West: {
-    GUJ: ["Astron Park", "Bharti House", "Changodar", "Rajkot Madhapar-New", "Rajkot Mavdi Old", "Surat", "Surat Telenor"],
-    MPCG: ["Bhopal Center 1st floor", "Bhopal Center 4th floor", "Gobindpura", "Gwalior", "Indore Geeta Bhawan", "Jabalpur", "Pardesipura", "Raipur"],
-    ROM: ["Nagpur", "Vega Center", "E-Space", "Kolhapur", "Nagpur New", "Nagpur BTSOL"],
-  },
-  North: {
-    DEL: ["DLF", "Mira Tower"],
-    HR: ["GLOBSYN"],
-    PJ: [],
-    RJ: [],
-    UP: [],
-    UK: [],
-  },
-  South: {
-    KA: ["Infinity-I", "Infinity-II"],
-    TS: ["Siliguri"],
-    AP: [],
-    KL: [],
-    TN: [],
-  },
-};
 
 export default function ManageCompliance({ userData }) {
   const userRole = userData?.role;

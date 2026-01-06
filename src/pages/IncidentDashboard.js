@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { collection, getDocs, query, where, orderBy, setDoc, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import '../assets/IncidentDashboard.css';
 import { Link, useNavigate } from 'react-router-dom';
-import { siteList } from "../config/sitelist";
+import { regions, siteList, siteIdMap} from "../config/siteConfigs";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";

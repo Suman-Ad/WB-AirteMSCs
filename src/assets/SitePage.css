@@ -21,12 +21,12 @@
   margin-bottom: 1rem;
 }
 
-.filter-bar input,
+/* .filter-bar input,
 .sitepage-filters input[type="month"] {
   padding: 0.3rem 0.5rem;
   border-radius: 4px;
   border: 1px solid #ccc;
-}
+} */
 
 /* Clear Filter Button */
 .filter-bar button,
