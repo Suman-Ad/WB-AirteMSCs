@@ -11,7 +11,7 @@ const SiteConfigEdit = ({ userData }) => {
     securityTeam: []  // NEW
   });
   const storage = getStorage();
-  const [activeSection, setActiveSection] = useState("ccms");
+  const [activeSection, setActiveSection] = useState("overview");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -74,7 +74,6 @@ const SiteConfigEdit = ({ userData }) => {
     { key: "overview", label: "Overview" },
     { key: "ccms", label: "CCMS / HSD Details" },
     { key: "equipment", label: "Site Equipment Details" },
-    { key: "dhr", label: "DHR Status" },
     { key: "oem", label: "Quarterly OEM CPH" },
   ];
 
@@ -163,7 +162,7 @@ const SiteConfigEdit = ({ userData }) => {
                 <option value="Leased">Leased</option>
                 <option value="Rental">Rental</option>
               </select>
-              <label>Factory</label>  
+              <label>Factory</label>
               <select name="factory" value={config.factory || ""} onChange={handleChange}>
                 <option value="">Select Factory</option>
                 <option value="MNG">MNG</option>
@@ -457,21 +456,117 @@ const SiteConfigEdit = ({ userData }) => {
           {activeSection === "equipment" && (
             <div className="chart-container">
               <h1>Site Equipment Details</h1>
+              {/* DG COUNT */}
               <label>DG Count</label>
               <input
                 type="number"
                 name="dgCount"
                 value={config.dgCount || 0}
-                onChange={handleChange}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    dgCount: Number(e.target.value),
+                    dgConfigs: prev.dgConfigs || {},
+                  }))
+                }
               />
 
-              <lable>DG Manufacturing Date</lable>
-              <input
-                type="date"
-                name="dgMfgDate"
-                value={config.dgMfgDate || ""}
-                onChange={handleChange}
-              />
+              {/* 🔹 DG WISE CONFIG */}
+              {Array.from({ length: config.dgCount || 0 }).map((_, i) => {
+                const dgKey = `DG-${i + 1}`;
+                const dg = config.dgConfigs?.[dgKey] || {};
+
+                return (
+                  <div
+                    key={dgKey}
+                    style={{
+                      marginTop: "15px",
+                      padding: "12px",
+                      border: "1px solid #ddd",
+                      borderRadius: "8px",
+                      background: "#fafafa11"
+                    }}
+                  >
+                    <h4>{dgKey} Details</h4>
+
+                    {/* Capacity */}
+                    <label>{dgKey} Capacity (kVA)</label>
+                    <input
+                      type="number"
+                      value={dg.capacityKva || ""}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          dgConfigs: {
+                            ...prev.dgConfigs,
+                            [dgKey]: {
+                              ...prev.dgConfigs?.[dgKey],
+                              capacityKva: Number(e.target.value),
+                            },
+                          },
+                        }))
+                      }
+                    />
+
+                    {/* ✅ DG MANUFACTURE DATE */}
+                    <label>{dgKey} Manufacture Date</label>
+                    <input
+                      type="date"
+                      value={dg.mfgDate || ""}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          dgConfigs: {
+                            ...prev.dgConfigs,
+                            [dgKey]: {
+                              ...prev.dgConfigs?.[dgKey],
+                              mfgDate: e.target.value,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                    
+                    {/* Day Tank */}
+                    <label>{dgKey} Day Tank Capacity (Ltrs)</label>
+                    <input
+                      type="number"
+                      value={dg.dayTankLtrs || ""}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          dgConfigs: {
+                            ...prev.dgConfigs,
+                            [dgKey]: {
+                              ...prev.dgConfigs?.[dgKey],
+                              dayTankLtrs: Number(e.target.value),
+                            },
+                          },
+                        }))
+                      }
+                    />
+
+                    {/* External Tank */}
+                    <label>{dgKey} External Tank Capacity (Ltrs)</label>
+                    <input
+                      type="number"
+                      value={dg.externalTankLtrs || ""}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          dgConfigs: {
+                            ...prev.dgConfigs,
+                            [dgKey]: {
+                              ...prev.dgConfigs?.[dgKey],
+                              externalTankLtrs: Number(e.target.value),
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </div>
+                );
+              })}
 
               <label>SMPS Count</label>
               <input
@@ -518,100 +613,6 @@ const SiteConfigEdit = ({ userData }) => {
                 type="number"
                 name="solarCount"
                 value={config.solarCount || 0}
-                onChange={handleChange}
-              />
-
-              <label>DG Capacity(kVA)</label>
-              <input
-                type="number"
-                name="dgCapacity"
-                value={config.dgCapacity || 0}
-                onChange={handleChange}
-              />
-
-              <label>DG Day Tank Capacity(Ltrs)</label>
-              <input
-                type="number"
-                name="dgDayTankCapacity"
-                value={config.dgDayTankCapacity || 0}
-                onChange={handleChange}
-              />
-
-              <label>DG External Tank Capacity(Ltrs)</label>
-              <input
-                type="number"
-                name="dgExtrnlTankCapacity"
-                value={config.dgExtrnlTankCapacity || 0}
-                onChange={handleChange}
-              />
-            </div>
-          )}
-
-          {activeSection === "dhr" && (
-            <div className="chart-container">
-              <h1>DHR Status</h1>
-              <label>EB Status</label>
-              <input
-                type="text"
-                name="ebStatus"
-                value={config.ebStatus || ""}
-                onChange={handleChange}
-              />
-              <label>DG Status</label>
-              <input
-                type="text"
-                name="dgStatus"
-                value={config.dgStatus || ""}
-                onChange={handleChange}
-              />
-              <label>SMPS Status</label>
-              <input
-                type="text"
-                name="smpsStatus"
-                value={config.smpsStatus || ""}
-                onChange={handleChange}
-              />
-
-              <label>UPS Status</label>
-              <input
-                type="text"
-                name="upsStatus"
-                value={config.upsStatus || ""}
-                onChange={handleChange}
-              />
-              <label>PAC Status</label>
-              <input
-                type="text"
-                name="pacStatus"
-                value={config.pacStatus || ""}
-                onChange={handleChange}
-              />
-              <label>CRV Status</label>
-              <input
-                type="text"
-                name="crvStatus"
-                value={config.crvStatus || ""}
-                onChange={handleChange}
-              />
-              <label>Major Status</label>
-              <input
-                type="text"
-                name="majorActivity"
-                value={config.majorActivity || ""}
-                onChange={handleChange}
-              />
-              <label>In-House PM</label>
-              <input
-                type="text"
-                name="inHousePm"
-                value={config.inHousePm || ""}
-                onChange={handleChange}
-              />
-              <label>Fault Details</label>
-              <input
-                type="text"
-                name="faultDetails"
-                value={config.faultDetails || ""}
                 onChange={handleChange}
               />
             </div>

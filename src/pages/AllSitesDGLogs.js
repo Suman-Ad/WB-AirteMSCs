@@ -800,14 +800,14 @@ const AllSitesDGLogs = ({ userData }) => {
                                 value={currentEBRate}
                                 onChange={handleFuelChange}
                                 style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-                            /><strong style={{ fontSize: "10px" }}>/Ltr. = ₹{fmt(summary.totalEBKWH * currentEBRate)}</strong>
+                            /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{color: "#302f74ff"}}>Cost: ₹{fmt(summary.totalEBKWH * currentEBRate)}</b></strong>
                         </p>
                         )}
                         {summary.totalSolarKWH > 0 && (
                             <p style={{ borderTop: "1px solid #eee" }}><strong>Total Solar Unit Generation - {fmt(summary.totalSolarKWH)} Units</strong></p>
                         )}
 
-                        <p style={{ borderTop: "1px solid #eee" }}><strong>⚡ Total DG KW Generation – {fmt(summary.totalKwh)} kW</strong></p>
+                        <p style={{ borderTop: "1px solid #eee" }}><strong>⚡ Total DG KW Generation – {fmt(summary.totalKwh)} kW</strong> <b style={{ fontSize: "10px", color: "#302f74ff" }}>(Cost: ₹{fmt((summary.totalFuel * currentFuelRate) / summary.totalKwh)}/Unit.)</b></p>
                         <div style={{ display: "flex" }}>
                             <p style={{ marginLeft: "20px" }}>
                                 • DG-1: <strong>{fmt1(summary.totalDG1Kw)} kW</strong>
@@ -824,7 +824,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                 value={currentFuelRate}
                                 onChange={handleFuelChange}
                                 style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-                            /><strong style={{ fontSize: "10px" }}>/Ltr. = ₹{fmt(summary.totalFilling * currentFuelRate)}</strong>
+                            /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{color: "#302f74ff"}}>Cost: ₹{fmt(summary.totalFilling * currentFuelRate)}</b></strong>
                         </p>
                         <div style={{ display: "flex" }}>
                             <p style={{ marginLeft: "20px" }}>
@@ -835,7 +835,7 @@ const AllSitesDGLogs = ({ userData }) => {
                             </p>
                         </div>
 
-                        <p style={{ borderTop: "1px solid #eee" }}><strong>⛽ Total Fuel Consumption – {fmt(summary.totalFuel)}</strong><b style={{ fontSize: "10px" }}>Ltrs. = ₹{fmt(summary.totalFuel * currentFuelRate)}</b></p>
+                        <p style={{ borderTop: "1px solid #eee" }}><strong>⛽ Total Fuel Consumption – {fmt(summary.totalFuel)}Ltrs.</strong> <b style={{ fontSize: "10px", color: "#302f74ff" }}>(Cost: ₹{fmt(summary.totalFuel * currentFuelRate)})</b></p>
                         <div style={{ display: "flex" }}>
                             <p style={{ marginLeft: "20px" }}>
                                 • DG-1: <strong>{fmt1(summary.totalDG1OnLoadCon + summary.totalDG1OffLoadCon)} Ltrs</strong>

@@ -584,7 +584,7 @@ const DGLogForm = ({ userData }) => {
         const start = parseFloat(form.hrMeterStart) || 0;
         const end = parseFloat(form.hrMeterEnd) || 0;
         const kw = parseFloat(form.kWHReading) || 0;
-        const capacity = parseFloat(siteConfig?.dgCapacity) || 0;
+        const capacity = parseFloat(siteConfig.dgConfigs?.[dgNumber]?.capacityKva) || 0;
         const fuelFromForm = parseFloat(form.fuelConsumption) || 0; // manual override if user typed
 
         const hmr = end - start;
@@ -877,7 +877,7 @@ const DGLogForm = ({ userData }) => {
         <div className="daily-log-container">
             <h2 className="dashboard-header">
                 <strong>
-                    🎯 {isEditMode ? "Update DG Log" : "Daily DG Log Entry"} - {userData.site}
+                    🎯 {isEditMode ? `Update ${siteConfig.dgConfigs?.[dgNumber]?.capacityKva}kVA DG Log` : `New Entry ${siteConfig.dgConfigs?.[dgNumber]?.capacityKva}kVA DG Log`} - {userData.site}
                 </strong>
             </h2>
 
@@ -1240,7 +1240,7 @@ const DGLogForm = ({ userData }) => {
 
                 {calculationResult && (
                     <div className="child-container">
-                        <h2 style={{ fontSize: "20px", borderBottom: "3px solid #eee" }}><strong>🔢 {siteConfig.dgCapacity}kVA</strong> Cummins DG CPH/SEGR Calculation Results:</h2>
+                        <h2 style={{ fontSize: "20px", borderBottom: "3px solid #eee" }}><strong>🔢 {siteConfig.dgConfigs?.[dgNumber]?.capacityKva}kVA</strong> Cummins DG CPH/SEGR Calculation Results:</h2>
                         <pre >{calculationResult}</pre>
                     </div>
                 )}

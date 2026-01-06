@@ -275,13 +275,6 @@ export default function MonthlyData({ userData }) {
         return -1;
     };
 
-    // OEM data exists for this percent — use OEM CPH table
-    const runPercent = (avgSiteRunningKw / (siteConfig.dgCapacity * 0.8)) * 100;
-    const roundedPercent = Math.round(runPercent);
-    const capacity = parseFloat(siteConfig?.dgCapacity) || 0;
-    const rowIndex = findRowDgCapacity(capacity);
-    const oDCPH = oemDieselCphData[`${roundedPercent}%`]?.[rowIndex];
-
     // 🔹 Build Monthly CPH vs Run Hrs Table
     const buildMonthlyCPHvsRunHrsTable = (logs, siteConfig, siteMeta) => {
         const dgMap = {};
@@ -321,8 +314,8 @@ export default function MonthlyData({ userData }) {
                         month: siteMeta.month,
 
                         dgNumber: dgKey,
-                        dgCapacity: siteConfig.dgCapacity,
-                        dgMfgDate: siteConfig.dgMfgDate,
+                        dgCapacity: siteConfig.dgConfigs?.[dgKey]?.capacityKva,
+                        dgMfgDate: siteConfig.dgConfigs?.[dgKey]?.mfgDate,
 
                         dgUnitsConsumed: 0,
 
@@ -359,20 +352,27 @@ export default function MonthlyData({ userData }) {
             const cph = r.dieselConsumedOnLoad / r.dgRunHrsOnLoad;
             const kwhPerLtr = r.dgUnitsConsumed / r.dieselConsumedOnLoad;
 
-            const gap = cph - siteMeta.oemCph || 0;
-            const gapMargin = cph - ((siteMeta.oemCph || 0) * 1.05);
+            // OEM data exists for this percent — use OEM CPH table
+            const runPercent = (avgSiteRunningKw / Number(siteConfig.dgConfigs?.[r.dgNumber]?.capacityKva * 0.8)) * 100;
+            const roundedPercent = Math.round(runPercent);
+            const capacity = parseFloat(siteConfig.dgConfigs?.[r.dgNumber]?.capacityKva) || 0;
+            const rowIndex = findRowDgCapacity(capacity);
+            const oDCPH = oemDieselCphData[`${roundedPercent}%`]?.[rowIndex];
+
+            const gap = cph - oDCPH || 0;
+            const gapMargin = cph - ((oDCPH || 0) * 1.05);
             const dgKey = r.dgNumber.replace("-", "");
 
             return {
                 ...r,
                 cph: Number(cph.toFixed(1)),
                 kwhPerLtr: Number(kwhPerLtr.toFixed(2)),
-                oemCph: siteMeta.oemCph || 0,
+                oemCph: oDCPH || 0,
                 gapXV: Number(gap.toFixed(2)),
-                cphStatus: cph > siteMeta.oemCph ? "High" : "Low",
-                oemCphWithMargin: siteMeta.oemCphMargin || 0,
+                cphStatus: cph > oDCPH ? "High" : "Low",
+                oemCphWithMargin: oDCPH * 1.05 || 0,
                 gapXVWithMargin: Number(gapMargin.toFixed(2)),
-                rcaHighCph: cph > siteMeta.oemCph ? "RCA Required" : "",
+                rcaHighCph: cph > oDCPH ? "RCA Required" : "",
                 remarks: "",
                 dgRunIncidentsOnLoad: summary?.[`${dgKey}_OnLoad`] || 0,
                 dgRunIncidentsNoLoad: summary?.[`${dgKey}_NoLoad`] || 0,
@@ -393,8 +393,6 @@ export default function MonthlyData({ userData }) {
             address: siteConfig.address,
             factory: siteConfig.factory,
             month: selectedMonth ? `${formatMonthName(selectedMonth)}-${formatYear(selectedMonth)}` : "NA",
-            oemCph: oDCPH || 0,
-            oemCphMargin: oDCPH * 1.05,
             pf: siteConfig.pf,
         };
 
@@ -738,7 +736,7 @@ export default function MonthlyData({ userData }) {
                                     <td>{row.dgMfgDate}</td>
                                     <td>{(avgSiteRunningKw / (siteConfig.pf || 0.8)).toFixed(2)}</td>
                                     <td>{avgSiteRunningKw}</td>
-                                    <td>{((avgSiteRunningKw / (siteConfig.dgCapacity * 0.8)) * 100).toFixed(0)}%</td>
+                                    <td>{((avgSiteRunningKw / (siteConfig.dgConfigs?.[row.dgNumber]?.capacityKva * 0.8)) * 100).toFixed(0)}%</td>
                                     <td>{row.dgUnitsConsumed.toFixed(2)}</td>
 
                                     <td>{row.dgRunHrsOnLoad.toFixed(1)}</td>
@@ -755,7 +753,7 @@ export default function MonthlyData({ userData }) {
                                     <td>{row.cph}</td>
                                     <td>{row.kwhPerLtr}</td>
                                     <td>{row.oemCph}</td>
-                                    <td>{row.gapXV}</td>
+                                    <td>{(row.gapXV).toFixed(2)}</td>
 
                                     <td
                                         style={{
@@ -766,8 +764,8 @@ export default function MonthlyData({ userData }) {
                                         {row.cphStatus}
                                     </td>
 
-                                    <td>{row.oemCphWithMargin}</td>
-                                    <td>{row.gapXVWithMargin}</td>
+                                    <td>{(row.oemCphWithMargin).toFixed(2)}</td>
+                                    <td>{(row.gapXVWithMargin).toFixed(2)}</td>
                                     <td>{row.rcaHighCph}</td>
                                     <td>{row.remarks}</td>
                                     <td>{row.pf}</td>

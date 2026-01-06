@@ -844,6 +844,7 @@ const Layout = ({ userData, children }) => {
                         {Array.from({ length: siteConfig.dgCount }, (_, i) => {
                           const dg = `DG-${i + 1}`;
                           const runCount = dgRunCountMap[dg] || 0;
+                          const dgCapacity = siteConfig.dgConfigs?.[dg]?.capacityKva;
                           return (
                             <button
                               key={dg}
@@ -861,7 +862,10 @@ const Layout = ({ userData, children }) => {
                               }}
                               disabled={powerSource === "DG"}
                             >
-                              <span style={{ fontSize: selectedDG === dg ? "15px" : "10px" }}>{dg}</span>
+                              <div>
+                              <p style={{ fontSize: selectedDG === dg ? "15px" : "10px" }}>{dg}</p>
+                              <p style={{ fontSize: "7px" }}>{dgCapacity}kVA</p>
+                              </div>
 
                               {/* 🔥 DG Run Count Badge */}
                               {runCount > 0 && (
@@ -1022,6 +1026,7 @@ const Layout = ({ userData, children }) => {
                       {Array.from({ length: siteConfig.dgCount }, (_, i) => {
                         const dg = `DG-${i + 1}`;
                         const runCount = dgRunCountMap[dg] || 0;
+                        const dgCapacity = siteConfig.dgConfigs?.[dg]?.capacityKva;
                         return (
                           <button
                             key={dg}
@@ -1039,7 +1044,10 @@ const Layout = ({ userData, children }) => {
                             }}
                             disabled={powerSource === "DG"}
                           >
-                            <p style={{ fontSize: selectedDG === dg ? "18px" : "12px" }}>{dg}</p>
+                            <div>
+                              <p style={{ fontSize: selectedDG === dg ? "18px" : "12px" }}>{dg}</p>
+                              <p style={{ fontSize: "8px" }}>{dgCapacity}kVA</p>
+                            </div>
 
                             {/* 🔥 DG Run Count Badge */}
                             {runCount > 0 && (
