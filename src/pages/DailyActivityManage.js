@@ -14,6 +14,8 @@ import {
 import { db } from "../firebase";
 import { Link } from "react-router-dom";
 import "../assets/daily-activity.css";
+import { ACTIVITY_MASTER, getApproversFromLevels } from "../config/activityMaster";
+// import { APPROVAL_LEVELS } from "../config/approvalLevels";
 
 /*
   DailyActivityManage (PM-focused)
@@ -70,8 +72,6 @@ export default function DailyActivityManage({ userData }) {
   const [loadingDaily, setLoadingDaily] = useState(false);
 
   // UI states
-  const [loadingHierarchy, setLoadingHierarchy] = useState(true);
-  const [hierarchy, setHierarchy] = useState({ East: { WB: [] }, West: {} }); // minimal fallback
   const [saving, setSaving] = useState(false);
   const [addingEntryFor, setAddingEntryFor] = useState(null); // equipment being added
 
@@ -82,38 +82,60 @@ export default function DailyActivityManage({ userData }) {
   const canEdit = isAdmin || isAssignedUser || isSuperAdmin;
 
   // equipment list
-  const [equipmentList, setEquipmentList] = useState(DEFAULT_EQUIP_LIST);
+  const [equipmentList, setEquipmentList] = useState([]);
+  const [vendorList, setVendorList] = useState([]);
+
+  const [dynamicEquip, setDynamicEquip] = useState("");
+  const [dynamicActivity, setDynamicActivity] = useState("");
+
+  const [siteConfig, setSiteConfig] = useState({});
+  const siteKey = site?.toUpperCase();
+
+  // Fetch Site Configs from Firestore
+  const fetchConfig = async () => {
+    if (!siteKey) return;
+    const snap = await getDoc(doc(db, "siteConfigs", siteKey));
+    if (snap.exists()) {
+      setSiteConfig(snap.data());
+    }
+  };
+
 
 
   // load site hierarchy from assets_register if available (best-effort)
   useEffect(() => {
-    async function loadHierarchy() {
-      setLoadingHierarchy(true);
+    if (!circle || !(userData?.siteId || site)) return;
+
+    async function loadAssetsFlat() {
       try {
-        const snap = await getDocs(collection(db, "assets_register"));
-        if (!snap.empty) {
-          const map = {};
-          snap.forEach(s => {
-            const d = s.data() || {};
-            const r = d.region || d.Region || "Unknown";
-            const c = d.circle || d.Circle || d.circleName || "General";
-            const sname = d.site || d.siteName || d.Site || d.name || s.id;
-            map[r] = map[r] || {};
-            map[r][c] = map[r][c] || [];
-            if (!map[r][c].includes(sname)) map[r][c].push(sname);
-          });
-          setHierarchy(map);
-        } else {
-          setHierarchy(prev => prev);
-        }
+        const snap = await getDocs(collection(db, "assets_flat"));
+
+        const equipSet = new Set();
+        const vendorSet = new Set();
+
+        snap.forEach(docSnap => {
+          const d = docSnap.data();
+          if (
+            d.Circle === circle &&
+            d.UniqueCode === (userData?.siteId || site)
+          ) {
+            if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
+            if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
+          }
+        });
+
+        setEquipmentList(Array.from(equipSet).sort());
+        setVendorList(Array.from(vendorSet).sort());
+
       } catch (e) {
-        console.warn("Failed to load assets_register", e);
-      } finally {
-        setLoadingHierarchy(false);
+        console.error("assets_flat load failed", e);
       }
     }
-    loadHierarchy();
-  }, []);
+
+    fetchConfig();
+
+    loadAssetsFlat();
+  }, [circle, site, userData?.siteId, siteKey]);
 
   // load pm doc for selected site/year
   useEffect(() => {
@@ -293,10 +315,15 @@ export default function DailyActivityManage({ userData }) {
         if (matchesByMonths || matchesByDates) {
           matches.push({
             nodeName: eq,
-            activityDetails: `${entry.pmType || "PM"} scheduled (${entry.frequency || entry.pmType || "scheduled"})`,
+            activityDetails: entry.pmType || "",
+            vendor: entry.vendor || "",
             activityType: entry.activityType || "Major",
             siteCategory: entry.siteCategory || "Super Critical",
-            approvalRequire: "CIH",
+            activityCode: entry.activityCode,
+            activityCategory: entry.activityCategory || "",        // NEW
+            approvalRequire: entry.approvalLevel || "",        // Yes / No
+            approvers: getApproversFromLevels(entry.approvalLevels) || "",
+            performBy: entry.performBy || "",
             cih: "NA",
             centralInfra: "NA",
             ranOpsHead: "NA",
@@ -384,10 +411,27 @@ export default function DailyActivityManage({ userData }) {
 
   // UI helpers
   const equipmentKeys = useMemo(() => {
-    if (!pmDoc || !pmDoc.equipmentSchedules) return DEFAULT_EQUIP_LIST;
-    const keys = Array.from(new Set([...Object.keys(pmDoc.equipmentSchedules || {}), ...DEFAULT_EQUIP_LIST]));
-    return keys;
-  }, [pmDoc]);
+    const fromPm = Object.keys(pmDoc?.equipmentSchedules || {});
+    const fromAssets = equipmentList.length ? equipmentList : DEFAULT_EQUIP_LIST;
+    return Array.from(new Set([...fromAssets, ...fromPm]));
+  }, [pmDoc, equipmentList]);
+
+  function resolveApproval(category) {
+    if (category === "PM") {
+      return { approvalRequired: "No", approvalLevel: "NA" };
+    }
+    if (category === "CM" || category === "Breakdown") {
+      return { approvalRequired: "Yes", approvalLevel: "CIH" };
+    }
+    return { approvalRequired: "Yes", approvalLevel: "CIH" };
+  }
+
+
+  function sanitize(obj) {
+    return JSON.parse(
+      JSON.stringify(obj, (_, v) => (v === undefined ? null : v))
+    );
+  }
 
   return (
     <div className="dhr-dashboard-container">
@@ -495,6 +539,108 @@ export default function DailyActivityManage({ userData }) {
                   </div>
                 );
               })}
+              <div style={{ marginBottom: 12, border: "1px dashed #ccc", padding: 10 }}>
+                <h4>➕ Add Dynamic Activity (Site User)</h4>
+
+                {/* Equipment */}
+                <select
+                  className="daily-activity-select"
+                  value={dynamicEquip}
+                  onChange={(e) => {
+                    setDynamicEquip(e.target.value);
+                    setDynamicActivity("");
+                  }}
+                >
+                  <option value="">Select Equipment</option>
+                  {equipmentKeys.map(eq => (
+                    <option key={eq} value={eq}>{eq}</option>
+                  ))}
+                </select>
+
+                {/* Activity */}
+                {dynamicEquip && (
+                  <select
+                    className="daily-activity-select"
+                    value={dynamicActivity}
+                    onChange={(e) => setDynamicActivity(e.target.value)}
+                    style={{ marginLeft: 8 }}
+                  >
+                    <option value="">Select Activity</option>
+                    {(ACTIVITY_MASTER[dynamicEquip] || ACTIVITY_MASTER["Other"] || []).map(a => (
+                      <option key={a.activityDescription} value={a.activityDescription}>{a.activityDescription}</option>
+                    ))}
+                  </select>
+                )}
+
+                {/* Add Button */}
+                <button
+                  className="daily-activity-btn daily-activity-btn-primary"
+                  style={{ marginLeft: 8 }}
+                  disabled={!dynamicEquip || !dynamicActivity}
+                  onClick={async () => {
+                    const meta = ACTIVITY_MASTER[dynamicEquip].find(
+                      a => a.activityDescription === dynamicActivity
+                    );
+
+                    const newRow = sanitize({
+                      nodeName: dynamicEquip,
+                      activityDetails: meta.activityDescription ?? "",
+                      activityType: meta.activityType ?? "Major",
+                      activityCategory: meta.activityCategory ?? "PM",
+                      performBy: meta.performBy ?? "In-House",
+                      activityCode: meta.activityCode ?? "*",
+
+                      siteCategory: siteConfig?.siteCategory ?? "Major",
+
+                      approvalRequire: meta.approvalLevel ?? "No",
+                      approvers: getApproversFromLevels(meta.approvalLevels) ?? null,
+
+                      crRequired: meta.crRequired ?? "No",
+                      crDaysBefore: meta.crDaysBefore ?? 0,
+
+                      cih: "NA",
+                      centralInfra: "NA",
+                      ranOpsHead: "NA",
+                      coreOpsHead: "NA",
+                      fiberOpsHead: "NA",
+
+                      crqType: "CRQ",
+                      crqNo: null,
+
+                      activityStartTime: "10:00",
+                      activityEndTime: "18:00",
+
+                      isDynamic: true,
+                      activitySource: "DYNAMIC",
+                      createdAt: serverTimestamp()
+                    });
+
+                    const updated = [...dailyRows, newRow];
+                    setDailyRows(updated);
+
+                    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
+                    await setDoc(
+                      doc(db, "daily_activity_sheets", docId),
+                      sanitize({
+                        siteId: userData?.siteId || site,
+                        siteName: site,
+                        date: selectedDate,
+                        rows: updated,
+                        lastUpdatedBy: userData?.uid || null,
+                        lastUpdatedAt: serverTimestamp()
+                      }),
+                      { merge: true }
+                    );
+
+
+                    setDynamicEquip("");
+                    setDynamicActivity("");
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+
             </div>
           </>
         )}
@@ -523,55 +669,135 @@ export default function DailyActivityManage({ userData }) {
         </div>
 
         {loadingDaily ? <div className="daily-activity-loading">Loading daily sheet…</div> : (
-          <table className="daily-activity-table">
-            <thead>
-              <tr>
-                <th>Sl.No</th>
-                <th>Node Name</th>
-                <th>Activity Details</th>
-                <th>Activity Type</th>
-                <th>Site Category</th>
-                <th>Approval Required</th>
-                <th>CIH</th>
-                <th>Central Infra</th>
-                <th>RAN Ops Head</th>
-                <th>Core Ops Head</th>
-                <th>Fiber Ops Head</th>
-                <th>PE/CRQ/REQ</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(dailyRows || []).length === 0 ? (
-                <tr><td colSpan="14" className="daily-activity-empty">No rows for this date</td></tr>
-              ) : (dailyRows || []).map((r, idx) => (
-                <tr key={idx}>
-                  <td>{idx + 1}</td>
-                  <td>
-                    <input className="daily-activity-input" value={r.nodeName || ""} onChange={(e) => updateDailyRow(idx, "nodeName", e.target.value)} />
-                  </td>
-                  <td>
-                    <input className="daily-activity-input" value={r.activityDetails || ""} onChange={(e) => updateDailyRow(idx, "activityDetails", e.target.value)} />
-                  </td>
-                  {/* Activity Type dropdown */}
-                  <td>
-                    <select className="daily-activity-select" value={r.activityType || "Major"} onChange={(e) => updateDailyRow(idx, "activityType", e.target.value)}>
-                      <option value="Major">Major</option>
-                      <option value="Minor">Minor</option>
+          <div className="table-container">
+            <table className="table-container">
+              <thead>
+                <tr>
+                  <th>Sl.No</th>
+                  <th>Node Name</th>
+                  <th>Activity Details</th>
+                  <th>Site Category</th>
+                  <th>Activity Category</th>
+                  <th>Activity Code</th>
+                  <th>Activity Type</th>
+                  <th>Approval Required</th>
+                  <th>Approval Level</th>
+                  <th>CIH</th>
+                  <th>Central Infra</th>
+                  <th>RAN Ops Head</th>
+                  <th>Core Ops Head</th>
+                  <th>Fiber Ops Head</th>
+                  <th>CRQ/REQ/PE Type</th>
+                  <th>CRQ/REQ/PE Number</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(dailyRows || []).length === 0 ? (
+                  <tr><td colSpan="14" className="daily-activity-empty">No rows for this date</td></tr>
+                ) : (dailyRows || []).map((r, idx) => (
+                  <tr key={idx}
+                    style={{
+                      background: r.activitySource === "DYNAMIC" ? "#f0fbff" : "transparent"
+                    }}
+                  >
+                    <td>{idx + 1}</td>
+                    <td>
+                      <input className="daily-activity-input" value={r.nodeName || ""} onChange={(e) => updateDailyRow(idx, "nodeName", e.target.value)} />
+                    </td>
+                    <td>
+                      <input className="daily-activity-input" value={r.activityDetails || ""} onChange={(e) => updateDailyRow(idx, "activityDetails", e.target.value)} />
+                    </td>
+
+                    {/* Site Category dropdown */}
+                    <td>
+                      <select className="daily-activity-select" value={siteConfig?.siteCategory || r.siteCategory} onChange={(e) => updateDailyRow(idx, "siteCategory", e.target.value)}>
+                        <option value="Super Critical">Super Critical</option>
+                        <option value="Critical">Critical</option>
+                        <option value="Major">Major</option>
+                      </select>
+                    </td>
+
+                    {/* Activity Type dropdown */}
+                    <td>
+                      <input
+                        className="daily-activity-select"
+                        value={r.activityCategory || "Major"}
+                        disabled
+                      />
+                    </td>
+
+                    <td>
+                      <input
+                        className="daily-activity-select"
+                        value={r.activityCode || "*"}
+                        disabled
+                      />
+                    </td>
+
+                    <td>
+                      <input
+                        className="daily-activity-select"
+                        value={r.performBy || "In-House"}
+                        disabled
+                      />
+                    </td>
+
+                    {/* <td>
+                    <select
+                      className="daily-activity-select"
+                      value={r.activityCategory || "PM"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const approval = resolveApproval(val);
+                        updateDailyRow(idx, "activityCategory", val);
+                        updateDailyRow(idx, "approvalRequired", approval.approvalRequired);
+                        updateDailyRow(idx, "approvalLevel", approval.approvalLevel);
+                      }}
+                    >
+                      <option value="PM">PM</option>
+                      <option value="CM">CM</option>
+                      <option value="Breakdown">Breakdown</option>
+                      <option value="Other">Other</option>
                     </select>
-                  </td>
-                  {/* Site Category dropdown */}
-                  <td>
-                    <select className="daily-activity-select" value={r.siteCategory || "Super Critical"} onChange={(e) => updateDailyRow(idx, "siteCategory", e.target.value)}>
-                      <option value="Super Critical">Super Critical</option>
-                      <option value="Critical">Critical</option>
-                      <option value="Major">Major</option>
+                  </td> */}
+
+                    <td>
+                      <input
+                        className="daily-activity-input"
+                        value={r.approvalRequire || "No"}
+                        disabled
+                      />
+                    </td>
+
+                    <td>
+                      <textarea
+                        className="daily-activity-input"
+                        value={
+                          r.approvers || "No"}
+                        disabled
+                      />
+                    </td>
+
+                    {/* <td>
+                    <select
+                      className="daily-activity-select"
+                      value={r.approvalLevel || "NA"}
+                      disabled={r.approvalRequired === "No"}
+                      onChange={(e) => updateDailyRow(idx, "approvalLevel", e.target.value)}
+                    >
+                      <option value="NA">NA</option>
+                      <option value="CIH">CIH</option>
+                      <option value="Central Infra">Central Infra</option>
+                      <option value="Ops Head">Ops Head</option>
                     </select>
-                  </td>
-                  {/* Approval Required dropdown */}
-                  <td>
+                  </td> */}
+
+
+                    {/* Approval Required dropdown */}
+                    {/* <td>
                     <select className="daily-activity-select" value={r.approvalRequire || "CIH"} onChange={(e) => updateDailyRow(idx, "approvalRequire", e.target.value)}>
                       <option value="CIH">CIH</option>
                       <option value="Central Infra">Central Infra</option>
@@ -579,19 +805,48 @@ export default function DailyActivityManage({ userData }) {
                       <option value="Core Ops Head">Core Ops Head</option>
                       <option value="Fiber Ops Head">Fiber Ops Head</option>
                     </select>
-                  </td>
-                  {/* Individual approvals */}
-                  {["cih", "centralInfra", "ranOpsHead", "coreOpsHead", "fiberOpsHead"].map(col => (
-                    <td key={col}>
-                      <select className="daily-activity-select" value={r[col] || "NA"} onChange={(e) => updateDailyRow(idx, col, e.target.value)}>
-                        <option value="NA">NA</option>
-                        <option value="Y">Y</option>
-                        <option value="N">N</option>
+                  </td> */}
+                    {/* Individual approvals */}
+                    {["cih", "centralInfra", "ranOpsHead", "coreOpsHead", "fiberOpsHead"].map(col => (
+                      <td key={col}>
+                        <select className="daily-activity-select" value={r[col] || "NA"} onChange={(e) => updateDailyRow(idx, col, e.target.value)}>
+                          <option value="NA">NA</option>
+                          <option value="Y">Y</option>
+                          <option value="N">N</option>
+                        </select>
+                      </td>
+                    ))}
+
+                    <td>
+                      <select
+                        className="daily-activity-select"
+                        value={r.crqType || "REQ"}
+                        onChange={(e) => updateDailyRow(idx, "crqType", e.target.value)}
+                      >
+                        <option value="CRQ">CRQ</option>
+                        <option value="REQ">REQ</option>
+                        <option value="PE">PE</option>
                       </select>
                     </td>
-                  ))}
-                  {/* CRQ No input with suggestions */}
-                  <td>
+
+                    {/* CRQ No input with suggestions */}
+                    <td>
+                      <input
+                        className="daily-activity-input"
+                        list={`crq-options-${idx}`}
+                        value={r.crqNo || ""}
+                        placeholder={r.crqType === "CRQ" ? "CRQ Number required" : "Optional"}
+                        required={r.crqType === "CRQ"}
+                        onChange={(e) => updateDailyRow(idx, "crqNo", e.target.value)}
+                      />
+                      <datalist id={`crq-options-${idx}`}>
+                        <option value="CRQ00000" />
+                        <option value="PE" />
+                        <option value="REQ" />
+                      </datalist>
+                    </td>
+
+                    {/* <td>
                     <input
                       className="daily-activity-input"
                       list={`crq-options-${idx}`}
@@ -604,19 +859,20 @@ export default function DailyActivityManage({ userData }) {
                       <option value="PE" />
                       <option value="REQ" />
                     </datalist>
-                  </td>
-                  {/* Start/End time */}
-                  <td><input className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e) => updateDailyRow(idx, "activityStartTime", e.target.value)} /></td>
-                  <td><input className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e) => updateDailyRow(idx, "activityEndTime", e.target.value)} /></td>
-                  {/* Delete */}
-                  <td>
-                    <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => deleteDailyRow(idx)}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+                  </td> */}
+                    {/* Start/End time */}
+                    <td><input className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e) => updateDailyRow(idx, "activityStartTime", e.target.value)} /></td>
+                    <td><input className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e) => updateDailyRow(idx, "activityEndTime", e.target.value)} /></td>
+                    {/* Delete */}
+                    <td>
+                      <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => deleteDailyRow(idx)}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
 
-          </table>
+            </table>
+          </div>
         )}
       </div>
 

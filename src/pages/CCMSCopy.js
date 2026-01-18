@@ -84,8 +84,8 @@ const CCMSCopy = () => {
     };
 
 
-    const totalFuelQuentity = logData['Total Fuel Filling'];
-    const totalAmount = (logData['Total Fuel Filling'] * fuelRate).toFixed(2);
+    const totalFuelQuentity = logData['Total Fuel Filling'] + logData['Total External Fuel'];
+    const totalAmount = (totalFuelQuentity * fuelRate).toFixed(2);
     const invoiceDate = new Date(logData.Date);
     // Extract parts
     const day = invoiceDate.toLocaleDateString("en-GB", { day: "2-digit" }); // "02"

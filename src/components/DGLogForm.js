@@ -35,6 +35,7 @@ const DGLogForm = ({ userData }) => {
         fuelConsumption: "",
         kWHReading: "",
         fuelFill: "",
+        exFuelFill: "",
     });
 
     const [hsdForm, setHsdForm] = useState({
@@ -124,7 +125,7 @@ const DGLogForm = ({ userData }) => {
         snap.forEach((d) => {
             if (isEditMode && d.id === state?.logData?.id) return; // 🛑 skip self
             const data = d.data();
-            sum += Number(data.fuelFill || 0);
+            sum += Number(data.fuelFill || 0) + Number(data.exFuelFill || 0);
         });
 
         setTotalFilledFuelBefore(sum);
@@ -189,14 +190,14 @@ const DGLogForm = ({ userData }) => {
             (isLastDGFill || !isEditMode)
         ) {
             const totalLtrs =
-                Number(totalFilledFuelBefore || 0) + Number(form.fuelFill || 0);
+                Number(totalFilledFuelBefore || 0) + Number(form.fuelFill || 0) + Number(form.exFuelFill || 0);
 
             setHsdForm((prev) => ({
                 ...prev,
                 ltrs: totalLtrs > 0 ? totalLtrs : prev.ltrs,
             }));
         }
-    }, [form.fuelFill, totalFilledFuelBefore, isLastDGFill, isEditMode]);
+    }, [form.fuelFill, form.exFuelFill, totalFilledFuelBefore, isLastDGFill, isEditMode]);
 
     useEffect(() => {
         if (!siteConfig?.dgCount) {
@@ -270,6 +271,7 @@ const DGLogForm = ({ userData }) => {
             "kwhMeterEnd",
             "kWHReading",
             "fuelFill",
+            "exFuelFill",
         ];
         setForm({
             ...form,
@@ -555,6 +557,7 @@ const DGLogForm = ({ userData }) => {
                     fuelConsumption: "",
                     kWHReading: "",
                     fuelFill: "",
+                    exFuelFill: "",
                 });
                 navigate("/dg-log-table")
             }
@@ -1094,7 +1097,7 @@ const DGLogForm = ({ userData }) => {
                 )}
 
                 {form.remarks === "Fuel Filling Only" && (
-                    <label className="form-label">Fuel Filling (Liters):
+                    <label className="form-label">Day Tank Fuel Filling (Liters):
                         <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- Skip it('0') if Fuel not fill)</span>
                         <input
                             type="number"
@@ -1102,7 +1105,22 @@ const DGLogForm = ({ userData }) => {
                             name="fuelFill"
                             value={form.fuelFill}
                             onChange={handleChange}
-                            placeholder="Add fuel filling (L)"
+                            placeholder="Add day tank fuel filling (L)"
+                            className="w-full p-2 border rounded"
+                            required
+                        />
+                    </label>)}
+                
+                {form.remarks === "Fuel Filling Only" && (
+                    <label className="form-label">External Tank Fuel Filling (Liters):
+                        <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- Skip it('0') if Fuel not fill)</span>
+                        <input
+                            type="number"
+                            step="0.1"
+                            name="exFuelFill"
+                            value={form.exFuelFill}
+                            onChange={handleChange}
+                            placeholder="Add external tank fuel filling (L)"
                             className="w-full p-2 border rounded"
                             required
                         />

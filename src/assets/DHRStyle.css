@@ -529,3 +529,133 @@ pre {
   white-space: pre-wrap;
   margin: 0;
 }
+
+/* =========================
+   MODAL OVERLAY
+========================= */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* =========================
+   MODAL CONTAINER
+========================= */
+.modal-box {
+  background: #ffffff;
+  width: 85%;
+  max-width: 950px;
+  max-height: 85vh;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+  animation: modalFadeIn 0.25s ease-in-out;
+}
+
+/* =========================
+   MODAL HEADER
+========================= */
+.modal-header {
+  padding: 12px 18px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f9fafb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Close button */
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #444;
+}
+
+.modal-close:hover {
+  color: #e53935;
+}
+
+/* =========================
+   MODAL BODY
+========================= */
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+/* Grid inside modal */
+.modal-body .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.modal-body label {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.modal-body input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.modal-body input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
+}
+
+/* =========================
+   MODAL FOOTER
+========================= */
+.modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #fafafa;
+}
+
+/* =========================
+   ANIMATION
+========================= */
+@keyframes modalFadeIn {
+  from {
+    transform: translateY(-20px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* =========================
+   MOBILE RESPONSIVE
+========================= */
+@media (max-width: 768px) {
+  .modal-box {
+    width: 95%;
+    max-height: 92vh;
+  }
+}

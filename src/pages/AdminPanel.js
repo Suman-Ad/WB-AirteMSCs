@@ -592,7 +592,7 @@ const AdminPanel = ({ userData }) => {
                             )}
 
                             {["Admin", "Super Admin"].includes(userData.role) &&
-                              user.id !== userData.uid && (
+                              user.id !== userData.uid && user?.role !== "Super Admin" && (
                                 <button
                                   className={user.isActive ? "btn-deactivate" : "btn-activate"}
                                   onClick={() => toggleUserActive(user.id, user.isActive)}

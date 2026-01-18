@@ -103,6 +103,49 @@
   background-color: #447dd3ff;
 }
 
+.mds-weekly-template {
+  margin-bottom: 20px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.mds-weekly-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.mds-weekly-table th,
+.mds-weekly-table td {
+  border: 1px solid #e5e7eb;
+  padding: 6px;
+  text-align: center;
+}
+
+.mds-weekly-table th {
+  background: #f1f5f9;
+}
+
+.mds-user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mds-user-line {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.mds-user-mobile {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+}
+
+
 /* MOBILE RESPONSIVE */
 @media (max-width: 600px) {
   .daily-log-container {

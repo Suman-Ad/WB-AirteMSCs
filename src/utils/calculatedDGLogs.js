@@ -15,6 +15,8 @@ export const calculateFields = (data, siteConfig) => {
     const offLoadFuelCon = parseFloat(result[`DG-${i} Off Load Fuel Consumption`]) || 0;
     const offLoadHrs = parseFloat(result[`DG-${i} Off Load Hour`]) || 0;
     const totalFuelCon = fuelOpen - fuelClose + fuelFill;
+    const externalFuelFilling = parseFloat(result[`DG-${i} External Fuel Filling`]) || 0;
+    const externalFuelStock = parseFloat(result[`DG-${i} External Fuel Stock`]) || 0;
 
     result[`DG-${i} KWH Generation`] = kwhClose - kwhOpen;
     result[`DG-${i} Fuel Consumption`] = totalFuelCon;
@@ -33,6 +35,8 @@ export const calculateFields = (data, siteConfig) => {
     result[`DG-${i} ON Load Hour`] = (hrClose - hrOpen - offLoadHrs);
     result[`DG-${i} OFF Load Hour`] = offLoadHrs;
     result[`DG-${i} Fuel Filling`] = fuelFill;
+    result[`DG-${i} External Fuel Filling`] = externalFuelFilling;
+    result[`DG-${i} External Fuel Stock`] = externalFuelStock;
 
     result[`DG-${i} Avg Fuel/Hr`] =
       result[`DG-${i} Running Hrs`] > 0
@@ -95,7 +99,7 @@ export const calculateFields = (data, siteConfig) => {
     (result["DG-2 Running Hrs"] || 0) +
     (result["DG-3 Running Hrs"] || 0) +
     (result["DG-4 Running Hrs"] || 0);
-  
+
   result["Total DG Onload Hours"] =
     (result["DG-1 ON Load Hour"] || 0) +
     (result["DG-2 ON Load Hour"] || 0) +
@@ -130,12 +134,18 @@ export const calculateFields = (data, siteConfig) => {
     (result["DG-3 Fuel Filling"] || 0) +
     (result["DG-4 Fuel Filling"] || 0);
 
+  result["Total External Fuel"] =
+    (result["DG-1 External Fuel Filling"] || 0) +
+    (result["DG-2 External Fuel Filling"] || 0) +
+    (result["DG-3 External Fuel Filling"] || 0) +
+    (result["DG-4 External Fuel Filling"] || 0);
+
   // PUE Calculation
   result["PUE"] =
     result["Office kW Consumption"] > 0
       ? (((result["Total Unit Consumption"] - result["Office kW Consumption"]) / 24) /
         result["Total IT Load KWH"]
-        ).toFixed(2)
+      ).toFixed(2)
       : 0;
 
   // Cooling Load Calculations

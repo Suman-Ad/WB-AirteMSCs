@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc } from "firebase/firestore";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
@@ -37,7 +37,6 @@ function formatDutyDisplay(mainShift, otShift, replacedName, cl) {
 }
 
 
-
 async function getAllUsersMap() {
   const snap = await getDocs(collection(db, "users"));
   const map = {};
@@ -51,7 +50,44 @@ export default function MyDutySchedule({ currentUser }) {
   const navigate = useNavigate();
   const [summary, setSummary] = useState({ totalCL: 0, totalOT: 0 });
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [weekdayTemplate, setWeekdayTemplate] = useState(null);
+  const [userMap, setUserMap] = useState({});
 
+
+  // async function loadWeekdayTemplate(siteId) {
+  //   const ref = doc(db, "dutyRosterTemplate", siteId);
+  //   const snap = await getDoc(ref);
+  //   return snap.exists() ? snap.data() : null;
+  // }
+
+  useEffect(() => {
+    if (!currentUser?.site) return;
+
+    async function loadTemplate() {
+      const ref = doc(db, "dutyRosterTemplate", currentUser.site);
+      const snap = await getDoc(ref);
+      setWeekdayTemplate(snap.exists() ? snap.data() : null);
+    }
+
+    loadTemplate();
+  }, [currentUser?.site]);
+
+  useEffect(() => {
+    async function loadUsers() {
+      const snap = await getDocs(collection(db, "users"));
+      const map = {};
+      snap.forEach(d => {
+        const u = d.data();
+        map[d.id] = {
+          name: u.name || "Unknown",
+          mobile: u.mobileNo || "-"
+        };
+      });
+      setUserMap(map);
+    }
+
+    loadUsers();
+  }, []);
 
 
   useEffect(() => {
@@ -167,6 +203,50 @@ export default function MyDutySchedule({ currentUser }) {
         <p>Emp.🆔: <strong>{currentUser.empId}</strong></p>
         <p>Designation: <strong>{currentUser.designation}</strong></p>
       </div>
+
+      {weekdayTemplate && (
+        <div className="mds-weekly-template">
+          <h3>📅 Weekly Duty Template</h3>
+
+          <table className="mds-weekly-table">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>General</th>
+                <th>Morning</th>
+                <th>Evening</th>
+                <th>Night</th>
+                <th>Weekly Off</th>
+              </tr>
+            </thead>
+            <tbody>
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
+                <tr key={day}>
+                  <td><strong>{day}</strong></td>
+
+                  {["G", "M", "E", "N", "WO"].map(shift => (
+                    <td key={shift}>
+                      {(weekdayTemplate?.[day]?.[shift] || []).length > 0 ? (
+                        <div className="mds-user-cell">
+                          {weekdayTemplate[day][shift].map((uid, idx) => (
+                            <div key={uid} className="mds-user-line">
+                              <strong>({idx + 1}) {userMap[uid]?.name || uid.slice(0, 6)}</strong>
+                              <span className="mds-user-mobile">
+                                📞 {userMap[uid]?.mobile || "-"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : "-"}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
 
       <div className="mds-month-box">
         <label>Select Month:</label>

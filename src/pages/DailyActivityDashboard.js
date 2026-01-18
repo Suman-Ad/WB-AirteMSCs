@@ -11,16 +11,21 @@ const LABELS = [
   "Sl.No",
   "Date",
   "Site Name",
+  "Site Category",
   "Node Name",
   "Activity Details",
+  "Activity Category",
   "Activity Type",
-  "Site Category",
+  "Activity Owner",
+  "Activity Code",
   "Approval Require",
+  "Approvers",
   "CIH",
   "Central Infra",
   "RAN OPS head",
   "Core OPS head",
   "Fiber OPS head",
+  "CRQ/PE/REQ Tpye",
   "CRQ No/PE",
   "Activity Start Time",
   "Activity End Time",
@@ -30,16 +35,21 @@ const LABELS = [
 const KEYS = [
   "date",
   "siteName",
+  "siteCategory",
   "nodeName",
   "activityDetails",
+  "activityCategory",
   "activityType",
-  "siteCategory",
+  "performBy",
+  "activityCode",
   "approvalRequire",
+  "approvers",
   "cih",
   "centralInfra",
   "ranOpsHead",
   "coreOpsHead",
   "fiberOpsHead",
+  "crqType",
   "crqNo",
   "activityStartTime",
   "activityEndTime",
@@ -140,6 +150,25 @@ export default function DailyActivityDashboard({ userData }) {
   const dailyTrendChartRef = useRef(null);
   const crqChartRef = useRef(null);
 
+
+  const toDateObj = (d) => {
+    if (!d) return null;
+
+    // If Firestore Timestamp
+    if (d.toDate) return d.toDate();
+
+    // If string YYYY-MM-DD
+    const parts = String(d).split("-");
+    if (parts.length === 3) {
+      const [y, m, dd] = parts;
+      return new Date(Number(y), Number(m) - 1, Number(dd));
+    }
+
+    // fallback parse
+    const t = Date.parse(d);
+    return Number.isNaN(t) ? null : new Date(t);
+  };
+
   /** load all daily sheets */
   useEffect(() => {
     (async () => {
@@ -152,7 +181,10 @@ export default function DailyActivityDashboard({ userData }) {
           const sheetId = docSnap.id;
           const siteId = sheet.siteId || "";
           const siteName = sheet.siteName || "";
-          const date = sheet.date || "";
+          const date = sheet.date
+            ? sheet.date.toDate ? sheet.date.toDate().toISOString().slice(0, 10) : sheet.date
+            : "";
+
           (sheet.rows || []).forEach((r, idx) => {
             out.push({
               _sheetId: sheetId,
@@ -162,14 +194,18 @@ export default function DailyActivityDashboard({ userData }) {
               siteName,
               nodeName: r.nodeName || "",
               activityDetails: r.activityDetails || "",
+              activityCategory: r.activityCategory || "",   // ✅ added
               activityType: r.activityType || "",
-              siteCategory: r.siteCategory || "",
+              performBy: r.performBy || "",                 // ✅ added
+              activityCode: r.activityCode || "",          // ✅ added
               approvalRequire: r.approvalRequire || "",
+              approvers: r.approvers || "",                // ✅ added
               cih: r.cih || "",
               centralInfra: r.centralInfra || "",
               ranOpsHead: r.ranOpsHead || "",
               coreOpsHead: r.coreOpsHead || "",
               fiberOpsHead: r.fiberOpsHead || "",
+              crqType: r.crqType || "",                     // ✅ added
               crqNo: r.crqNo || "",
               activityStartTime: r.activityStartTime || "",
               activityEndTime: r.activityEndTime || "",
@@ -532,7 +568,7 @@ export default function DailyActivityDashboard({ userData }) {
           {isAdmin ? "Admin view: all sites" : "User view: your site only"}
         </div>
         <p onClick={() => navigate("/activity-dashboard")} style={{ cursor: "pointer" }}>Activity Matrix</p>
-        {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin" ) && (
+        {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin") && (
           <Link to="/daily-activity-management"><span className="pm-manage-btn">🚧🛠️ Manage Daily {userData?.site} Activity</span></Link>
         )}
       </div>

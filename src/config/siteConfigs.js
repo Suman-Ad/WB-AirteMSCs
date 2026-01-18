@@ -20,7 +20,7 @@ export const siteList = {
   "West": {
     "GUJ": ["Astron Park", "Bharti House", "Changodar", "Rajkot Madhapar-New", "Rajkot Mavdi Old", "Surat", "Surat Telenor"],
     "MPCG": ["Bhopal Center 1st floor", "Bhopal Center 4th floor", "Gobindpura", "Gwalior", "Indore Geeta Bhawan", "Jabalpur", "Pardesipura", "Raipur"],
-    "ROM": ["Nagpur", "Vega Center", "E-Space", "Kolhapur", "Nagpur New", "Nagpur BTSOL"],
+    "ROM": ["Nagpur-I", "Vega Center", "E-Space", "Kolhapur", "Nagpur-II", "Nagpur BTSOL"],
   },
   "North": {
     "DEL": ["DLF", "Mira Tower"],

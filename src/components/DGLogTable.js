@@ -788,9 +788,9 @@ const DGLogTable = ({ userData }) => {
       </h2>
       <button
         className="segr-manage-btn warning"
-        onClick={() => Navigate("/dg-log-entry", { state: { siteConfig , isDGOnLoad: false} })}
+        onClick={() => Navigate("/dg-log-entry", { state: { siteConfig, isDGOnLoad: false } })}
       >
-        ✎ DG Run Log Entry
+        ✎ DG No Load Run / Fuel Filling Log Entry
       </button>
 
       {/* Summary table */}
@@ -989,7 +989,17 @@ const DGLogTable = ({ userData }) => {
                   <td>{log.kWHReading || 0}</td>
                   <td>{log.fuelConsumption || 0}</td>
                   <td>{log.remarks}</td>
-                  <td>{log.fuelFill ? log.fuelFill : 0}</td>
+                  <td style={{ fontSize: "12px" }}>
+                    {log.fuelFill ? (
+                      <div>
+                        Day🛢️: {log.fuelFill ? log.fuelFill : 0}L
+                        <p style={{ fontSize: "12px" }}>
+                          Ex.🛢️:{log.exFuelFill ? log.exFuelFill : 0}L
+                        </p>
+                        = {log.fuelFill + log.exFuelFill}L
+                      </div>
+                    ) : 0}
+                  </td>
                   <td>{log.oemCPH ? log.oemCPH : "N/A"}</td>
                   <td style={log.cph > log.oemCPH ? { color: "Red" } : log.cph?.toFixed(0) === log.oemCPH ? { color: "orange" } : { color: "Green" }}
                     title={log.cph > log.oemCPH ? "High" : log.cph?.toFixed(0) === log.oemCPH ? "In-Line" : "Low"}

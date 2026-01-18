@@ -12,6 +12,8 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import "../assets/daily-activity.css";
+import { region, siteList, siteIdMap } from "../config/siteConfigs.js";
+import { ACTIVITY_MASTER } from "../config/activityMaster.js";
 
 /*
  PM Register Sheet
@@ -21,51 +23,30 @@ import "../assets/daily-activity.css";
 */
 
 /* Default equipment list (from you) */
-const DEFAULT_EQUIP_LIST = [
-  "ACS","Air Conditioner","BMS","CCTV","Comfort AC","Diesel Generator","Earth Pit",
-  "Exhust Fan","FAS","FSS","HT Panel","Inverter","LT Panel","PAS","PFE","SMPS",
-  "SMPS BB","Solar System","UPS","UPS BB","DCDB/ACDB","Transformer"
-];
+// const DEFAULT_EQUIP_LIST = [
+//   "ACS", "Air Conditioner", "BMS", "CCTV", "Comfort AC", "Diesel Generator", "Earth Pit",
+//   "Exhust Fan", "FAS", "FSS", "HT Panel", "Inverter", "LT Panel", "PAS", "PFE", "SMPS",
+//   "SMPS BB", "Solar System", "UPS", "UPS BB", "DCDB/ACDB", "Transformer"
+// ];
 
 /* default local site hierarchy fallback (used if assets_register not available) */
-const DEFAULT_SITE_HIERARCHY = {
-  East: {
-    "BH & JH": ["Patliputra", "Bhaglpur", "Muzaffarpur New", "Muzaffarpur Old", "Ranchi", "Ranchi telenor", "Marwari Awas"],
-    "WB": ["Andaman", "Asansol", "Berhampore", "DLF", "Globsyn", "Infinity-I", "Infinity-II", "Kharagpur", "Mira Tower", "New Alipore", "SDF", "Siliguri"],
-    "NESA":["Aizwal", "Guwahati", "Jorabat New", "Jorhat", "Shillong"],
-    "OR": ["Cuttack", "Sambalpur"],
-
-  },
-  West: {
-    "GUJ": ["Astron Park", "Bharti House", "Changodar", "Rajkot Madhapar-New", "Rajkot Mavdi Old", "Surat", "Surat Telenor"],
-    "MPCG": ["Bhopal Center 1st floor", "Bhopal Center 4th floor", "Gobindpura", "Gwalior", "Indore Geeta Bhawan", "Jabalpur", "Pardesipura", "Raipur"],
-    "ROM": ["Nagpur", "Vega Center", "E-Space", "Kolhapur", "Nagpur New", "Nagpur BTSOL"],
-  },
-  North: {
-    "DEL": ["DLF", "Mira Tower"],
-    "HR": ["GLOBSYN"]
-  },
-  South: {
-    "KA": ["Infinity-I", "Infinity-II"],
-    "TS": ["Siliguri"]
-  }
-};
+const DEFAULT_SITE_HIERARCHY = siteList;
 
 /* months array for checkboxes */
 const MONTHS = [
-  { num: 1, label: "Jan" },{ num: 2, label: "Feb" },{ num: 3, label: "Mar" },
-  { num: 4, label: "Apr" },{ num: 5, label: "May" },{ num: 6, label: "Jun" },
-  { num: 7, label: "Jul" },{ num: 8, label: "Aug" },{ num: 9, label: "Sep" },
-  { num: 10, label: "Oct" },{ num: 11, label: "Nov" },{ num: 12, label: "Dec" }
+  { num: 1, label: "Jan" }, { num: 2, label: "Feb" }, { num: 3, label: "Mar" },
+  { num: 4, label: "Apr" }, { num: 5, label: "May" }, { num: 6, label: "Jun" },
+  { num: 7, label: "Jul" }, { num: 8, label: "Aug" }, { num: 9, label: "Sep" },
+  { num: 10, label: "Oct" }, { num: 11, label: "Nov" }, { num: 12, label: "Dec" }
 ];
 
 /* helper utilities */
 const pad2 = (n) => (n < 10 ? `0${n}` : `${n}`);
 const currentYear = () => new Date().getFullYear();
 function makeSiteKey(region, circle, site) {
-  return `${(region||"")}__${(circle||"")}__${(site||"")}`.replace(/\s+/g, "_");
+  return `${(region || "")}__${(circle || "")}__${(site || "")}`.replace(/\s+/g, "_");
 }
-function generateId() { return `${Date.now()}_${Math.random().toString(36).slice(2,9)}`; }
+function generateId() { return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`; }
 
 /* parse CSV simple — expects header row like: equipment,pmType,frequency,months,day,notes */
 function parseCSV(text) {
@@ -88,16 +69,16 @@ function parseMonthsString(s) {
   const out = new Set();
   parts.forEach(p => {
     if (p.includes("-")) {
-      const [a,b] = p.split("-").map(x => parseInt(x,10)).filter(n => !isNaN(n));
+      const [a, b] = p.split("-").map(x => parseInt(x, 10)).filter(n => !isNaN(n));
       if (!isNaN(a) && !isNaN(b)) {
-        for (let k = Math.max(1,a); k <= Math.min(12,b); k++) out.add(k);
+        for (let k = Math.max(1, a); k <= Math.min(12, b); k++) out.add(k);
       }
     } else {
-      const n = parseInt(p,10);
+      const n = parseInt(p, 10);
       if (!isNaN(n) && n >= 1 && n <= 12) out.add(n);
     }
   });
-  return Array.from(out).sort((a,b) => a-b);
+  return Array.from(out).sort((a, b) => a - b);
 }
 
 /* default empty PM doc structure */
@@ -127,7 +108,8 @@ export default function PMRegister({ userData }) {
   const [year, setYear] = useState(currentYear());
 
   // equipment list
-  const [equipmentList, setEquipmentList] = useState(DEFAULT_EQUIP_LIST);
+  const [equipmentList, setEquipmentList] = useState([]);
+  const [vendorList, setVendorList] = useState([]);
 
   // pm document (loaded for site+year)
   const [pmDoc, setPmDoc] = useState(() => emptyPMDoc(region, circle, site, year));
@@ -139,43 +121,75 @@ export default function PMRegister({ userData }) {
   const [isAssignedUser, setIsAssignedUser] = useState(false);
   const canEdit = isAdmin || isAssignedUser;
 
+  const isDynamic = (entry) => entry.pmType === "Dynamic";
+
+  const addSchedule = (equipmentName, newEntry) => {
+    setPmDoc(prev => ({
+      ...prev,
+      [equipmentName]: [...(prev[equipmentName] || []), newEntry]
+    }));
+  };
+
   // UI states
-  const [selectedEquipment, setSelectedEquipment] = useState(DEFAULT_EQUIP_LIST[0] || "");
+  const [selectedEquipment, setSelectedEquipment] = useState("");
+  useEffect(() => {
+    if (equipmentList.length && !selectedEquipment) {
+      setSelectedEquipment(equipmentList[0]);
+    }
+  }, [equipmentList]);
+
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  function getActivityDetails(equipmentName, activityDescription) {
+    const list =
+      ACTIVITY_MASTER[equipmentName] ||
+      ACTIVITY_MASTER.Other ||
+      [];
+
+    return list.find(
+      a => a.activityDescription === activityDescription
+    ) || null;
+  }
+
+
   // load site list from assets_register if available
   useEffect(() => {
-    async function loadAssets() {
-      setLoadingHierarchy(true);
+    if (!circle || !site) return;
+
+    async function loadAssetsFlatData() {
       try {
-        const snap = await getDocs(collection(db, "assets_register"));
-        if (!snap.empty) {
-          // Build hierarchy map: region -> circle -> sites[]
-          const map = {};
-          snap.forEach(docSnap => {
-            const d = docSnap.data() || {};
-            // best-effort keys: region, circle, site or siteName
-            const r = d.region || d.Region || "Unknown";
-            const c = d.circle || d.Circle || d.CircleName || "General";
-            const s = d.site || d.siteName || d.Site || d.SiteName || d.name || docSnap.id;
-            map[r] = map[r] || {};
-            map[r][c] = map[r][c] || [];
-            if (!map[r][c].includes(s)) map[r][c].push(s);
-          });
-          setHierarchy(map);
-        } else {
-          setHierarchy(DEFAULT_SITE_HIERARCHY);
-        }
+        const snap = await getDocs(collection(db, "assets_flat"));
+
+        const equipSet = new Set();
+        const vendorSet = new Set();
+
+        snap.forEach(docSnap => {
+          const d = docSnap.data();
+          if (
+            d.Circle === circle &&
+            d.UniqueCode === siteIdMap[site]   // ✅ N19106A
+          ) {
+            if (d.EquipmentCategory) {
+              equipSet.add(d.EquipmentCategory);
+            }
+            if (d.AMC_Partner_Name) {
+              vendorSet.add(d.AMC_Partner_Name);
+            }
+          }
+        });
+
+        setEquipmentList(Array.from(equipSet).sort());
+        setVendorList(Array.from(vendorSet).sort());
+
       } catch (e) {
-        console.warn("assets_register not found or failed to load, using default hierarchy", e);
-        setHierarchy(DEFAULT_SITE_HIERARCHY);
-      } finally {
-        setLoadingHierarchy(false);
+        console.error("assets_flat load failed", e);
       }
     }
-    loadAssets();
-  }, []);
+
+    loadAssetsFlatData();
+  }, [circle, site]);
+
 
   // load admin_assignments to detect assigned user (any admin_assignments doc containing our uid)
   useEffect(() => {
@@ -228,33 +242,134 @@ export default function PMRegister({ userData }) {
   }, [region, circle, site, year, userData?.uid]);
 
   // helpers to edit pmDoc state (local only until Save)
+  // function ensureEquipmentSlot(equipmentName) {
+  //   setPmDoc(prev => {
+  //     const copy = { ...(prev || {}) };
+  //     copy.equipmentSchedules = copy.equipmentSchedules || {};
+  //     if (!Array.isArray(copy.equipmentSchedules[equipmentName])) copy.equipmentSchedules[equipmentName] = [];
+  //     return copy;
+  //   });
+  // }
+
   function ensureEquipmentSlot(equipmentName) {
     setPmDoc(prev => {
-      const copy = { ...(prev || {}) };
-      copy.equipmentSchedules = copy.equipmentSchedules || {};
-      if (!Array.isArray(copy.equipmentSchedules[equipmentName])) copy.equipmentSchedules[equipmentName] = [];
+      const copy = { ...prev };
+      copy.equipmentSchedules ||= {};
+
+      // ⛔ STOP if already exists
+      if (copy.equipmentSchedules.hasOwnProperty(equipmentName)) {
+        return copy;
+      }
+
+      // ✅ only create empty slot ONCE
+      copy.equipmentSchedules[equipmentName] = [];
       return copy;
     });
   }
 
-  function addScheduleEntry(equipmentName) {
+  // function addScheduleEntry(equipmentName) {
+  //   setPmDoc(prev => {
+  //     const copy = { ...(prev || {}) };
+  //     copy.equipmentSchedules = copy.equipmentSchedules || {};
+  //     const arr = Array.isArray(copy.equipmentSchedules[equipmentName]) ? [...copy.equipmentSchedules[equipmentName]] : [];
+  //     arr.push({
+  //       id: generateId(),
+  //       pmType: "In-House", // or Vendor
+  //       frequency: "monthly", // monthly | quarterly | half-yearly | yearly (informative)
+  //       months: [1], // which months (1..12) this PM falls on
+  //       dayOfMonth: 1,
+  //       vendor: "",
+  //       notes: ""
+  //     });
+  //     copy.equipmentSchedules[equipmentName] = arr;
+  //     return copy;
+  //   });
+  // }
+
+  // function addScheduleEntry(equipmentName, activityDescription) {
+  //   const activity = getActivityDetails(equipmentName, activityDescription);
+
+  //   if (!activity) return;
+
+  //   setPmDoc(prev => {
+  //     const copy = { ...prev };
+  //     copy.equipmentSchedules ||= {};
+  //     copy.equipmentSchedules[equipmentName] ||= [];
+
+  //     copy.equipmentSchedules[equipmentName].push({
+  //       id: generateId(),
+  //       pmType: activity.activityDescription,
+
+  //       // 🔽 activityMaster sync
+  //       activityCategory: activity.activityCategory,
+  //       activityCode: activity.activityCode,
+  //       activityType: activity.activityType,
+  //       avgMonthlyCount: activity.avgMonthlyCount,
+  //       crRequired: activity.crRequired,
+  //       crDaysBefore: activity.crDaysBefore,
+  //       approvalLevel: activity.approvalLevel,
+  //       approvers: activity.approvers || [],
+  //       information: activity.information || "",
+
+  //       // 🔽 PM specific
+  //       frequency: "monthly",
+  //       months: [1],
+  //       dayOfMonth: 1,
+  //       vendor: "",
+  //       notes: ""
+  //     });
+
+  //     return copy;
+  //   });
+  // }
+
+  function addScheduleEntry(equipmentName, activityDescription) {
+    const activity = getActivityDetails(equipmentName, activityDescription);
+    if (!activity) return;
+
     setPmDoc(prev => {
-      const copy = { ...(prev || {}) };
-      copy.equipmentSchedules = copy.equipmentSchedules || {};
-      const arr = Array.isArray(copy.equipmentSchedules[equipmentName]) ? [...copy.equipmentSchedules[equipmentName]] : [];
-      arr.push({
+      const copy = { ...prev };
+      copy.equipmentSchedules ||= {};
+
+      const existing = copy.equipmentSchedules[equipmentName] || [];
+
+      // 🚫 STOP if same activity already exists
+      const alreadyExists = existing.some(
+        e => e.pmType === activity.activityDescription
+      );
+
+      if (alreadyExists) {
+        return copy; // ⛔ no duplicate, no re-render
+      }
+
+      const entry = {
         id: generateId(),
-        pmType: "In-House", // or Vendor
-        frequency: "monthly", // monthly | quarterly | half-yearly | yearly (informative)
-        months: [1], // which months (1..12) this PM falls on
+        pmType: activity.activityDescription,
+
+        // 🔹 activity master
+        activityCategory: activity.activityCategory,
+        activityCode: activity.activityCode,
+        activityType: activity.activityType,
+        avgMonthlyCount: activity.avgMonthlyCount,
+        crRequired: activity.crRequired,
+        crDaysBefore: activity.crDaysBefore,
+        approvalLevel: activity.approvalLevel,
+        approvers: activity.approvers || [],
+        information: activity.information || "",
+
+        // 🔹 schedule fields
+        frequency: "monthly",
+        months: Array.from({ length: 12 }, (_, i) => i + 1),
         dayOfMonth: 1,
         vendor: "",
         notes: ""
-      });
-      copy.equipmentSchedules[equipmentName] = arr;
+      };
+
+      copy.equipmentSchedules[equipmentName] = [...existing, entry];
       return copy;
     });
   }
+
 
   function updateScheduleEntry(equipmentName, entryId, field, value) {
     setPmDoc(prev => {
@@ -270,15 +385,49 @@ export default function PMRegister({ userData }) {
     });
   }
 
-  function removeScheduleEntry(equipmentName, entryId) {
+  function updateScheduleEntryFull(equipmentName, entryId, updates) {
     setPmDoc(prev => {
-      const copy = { ...(prev || {}) };
-      copy.equipmentSchedules = copy.equipmentSchedules || {};
-      const arr = Array.isArray(copy.equipmentSchedules[equipmentName]) ? [...copy.equipmentSchedules[equipmentName]] : [];
-      copy.equipmentSchedules[equipmentName] = arr.filter(x => x.id !== entryId);
+      const copy = { ...prev };
+      copy.equipmentSchedules ||= {};
+
+      const arr = (copy.equipmentSchedules[equipmentName] || []).map(e =>
+        e.id === entryId ? { ...e, ...updates } : e
+      );
+
+      copy.equipmentSchedules[equipmentName] = arr;
       return copy;
     });
   }
+
+
+  // function removeScheduleEntry(equipmentName, entryId) {
+  //   setPmDoc(prev => {
+  //     const copy = { ...(prev || {}) };
+  //     copy.equipmentSchedules = copy.equipmentSchedules || {};
+  //     const arr = Array.isArray(copy.equipmentSchedules[equipmentName]) ? [...copy.equipmentSchedules[equipmentName]] : [];
+  //     copy.equipmentSchedules[equipmentName] = arr.filter(x => x.id !== entryId);
+  //     return copy;
+  //   });
+  // }
+
+  function removeScheduleEntry(equipmentName, entryId) {
+    setPmDoc(prev => {
+      const copy = { ...prev };
+      copy.equipmentSchedules ||= {};
+
+      const next = (copy.equipmentSchedules[equipmentName] || [])
+        .filter(e => e.id !== entryId);
+
+      if (next.length === 0) {
+        delete copy.equipmentSchedules[equipmentName];
+      } else {
+        copy.equipmentSchedules[equipmentName] = next;
+      }
+
+      return copy;
+    });
+  }
+
 
   // apply quick frequency -> months helper (monthly/quarterly/half/yearly)
   function applyFrequencyToEntry(entryId, equipmentName, frequency, startMonth = 1) {
@@ -361,8 +510,8 @@ export default function PMRegister({ userData }) {
             id: generateId(),
             pmType: r.pmType || r.pmType || "Vendor",
             frequency: r.frequency || "monthly",
-            months: (m.length ? m : (r.frequency === "monthly" ? Array.from({length:12}, (_,i)=>i+1) : [])),
-            dayOfMonth: r.day ? parseInt(r.day,10) || 1 : (r.dayOfMonth ? parseInt(r.dayOfMonth,10) || 1 : 1),
+            months: (m.length ? m : (r.frequency === "monthly" ? Array.from({ length: 12 }, (_, i) => i + 1) : [])),
+            dayOfMonth: r.day ? parseInt(r.day, 10) || 1 : (r.dayOfMonth ? parseInt(r.dayOfMonth, 10) || 1 : 1),
             vendor: r.vendor || "",
             notes: r.notes || r.note || ""
           };
@@ -393,6 +542,9 @@ export default function PMRegister({ userData }) {
     }
   }, [userData, isAdmin, isAssignedUser]);
 
+  const genId = () =>
+    `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
   return (
     <div className="dhr-dashboard-container">
       <div className="daily-activity-header">
@@ -410,17 +562,17 @@ export default function PMRegister({ userData }) {
           {regions.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
 
-        <select className="daily-activity-select" value={circle || ""} onChange={(e)=>{ setCircle(e.target.value); setSite(""); }} disabled={!region || (!isAdmin && !isAssignedUser && !!userData?.circle)}>
+        <select className="daily-activity-select" value={circle || ""} onChange={(e) => { setCircle(e.target.value); setSite(""); }} disabled={!region || (!isAdmin && !isAssignedUser && !!userData?.circle)}>
           <option value="">Select Circle</option>
           {circles.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
 
-        <select className="daily-activity-select" value={site || ""} onChange={(e)=> setSite(e.target.value)} disabled={!circle || (!isAdmin && !isAssignedUser && !!userData?.site)}>
+        <select className="daily-activity-select" value={site || ""} onChange={(e) => setSite(e.target.value)} disabled={!circle || (!isAdmin && !isAssignedUser && !!userData?.site)}>
           <option value="">Select Site</option>
           {sites.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
 
-        <input className="daily-activity-input" type="number" min="2000" max="2100" value={year} onChange={(e)=>setYear(parseInt(e.target.value,10)||currentYear())} style={{ width: 110 }} />
+        <input className="daily-activity-input" type="number" min="2000" max="2100" value={year} onChange={(e) => setYear(parseInt(e.target.value, 10) || currentYear())} style={{ width: 110 }} />
 
         <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
           // reload pmDoc for selected site/year — handled by useEffect but we allow manual
@@ -465,11 +617,33 @@ export default function PMRegister({ userData }) {
 
             {/* equipment selection quick add */}
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <select className="daily-activity-select" value={selectedEquipment} onChange={(e)=>setSelectedEquipment(e.target.value)}>
+              <select className="daily-activity-select" value={selectedEquipment} onChange={(e) => setSelectedEquipment(e.target.value)}>
                 {Array.from(new Set([...equipmentList, ...Object.keys(pmDoc.equipmentSchedules || {})])).map(eq => <option key={eq} value={eq}>{eq}</option>)}
               </select>
               <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => ensureEquipmentSlot(selectedEquipment)} disabled={!canEdit}>Ensure Slot</button>
-              <button className="daily-activity-btn daily-activity-btn-primary" onClick={() => addScheduleEntry(selectedEquipment)} disabled={!canEdit}>+ Add Schedule Entry</button>
+              <button
+                className="daily-activity-btn daily-activity-btn-primary"
+                disabled={!canEdit}
+                onClick={() => {
+                  const activities =
+                    ACTIVITY_MASTER[selectedEquipment] ||
+                    ACTIVITY_MASTER.Other ||
+                    [];
+
+                  if (!activities.length) {
+                    alert("No activities defined for this equipment");
+                    return;
+                  }
+
+                  addScheduleEntry(
+                    selectedEquipment,
+                    activities[0].activityDescription   // ✅ STRING
+                  );
+                }}
+              >
+                + Add Schedule Entry
+              </button>
+
             </div>
 
             {/* equipment schedules list */}
@@ -503,18 +677,129 @@ export default function PMRegister({ userData }) {
                           <div key={entry.id} style={{ borderTop: "1px dashed #eee", paddingTop: 8 }}>
                             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                               <label style={{ minWidth: 110 }}>
-                                PM Type:
-                                <select className="daily-activity-select" value={entry.pmType || "In-House"}
-                                  onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "pmType", e.target.value)} disabled={!canEdit}>
-                                  <option value="In-House">In-House</option>
-                                  <option value="Vendor">Vendor</option>
+                                Activity Type:
+                                {/* <select className="daily-activity-select"
+                                  value={entry.pmType || "Select Activity"}
+                                  // onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "pmType", e.target.value)}
+                                  onChange={(e) => {
+                                    const activityDescription = e.target.value;
+                                    const activity = getActivityDetails(equipmentName, activityDescription);
+                                    if (!activity) return;
+
+                                    setPmDoc(prev => {
+                                      const copy = { ...prev };
+                                      const arr = [...copy.equipmentSchedules[equipmentName]];
+                                      const idx = arr.findIndex(x => x.id === entry.id);
+
+                                      if (idx >= 0) {
+                                        arr[idx] = {
+                                          ...arr[idx],
+                                          pmType: activity.activityDescription,
+                                          activityCategory: activity.activityCategory,
+                                          activityCode: activity.activityCode,
+                                          activityType: activity.activityType,
+                                          avgMonthlyCount: activity.avgMonthlyCount,
+                                          crRequired: activity.crRequired,
+                                          crDaysBefore: activity.crDaysBefore,
+                                          approvalLevel: activity.approvalLevel,
+                                          approvers: activity.approvers || [],
+                                          information: activity.information || ""
+                                        };
+                                      }
+
+                                      copy.equipmentSchedules[equipmentName] = arr;
+                                      return copy;
+                                    });
+                                  }}
+
+                                  disabled={!canEdit}>
+                                  {(ACTIVITY_MASTER[equipmentName] || ACTIVITY_MASTER.Other || []).map(a => (
+                                    <option key={a.activityDescription} value={a.activityDescription}>{a.activityDescription}</option>
+                                  ))}
+                                </select> */}
+                                <select
+                                  className="daily-activity-select"
+                                  value={entry.pmType || ""}
+                                  disabled={!canEdit}
+                                  onChange={(e) => {
+                                    const activity = getActivityDetails(equipmentName, e.target.value);
+                                    if (!activity) return;
+
+                                    updateScheduleEntryFull(equipmentName, entry.id, {
+                                      pmType: activity.activityDescription,
+                                      activityCategory: activity.activityCategory,
+                                      activityCode: activity.activityCode,
+                                      activityType: activity.activityType,
+                                      avgMonthlyCount: activity.avgMonthlyCount,
+                                      crRequired: activity.crRequired,
+                                      crDaysBefore: activity.crDaysBefore,
+                                      approvalLevel: activity.approvalLevel,
+                                      approvers: activity.approvers || [],
+                                      information: activity.information || ""
+                                    });
+                                  }}
+
+                                >
+                                  {(ACTIVITY_MASTER[equipmentName] || ACTIVITY_MASTER.Other || []).map(a => (
+                                    <option key={a.activityDescription} value={a.activityDescription}>
+                                      {a.activityDescription}
+                                    </option>
+                                  ))}
                                 </select>
+
                               </label>
+
+
+                              {/* <div style={{ marginTop: 10 }}>
+                                <label style={{ fontSize: 12, fontWeight: 600 }}>
+                                  Add Dynamic Activity
+                                </label>
+
+                                <select
+                                  className="daily-activity-select"
+                                  onChange={(e) => {
+                                    if (!e.target.value) return;
+
+                                    addSchedule(equipmentName, {
+                                      id: genId(),
+                                      pmType: "Dynamic",
+                                      activityDescription: e.target.value,
+                                      scheduleDate: new Date().toISOString().slice(0, 10),
+                                      vendor: "",
+                                      notes: ""
+                                    });
+                                    e.target.value = "";
+                                  }}
+                                >
+                                  <option value="">Select Activity</option>
+                                  {(ACTIVITY_MASTER[equipmentName] || ACTIVITY_MASTER.Other || []).map(a => (
+                                    <option key={a.activityDescription} value={a.activityDescription}>{a.activityDescription}</option>
+                                  ))}
+                                </select>
+                              </div> */}
 
                               <label style={{ minWidth: 160 }}>
                                 Frequency:
                                 <select className="daily-activity-select" value={entry.frequency || "monthly"}
-                                  onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
+                                  // onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
+                                  onChange={(e) => {
+                                    const freq = e.target.value;
+
+                                    const months =
+                                      freq === "monthly" ? Array.from({ length: 12 }, (_, i) => i + 1) :
+                                        freq === "quarterly" ? [1, 4, 7, 10] :
+                                          freq === "half-yearly" ? [1, 7] :
+                                            [1];
+
+                                    updateScheduleEntryFull(equipmentName, entry.id, {
+                                      frequency: freq,
+                                      months
+                                    });
+                                  }}
+
+                                  disabled={!canEdit}
+                                >
+
                                   <option value="monthly">Monthly</option>
                                   <option value="quarterly">Quarterly</option>
                                   <option value="half-yearly">Half-Yearly</option>
@@ -525,13 +810,38 @@ export default function PMRegister({ userData }) {
                               <label>
                                 Day:
                                 <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1}
-                                  onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1",10))))} disabled={!canEdit} />
+                                  // onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1", 10))))} disabled={!canEdit}
+                                  onChange={(e) =>
+                                    updateScheduleEntryFull(equipmentName, entry.id, {
+                                      dayOfMonth: Math.max(1, Math.min(31, Number(e.target.value)))
+                                    })
+                                  }
+                                />
                               </label>
 
                               <label>
                                 Vendor:
-                                <input className="daily-activity-input" value={entry.vendor || ""} onChange={(e)=>updateScheduleEntry(equipmentName, entry.id, "vendor", e.target.value)} disabled={!canEdit} />
+                                <select
+                                  className="daily-activity-select"
+                                  value={entry.vendor || ""}
+                                  // onChange={(e) =>
+                                  //   updateScheduleEntry(equipmentName, entry.id, "vendor", e.target.value)
+                                  // }
+                                  onChange={(e) =>
+                                    updateScheduleEntryFull(equipmentName, entry.id, {
+                                      vendor: e.target.value
+                                    })
+                                  }
+
+                                  disabled={!canEdit}
+                                >
+                                  <option value="">Select Vendor</option>
+                                  {vendorList.map(v => (
+                                    <option key={v} value={v}>{v}</option>
+                                  ))}
+                                </select>
                               </label>
+
 
                               <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
                                 <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => applyFrequencyToEntry(entry.id, equipmentName, entry.frequency || "monthly", (entry.months && entry.months[0]) || 1)} disabled={!canEdit}>Apply Frequency → Months</button>
@@ -551,7 +861,7 @@ export default function PMRegister({ userData }) {
                                         if (!canEdit) return;
                                         const next = new Set(Array.isArray(entry.months) ? entry.months : []);
                                         if (next.has(m.num)) next.delete(m.num); else next.add(m.num);
-                                        updateScheduleEntry(equipmentName, entry.id, "months", Array.from(next).sort((a,b)=>a-b));
+                                        updateScheduleEntry(equipmentName, entry.id, "months", Array.from(next).sort((a, b) => a - b));
                                       }}
                                       type="button"
                                       style={{ padding: "6px 8px", borderRadius: 6 }}
@@ -564,7 +874,14 @@ export default function PMRegister({ userData }) {
                             </div>
 
                             <div style={{ marginTop: 8 }}>
-                              <textarea placeholder="Notes / instructions" className="daily-activity-input" value={entry.notes || ""} onChange={(e)=>updateScheduleEntry(equipmentName, entry.id, "notes", e.target.value)} disabled={!canEdit} />
+                              <textarea placeholder="Notes / instructions" className="daily-activity-input" value={entry.notes || ""}
+                                // onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "notes", e.target.value)} disabled={!canEdit} 
+                                onChange={(e) =>
+                                  updateScheduleEntryFull(equipmentName, entry.id, {
+                                    notes: e.target.value
+                                  })
+                                }
+                              />
                             </div>
                           </div>
                         ))}

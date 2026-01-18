@@ -457,7 +457,7 @@ const SiteConfigEdit = ({ userData }) => {
             <div className="chart-container">
               <h1>Site Equipment Details</h1>
               {/* DG COUNT */}
-              <label>DG Count</label>
+              {/* <label>DG Count</label>
               <input
                 type="number"
                 name="dgCount"
@@ -469,7 +469,47 @@ const SiteConfigEdit = ({ userData }) => {
                     dgConfigs: prev.dgConfigs || {},
                   }))
                 }
-              />
+              /> */}
+
+              <label>DG Count</label>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => {
+                      const newCount = Math.max(0, (prev.dgCount || 0) - 1);
+                      return {
+                        ...prev,
+                        dgCount: newCount,
+                        dgConfigs: prev.dgConfigs || {},
+                      };
+                    })
+                  }
+                  disabled={(config.dgCount || 0) <= 0}
+                >
+                  –
+                </button>
+
+                <strong>{config.dgCount || 0}</strong>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => {
+                      const newCount = Math.min(4, (prev.dgCount || 0) + 1);
+                      return {
+                        ...prev,
+                        dgCount: newCount,
+                        dgConfigs: prev.dgConfigs || {},
+                      };
+                    })
+                  }
+                  disabled={(config.dgCount || 0) >= 4}
+                >
+                  +
+                </button>
+              </div>
 
               {/* 🔹 DG WISE CONFIG */}
               {Array.from({ length: config.dgCount || 0 }).map((_, i) => {
@@ -526,7 +566,7 @@ const SiteConfigEdit = ({ userData }) => {
                         }))
                       }
                     />
-                    
+
                     {/* Day Tank */}
                     <label>{dgKey} Day Tank Capacity (Ltrs)</label>
                     <input

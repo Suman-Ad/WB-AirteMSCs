@@ -187,12 +187,12 @@ const HSDPrintTemplate = ({ form, hsdForm, siteConfig, setPreviewOpen }) => {
                         <td colSpan={2}>
                             <strong>Document:</strong> HSD Receiving SOP
                         </td>
-                        <td colSpan={5}>
+                        <td colSpan={7}>
                             <strong>Version No:</strong> Nxtra/Sec/V1.0
                         </td>
-                        <td colSpan={2}>
+                        {/* <td colSpan={2}>
                             <strong>Date of Release:</strong> 26th October 2022
-                        </td>
+                        </td> */}
                     </tr>
                 </tbody>
                 <tbody>
@@ -257,10 +257,10 @@ const HSDPrintTemplate = ({ form, hsdForm, siteConfig, setPreviewOpen }) => {
                     <tr>
                         <td>{hsdForm.density || "—"}</td>
                         <td>{hsdForm.temperature || 0} °C</td>
-                        <td>200+200 Ltr (Iron Barrel)</td>
-                        <td>{hsdForm.ltrs || 0} Ltrs</td>
                         <td>—</td>
-                        <td>{hsdForm.ltrs ? `${hsdForm.ltrs} Ltrs` : "—"}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>{hsdForm.ltrs ? `${hsdForm.ltrs}` : "—"}</td>
                         <td>Nil</td>
                         <td>{hsdForm.dillerInvoice || "N/A"}</td>
                         <td>{hsdForm.outTime || "00:00"} Hrs</td>
