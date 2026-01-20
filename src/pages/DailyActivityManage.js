@@ -17,6 +17,24 @@ import "../assets/daily-activity.css";
 import { ACTIVITY_MASTER, getApproversFromLevels } from "../config/activityMaster";
 // import { APPROVAL_LEVELS } from "../config/approvalLevels";
 
+const formatApproversFromArray = (approversArr) => {
+  if (!Array.isArray(approversArr) || approversArr.length === 0) {
+    return "NA";
+  }
+
+  const grouped = approversArr.reduce((acc, { level, approver }) => {
+    if (!level || !approver) return acc;
+    acc[level] = acc[level] || [];
+    acc[level].push(approver);
+    return acc;
+  }, {});
+
+  return Object.entries(grouped)
+    .map(([level, users]) => `${level}: ${users.join(", ")}`)
+    .join("\n");
+};
+
+
 /*
   DailyActivityManage (PM-focused)
   - Uses pm_registers collection with doc id: `${region}__${circle}__${site}__${year}`
@@ -90,6 +108,41 @@ export default function DailyActivityManage({ userData }) {
 
   const [siteConfig, setSiteConfig] = useState({});
   const siteKey = site?.toUpperCase();
+
+  const [editRowIndex, setEditRowIndex] = useState(null);
+  const [editRowData, setEditRowData] = useState(null);
+  const openEditModal = (row, index) => {
+    setEditRowIndex(index);
+    setEditRowData({ ...row });
+  };
+
+  const saveEditModal = async () => {
+    if (editRowIndex === null) return;
+
+    const updated = [...dailyRows];
+    updated[editRowIndex] = editRowData;
+
+    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
+
+    await setDoc(
+      doc(db, "daily_activity_sheets", docId),
+      {
+        rows: updated,
+        lastUpdatedBy: userData?.uid,
+        lastUpdatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    setDailyRows(updated);
+    setEditRowIndex(null);
+    setEditRowData(null);
+  };
+
+  // collapse state per equipment
+  const [collapsedEquip, setCollapsedEquip] = useState({});
+  const [isAllCollapsed, setIsAllCollapsed] = useState(true); // default closed
+
 
   // Fetch Site Configs from Firestore
   const fetchConfig = async () => {
@@ -319,16 +372,13 @@ export default function DailyActivityManage({ userData }) {
             vendor: entry.vendor || "",
             activityType: entry.activityType || "Major",
             siteCategory: entry.siteCategory || "Super Critical",
+            mopRequired: entry.mopRequired ? "Yes" : "No",
             activityCode: entry.activityCode,
             activityCategory: entry.activityCategory || "",        // NEW
             approvalRequire: entry.approvalLevel || "",        // Yes / No
             approvers: getApproversFromLevels(entry.approvalLevels) || "",
             performBy: entry.performBy || "",
-            cih: "NA",
-            centralInfra: "NA",
-            ranOpsHead: "NA",
-            coreOpsHead: "NA",
-            fiberOpsHead: "NA",
+            crqType: entry.crRequired ? "CRQ" : "PE",
             crqNo: "CRQ00000",
             activityStartTime: entry.activityStartTime && entry.activityStartTime.trim() !== ""
               ? entry.activityStartTime
@@ -433,6 +483,33 @@ export default function DailyActivityManage({ userData }) {
     );
   }
 
+  const getUniqueLevels = (approversArr = []) => {
+    if (!Array.isArray(approversArr)) return [];
+    return [...new Set(approversArr.map(a => a.level))];
+  };
+
+  const getMaxApprovalLevelNumber = (rows = []) => {
+    let max = 0;
+
+    rows.forEach((r) => {
+      if (!Array.isArray(r.approvers)) return;
+
+      r.approvers.forEach(({ level }) => {
+        const num = parseInt(level?.replace("Level-", ""), 10);
+        if (!isNaN(num)) max = Math.max(max, num);
+      });
+    });
+
+    return max;
+  };
+
+  /* 👇 ADD THIS BLOCK HERE */
+  const maxLevel = getMaxApprovalLevelNumber(dailyRows);
+  const headerLevels = Array.from(
+    { length: maxLevel },
+    (_, i) => `Level-${i + 1}`
+  );
+
   return (
     <div className="dhr-dashboard-container">
       <div className="daily-activity-header">
@@ -446,206 +523,229 @@ export default function DailyActivityManage({ userData }) {
         <Link to="/pm-register"><span className="pm-manage-btn">📜Manage PM Register</span></Link>
       )}
 
-      {/* selection row */}
-      <div className="daily-activity-toolbar" style={{ alignItems: "center", gap: 8 }}>
-        <input className="daily-activity-input" placeholder="Region" value={region} onChange={(e) => setRegion(e.target.value)} style={{ width: 140 }} />
-        <input className="daily-activity-input" placeholder="Circle" value={circle} onChange={(e) => setCircle(e.target.value)} style={{ width: 140 }} />
-        <input className="daily-activity-input" placeholder="Site" value={site} onChange={(e) => setSite(e.target.value)} style={{ width: 220 }} />
-        <input className="daily-activity-input" type="number" min="2000" max="2100" value={year} onChange={(e) => setYear(parseInt(e.target.value || String(new Date().getFullYear()), 10))} style={{ width: 110 }} />
-        <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
-          // reload pm doc (useEffect covers it) — but we force re-fetch
-          if (!region || !circle || !site) return alert("Select region, circle & site");
-          (async () => {
-            setLoadingPm(true);
-            try {
-              const id = pmDocId(region, circle, site, year);
-              const snap = await getDoc(doc(db, "pm_registers", id));
-              if (snap.exists()) setPmDoc(snap.data());
-              else setPmDoc({ region, circle, site, year, createdBy: userData?.uid || null, equipmentSchedules: {} });
-            } catch (e) { console.error(e); alert("Load failed"); } finally { setLoadingPm(false); }
-          })();
-        }}>Load PM Register</button>
-
-        <button className="daily-activity-btn daily-activity-btn-primary" onClick={savePmDocToFirestore} disabled={!canEdit || saving}>{saving ? "Saving..." : "Save PM Register"}</button>
-        <button className="daily-activity-btn daily-activity-btn-danger" onClick={deletePmDocFromFirestore} disabled={!canEdit}>Delete PM Register</button>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+        <button
+          className="daily-activity-btn daily-activity-btn-secondary"
+          onClick={() => setIsAllCollapsed(prev => !prev)}
+        >
+          {isAllCollapsed ? "➕ Expand PM Register " : "➖ Collapse PM Register"}
+        </button>
       </div>
-
       {/* PM doc editor */}
-      <div style={{ marginTop: 12, border: "1px solid #eee", padding: 12, borderRadius: 8 }}>
-        {loadingPm ? <div className="daily-activity-loading">Loading PM Register…</div> : (
-          <>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontWeight: 700 }}>{pmDoc ? `${pmDoc.region} / ${pmDoc.circle} / ${pmDoc.site} — ${pmDoc.year}` : "No PM register loaded"}</div>
-              <div style={{ color: "#666" }}>Only admins & assigned users can edit schedules</div>
-            </div>
+      {!isAllCollapsed && (
+        <div style={{ marginTop: 12, border: "1px solid #eee", padding: 12, borderRadius: 8 }}>
+          {/* selection row */}
+          <div className="daily-activity-toolbar" style={{ alignItems: "center", gap: 8 }}>
+            <input className="daily-activity-input" placeholder="Region" value={region} onChange={(e) => setRegion(e.target.value)} style={{ width: 140 }} disabled={!isAdmin} />
+            <input className="daily-activity-input" placeholder="Circle" value={circle} onChange={(e) => setCircle(e.target.value)} style={{ width: 140 }} disabled={!isAdmin} />
+            <input className="daily-activity-input" placeholder="Site" value={site} onChange={(e) => setSite(e.target.value)} style={{ width: 220 }} disabled={!isAdmin} />
+            <input className="daily-activity-input" type="number" min="2000" max="2100" value={year} onChange={(e) => setYear(parseInt(e.target.value || String(new Date().getFullYear()), 10))} style={{ width: 110 }} />
+            <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
+              // reload pm doc (useEffect covers it) — but we force re-fetch
+              if (!region || !circle || !site) return alert("Select region, circle & site");
+              (async () => {
+                setLoadingPm(true);
+                try {
+                  const id = pmDocId(region, circle, site, year);
+                  const snap = await getDoc(doc(db, "pm_registers", id));
+                  if (snap.exists()) setPmDoc(snap.data());
+                  else setPmDoc({ region, circle, site, year, createdBy: userData?.uid || null, equipmentSchedules: {} });
+                } catch (e) { console.error(e); alert("Load failed"); } finally { setLoadingPm(false); }
+              })();
+            }}>Load PM Register</button>
 
-            {/* equipment list with schedules */}
-            <div style={{ display: "grid", gap: 12 }}>
-              {equipmentKeys.length === 0 ? <div className="daily-activity-empty">No equipment</div> : equipmentKeys.map(eq => {
-                const entries = (pmDoc && pmDoc.equipmentSchedules && Array.isArray(pmDoc.equipmentSchedules[eq])) ? pmDoc.equipmentSchedules[eq] : [];
-                return (
-                  <div key={eq} style={{ border: "1px solid #f3f3f3", padding: 10, borderRadius: 6 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ fontWeight: 600 }}>{eq}</div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => ensureEquipmentSlot(eq)} disabled={!canEdit}>Ensure</button>
-                        <button className="daily-activity-btn daily-activity-btn-primary" onClick={() => addSchedule(eq)} disabled={!canEdit}>+ Add Schedule</button>
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
-                      {entries.length === 0 ? (
-                        <div style={{ color: "#666" }}>No schedule entries</div>
-                      ) : entries.map(entry => (
-                        <div key={entry.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 8, alignItems: "center", padding: 8, borderTop: "1px dashed #eee" }}>
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 600 }}>{entry.pmType || (entry.frequency ? (entry.frequency + " PM") : "PM")}</div>
-                            <div style={{ fontSize: 12, color: "#444" }}>{entry.notes || ""}</div>
-                          </div>
-                          <div>
-                            <label style={{ fontSize: 12, color: "#666" }}>Frequency</label>
-                            <select className="daily-activity-select" value={entry.frequency || "monthly"} onChange={(e) => updateSchedule(eq, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
-                              {FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label style={{ fontSize: 12, color: "#666" }}>Months (comma separated)</label>
-                            <input className="daily-activity-input" value={(entry.months || []).join(",")} onChange={(e) => {
-                              const months = (e.target.value || "").split(/[,\s]+/).map(x => parseInt(x, 10)).filter(n => !isNaN(n) && n >= 1 && n <= 12);
-                              updateSchedule(eq, entry.id, "months", Array.from(new Set(months)).sort((a, b) => a - b));
-                            }} disabled={!canEdit} />
-                            <div style={{ fontSize: 11, color: "#666" }}>{(entry.months || []).length ? `Months: ${(entry.months || []).join(",")}` : "No months set"}</div>
-                          </div>
-                          <div style={{ textAlign: "right" }}>
-                            <div style={{ marginBottom: 6 }}>
-                              <label style={{ display: "block", fontSize: 12, color: "#666" }}>Day (1-31)</label>
-                              <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1} onChange={(e) => updateSchedule(eq, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1", 10))))} disabled={!canEdit} />
-                            </div>
-                            <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                              <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
-                                // quick toggle pmType between In-House and Vendor
-                                updateSchedule(eq, entry.id, "pmType", entry.pmType === "Vendor" ? "In-House" : "Vendor");
-                              }} disabled={!canEdit}>Toggle Type</button>
-                              <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => {
-                                if (!canEdit) return;
-                                if (!window.confirm("Remove this schedule entry?")) return;
-                                removeSchedule(eq, entry.id);
-                              }} disabled={!canEdit}>Remove</button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-              <div style={{ marginBottom: 12, border: "1px dashed #ccc", padding: 10 }}>
-                <h4>➕ Add Dynamic Activity (Site User)</h4>
-
-                {/* Equipment */}
-                <select
-                  className="daily-activity-select"
-                  value={dynamicEquip}
-                  onChange={(e) => {
-                    setDynamicEquip(e.target.value);
-                    setDynamicActivity("");
-                  }}
-                >
-                  <option value="">Select Equipment</option>
-                  {equipmentKeys.map(eq => (
-                    <option key={eq} value={eq}>{eq}</option>
-                  ))}
-                </select>
-
-                {/* Activity */}
-                {dynamicEquip && (
-                  <select
-                    className="daily-activity-select"
-                    value={dynamicActivity}
-                    onChange={(e) => setDynamicActivity(e.target.value)}
-                    style={{ marginLeft: 8 }}
-                  >
-                    <option value="">Select Activity</option>
-                    {(ACTIVITY_MASTER[dynamicEquip] || ACTIVITY_MASTER["Other"] || []).map(a => (
-                      <option key={a.activityDescription} value={a.activityDescription}>{a.activityDescription}</option>
-                    ))}
-                  </select>
-                )}
-
-                {/* Add Button */}
-                <button
-                  className="daily-activity-btn daily-activity-btn-primary"
-                  style={{ marginLeft: 8 }}
-                  disabled={!dynamicEquip || !dynamicActivity}
-                  onClick={async () => {
-                    const meta = ACTIVITY_MASTER[dynamicEquip].find(
-                      a => a.activityDescription === dynamicActivity
-                    );
-
-                    const newRow = sanitize({
-                      nodeName: dynamicEquip,
-                      activityDetails: meta.activityDescription ?? "",
-                      activityType: meta.activityType ?? "Major",
-                      activityCategory: meta.activityCategory ?? "PM",
-                      performBy: meta.performBy ?? "In-House",
-                      activityCode: meta.activityCode ?? "*",
-
-                      siteCategory: siteConfig?.siteCategory ?? "Major",
-
-                      approvalRequire: meta.approvalLevel ?? "No",
-                      approvers: getApproversFromLevels(meta.approvalLevels) ?? null,
-
-                      crRequired: meta.crRequired ?? "No",
-                      crDaysBefore: meta.crDaysBefore ?? 0,
-
-                      cih: "NA",
-                      centralInfra: "NA",
-                      ranOpsHead: "NA",
-                      coreOpsHead: "NA",
-                      fiberOpsHead: "NA",
-
-                      crqType: "CRQ",
-                      crqNo: null,
-
-                      activityStartTime: "10:00",
-                      activityEndTime: "18:00",
-
-                      isDynamic: true,
-                      activitySource: "DYNAMIC",
-                      createdAt: serverTimestamp()
-                    });
-
-                    const updated = [...dailyRows, newRow];
-                    setDailyRows(updated);
-
-                    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
-                    await setDoc(
-                      doc(db, "daily_activity_sheets", docId),
-                      sanitize({
-                        siteId: userData?.siteId || site,
-                        siteName: site,
-                        date: selectedDate,
-                        rows: updated,
-                        lastUpdatedBy: userData?.uid || null,
-                        lastUpdatedAt: serverTimestamp()
-                      }),
-                      { merge: true }
-                    );
-
-
-                    setDynamicEquip("");
-                    setDynamicActivity("");
-                  }}
-                >
-                  Add
-                </button>
+            <button className="daily-activity-btn daily-activity-btn-primary" onClick={savePmDocToFirestore} disabled={!canEdit || saving}>{saving ? "Saving..." : "Save PM Register"}</button>
+            <button className="daily-activity-btn daily-activity-btn-danger" onClick={deletePmDocFromFirestore} disabled={!canEdit}>Delete PM Register</button>
+          </div>
+          {loadingPm ? <div className="daily-activity-loading">Loading PM Register…</div> : (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ fontWeight: 700 }}>{pmDoc ? `${pmDoc.region} / ${pmDoc.circle} / ${pmDoc.site} — ${pmDoc.year}` : "No PM register loaded"}</div>
+                <div style={{ color: "#666" }}>Only admins & assigned users can edit schedules</div>
               </div>
 
-            </div>
-          </>
-        )}
-      </div>
 
+
+              {/* equipment list with schedules */}
+              <div className="child-container" style={{ display: "grid", gap: 12 }}>
+                {equipmentKeys.length === 0 ? <div className="daily-activity-empty">No equipment</div> : equipmentKeys.map(eq => {
+                  const entries = (pmDoc && pmDoc.equipmentSchedules && Array.isArray(pmDoc.equipmentSchedules[eq])) ? pmDoc.equipmentSchedules[eq] : [];
+                  return (
+                    <div key={eq} style={{ border: "1px solid #f3f3f3", padding: 10, borderRadius: 6 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontWeight: 600 }}>{eq}</div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => ensureEquipmentSlot(eq)} disabled={!canEdit}>Ensure</button>
+                          <button className="daily-activity-btn daily-activity-btn-primary" onClick={() => addSchedule(eq)} disabled={!canEdit}>+ Add Schedule</button>
+                        </div>
+                      </div>
+
+
+                      <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
+                        {entries.length === 0 ? (
+                          <div style={{ color: "#666" }}>No schedule entries</div>
+                        ) : entries.map(entry => (
+                          <div key={entry.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, alignItems: "center", padding: 8, borderTop: "1px dashed #eee", width: "inherit", background: "#adababd2" }}>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600 }}>
+                                {entry.pmType ||
+                                  <>
+                                    <select>
+                                      <option value="">Select Activity</option>
+                                      {(ACTIVITY_MASTER[eq] || ACTIVITY_MASTER["Other"] || []).map(a => (
+                                        <option key={a.activityDescription} value={a.activityDescription}>{a.activityDescription}</option>
+                                      ))}
+                                    </select>
+                                  </>
+                                }
+                              </div>
+                              <div style={{ fontSize: 12, color: "#444" }}>{entry.notes || ""}</div>
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 12, color: "#666" }}>Frequency</label>
+                              <select className="daily-activity-select" value={entry.frequency || "monthly"} onChange={(e) => updateSchedule(eq, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
+                                {FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 12, color: "#666" }}>Months (comma separated)</label>
+                              <input className="daily-activity-input" value={(entry.months || []).join(",")} onChange={(e) => {
+                                const months = (e.target.value || "").split(/[,\s]+/).map(x => parseInt(x, 10)).filter(n => !isNaN(n) && n >= 1 && n <= 12);
+                                updateSchedule(eq, entry.id, "months", Array.from(new Set(months)).sort((a, b) => a - b));
+                              }} disabled={!canEdit} />
+                              <div style={{ fontSize: 11, color: "#666" }}>{(entry.months || []).length ? `Months: ${(entry.months || []).join(",")}` : "No months set"}</div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ marginBottom: 6 }}>
+                                <label style={{ display: "block", fontSize: 12, color: "#666" }}>Day (1-31)</label>
+                                <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1} onChange={(e) => updateSchedule(eq, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1", 10))))} disabled={!canEdit} />
+                              </div>
+                              <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                                {/* <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
+                                // quick toggle pmType between In-House and Vendor
+                                updateSchedule(eq, entry.id, "pmType", entry.pmType === "Vendor" ? "In-House" : "Vendor");
+                              }} disabled={!canEdit}>Toggle Type</button> */}
+                                <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => {
+                                  if (!canEdit) return;
+                                  if (!window.confirm("Remove this schedule entry?")) return;
+                                  removeSchedule(eq, entry.id);
+                                }} disabled={!canEdit}>Remove</button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="child-container" style={{ marginBottom: 12, border: "1px dashed #ccc", padding: 10 }}>
+        <h4>➕ Add Dynamic Activity (Site User)</h4>
+
+        {/* Equipment */}
+        <select
+          className="daily-activity-select"
+          value={dynamicEquip}
+          onChange={(e) => {
+            setDynamicEquip(e.target.value);
+            setDynamicActivity("");
+          }}
+        >
+          <option value="">Select Equipment</option>
+          {equipmentKeys.map(eq => (
+            <option key={eq} value={eq}>{eq}</option>
+          ))}
+          <option value="Others" >Others</option>
+        </select>
+
+        {/* Activity */}
+        {dynamicEquip && (
+          <select
+            className="daily-activity-select"
+            value={dynamicActivity}
+            onChange={(e) => setDynamicActivity(e.target.value)}
+            style={{ marginLeft: 8 }}
+          >
+            <option value="">Select Activity</option>
+            {(ACTIVITY_MASTER[dynamicEquip] || ACTIVITY_MASTER["Other"] || []).map(a => (
+              <option key={a.activityDescription} value={a.activityDescription}>{a.activityDescription}</option>
+            ))}
+          </select>
+        )}
+
+        {/* Add Button */}
+        <button
+          className="daily-activity-btn daily-activity-btn-primary"
+          style={{ marginLeft: 8 }}
+          disabled={!dynamicEquip || !dynamicActivity}
+          onClick={async () => {
+            const meta = ACTIVITY_MASTER[dynamicEquip].find(
+              a => a.activityDescription === dynamicActivity
+            );
+
+            const newRow = sanitize({
+              nodeName: dynamicEquip,
+              activityDetails: meta.activityDescription ?? "",
+              activityType: meta.activityType ?? "Major",
+              activityCategory: meta.activityCategory ?? "PM",
+              performBy: meta.performBy ?? "In-House",
+              mopRequired: meta.mopRequired ? "Yes" : "No",
+              activityCode: meta.activityCode ?? "*",
+
+              siteCategory: siteConfig?.siteCategory ?? "Major",
+
+              approvalRequire: meta.approvalLevel ?? "No",
+              approvers: getApproversFromLevels(meta.approvalLevels) ?? null,
+
+              crDaysBefore: meta.crDaysBefore ?? 0,
+
+              cih: "NA",
+              centralInfra: "NA",
+              ranOpsHead: "NA",
+              coreOpsHead: "NA",
+              fiberOpsHead: "NA",
+
+              crqType: meta.crRequired ? "CRQ" : "PE",
+              crqNo: null,
+
+              activityStartTime: "10:00",
+              activityEndTime: "18:00",
+
+              isDynamic: true,
+              activitySource: "DYNAMIC",
+              createdAt: serverTimestamp()
+            });
+
+            const updated = [...dailyRows, newRow];
+            setDailyRows(updated);
+
+            const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
+            await setDoc(
+              doc(db, "daily_activity_sheets", docId),
+              sanitize({
+                siteId: userData?.siteId || site,
+                siteName: site,
+                date: selectedDate,
+                rows: updated,
+                lastUpdatedBy: userData?.uid || null,
+                lastUpdatedAt: serverTimestamp()
+              }),
+              { merge: true }
+            );
+
+
+            setDynamicEquip("");
+            setDynamicActivity("");
+          }}
+        >
+          Add
+        </button>
+      </div>
       {/* Daily sheet */}
       <div style={{ marginTop: 12, border: "1px solid #eee", padding: 12, borderRadius: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -680,15 +780,16 @@ export default function DailyActivityManage({ userData }) {
                   <th>Activity Category</th>
                   <th>Activity Code</th>
                   <th>Activity Type</th>
+                  <th>Activity Owner</th>
+                  <th>MOP Required</th>
                   <th>Approval Required</th>
                   <th>Approval Level</th>
-                  <th>CIH</th>
-                  <th>Central Infra</th>
-                  <th>RAN Ops Head</th>
-                  <th>Core Ops Head</th>
-                  <th>Fiber Ops Head</th>
-                  <th>CRQ/REQ/PE Type</th>
-                  <th>CRQ/REQ/PE Number</th>
+                  {/* 👇 DYNAMIC LEVEL HEADERS */}
+                  {headerLevels.map(level => (
+                    <th key={level}>{level}</th>
+                  ))}
+                  <th>CRQ/PE Type</th>
+                  <th>CRQ/PE Number</th>
                   <th>Start</th>
                   <th>End</th>
                   <th>Actions</th>
@@ -704,45 +805,54 @@ export default function DailyActivityManage({ userData }) {
                     }}
                   >
                     <td>{idx + 1}</td>
-                    <td>
-                      <input className="daily-activity-input" value={r.nodeName || ""} onChange={(e) => updateDailyRow(idx, "nodeName", e.target.value)} />
+                    <td className="daily-activity-input" value={r.nodeName || ""} onChange={(e) => updateDailyRow(idx, "nodeName", e.target.value)} >
+                      {r.nodeName || ""}
                     </td>
-                    <td>
-                      <input className="daily-activity-input" value={r.activityDetails || ""} onChange={(e) => updateDailyRow(idx, "activityDetails", e.target.value)} />
+                    <td className="daily-activity-input" value={r.activityDetails || ""} onChange={(e) => updateDailyRow(idx, "activityDetails", e.target.value)} >
+                      {r.activityDetails || ""}
                     </td>
 
                     {/* Site Category dropdown */}
-                    <td>
+                    {/* <td>
                       <select className="daily-activity-select" value={siteConfig?.siteCategory || r.siteCategory} onChange={(e) => updateDailyRow(idx, "siteCategory", e.target.value)}>
                         <option value="Super Critical">Super Critical</option>
                         <option value="Critical">Critical</option>
                         <option value="Major">Major</option>
                       </select>
-                    </td>
+                    </td> */}
+                    <td>{siteConfig?.siteCategory || r.siteCategory}</td>
 
                     {/* Activity Type dropdown */}
-                    <td>
-                      <input
-                        className="daily-activity-select"
-                        value={r.activityCategory || "Major"}
-                        disabled
-                      />
+                    <td
+                      className="daily-activity-select"
+                      value={r.activityCategory || "Minor"}
+                      disabled
+                    >
+                      {r.activityCategory || "Minor"}
                     </td>
 
-                    <td>
-                      <input
-                        className="daily-activity-select"
-                        value={r.activityCode || "*"}
-                        disabled
-                      />
+                    <td
+                      className="daily-activity-select"
+                      value={r.activityCode || "*"}
+                      disabled
+                    >
+                      {r.activityCode || "*"}
                     </td>
 
-                    <td>
-                      <input
-                        className="daily-activity-select"
-                        value={r.performBy || "In-House"}
-                        disabled
-                      />
+                    <td
+                      className="daily-activity-select"
+                      value={r.activityType || ""}
+                      disabled
+                    >
+                      {r.activityType || ""}
+                    </td>
+
+                    <td
+                      className="daily-activity-select"
+                      value={r.performBy || "In-House"}
+                      disabled
+                    >
+                      {r.performBy || "In-House"}
                     </td>
 
                     {/* <td>
@@ -764,22 +874,31 @@ export default function DailyActivityManage({ userData }) {
                     </select>
                   </td> */}
 
-                    <td>
-                      <input
-                        className="daily-activity-input"
-                        value={r.approvalRequire || "No"}
-                        disabled
-                      />
+                    <td
+                      className="daily-activity-input"
+                      value={r.mopRequired}
+                      disabled
+                    >
+                      {r.mopRequired}
+                    </td>
+
+                    <td
+                      className="daily-activity-input"
+                      value={r.approvalRequire || "No"}
+                      disabled
+                    >
+                      {r.approvalRequire || "No"}
                     </td>
 
                     <td>
                       <textarea
                         className="daily-activity-input"
-                        value={
-                          r.approvers || "No"}
+                        value={formatApproversFromArray(r.approvers)}
                         disabled
+                        style={{ width: "150px", height: "150px" }}
                       />
                     </td>
+
 
                     {/* <td>
                     <select
@@ -806,25 +925,46 @@ export default function DailyActivityManage({ userData }) {
                       <option value="Fiber Ops Head">Fiber Ops Head</option>
                     </select>
                   </td> */}
-                    {/* Individual approvals */}
-                    {["cih", "centralInfra", "ranOpsHead", "coreOpsHead", "fiberOpsHead"].map(col => (
-                      <td key={col}>
-                        <select className="daily-activity-select" value={r[col] || "NA"} onChange={(e) => updateDailyRow(idx, col, e.target.value)}>
-                          <option value="NA">NA</option>
-                          <option value="Y">Y</option>
-                          <option value="N">N</option>
-                        </select>
-                      </td>
-                    ))}
+                    {/* Individual approvals – Level based */}
+                    {/* Individual approvals – dynamic by max level */}
+                    {headerLevels.map((level) => {
+                      const rowLevels = Array.isArray(r.approvers)
+                        ? r.approvers.map(a => a.level)
+                        : [];
+
+                      const hasLevel = rowLevels.includes(level);
+
+                      return (
+                        <td key={level}>
+                          <select
+                            className="daily-activity-select"
+                            value={r.approvalStatusByLevel?.[level] || "NA"}
+                            disabled={!hasLevel}
+                            onChange={(e) => {
+                              if (!hasLevel) return;
+
+                              updateDailyRow(idx, "approvalStatusByLevel", {
+                                ...(r.approvalStatusByLevel || {}),
+                                [level]: e.target.value,
+                              });
+                            }}
+                            style={{ cursor: !hasLevel ? "not-allowed" : "pointer" }}
+                          >
+                            <option value="NA">NA</option>
+                            <option value="Y">Y</option>
+                            <option value="N">N</option>
+                          </select>
+                        </td>
+                      );
+                    })}
 
                     <td>
                       <select
                         className="daily-activity-select"
-                        value={r.crqType || "REQ"}
+                        value={r.crqType}
                         onChange={(e) => updateDailyRow(idx, "crqType", e.target.value)}
                       >
-                        <option value="CRQ">CRQ</option>
-                        <option value="REQ">REQ</option>
+                        <option value="CRQ" disabled={!r.crRequired}>CRQ</option>
                         <option value="PE">PE</option>
                       </select>
                     </td>
@@ -835,14 +975,13 @@ export default function DailyActivityManage({ userData }) {
                         className="daily-activity-input"
                         list={`crq-options-${idx}`}
                         value={r.crqNo || ""}
-                        placeholder={r.crqType === "CRQ" ? "CRQ Number required" : "Optional"}
+                        placeholder={r.crqType === "CRQ" ? "CRQ Number required" : "PE Number required"}
                         required={r.crqType === "CRQ"}
                         onChange={(e) => updateDailyRow(idx, "crqNo", e.target.value)}
                       />
                       <datalist id={`crq-options-${idx}`}>
                         <option value="CRQ00000" />
                         <option value="PE" />
-                        <option value="REQ" />
                       </datalist>
                     </td>
 
@@ -861,17 +1000,92 @@ export default function DailyActivityManage({ userData }) {
                     </datalist>
                   </td> */}
                     {/* Start/End time */}
-                    <td><input className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e) => updateDailyRow(idx, "activityStartTime", e.target.value)} /></td>
-                    <td><input className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e) => updateDailyRow(idx, "activityEndTime", e.target.value)} /></td>
+                    <td className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e) => updateDailyRow(idx, "activityStartTime", e.target.value)} >{r.activityStartTime || ""}</td>
+                    <td className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e) => updateDailyRow(idx, "activityEndTime", e.target.value)} >{r.activityEndTime || ""}</td>
                     {/* Delete */}
                     <td>
-                      <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => deleteDailyRow(idx)}>Delete</button>
+                      <button
+                        className="daily-activity-btn daily-activity-btn-secondary"
+                        onClick={() => openEditModal(r, idx)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className="daily-activity-btn daily-activity-btn-danger"
+                        onClick={() => deleteDailyRow(idx)}
+                      >
+                        Delete
+                      </button>
                     </td>
+
                   </tr>
                 ))}
               </tbody>
 
             </table>
+
+            {editRowData && (
+              <div className="modal-overlay">
+                <div className="modal-box">
+                  <h3>Edit Daily Activity</h3>
+
+                  <label>Node Name</label>
+                  <input
+                    className="daily-activity-input"
+                    value={editRowData.nodeName}
+                    onChange={(e) =>
+                      setEditRowData({ ...editRowData, nodeName: e.target.value })
+                    }
+                  />
+
+                  <label>Activity Details</label>
+                  <input
+                    className="daily-activity-input"
+                    value={editRowData.activityDetails}
+                    onChange={(e) =>
+                      setEditRowData({ ...editRowData, activityDetails: e.target.value })
+                    }
+                  />
+
+                  <label>Start Time</label>
+                  <input
+                    type="time"
+                    className="daily-activity-input"
+                    value={editRowData.activityStartTime}
+                    onChange={(e) =>
+                      setEditRowData({ ...editRowData, activityStartTime: e.target.value })
+                    }
+                  />
+
+                  <label>End Time</label>
+                  <input
+                    type="time"
+                    className="daily-activity-input"
+                    value={editRowData.activityEndTime}
+                    onChange={(e) =>
+                      setEditRowData({ ...editRowData, activityEndTime: e.target.value })
+                    }
+                  />
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                    <button
+                      className="daily-activity-btn daily-activity-btn-secondary"
+                      onClick={() => setEditRowData(null)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="daily-activity-btn daily-activity-btn-primary"
+                      onClick={saveEditModal}
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </div>

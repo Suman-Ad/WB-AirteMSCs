@@ -13,7 +13,7 @@ import {
 import { db } from "../firebase";
 import "../assets/daily-activity.css";
 import { region, siteList, siteIdMap } from "../config/siteConfigs.js";
-import { ACTIVITY_MASTER } from "../config/activityMaster.js";
+import { ACTIVITY_MASTER, getApproversFromLevels } from "../config/activityMaster.js";
 
 /*
  PM Register Sheet
@@ -323,6 +323,24 @@ export default function PMRegister({ userData }) {
   //   });
   // }
 
+  const formatApproversFromArray = (approversArr) => {
+    if (!Array.isArray(approversArr) || approversArr.length === 0) {
+      return "NA";
+    }
+
+    const grouped = approversArr.reduce((acc, { level, approver }) => {
+      if (!level || !approver) return acc;
+      acc[level] = acc[level] || [];
+      acc[level].push(approver);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([level, users]) => `${level}: ${users.join(", ")}`)
+      .join("\n");
+  };
+
+
   function addScheduleEntry(equipmentName, activityDescription) {
     const activity = getActivityDetails(equipmentName, activityDescription);
     if (!activity) return;
@@ -354,7 +372,7 @@ export default function PMRegister({ userData }) {
         crRequired: activity.crRequired,
         crDaysBefore: activity.crDaysBefore,
         approvalLevel: activity.approvalLevel,
-        approvers: activity.approvers || [],
+        approvalLevels: activity.approvalLevels,
         information: activity.information || "",
 
         // 🔹 schedule fields
@@ -734,7 +752,7 @@ export default function PMRegister({ userData }) {
                                       crRequired: activity.crRequired,
                                       crDaysBefore: activity.crDaysBefore,
                                       approvalLevel: activity.approvalLevel,
-                                      approvers: activity.approvers || [],
+                                      approvalLevels: activity.approvalLevels,
                                       information: activity.information || ""
                                     });
                                   }}

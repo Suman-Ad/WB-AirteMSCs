@@ -168,6 +168,13 @@ const SiteConfigEdit = ({ userData }) => {
                 <option value="MNG">MNG</option>
                 <option value="TNG">TNG</option>
               </select>
+              <label>Site Category</label>
+              <select name="siteCategory" value={config.siteCategory || ""} onChange={handleChange}>
+                <option value="">Select Category</option>
+                <option value="Super Critical">Super Critical</option>
+                <option value="Critical">Critical</option>
+                <option value="Major">Major</option>
+              </select>
               <label>Running PF</label>
               <input
                 type="number"

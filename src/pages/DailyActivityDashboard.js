@@ -17,14 +17,11 @@ const LABELS = [
   "Activity Category",
   "Activity Type",
   "Activity Owner",
+  "MOP Required",
   "Activity Code",
   "Approval Require",
   "Approvers",
-  "CIH",
-  "Central Infra",
-  "RAN OPS head",
-  "Core OPS head",
-  "Fiber OPS head",
+  "CRQ Required",
   "CRQ/PE/REQ Tpye",
   "CRQ No/PE",
   "Activity Start Time",
@@ -41,19 +38,17 @@ const KEYS = [
   "activityCategory",
   "activityType",
   "performBy",
+  "mopRequired",
   "activityCode",
   "approvalRequire",
   "approvers",
-  "cih",
-  "centralInfra",
-  "ranOpsHead",
-  "coreOpsHead",
-  "fiberOpsHead",
+  "crRequired",
   "crqType",
   "crqNo",
   "activityStartTime",
   "activityEndTime",
 ];
+
 
 /** Small utils */
 const toDateObj = (d) => {
@@ -129,13 +124,21 @@ export default function DailyActivityDashboard({ userData }) {
   /** raw rows and filtered rows */
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const getTodayISO = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
 
   /** filter popup state */
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({
     searchText: "",
-    dateFrom: "",
-    dateTo: "",
+    dateFrom: getTodayISO(),
+    dateTo: getTodayISO(),
     siteName: "",
     activityType: "",
     siteCategory: "",
@@ -192,6 +195,7 @@ export default function DailyActivityDashboard({ userData }) {
               siteId,
               date,
               siteName,
+              siteCategory: r.siteCategory || "",
               nodeName: r.nodeName || "",
               activityDetails: r.activityDetails || "",
               activityCategory: r.activityCategory || "",   // ✅ added
@@ -396,32 +400,6 @@ export default function DailyActivityDashboard({ userData }) {
     }
   }
 
-  /** export current filtered rows to Excel */
-  function exportExcel() {
-    const exportData = filteredRows.map((r, i) => ({
-      [LABELS[0]]: i + 1,
-      [LABELS[1]]: r.date || "",
-      [LABELS[2]]: r.siteName || "",
-      [LABELS[3]]: r.nodeName || "",
-      [LABELS[4]]: r.activityDetails || "",
-      [LABELS[5]]: r.activityType || "",
-      [LABELS[6]]: r.siteCategory || "",
-      [LABELS[7]]: r.approvalRequire || "",
-      [LABELS[8]]: r.cih || "",
-      [LABELS[9]]: r.centralInfra || "",
-      [LABELS[10]]: r.ranOpsHead || "",
-      [LABELS[11]]: r.coreOpsHead || "",
-      [LABELS[12]]: r.fiberOpsHead || "",
-      [LABELS[13]]: r.crqNo || "",
-      [LABELS[14]]: r.activityStartTime || "",
-      [LABELS[15]]: r.activityEndTime || "",
-    }));
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Daily Activities");
-    XLSX.writeFile(wb, `DailyActivityDashboard_${Date.now()}.xlsx`);
-  }
-
   /** Charts: Site-wise Approval (bar), Daily Approval Trend (line), CRQ/PE/REQ (pie) */
   useEffect(() => {
     // destroy old charts to avoid leaks
@@ -549,13 +527,146 @@ export default function DailyActivityDashboard({ userData }) {
   const resetFilters = () =>
     setFilters({
       searchText: "",
-      dateFrom: "",
-      dateTo: "",
+      dateFrom: getTodayISO(),
+      dateTo: getTodayISO(),
       siteName: "",
       activityType: "",
       siteCategory: "",
       approvalStatus: "",
     });
+
+
+  const getMaxApprovalLevelNumber = (rows = []) => {
+    let max = 0;
+
+    rows.forEach((r) => {
+      if (!Array.isArray(r.approvers)) return;
+
+      r.approvers.forEach(({ level }) => {
+        const num = parseInt(level?.replace("Level-", ""), 10);
+        if (!isNaN(num)) max = Math.max(max, num);
+      });
+    });
+
+    return max;
+  };
+
+  const getHeaderLevels = (rows = []) => {
+    const max = getMaxApprovalLevelNumber(rows);
+    return Array.from({ length: max }, (_, i) => `Level-${i + 1}`);
+  };
+
+  const headerLevels = useMemo(
+    () => getHeaderLevels(filteredRows),
+    [filteredRows]
+  );
+
+  const formatApproversForDashboard = (approversArr) => {
+    if (!Array.isArray(approversArr) || approversArr.length === 0) {
+      return "NA";
+    }
+
+    const grouped = approversArr.reduce((acc, { level, approver }) => {
+      if (!level || !approver) return acc;
+      acc[level] = acc[level] || [];
+      acc[level].push(approver);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([level, users]) => `${level}: ${users.join(", ")}`)
+      .join(" | ");
+  };
+
+  /** export current filtered rows to Excel */
+  const formatApproversForExport = (approversArr) => {
+    if (!Array.isArray(approversArr) || approversArr.length === 0) return "NA";
+
+    const grouped = approversArr.reduce((acc, { level, approver }) => {
+      acc[level] = acc[level] || [];
+      acc[level].push(approver);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([level, users]) => `${level}: ${users.join(", ")}`)
+      .join(" | ");
+  };
+
+  const getDayNightFromStartTime = (startTime) => {
+    if (!startTime || typeof startTime !== "string") return "";
+
+    // Expected formats: "HH:mm" or "HH:mm:ss"
+    const parts = startTime.split(":");
+    if (parts.length < 2) return "";
+
+    const hour = parseInt(parts[0], 10);
+    if (isNaN(hour)) return "";
+
+    return hour < 6 ? "Night Activity" : "Day Activity";
+  };
+
+
+  function exportExcel() {
+    if (!filteredRows.length) return;
+
+    // 🔹 dynamic approval levels
+    const maxLevel = getMaxApprovalLevelNumber(filteredRows);
+    const levelHeaders = Array.from(
+      { length: maxLevel },
+      (_, i) => `Level-${i + 1}`
+    );
+
+    const exportData = filteredRows.map((r, i) => {
+      const baseRow = {
+        "Sl.No": i + 1,
+        Date: r.date || "",
+        "Site Name": r.siteName || "",
+        "Site Category": r.siteCategory || "",
+        "Node Name": r.nodeName || "",
+        "Activity Details": r.activityDetails || "",
+        "Activity Category": r.activityCategory || "",
+        "Activity Type": r.activityType || "",
+        "Activity Owner": r.performBy || "",
+        "MOP Required": !r.mopRequired ? "No" : "Yes",
+        "Activity Code": r.activityCode || "",
+        "Approval Require": r.approvalRequire || "",
+        Approvers: formatApproversForExport(r.approvers),
+        // ✅ NEW COLUMN
+        "Activity Time (Day/Night)": getDayNightFromStartTime(
+          r.activityStartTime
+        ),
+        "CRQ Required": r.crRequired ? "Yes" : "No",
+        "CRQ/PE/REQ Type": r.crqType || "",
+        "CRQ No/PE": r.crqNo || "",
+        "Activity Start Time": r.activityStartTime || "",
+        "Activity End Time": r.activityEndTime || "",
+      };
+
+      // 🔹 add level-wise approval status
+      levelHeaders.forEach((level) => {
+        const rowLevels = Array.isArray(r.approvers)
+          ? r.approvers.map((a) => a.level)
+          : [];
+
+        baseRow[level] = rowLevels.includes(level)
+          ? r.approvalStatusByLevel?.[level] || "NA"
+          : "";
+      });
+
+      return baseRow;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Daily Activities");
+
+    XLSX.writeFile(
+      wb,
+      `DailyActivityDashboard_${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
+  }
+
 
   return (
     <div className="dhr-dashboard-container">
@@ -664,6 +775,12 @@ export default function DailyActivityDashboard({ userData }) {
                 {LABELS.map((label) => (
                   <th key={label}>{label}</th>
                 ))}
+
+                {/* 🔹 Dynamic approval level headers */}
+                {headerLevels.map((level) => (
+                  <th key={level}>{level}</th>
+                ))}
+
                 {isAdmin && <th>Actions</th>}
               </tr>
             </thead>
@@ -671,25 +788,60 @@ export default function DailyActivityDashboard({ userData }) {
               {filteredRows.map((rowObj, idx) => (
                 <tr key={`${rowObj._sheetId}-${rowObj._rowIndex}`}>
                   <td>{idx + 1}</td>
-                  {KEYS.map((k) => (
-                    <td key={k}>
-                      {isAdmin &&
-                        editingRow &&
-                        editingRow.sheetId === rowObj._sheetId &&
-                        editingRow.rowIndex === rowObj._rowIndex ? (
-                        <input
-                          type="text"
-                          className="daily-activity-input"
-                          value={draftRow[k] || ""}
-                          onChange={(e) =>
-                            setDraftRow((d) => ({ ...d, [k]: e.target.value }))
-                          }
-                        />
-                      ) : (
-                        rowObj[k] || ""
-                      )}
-                    </td>
-                  ))}
+                  {KEYS.map((k) => {
+                    const isApprovers = k === "approvers";
+                    const isCode = k === "activityCode";
+                    const isColor = k.activityCode;
+
+                    return (
+                      <td key={k}
+                        style={{
+                          // maxHeight: isApprovers ? "10px" : "10px",
+                          overflowY: isApprovers ? "auto" : "visible",
+                          whiteSpace: isApprovers ? "nowrap" : "pre-line",
+                          maxWidth: isApprovers ? "200px" : "auto",
+                          scrollbarsWidth: isApprovers ? "thin" : "auto",
+                          background: isCode ? isColor === "BLUE" ? "blue" : isColor === "GREEN" ? "green" : isColor === "AMBER" ? "amber" : isColor === "RED" ? "red" : "gray" : "",
+                          // verticalAlign: "top",
+                        }}
+                      >
+                        {isAdmin &&
+                          editingRow &&
+                          editingRow.sheetId === rowObj._sheetId &&
+                          editingRow.rowIndex === rowObj._rowIndex ? (
+                          <input
+                            type="text"
+                            className="daily-activity-input"
+                            value={draftRow[k] || ""}
+                            onChange={(e) =>
+                              setDraftRow((d) => ({ ...d, [k]: e.target.value }))
+                            }
+                          />
+                        ) : (
+                          k === "approvers"
+                            ? formatApproversForDashboard(rowObj.approvers)
+                            : rowObj[k] || ""
+                        )}
+                      </td>
+                    )
+                  })}
+                  {/* 🔹 Level-based approval status */}
+                  {headerLevels.map((level) => {
+                    const rowLevels = Array.isArray(rowObj.approvers)
+                      ? rowObj.approvers.map((a) => a.level)
+                      : [];
+
+                    const hasLevel = rowLevels.includes(level);
+
+                    return (
+                      <td key={level}>
+                        {hasLevel
+                          ? rowObj.approvalStatusByLevel?.[level] || "NA"
+                          : "—"}
+                      </td>
+                    );
+                  })}
+
                   {isAdmin && (
                     <td>
                       {editingRow &&

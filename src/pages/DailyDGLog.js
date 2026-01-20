@@ -2375,7 +2375,26 @@ const DailyDGLog = ({ userData }) => {
 
         return (
           <div className="chart-container" >
+
             <div className="status-header">
+              <span
+                style={{
+                  marginLeft: "8px",
+                  padding: "2px 10px",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  color: "#fff",
+                  background:
+                    powerSource === "DG"
+                      ? "#dc2626"
+                      : powerSource === "EB"
+                        ? "#16a34a"
+                        : "#6b7280",
+                }}
+              >
+                Site Live On:- <strong>{powerSource || "N/A"}</strong> Source
+              </span>
               {(userData.role === 'Admin' || userData.role === 'Super Admin') && (
                 <h2
                   className={`month ${formatMonthName(selectedMonth)}`}
@@ -2391,24 +2410,6 @@ const DailyDGLog = ({ userData }) => {
               <h1 style={{ background: powerSource === "DG" ? "#d17272ff" : "#6ce9e35d", borderBottom: "3px solid #fff", borderTop: "3px solid #fff", borderRadius: "10px", color: "#746212ff" }}>
                 <span onClick={() => window.location.reload()} style={{ cursor: "pointer" }} title="Refresh">🔄</span>
                 Current Site Status
-                <span
-                  style={{
-                    marginLeft: "8px",
-                    padding: "2px 10px",
-                    borderRadius: "6px",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    color: "#fff",
-                    background:
-                      powerSource === "DG"
-                        ? "#dc2626"
-                        : powerSource === "EB"
-                          ? "#16a34a"
-                          : "#6b7280",
-                  }}
-                >
-                  Site Live On:- <strong>{powerSource || "N/A"}</strong> Source
-                </span>
               </h1>
               <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}><strong>⛽Present Stock – {totalFuelAvailable} ltrs. </strong></h1>
               <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
