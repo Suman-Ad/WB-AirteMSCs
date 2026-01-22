@@ -14,6 +14,7 @@ export const ACTIVITY_MASTER = {
   UPS: [
     {
       activityDescription: "UPS EOL replacement/upgradation",
+      performBy: "OEM",
       activityCategory: "Super Critical",
       activityCode: "RED",
       activityType: "Replacement/upgradation",
@@ -27,6 +28,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "UPS Preventive maintenance (OEM)",
+      performBy: "OEM",
       activityCategory: "Major",
       activityCode: "BLUE",
       activityType: "Preventive maintenance",
@@ -41,6 +43,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "UPS Preventive maintenance (In House)",
+      performBy: "In-House",
       activityCategory: "Major",
       activityCode: "BLUE",
       activityType: "Preventive maintenance",
@@ -55,6 +58,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "Fault / Alarm / Break Down - UPS",
+      performBy: "OEM",
       activityCategory: "Critical",
       activityCode: "RED",
       activityType: "Corrective maintenance",
@@ -72,6 +76,7 @@ export const ACTIVITY_MASTER = {
   "UPS BB": [
     {
       activityDescription: "UPS BB EOL Replacement/Upgradation",
+      performBy: "OEM",
       activityCategory: "Super Critical",
       activityCode: "BLUE",
       activityType: "Replacement/Upgradation",
@@ -115,7 +120,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "UPS BB Cell Replacement",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Major",
       activityCode: "BLUE",
       activityType: "Replacement/Upgradation",
@@ -132,6 +137,7 @@ export const ACTIVITY_MASTER = {
   SMPS: [
     {
       activityDescription: "SMPS EOL replacement/upgradation",
+      performBy: "OEM",
       activityCategory: "Super Critical",
       activityCode: "RED",
       activityType: "Replacement/upgradation",
@@ -173,6 +179,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "Fault / Alarm / Break Down - SMPS",
+      performBy: "OEM",
       activityCategory: "Critical",
       activityCode: "RED",
       activityType: "Corrective maintenance",
@@ -189,6 +196,7 @@ export const ACTIVITY_MASTER = {
   "SMPS BB": [
     {
       activityDescription: "SMPS BB EOL Replacement/Upgradation",
+      performBy: "OEM",
       activityCategory: "Super Critical",
       activityCode: "BLUE",
       activityType: "Replacement/Upgradation",
@@ -230,7 +238,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "SMPS BB Cell Replacement",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Major",
       activityCode: "BLUE",
       activityType: "Replacement/Upgradation",
@@ -261,6 +269,7 @@ export const ACTIVITY_MASTER = {
   "Diesel Generator": [
     {
       activityDescription: "DG Set Replacement activity",
+      performBy: "OEM",
       activityCategory: "Super Critical",
       activityCode: "RED",
       activityType: "Replacement/upgradation",
@@ -302,6 +311,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "DG Set Radiator & Fuel tank cleaning activity",
+      performBy: "OEM",
       activityCategory: "Critical",
       activityCode: "AMBER",
       activityType: "Preventive maintenance",
@@ -315,6 +325,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "Daily DG test run",
+      performBy: "In-House",
       activityCategory: "Critical",
       activityCode: "GREEN",
       activityType: "Preventive maintenance",
@@ -373,7 +384,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "PAC Compressor replacement",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Major",
       activityCode: "BLUE",
       activityType: "Corrective maintenance",
@@ -387,7 +398,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "PAC ODU replacement",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Major",
       activityCode: "BLUE",
       activityType: "Replacement/upgradation",
@@ -404,7 +415,7 @@ export const ACTIVITY_MASTER = {
   "HT Panel": [
     {
       activityDescription: "HT panel replacement/upgradation",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Super Critical",
       activityCode: "RED",
       activityType: "Replacement/upgradation",
@@ -418,7 +429,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "HT panel Preventive maintenance (OEM)",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Major",
       activityCode: "BLUE",
       activityType: "Preventive maintenance",
@@ -446,7 +457,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "Fault / Alarm / Break Down - HT Panel",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Critical",
       activityCode: "AMBER",
       activityType: "Corrective maintenance",
@@ -465,7 +476,7 @@ export const ACTIVITY_MASTER = {
   "LT Panel": [
     {
       activityDescription: "LT panel replacement/upgradation",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Super Critical",
       activityCode: "RED",
       activityType: "Replacement/upgradation",
@@ -479,7 +490,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "LT panel Preventive maintenance (OEM)",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Major",
       activityCode: "BLUE",
       activityType: "Preventive maintenance",
@@ -507,7 +518,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "Fault / Alarm / Break Down - HT Panel",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Critical",
       activityCode: "AMBER",
       activityType: "Corrective maintenance",
@@ -523,8 +534,8 @@ export const ACTIVITY_MASTER = {
 
   Transformer: [
     {
-      activityDescription: "Transformer Replacement OEM",
-      performBy: "Vendor",
+      activityDescription: "Transformer Replacement(OEM)",
+      performBy: "OEM",
       activityCategory: "Super Critical",
       activityCode: "RED",
       activityType: "Replacement/upgradation",
@@ -538,7 +549,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "Transformer Preventive maintenance Oil filtration",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Critical",
       activityCode: "AMBER",
       activityType: "Preventive maintenance",
@@ -550,9 +561,22 @@ export const ACTIVITY_MASTER = {
       approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4"],
       information: ""
     },
-
+{
+      activityDescription: "Transformer Preventive maintenance (OEM)",
+      performBy: "OEM",
+      activityCategory: "Critical",
+      activityCode: "BLUE",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 27,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      information: ""
+    },
     {
-      activityDescription: "Transformer In House PM",
+      activityDescription: "Transformer Preventive maintenance (In-House)",
       performBy: "In-House",
       activityCategory: "Critical",
       activityCode: "BLUE",
@@ -584,6 +608,22 @@ export const ACTIVITY_MASTER = {
     }
   ],
 
+  BMS: [
+    {
+      activityDescription: "BMS Preventive maintenance (In-House) ",
+      performBy: "In-House",
+      activityCategory: "Minor",
+      activityCode: "GREEN",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 0,
+      mopRequired: false,
+      crRequired: false,
+      crDaysBefore: 2,
+      approvalLevel: "Circle",
+      approvalLevels: ["Level-1", "Level-2"],
+      information: ""
+    }
+  ],
   PFE: [
     {
       activityDescription: "Portable fire extinguisher preventive maintenance (In-House) ",
@@ -682,18 +722,32 @@ export const ACTIVITY_MASTER = {
 
   FAS: [
     {
-      activityDescription: "Fire Panel replacement OEM",
+      activityDescription: "Fire Panel Preventive maintenance(In-House)",
       performBy: "In-House",
-      activityCategory: "Super Critical",
-      activityCode: "RED",
-      activityType: "Replacement/upgradation",
+      activityCategory: "Minor",
+      activityCode: "GREEN",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 32,
+      mopRequired: false,
+      crRequired: false,
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      information: ""
+    },
+    {
+      activityDescription: "Fire Panel Preventive maintenance(OEM)",
+      performBy: "OEM",
+      activityCategory: "Minor",
+      activityCode: "BLUE",
+      activityType: "Preventive maintenance",
       avgMonthlyCount: 32,
       mopRequired: true,
       crRequired: true,
-      crDaysBefore: 5,
-      approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
-      information: "Mr. Deepak Sanghi"
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      information: ""
     },
     {
       activityDescription: "Fire Panel maintenance OEM",
@@ -713,18 +767,32 @@ export const ACTIVITY_MASTER = {
 
   FSS: [
     {
-      activityDescription: "FSS replacement OEM",
+      activityDescription: "FSS Preventive maintenance(In-House)",
       performBy: "In-House",
-      activityCategory: "Super Critical",
-      activityCode: "RED",
-      activityType: "Replacement/upgradation",
+      activityCategory: "Minor",
+      activityCode: "GREEN",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 32,
+      mopRequired: false,
+      crRequired: false,
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      information: ""
+    },
+    {
+      activityDescription: "FSS Preventive maintenance(OEM)",
+      performBy: "OEM",
+      activityCategory: "Minor",
+      activityCode: "BLUE",
+      activityType: "Preventive maintenance",
       avgMonthlyCount: 32,
       mopRequired: true,
       crRequired: true,
-      crDaysBefore: 5,
-      approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
-      information: "Mr. Deepak Sanghi"
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      information: ""
     },
     {
       activityDescription: "FSS maintenance OEM",
@@ -789,7 +857,7 @@ export const ACTIVITY_MASTER = {
     },
     {
       activityDescription: "Pest Control activity",
-      performBy: "Vendor",
+      performBy: "OEM",
       activityCategory: "Minor",
       activityCode: "GREEN",
       activityType: "Preventive maintenance",

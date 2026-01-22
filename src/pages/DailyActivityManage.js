@@ -80,6 +80,12 @@ export default function DailyActivityManage({ userData }) {
   const [site, setSite] = useState(userData?.site || userData?.siteName || "");
   const [year, setYear] = useState(new Date().getFullYear());
 
+  const [regions, setRegions] = useState([]);
+  const [circles, setCircles] = useState([]);
+  const [sites, setSites] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+
   // pm doc
   const [pmDoc, setPmDoc] = useState(null);
   const [loadingPm, setLoadingPm] = useState(false);
@@ -105,6 +111,7 @@ export default function DailyActivityManage({ userData }) {
 
   const [dynamicEquip, setDynamicEquip] = useState("");
   const [dynamicActivity, setDynamicActivity] = useState("");
+  const [vendorName, setVendorName] = useState("");
 
   const [siteConfig, setSiteConfig] = useState({});
   const siteKey = site?.toUpperCase();
@@ -144,6 +151,8 @@ export default function DailyActivityManage({ userData }) {
   const [isAllCollapsed, setIsAllCollapsed] = useState(true); // default closed
 
 
+
+
   // Fetch Site Configs from Firestore
   const fetchConfig = async () => {
     if (!siteKey) return;
@@ -154,13 +163,13 @@ export default function DailyActivityManage({ userData }) {
   };
 
 
-
   // load site hierarchy from assets_register if available (best-effort)
   useEffect(() => {
     if (!circle || !(userData?.siteId || site)) return;
 
     async function loadAssetsFlat() {
       try {
+        setLoading(true);
         const snap = await getDocs(collection(db, "assets_flat"));
 
         const equipSet = new Set();
@@ -168,6 +177,15 @@ export default function DailyActivityManage({ userData }) {
 
         snap.forEach(docSnap => {
           const d = docSnap.data();
+
+          // 🔐 Admin / Super Admin → ALL sites
+          if (isAdmin || isSuperAdmin) {
+            if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
+            if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
+            return;
+          }
+
+          // 👤 Other users → EXISTING site-based logic
           if (
             d.Circle === circle &&
             d.UniqueCode === (userData?.siteId || site)
@@ -179,7 +197,7 @@ export default function DailyActivityManage({ userData }) {
 
         setEquipmentList(Array.from(equipSet).sort());
         setVendorList(Array.from(vendorSet).sort());
-
+        setLoading(false);
       } catch (e) {
         console.error("assets_flat load failed", e);
       }
@@ -190,11 +208,13 @@ export default function DailyActivityManage({ userData }) {
     loadAssetsFlat();
   }, [circle, site, userData?.siteId, siteKey]);
 
+
   // load pm doc for selected site/year
   useEffect(() => {
     async function loadPm() {
       if (!region || !circle || !site || !year) { setPmDoc(null); return; }
       setLoadingPm(true);
+      setLoading(true);
       const id = pmDocId(region, circle, site, year);
       try {
         const snap = await getDoc(doc(db, "pm_registers", id));
@@ -222,6 +242,7 @@ export default function DailyActivityManage({ userData }) {
         });
       } finally {
         setLoadingPm(false);
+        setLoading(false);
       }
     }
     loadPm();
@@ -232,6 +253,7 @@ export default function DailyActivityManage({ userData }) {
     async function loadDaily() {
       if (!site) { setDailyRows([]); return; }
       setLoadingDaily(true);
+      setLoading(true);
       const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
       try {
         const snap = await getDoc(doc(db, "daily_activity_sheets", docId));
@@ -245,10 +267,59 @@ export default function DailyActivityManage({ userData }) {
         setDailyRows([]);
       } finally {
         setLoadingDaily(false);
+        setLoading(false);
       }
     }
     loadDaily();
   }, [selectedDate, site, userData?.siteId]);
+
+
+  useEffect(() => {
+    async function loadRegionCircleSite() {
+      const snap = await getDocs(collection(db, "assets_flat"));
+
+      const regionSet = new Set();
+      const circleMap = {};
+      const siteMap = {};
+
+      snap.forEach(docSnap => {
+        const d = docSnap.data();
+
+        // 🔐 Restrict non-admin users
+        if (!isAdmin && !isSuperAdmin) {
+          if (
+            d.Region !== userData?.region ||
+            d.Circle !== userData?.circle ||
+            d.UniqueCode !== (userData?.siteId || userData?.site)
+          ) {
+            return;
+          }
+        }
+
+        // REGION
+        if (d.Region) regionSet.add(d.Region);
+
+        // CIRCLE
+        if (d.Region && d.Circle) {
+          circleMap[d.Region] = circleMap[d.Region] || new Set();
+          circleMap[d.Region].add(d.Circle);
+        }
+
+        // SITE
+        if (d.Circle && d.SiteName) {
+          siteMap[d.Circle] = siteMap[d.Circle] || new Set();
+          siteMap[d.Circle].add(d.SiteName);
+        }
+      });
+
+      setRegions([...regionSet].sort());
+      setCircles(region ? [...(circleMap[region] || [])].sort() : []);
+      setSites(circle ? [...(siteMap[circle] || [])].sort() : []);
+    }
+
+    loadRegionCircleSite();
+  }, [region, circle, isAdmin, isSuperAdmin, userData]);
+
 
   // helpers for modifying pmDoc locally
   function ensureEquipmentSlot(equipment) {
@@ -367,6 +438,7 @@ export default function DailyActivityManage({ userData }) {
         const matchesByDates = scheduleDates.length ? scheduleDates.includes(selectedDate) : false;
         if (matchesByMonths || matchesByDates) {
           matches.push({
+            // circle: pmDoc.circle || "",
             nodeName: eq,
             activityDetails: entry.pmType || "",
             vendor: entry.vendor || "",
@@ -512,6 +584,48 @@ export default function DailyActivityManage({ userData }) {
 
   return (
     <div className="dhr-dashboard-container">
+      {loading && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: "#0f172a",
+              padding: "30px 40px",
+              borderRadius: "12px",
+              textAlign: "center",
+              color: "white",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                border: "4px solid #334155",
+                borderTop: "4px solid #38bdf8",
+                borderRadius: "50%",
+                margin: "0 auto 15px",
+                animation: "spin 1s linear infinite",
+              }}
+            />
+            <div style={{ fontSize: "15px", fontWeight: "bold" }}>
+              Fetching Daily Activity…
+            </div>
+            <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "4px" }}>
+              Please wait
+            </div>
+          </div>
+        </div>
+      )}
       <div className="daily-activity-header">
         <h1 className="dashboard-header">
           <strong>🚧🛠️ Daily Activity Manage (PM Register integration)</strong>
@@ -536,9 +650,52 @@ export default function DailyActivityManage({ userData }) {
         <div style={{ marginTop: 12, border: "1px solid #eee", padding: 12, borderRadius: 8 }}>
           {/* selection row */}
           <div className="daily-activity-toolbar" style={{ alignItems: "center", gap: 8 }}>
-            <input className="daily-activity-input" placeholder="Region" value={region} onChange={(e) => setRegion(e.target.value)} style={{ width: 140 }} disabled={!isAdmin} />
-            <input className="daily-activity-input" placeholder="Circle" value={circle} onChange={(e) => setCircle(e.target.value)} style={{ width: 140 }} disabled={!isAdmin} />
-            <input className="daily-activity-input" placeholder="Site" value={site} onChange={(e) => setSite(e.target.value)} style={{ width: 220 }} disabled={!isAdmin} />
+            {/* <input className="daily-activity-input" placeholder="Region" value={region} onChange={(e) => setRegion(e.target.value)} style={{ width: 140 }} disabled={!isAdmin} /> */}
+            <select
+              className="daily-activity-select"
+              value={region}
+              onChange={(e) => {
+                setRegion(e.target.value);
+                setCircle("");
+                setSite("");
+              }}
+              disabled={!isAdmin && !isSuperAdmin}
+            >
+              <option value="">Select Region</option>
+              {regions.map(r => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+
+            {/* <input className="daily-activity-input" placeholder="Circle" value={circle} onChange={(e) => setCircle(e.target.value)} style={{ width: 140 }} disabled={!isAdmin} /> */}
+            <select
+              className="daily-activity-select"
+              value={circle}
+              onChange={(e) => {
+                setCircle(e.target.value);
+                setSite("");
+              }}
+              disabled={!region || (!isAdmin && !isSuperAdmin)}
+            >
+              <option value="">Select Circle</option>
+              {circles.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
+            {/* <input className="daily-activity-input" placeholder="Site" value={site} onChange={(e) => setSite(e.target.value)} style={{ width: 220 }} disabled={!isAdmin} /> */}
+            <select
+              className="daily-activity-select"
+              value={site}
+              onChange={(e) => setSite(e.target.value)}
+              disabled={!circle || (!isAdmin && !isSuperAdmin)}
+            >
+              <option value="">Select Site</option>
+              {sites.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+
             <input className="daily-activity-input" type="number" min="2000" max="2100" value={year} onChange={(e) => setYear(parseInt(e.target.value || String(new Date().getFullYear()), 10))} style={{ width: 110 }} />
             <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
               // reload pm doc (useEffect covers it) — but we force re-fetch
@@ -663,6 +820,16 @@ export default function DailyActivityManage({ userData }) {
           <option value="Others" >Others</option>
         </select>
 
+        <select
+          value={vendorName}
+          onChange={(e) => setVendorName(e.target.value)}
+        >
+          <option value="">Select Vendor Name</option>
+          {vendorList.map(v => (
+            <option key={v} value={v}>{v}</option>
+          ))}
+        </select>
+
         {/* Activity */}
         {dynamicEquip && (
           <select
@@ -694,6 +861,7 @@ export default function DailyActivityManage({ userData }) {
               activityType: meta.activityType ?? "Major",
               activityCategory: meta.activityCategory ?? "PM",
               performBy: meta.performBy ?? "In-House",
+              vendor: vendorName || "In-House",
               mopRequired: meta.mopRequired ? "Yes" : "No",
               activityCode: meta.activityCode ?? "*",
 
@@ -703,12 +871,6 @@ export default function DailyActivityManage({ userData }) {
               approvers: getApproversFromLevels(meta.approvalLevels) ?? null,
 
               crDaysBefore: meta.crDaysBefore ?? 0,
-
-              cih: "NA",
-              centralInfra: "NA",
-              ranOpsHead: "NA",
-              coreOpsHead: "NA",
-              fiberOpsHead: "NA",
 
               crqType: meta.crRequired ? "CRQ" : "PE",
               crqNo: null,
@@ -781,6 +943,7 @@ export default function DailyActivityManage({ userData }) {
                   <th>Activity Code</th>
                   <th>Activity Type</th>
                   <th>Activity Owner</th>
+                  <th>OEM/Vendor Name</th>
                   <th>MOP Required</th>
                   <th>Approval Required</th>
                   <th>Approval Level</th>
@@ -853,6 +1016,14 @@ export default function DailyActivityManage({ userData }) {
                       disabled
                     >
                       {r.performBy || "In-House"}
+                    </td>
+
+                    <td
+                      className="daily-activity-select"
+                      value={r.vendor || "In-House"}
+                      disabled
+                    >
+                      {r.vendor || "In-House"}
                     </td>
 
                     {/* <td>

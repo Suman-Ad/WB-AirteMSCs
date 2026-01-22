@@ -24,7 +24,7 @@ import {
   XAxis, YAxis, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 import { calculateFields } from "../utils/calculatedDGLogs";
-import { external } from "jszip";
+// import { external } from "jszip";
 
 // ✅ helper to format date as YYYY-MM-DD
 
@@ -284,6 +284,8 @@ const DailyDGLog = ({ userData }) => {
     setForm(prev => ({
       ...prev,
       [`${dgKey} External Fuel Stock`]: newExternal.toFixed(2),
+      [`${dgKey} Fuel Opening`]:
+        (Number(prev[`${dgKey} Fuel Opening`] || 0) + used).toFixed(2),
       [`${dgKey} Fuel Closing`]:
         (Number(prev[`${dgKey} Fuel Closing`] || 0) + used).toFixed(2)
     }));
@@ -1252,7 +1254,7 @@ const DailyDGLog = ({ userData }) => {
         return alert(`DG-${i} Off Load Hour cannot be negative`);
       }
 
-      if (fuelFill > 0) {
+      if ((fuelFill > 0)) {
         // in filling case → Closing must be greater than Opening
         if (fuelClose <= fuelOpen) {
           return alert(`DG-${i} Fuel Closing must be greater than Opening when filling fuel`);
@@ -1648,6 +1650,7 @@ const DailyDGLog = ({ userData }) => {
         row[`DG-${i} Fuel Opening`] = fmt(calculated[`DG-${i} Fuel Opening`]);
         row[`DG-${i} Fuel Closing`] = fmt(calculated[`DG-${i} Fuel Closing`]);
         row[`DG-${i} Fuel Filling`] = fmt(calculated[`DG-${i} Fuel Filling`]);
+        row[`DG-${i} External Fuel Filling`] = fmt(calculated[`DG-${i} External Fuel Filling`]);
         row[`DG-${i} External Fuel Stock`] = fmt(calculated[`DG-${i} External Fuel Stock`]);
         row[`DG-${i} ON Load Consumption`] = fmt(calculated[`DG-${i} ON Load Consumption`]);
         row[`DG-${i} OFF Load Consumption`] = fmt(calculated[`DG-${i} OFF Load Consumption`]);
@@ -1962,6 +1965,10 @@ const DailyDGLog = ({ userData }) => {
     if (header.includes("Run Min")) return { backgroundColor: "#FFD700", color: "#000" };
     if (header.includes("ON Load")) return { backgroundColor: "#2E7D32", color: "#fff" };
     if (header.includes("OFF Load")) return { backgroundColor: "#F35C48", color: "#fff" };
+    if (header.startsWith("DG-1") && header.endsWith("Filling")) return { backgroundColor: "#8655ac", color: "#35b646" };
+    if (header.startsWith("DG-1") && header.endsWith("Stock")) return { backgroundColor: "#8655ac", color: "#35b646" };
+    if (header.startsWith("DG-2") && header.endsWith("Filling")) return { backgroundColor: "#5e87b9", color: "#35b646" };
+    if (header.startsWith("DG-2") && header.endsWith("Stock")) return { backgroundColor: "#5e87b9", color: "#35b646" };
     if (header.startsWith("DG-1")) return { backgroundColor: "#8655ac", color: "#fff" };
     if (header.startsWith("DG-2")) return { backgroundColor: "#5e87b9", color: "#fff" };
     if (header.startsWith("DG-2")) return { backgroundColor: "#5e87b9", color: "#fff" };
@@ -3734,7 +3741,7 @@ const DailyDGLog = ({ userData }) => {
         <div className="table-container" style={{ scrollbarWidth: "thin" }}>
           <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>
 
-          <table >
+          <table>
             <thead>
               <tr>
                 <th>Metric</th>

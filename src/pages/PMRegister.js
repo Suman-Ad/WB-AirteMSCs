@@ -99,6 +99,7 @@ export default function PMRegister({ userData }) {
   // site hierarchy (either from assets_register collection or fallback)
   const [hierarchy, setHierarchy] = useState(DEFAULT_SITE_HIERARCHY);
   const [loadingHierarchy, setLoadingHierarchy] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // selected area & year
   const initialRegion = userData?.region || Object.keys(DEFAULT_SITE_HIERARCHY)[0] || "";
@@ -116,19 +117,22 @@ export default function PMRegister({ userData }) {
   const [pmLoading, setPmLoading] = useState(false);
 
   // permissions
-  const isSuperAdmin = userData?.role === "Super Admin";
-  const isAdmin = isSuperAdmin || userData?.role === "Admin";
-  const [isAssignedUser, setIsAssignedUser] = useState(false);
-  const canEdit = isAdmin || isAssignedUser;
+  const isAdmin = userData?.role === "Admin" ||
+    userData?.role === "Super Admin" ||
+    userData?.designation === "Vertiv CIH" ||
+    userData?.designation === "Vertiv Site Infra Engineer" ||
+    userData?.isAdminAssigned ||
+    userData?.designation === "Vertiv ZM";
+  const canEdit = isAdmin;
 
-  const isDynamic = (entry) => entry.pmType === "Dynamic";
+  // const isDynamic = (entry) => entry.pmType === "Dynamic";
 
-  const addSchedule = (equipmentName, newEntry) => {
-    setPmDoc(prev => ({
-      ...prev,
-      [equipmentName]: [...(prev[equipmentName] || []), newEntry]
-    }));
-  };
+  // const addSchedule = (equipmentName, newEntry) => {
+  //   setPmDoc(prev => ({
+  //     ...prev,
+  //     [equipmentName]: [...(prev[equipmentName] || []), newEntry]
+  //   }));
+  // };
 
   // UI states
   const [selectedEquipment, setSelectedEquipment] = useState("");
@@ -156,9 +160,10 @@ export default function PMRegister({ userData }) {
   // load site list from assets_register if available
   useEffect(() => {
     if (!circle || !site) return;
-
     async function loadAssetsFlatData() {
       try {
+        setLoading(true);
+
         const snap = await getDocs(collection(db, "assets_flat"));
 
         const equipSet = new Set();
@@ -166,22 +171,26 @@ export default function PMRegister({ userData }) {
 
         snap.forEach(docSnap => {
           const d = docSnap.data();
+          // 🔐 Admin / Super Admin → ALL sites
+          if (isAdmin) {
+            if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
+            if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
+            return;
+          }
+
+          // 👤 Other users → EXISTING site-based logic
           if (
             d.Circle === circle &&
-            d.UniqueCode === siteIdMap[site]   // ✅ N19106A
+            d.UniqueCode === (userData?.siteId || site)
           ) {
-            if (d.EquipmentCategory) {
-              equipSet.add(d.EquipmentCategory);
-            }
-            if (d.AMC_Partner_Name) {
-              vendorSet.add(d.AMC_Partner_Name);
-            }
+            if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
+            if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
           }
         });
 
         setEquipmentList(Array.from(equipSet).sort());
         setVendorList(Array.from(vendorSet).sort());
-
+        setLoading(false);
       } catch (e) {
         console.error("assets_flat load failed", e);
       }
@@ -191,24 +200,6 @@ export default function PMRegister({ userData }) {
   }, [circle, site]);
 
 
-  // load admin_assignments to detect assigned user (any admin_assignments doc containing our uid)
-  useEffect(() => {
-    async function loadAssignments() {
-      try {
-        const snap = await getDocs(collection(db, "admin_assignments"));
-        let found = false;
-        snap.forEach(s => {
-          const d = s.data() || {};
-          if (Array.isArray(d.assignedUsers) && d.assignedUsers.includes(userData?.uid)) found = true;
-        });
-        setIsAssignedUser(found);
-      } catch (e) {
-        console.warn("admin_assignments load failed", e);
-      }
-    }
-    loadAssignments();
-  }, [userData?.uid]);
-
   // When region/circle/site/year changes, load existing PM doc
   useEffect(() => {
     async function loadPM() {
@@ -216,6 +207,7 @@ export default function PMRegister({ userData }) {
         setPmDoc(emptyPMDoc(region, circle, site, year));
         return;
       }
+      setLoading(true);
       setPmLoading(true);
       const key = makeSiteKey(region, circle, site) + "__" + String(year);
       try {
@@ -236,6 +228,7 @@ export default function PMRegister({ userData }) {
         setPmDoc(emptyPMDoc(region, circle, site, year));
       } finally {
         setPmLoading(false);
+        setLoading(false);
       }
     }
     loadPM();
@@ -366,10 +359,12 @@ export default function PMRegister({ userData }) {
 
         // 🔹 activity master
         activityCategory: activity.activityCategory,
+
         activityCode: activity.activityCode,
+        mopRequired: activity.mopRequired || false,
         activityType: activity.activityType,
         avgMonthlyCount: activity.avgMonthlyCount,
-        crRequired: activity.crRequired,
+        crRequired: activity.crRequired || false,
         crDaysBefore: activity.crDaysBefore,
         approvalLevel: activity.approvalLevel,
         approvalLevels: activity.approvalLevels,
@@ -553,18 +548,60 @@ export default function PMRegister({ userData }) {
 
   // protect non-admin users: if user is non-admin and has a site, lock region/circle/site to user's site
   useEffect(() => {
-    if (!isAdmin && !isAssignedUser) {
+    if (!isAdmin) {
       if (userData?.region) setRegion(userData.region);
       if (userData?.circle) setCircle(userData.circle);
       if (userData?.site) setSite(userData.site);
     }
-  }, [userData, isAdmin, isAssignedUser]);
+  }, [userData, isAdmin]);
 
   const genId = () =>
     `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
   return (
     <div className="dhr-dashboard-container">
+      {loading && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: "#0f172a",
+              padding: "30px 40px",
+              borderRadius: "12px",
+              textAlign: "center",
+              color: "white",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                border: "4px solid #334155",
+                borderTop: "4px solid #38bdf8",
+                borderRadius: "50%",
+                margin: "0 auto 15px",
+                animation: "spin 1s linear infinite",
+              }}
+            />
+            <div style={{ fontSize: "15px", fontWeight: "bold" }}>
+              Fetching PM Templates…
+            </div>
+            <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "4px" }}>
+              Please wait
+            </div>
+          </div>
+        </div>
+      )}
       <div className="daily-activity-header">
         <h1 className="dashboard-header">
           <strong>📜 PM Register Sheet (Yearly Templates)</strong>
@@ -575,17 +612,17 @@ export default function PMRegister({ userData }) {
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        <select className="daily-activity-select" value={region || ""} onChange={(e) => { setRegion(e.target.value); setCircle(""); setSite(""); }} disabled={!isAdmin && !isAssignedUser && !!userData?.region}>
+        <select className="daily-activity-select" value={region || ""} onChange={(e) => { setRegion(e.target.value); setCircle(""); setSite(""); }} disabled={!isAdmin && !!userData?.region}>
           <option value="">Select Region</option>
           {regions.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
 
-        <select className="daily-activity-select" value={circle || ""} onChange={(e) => { setCircle(e.target.value); setSite(""); }} disabled={!region || (!isAdmin && !isAssignedUser && !!userData?.circle)}>
+        <select className="daily-activity-select" value={circle || ""} onChange={(e) => { setCircle(e.target.value); setSite(""); }} disabled={!region || (!isAdmin && !!userData?.circle)}>
           <option value="">Select Circle</option>
           {circles.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
 
-        <select className="daily-activity-select" value={site || ""} onChange={(e) => setSite(e.target.value)} disabled={!circle || (!isAdmin && !isAssignedUser && !!userData?.site)}>
+        <select className="daily-activity-select" value={site || ""} onChange={(e) => setSite(e.target.value)} disabled={!circle || (!isAdmin && !!userData?.site)}>
           <option value="">Select Site</option>
           {sites.map(s => <option key={s} value={s}>{s}</option>)}
         </select>

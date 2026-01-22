@@ -12,11 +12,14 @@ export const calculateFields = (data, siteConfig) => {
     const hrOpen = parseFloat(result[`DG-${i} Hour Opening`]) || 0;
     const hrClose = parseFloat(result[`DG-${i} Hour Closing`]) || 0;
     const fuelFill = parseFloat(result[`DG-${i} Fuel Filling`]) || 0;
-    const offLoadFuelCon = parseFloat(result[`DG-${i} Off Load Fuel Consumption`]) || 0;
-    const offLoadHrs = parseFloat(result[`DG-${i} Off Load Hour`]) || 0;
-    const totalFuelCon = fuelOpen - fuelClose + fuelFill;
     const externalFuelFilling = parseFloat(result[`DG-${i} External Fuel Filling`]) || 0;
     const externalFuelStock = parseFloat(result[`DG-${i} External Fuel Stock`]) || 0;
+    const offLoadFuelCon = parseFloat(result[`DG-${i} Off Load Fuel Consumption`]) || 0;
+    const offLoadHrs = parseFloat(result[`DG-${i} Off Load Hour`]) || 0;
+    // const exUSe = parseFloat(prevLog[`DG-${i} External Fuel Stock`]) || 0;
+
+    // Adjust fuelOpen if there's external fuel stock from previous day
+    const totalFuelCon = fuelOpen - fuelClose + fuelFill;
 
     result[`DG-${i} KWH Generation`] = kwhClose - kwhOpen;
     result[`DG-${i} Fuel Consumption`] = totalFuelCon;

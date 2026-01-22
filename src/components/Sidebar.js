@@ -75,6 +75,10 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
           <Link to="/daily-dg-log-editor" className="sidepanel-manage-btn" title={collapsed ? "Insident Dashboard" : ""} onClick={() => setCollapsed(true)}>☣️ <span className="label">Daily DG Log Book</span></Link>
         )}
 
+        {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
+          <Link to="/daily-activity-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Daily Activity Dashboard" : ""} onClick={() => setCollapsed(true)}>🏗️ <span className="label">Daily Activity Dashboard</span></Link>
+        )}
+
         {(role === "Super User" || role === "Admin" || role === "Super Admin") && (
           <Link to="/daily-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Daily Details Dashboard" : ""} onClick={() => setCollapsed(true)}>📅 <span className="label">Daily Dashboard</span></Link>
         )}
@@ -87,12 +91,10 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
           <Link to="/acdc-rack-details" className="sidepanel-manage-btn" title={collapsed ? "Rack Dashboard" : ""} onClick={() => setCollapsed(true)}>🗄️ <span className="label">AC DC Rack Details</span></Link>
         )}
 
-        {(role === "Admin" || role === "Super Admin") && (
+        {/* {(role === "Admin" || role === "Super Admin") && (
         <Link to="/dhr-dashboard" className="sidepanel-manage-btn" title={collapsed ? "DHR Dashboard" : ""} onClick={() => setCollapsed(true)}>⚡<span className="label">DHR Dashboard</span></Link>
-          )}
-        {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
-          <Link to="/daily-activity-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Daily Activity Dashboard" : ""} onClick={() => setCollapsed(true)}>🏗️ <span className="label">Daily Activity Dashboard</span></Link>
-        )}
+          )} */}
+        
 
         {(role === "Admin" || role === "Super Admin") && (
           <Link to="/duty-tracker" className="sidepanel-manage-btn" title={collapsed ? "Daily Activity Dashboard" : ""} onClick={() => setCollapsed(true)}>☀️ <span className="label">Duty Tracker</span></Link>

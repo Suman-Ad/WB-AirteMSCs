@@ -17,6 +17,7 @@ const LABELS = [
   "Activity Category",
   "Activity Type",
   "Activity Owner",
+  "OEM/Vendor",
   "MOP Required",
   "Activity Code",
   "Approval Require",
@@ -38,6 +39,7 @@ const KEYS = [
   "activityCategory",
   "activityType",
   "performBy",
+  "vendor",
   "mopRequired",
   "activityCode",
   "approvalRequire",
@@ -201,18 +203,15 @@ export default function DailyActivityDashboard({ userData }) {
               activityCategory: r.activityCategory || "",   // ✅ added
               activityType: r.activityType || "",
               performBy: r.performBy || "",                 // ✅ added
+              mopRequired: r.mopRequired || "",                 // ✅ added
               activityCode: r.activityCode || "",          // ✅ added
               approvalRequire: r.approvalRequire || "",
               approvers: r.approvers || "",                // ✅ added
-              cih: r.cih || "",
-              centralInfra: r.centralInfra || "",
-              ranOpsHead: r.ranOpsHead || "",
-              coreOpsHead: r.coreOpsHead || "",
-              fiberOpsHead: r.fiberOpsHead || "",
               crqType: r.crqType || "",                     // ✅ added
               crqNo: r.crqNo || "",
               activityStartTime: r.activityStartTime || "",
               activityEndTime: r.activityEndTime || "",
+              vendor: r.vendor || ""
             });
           });
         });
@@ -628,6 +627,7 @@ export default function DailyActivityDashboard({ userData }) {
         "Activity Category": r.activityCategory || "",
         "Activity Type": r.activityType || "",
         "Activity Owner": r.performBy || "",
+        "OEM/Vendor Name": r.vendor || "",
         "MOP Required": !r.mopRequired ? "No" : "Yes",
         "Activity Code": r.activityCode || "",
         "Approval Require": r.approvalRequire || "",
@@ -670,6 +670,48 @@ export default function DailyActivityDashboard({ userData }) {
 
   return (
     <div className="dhr-dashboard-container">
+      {loading && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: "#0f172a",
+              padding: "30px 40px",
+              borderRadius: "12px",
+              textAlign: "center",
+              color: "white",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                border: "4px solid #334155",
+                borderTop: "4px solid #38bdf8",
+                borderRadius: "50%",
+                margin: "0 auto 15px",
+                animation: "spin 1s linear infinite",
+              }}
+            />
+            <div style={{ fontSize: "15px", fontWeight: "bold" }}>
+              Fetching All Activitys…
+            </div>
+            <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "4px" }}>
+              Please wait
+            </div>
+          </div>
+        </div>
+      )}
       <div className="daily-activity-header">
         <h1 className="dashboard-header">
           <strong>🏗️ Daily Activity Dashboard</strong>
