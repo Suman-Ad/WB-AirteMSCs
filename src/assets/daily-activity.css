@@ -191,6 +191,25 @@
   font-size: 0.75rem;
 }
 
+.pm-kpi-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.pm-kpi-card h4 {
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.pm-kpi-card strong {
+  font-size: 22px;
+}
+
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
   .daily-activity-header {

@@ -14,8 +14,9 @@ import {
 import { db } from "../firebase";
 import { Link } from "react-router-dom";
 import "../assets/daily-activity.css";
-import { ACTIVITY_MASTER, getApproversFromLevels } from "../config/activityMaster";
-// import { APPROVAL_LEVELS } from "../config/approvalLevels";
+import { ACTIVITY_MASTER, getApproversFromLevels, getMopByActivity } from "../config/activityMaster";
+import { generateMopPDF, generateMopExcel } from "../utils/mopGenerator";
+import { siteIdMap } from "../config/siteConfigs";
 
 const formatApproversFromArray = (approversArr) => {
   if (!Array.isArray(approversArr) || approversArr.length === 0) {
@@ -77,7 +78,8 @@ export default function DailyActivityManage({ userData }) {
   // selection
   const [region, setRegion] = useState(userData?.region || "");
   const [circle, setCircle] = useState(userData?.circle || "");
-  const [site, setSite] = useState(userData?.site || userData?.siteName || "");
+  const [site, setSite] = useState(userData?.site || "");
+  const siteId = siteIdMap[site] || "";
   const [year, setYear] = useState(new Date().getFullYear());
 
   const [regions, setRegions] = useState([]);
@@ -85,14 +87,18 @@ export default function DailyActivityManage({ userData }) {
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(false);
 
-
   // pm doc
   const [pmDoc, setPmDoc] = useState(null);
   const [loadingPm, setLoadingPm] = useState(false);
 
   // daily sheet
-  const [selectedDate, setSelectedDate] = useState(todayISO());
+  const [dateFrom, setDateFrom] = useState(todayISO());
+  const [dateTo, setDateTo] = useState(todayISO());
+  const [selectDate, setSelectDate] = useState(todayISO());
+  const [editingRowDate, setEditingRowDate] = useState(null);
+
   const [dailyRows, setDailyRows] = useState([]);
+  const [dailyRowsByDate, setDailyRowsByDate] = useState({});
   const [loadingDaily, setLoadingDaily] = useState(false);
 
   // UI states
@@ -103,7 +109,7 @@ export default function DailyActivityManage({ userData }) {
   const isSuperAdmin = userData?.role === "Super Admin";
   const isAdmin = isSuperAdmin || userData?.role === "Admin";
   const isAssignedUser = userData?.isAdminAssigned;
-  const canEdit = isAdmin || isAssignedUser || isSuperAdmin;
+  const canEdit = isAdmin || isAssignedUser || isSuperAdmin || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM" || userData?.designation === "Vertiv Site Infra Engineer";
 
   // equipment list
   const [equipmentList, setEquipmentList] = useState([]);
@@ -112,46 +118,117 @@ export default function DailyActivityManage({ userData }) {
   const [dynamicEquip, setDynamicEquip] = useState("");
   const [dynamicActivity, setDynamicActivity] = useState("");
   const [vendorName, setVendorName] = useState("");
+  const [vendorNameInHouse, setVendorNameInHouse] = useState("");
+  const [vendorNameOthers, setVendorNameOthers] = useState("");
 
   const [siteConfig, setSiteConfig] = useState({});
   const siteKey = site?.toUpperCase();
 
   const [editRowIndex, setEditRowIndex] = useState(null);
   const [editRowData, setEditRowData] = useState(null);
-  const openEditModal = (row, index) => {
-    setEditRowIndex(index);
-    setEditRowData({ ...row });
+  // const openEditModal = (row, index) => {
+  //   setEditRowIndex(index);
+  //   setEditRowData({ ...row });
+  //   setEditingRowDate(row._sheetDate);
+  // };
+
+  const [isEntryToggeled, setIsEntryToggeled] = useState({});
+
+  const toggleEntry = (equipment, idx) => {
+    const key = `${equipment}_${idx}`;
+
+    setIsEntryToggeled(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
+
+  const normalizeApprovalStatusByLevel = (row) => {
+    const status = { ...(row.approvalStatusByLevel || {}) };
+
+    (row.approvers || []).forEach((a) => {
+      if (!status[a.level]) {
+        status[a.level] = "NA";
+      }
+    });
+
+    return status;
+  };
+
+  const normalizeApproversByLevel = (approvers = []) => {
+    const seen = new Set();
+
+    return approvers.filter(a => {
+      if (!a?.level) return false;
+      if (seen.has(a.level)) return false;
+      seen.add(a.level);
+      return true;
+    });
+  };
+
+
+  const openEditModal = (row, index) => {
+    const cleanApprovers = normalizeApproversByLevel(row.approvers || []);
+
+    setEditRowIndex(index);
+    setEditingRowDate(row._sheetDate);
+
+    setEditRowData({
+      ...row,
+      approvers: cleanApprovers,
+      approvalStatusByLevel: normalizeApprovalStatusByLevel({
+        ...row,
+        approvers: cleanApprovers,
+      }),
+    });
+  };
+
+
   const saveEditModal = async () => {
-    if (editRowIndex === null) return;
+    if (editRowIndex === null || !editingRowDate) return;
 
-    const updated = [...dailyRows];
-    updated[editRowIndex] = editRowData;
+    const cleanedRow = {
+      ...editRowData,
+      approvers: normalizeApproversByLevel(editRowData.approvers || []),
+    };
 
-    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
+    // 1️⃣ Update only edited row in memory
+    const updatedAll = [...dailyRows];
+    updatedAll[editRowIndex] = cleanedRow;
+
+    // 2️⃣ 🔥 Extract rows ONLY for this date
+    const rowsForDate = updatedAll
+      .filter(r => r._sheetDate === editingRowDate)
+      .map(({ _sheetDate, ...rest }) => rest); // remove helper field
+
+    const docId = `${siteId || userData?.siteId}_${editingRowDate}`.replace(/\s+/g, "_");
 
     await setDoc(
       doc(db, "daily_activity_sheets", docId),
       {
-        rows: updated,
+        siteId: siteId || userData?.siteId,
+        region: region || userData?.region,
+        circle: circle || userData?.circle,
+        siteName: site,
+        date: editingRowDate,
+        rows: rowsForDate,
         lastUpdatedBy: userData?.uid,
         lastUpdatedAt: serverTimestamp(),
       },
       { merge: true }
     );
 
-    setDailyRows(updated);
+    // 3️⃣ Update UI state
+    setDailyRows(updatedAll);
     setEditRowIndex(null);
     setEditRowData(null);
+    setEditingRowDate(null);
   };
 
   // collapse state per equipment
   const [collapsedEquip, setCollapsedEquip] = useState({});
   const [isAllCollapsed, setIsAllCollapsed] = useState(true); // default closed
-
-
-
 
   // Fetch Site Configs from Firestore
   const fetchConfig = async () => {
@@ -248,31 +325,99 @@ export default function DailyActivityManage({ userData }) {
     loadPm();
   }, [region, circle, site, year, userData?.uid]);
 
+  function getDatesBetween(from, to) {
+    const dates = [];
+    let d = new Date(from);
+    const end = new Date(to);
+
+    while (d <= end) {
+      dates.push(d.toISOString().slice(0, 10));
+      d.setDate(d.getDate() + 1);
+    }
+    return dates;
+  }
+
   // load daily sheet for selected date
+  // useEffect(() => {
+  //   async function loadDaily() {
+  //     if (!site) { setDailyRows([]); return; }
+  //     setLoadingDaily(true);
+  //     setLoading(true);
+  //     const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
+  //     try {
+  //       const snap = await getDoc(doc(db, "daily_activity_sheets", docId));
+  //       if (snap.exists()) {
+  //         setDailyRows(snap.data().rows || []);
+  //       } else {
+  //         setDailyRows([]);
+  //       }
+  //     } catch (e) {
+  //       console.error("loadDaily error", e);
+  //       setDailyRows([]);
+  //     } finally {
+  //       setLoadingDaily(false);
+  //       setLoading(false);
+  //     }
+  //   }
+  //   loadDaily();
+  // }, [selectedDate, site, userData?.siteId]);
+
+
+  // async function getAllExistingDailyDatesForSite() {
+  //   const q = query(
+  //     collection(db, "daily_activity_sheets"),
+  //     where("siteId", "==", siteId || userData?.siteId)
+  //   );
+
+  //   const snap = await getDocs(q);
+  //   return snap.docs.map(d => d.data().date).sort();
+  // }
+
+
   useEffect(() => {
-    async function loadDaily() {
-      if (!site) { setDailyRows([]); return; }
+    async function loadDailyRange() {
+      if (!site || !dateFrom || !dateTo) {
+        setDailyRows([]);
+        return;
+      }
+
       setLoadingDaily(true);
       setLoading(true);
-      const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
+
       try {
-        const snap = await getDoc(doc(db, "daily_activity_sheets", docId));
-        if (snap.exists()) {
-          setDailyRows(snap.data().rows || []);
-        } else {
-          setDailyRows([]);
+        const dates = getDatesBetween(dateFrom, dateTo);
+
+        let allRows = [];
+
+        for (const date of dates) {
+          const docId = `${siteId || userData?.siteId}_${date}`.replace(/\s+/g, "_");
+          const snap = await getDoc(doc(db, "daily_activity_sheets", docId));
+
+          if (snap.exists()) {
+            const rows = snap.data().rows || [];
+            allRows.push(
+              ...rows.map(r => ({
+                ...r,
+                _sheetDate: date, // ✅ keep date info
+              }))
+            );
+          }
         }
+
+        setDailyRows(allRows);
       } catch (e) {
-        console.error("loadDaily error", e);
+        console.error("loadDailyRange error", e);
         setDailyRows([]);
       } finally {
         setLoadingDaily(false);
         setLoading(false);
       }
     }
-    loadDaily();
-  }, [selectedDate, site, userData?.siteId]);
 
+    loadDailyRange();
+  }, [dateFrom, dateTo, site, userData?.siteId]);
+
+  // load regions/circles/sites for selection dropdowns
 
   useEffect(() => {
     async function loadRegionCircleSite() {
@@ -332,18 +477,71 @@ export default function DailyActivityManage({ userData }) {
     });
   }
 
+  // function addSchedule(equipment, payload = null) {
+  //   if (!pmDoc) return;
+  //   const entry = payload || { id: genId(), frequency: "monthly", months: [1], dayOfMonth: 1, vendor: "", notes: "" };
+  //   setPmDoc(prev => {
+  //     const copy = { ...(prev || {}) };
+  //     copy.equipmentSchedules = copy.equipmentSchedules || {};
+  //     const arr = Array.isArray(copy.equipmentSchedules[equipment]) ? [...copy.equipmentSchedules[equipment]] : [];
+  //     arr.push(entry);
+  //     copy.equipmentSchedules[equipment] = arr;
+  //     return copy;
+  //   });
+  // }
+
   function addSchedule(equipment, payload = null) {
     if (!pmDoc) return;
-    const entry = payload || { id: genId(), frequency: "monthly", months: [1], dayOfMonth: 1, vendor: "", notes: "" };
+
     setPmDoc(prev => {
       const copy = { ...(prev || {}) };
       copy.equipmentSchedules = copy.equipmentSchedules || {};
-      const arr = Array.isArray(copy.equipmentSchedules[equipment]) ? [...copy.equipmentSchedules[equipment]] : [];
+
+      const arr = Array.isArray(copy.equipmentSchedules[equipment])
+        ? [...copy.equipmentSchedules[equipment]]
+        : [];
+
+      // 🔐 PREVENT duplicate empty/new schedule
+      const hasEmpty = arr.some(e =>
+        !e.pmType &&
+        (!Array.isArray(e.months) || e.months.length === 0)
+      );
+
+      if (hasEmpty) {
+        alert("⚠️ Please configure the existing schedule before adding a new one.");
+        return prev; // ⛔ no duplicate added
+      }
+
+      const entry = payload || {
+        id: genId(),
+        pmType: "",
+        frequency: "monthly",
+        months: [],
+        dayOfMonth: 1,
+        vendor: "",
+        notes: "",
+        createdAt: serverTimestamp(),
+      };
+
+      const isDuplicate = arr.some(e =>
+        e.pmType === payload?.pmType &&
+        e.frequency === payload?.frequency &&
+        e.dayOfMonth === payload?.dayOfMonth &&
+        JSON.stringify(e.months || []) === JSON.stringify(payload?.months || [])
+      );
+
+      if (isDuplicate) {
+        alert("⚠️ This PM schedule already exists.");
+        return prev;
+      }
+
       arr.push(entry);
       copy.equipmentSchedules[equipment] = arr;
+
       return copy;
     });
   }
+
 
   function updateSchedule(equipment, entryId, field, value) {
     if (!pmDoc) return;
@@ -372,33 +570,74 @@ export default function DailyActivityManage({ userData }) {
   }
 
   // Save pmDoc to Firestore (create/update)
+  // async function savePmDocToFirestore() {
+  //   if (!canEdit) { alert("No permission to save"); return; }
+  //   if (!pmDoc) return;
+  //   setSaving(true);
+  //   try {
+  //     const id = pmDocId(pmDoc.region, pmDoc.circle, pmDoc.site, pmDoc.year);
+  //     const payload = {
+  //       region: pmDoc.region,
+  //       circle: pmDoc.circle,
+  //       site: pmDoc.site,
+  //       year: pmDoc.year,
+  //       equipmentSchedules: pmDoc.equipmentSchedules || {},
+  //       createdBy: pmDoc.createdBy || userData?.uid || null,
+  //       updatedAt: serverTimestamp()
+  //     };
+  //     await setDoc(doc(db, "pm_registers", id), payload, { merge: true });
+  //     alert("PM register saved.");
+  //     // reload
+  //     const snap = await getDoc(doc(db, "pm_registers", id));
+  //     if (snap.exists()) setPmDoc(snap.data());
+  //   } catch (e) {
+  //     console.error("savePmDoc error", e);
+  //     alert("Save failed. See console.");
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // }
   async function savePmDocToFirestore() {
-    if (!canEdit) { alert("No permission to save"); return; }
+    if (!canEdit) {
+      alert("No permission to save");
+      return;
+    }
     if (!pmDoc) return;
+
     setSaving(true);
+
     try {
       const id = pmDocId(pmDoc.region, pmDoc.circle, pmDoc.site, pmDoc.year);
-      const payload = {
+
+      // 🔐 SANITIZE equipmentSchedules deeply
+      const cleanedSchedules = sanitize(pmDoc.equipmentSchedules || {});
+
+      const payload = sanitize({
         region: pmDoc.region,
         circle: pmDoc.circle,
         site: pmDoc.site,
         year: pmDoc.year,
-        equipmentSchedules: pmDoc.equipmentSchedules || {},
+        equipmentSchedules: cleanedSchedules,
         createdBy: pmDoc.createdBy || userData?.uid || null,
-        updatedAt: serverTimestamp()
-      };
+        updatedAt: serverTimestamp(),
+      });
+
       await setDoc(doc(db, "pm_registers", id), payload, { merge: true });
-      alert("PM register saved.");
-      // reload
+
+      alert("✅ PM register saved successfully");
+
       const snap = await getDoc(doc(db, "pm_registers", id));
-      if (snap.exists()) setPmDoc(snap.data());
+      if (snap.exists()) {
+        setPmDoc(snap.data());
+      }
     } catch (e) {
-      console.error("savePmDoc error", e);
-      alert("Save failed. See console.");
+      console.error("❌ savePmDoc error", e);
+      alert("Save failed. Invalid PM data found. Check console.");
     } finally {
       setSaving(false);
     }
   }
+
 
   // Delete entire pm doc
   async function deletePmDocFromFirestore() {
@@ -424,90 +663,290 @@ export default function DailyActivityManage({ userData }) {
   // Logic: for each equipment in pmDoc, for each schedule entry check if selectedDate matches:
   // - if entry.months includes the month (1..12) AND entry.dayOfMonth equals day -> include
   // - OR if entry has scheduleDates array (YYYY-MM-DD strings) -> check includes selectedDate
+  // async function addScheduledItemsToDailySheet() {
+  //   if (!pmDoc) return alert("No PM template loaded.");
+  //   const month = monthOfISO(selectedDate);
+  //   const day = dayOfISO(selectedDate);
+  //   if (!month || !day) return alert("Invalid date selected.");
+  //   const matches = [];
+  //   Object.entries(pmDoc.equipmentSchedules || {}).forEach(([eq, arr]) => {
+  //     (Array.isArray(arr) ? arr : []).forEach(entry => {
+  //       const months = Array.isArray(entry.months) ? entry.months : [];
+  //       const scheduleDates = Array.isArray(entry.scheduleDates) ? entry.scheduleDates : [];
+  //       const matchesByMonths = months.length ? months.includes(month) && (entry.dayOfMonth ? entry.dayOfMonth === day : true) : false;
+  //       const matchesByDates = scheduleDates.length ? scheduleDates.includes(selectedDate) : false;
+  //       if (matchesByMonths || matchesByDates) {
+  //         matches.push({
+  //           // circle: pmDoc.circle || "",
+  //           nodeName: eq,
+  //           activityDetails: entry.pmType || "",
+  //           vendor: entry.vendor || "",
+  //           activityType: entry.activityType || "Major",
+  //           siteCategory: entry.siteCategory || "Super Critical",
+  //           mopRequired: entry.mopRequired ? "Yes" : "No",
+  //           activityCode: entry.activityCode,
+  //           activityCategory: entry.activityCategory || "",        // NEW
+  //           approvalRequire: entry.approvalLevel || "",        // Yes / No
+  //           approvers: getApproversFromLevels(entry.approvalLevels) || "",
+  //           performBy: entry.performBy || "",
+  //           crqType: entry.crRequired ? "CRQ" : "PE",
+  //           crqNo: "CRQ00000",
+  //           activityStartTime: entry.activityStartTime && entry.activityStartTime.trim() !== ""
+  //             ? entry.activityStartTime
+  //             : "10:00 AM", // ✅ Default Start Time
+  //           activityEndTime: entry.activityEndTime && entry.activityEndTime.trim() !== ""
+  //             ? entry.activityEndTime
+  //             : "06:00 PM", // ✅ Default End Time
+  //           createdFromPmId: entry.id || null,
+  //           pmEntry: entry,
+  //         });
+  //       }
+  //     });
+  //   });
+
+  //   if (matches.length === 0) {
+  //     alert("No scheduled PM items for selected date.");
+  //     return;
+  //   }
+
+  //   // Merge into existing dailyRows, avoid duplicates by nodeName + pmEntry.id
+  //   const merged = [...dailyRows];
+  //   matches.forEach(m => {
+  //     const exists = merged.some(r => (r.nodeName === m.nodeName) && (r.createdFromPmId && r.createdFromPmId === m.createdFromPmId));
+  //     if (!exists) {
+  //       merged.push(m);
+  //     }
+  //   });
+
+  //   // save to daily_activity_sheets
+  //   const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
+  //   try {
+  //     await setDoc(doc(db, "daily_activity_sheets", docId), {
+  //       siteId: userData?.siteId || site,
+  //       region: userData?.region || region || "",
+  //       circle: userData?.circle || circle || "",
+  //       siteName: userData?.site || site,
+  //       date: selectedDate,
+  //       rows: merged,
+  //       lastUpdatedBy: userData?.uid || null,
+  //       lastUpdatedAt: serverTimestamp()
+  //     }, { merge: true });
+  //     setDailyRows(merged);
+  //     alert(`Added ${matches.length} scheduled item(s) to daily sheet.`);
+  //   } catch (e) {
+  //     console.error("addScheduledItemsToDailySheet error", e);
+  //     alert("Failed to add scheduled items.");
+  //   }
+  // }
+
+  function isDuplicateDailyRow(existingRows, newRow) {
+    return existingRows.some(r =>
+      // Strong match (preferred)
+      (r.createdFromPmId && r.createdFromPmId === newRow.createdFromPmId) ||
+
+      // Fallback for legacy rows
+      (
+        r.nodeName === newRow.nodeName &&
+        r.activityDetails === newRow.activityDetails &&
+        r.activityCategory === newRow.activityCategory
+      )
+    );
+  }
+
+  function hasPmActivitiesForRange(pmDoc, dateFrom, dateTo) {
+    if (!pmDoc?.equipmentSchedules) return false;
+
+    const dates = getDatesBetween(dateFrom, dateTo);
+
+    return dates.some(date => {
+      const month = monthOfISO(date);
+      const day = dayOfISO(date);
+
+      return Object.values(pmDoc.equipmentSchedules).some(arr =>
+        (arr || []).some(entry => {
+          const months = entry.months || [];
+          const scheduleDates = entry.scheduleDates || [];
+
+          const byMonth =
+            months.includes(month) &&
+            (!entry.dayOfMonth || entry.dayOfMonth === day);
+
+          const byDate = scheduleDates.includes(date);
+
+          return byMonth || byDate;
+        })
+      );
+    });
+  }
+
+  function canAddScheduledItems(pmDoc, dateFrom, dateTo, dailyRowsByDate) {
+    if (!pmDoc?.equipmentSchedules || !dateFrom || !dateTo) return false;
+
+    const dates = getDatesBetween(dateFrom, dateTo);
+
+    for (const date of dates) {
+      const month = monthOfISO(date);
+      const day = dayOfISO(date);
+
+      const dailyRows = dailyRowsByDate?.[date] || [];
+
+      for (const [eq, arr] of Object.entries(pmDoc.equipmentSchedules)) {
+        for (const entry of arr || []) {
+          const months = entry.months || [];
+          const scheduleDates = entry.scheduleDates || [];
+
+          const isScheduled =
+            (months.includes(month) &&
+              (!entry.dayOfMonth || entry.dayOfMonth === day)) ||
+            scheduleDates.includes(date);
+
+          if (!isScheduled) continue;
+
+          const alreadyExists = dailyRows.some(r =>
+            r.createdFromPmId === entry.id ||
+            (
+              r.nodeName === eq &&
+              r.activityDetails === entry.pmType
+            )
+          );
+
+          // 🔑 at least one PM activity NOT yet added
+          if (!alreadyExists) return true;
+        }
+      }
+    }
+
+    // ❌ all PM activities already exist
+    return false;
+  }
+
+  async function loadDailyRowsForRange(from, to) {
+    if (!from || !to || !siteId) return;
+
+    const dates = getDatesBetween(from, to);
+    const result = {};
+
+    for (const date of dates) {
+      const docId = `${siteId}_${date}`.replace(/\s+/g, "_");
+      const snap = await getDoc(doc(db, "daily_activity_sheets", docId));
+      result[date] = snap.exists() ? snap.data().rows || [] : [];
+    }
+
+    setDailyRowsByDate(result);
+  }
+
+  useEffect(() => {
+    if (dateFrom && dateTo && siteId) {
+      loadDailyRowsForRange(dateFrom, dateTo);
+    }
+  }, [dateFrom, dateTo, siteId]);
+
+
   async function addScheduledItemsToDailySheet() {
     if (!pmDoc) return alert("No PM template loaded.");
-    const month = monthOfISO(selectedDate);
-    const day = dayOfISO(selectedDate);
-    if (!month || !day) return alert("Invalid date selected.");
-    const matches = [];
-    Object.entries(pmDoc.equipmentSchedules || {}).forEach(([eq, arr]) => {
-      (Array.isArray(arr) ? arr : []).forEach(entry => {
-        const months = Array.isArray(entry.months) ? entry.months : [];
-        const scheduleDates = Array.isArray(entry.scheduleDates) ? entry.scheduleDates : [];
-        const matchesByMonths = months.length ? months.includes(month) && (entry.dayOfMonth ? entry.dayOfMonth === day : true) : false;
-        const matchesByDates = scheduleDates.length ? scheduleDates.includes(selectedDate) : false;
-        if (matchesByMonths || matchesByDates) {
-          matches.push({
-            // circle: pmDoc.circle || "",
-            nodeName: eq,
-            activityDetails: entry.pmType || "",
-            vendor: entry.vendor || "",
-            activityType: entry.activityType || "Major",
-            siteCategory: entry.siteCategory || "Super Critical",
-            mopRequired: entry.mopRequired ? "Yes" : "No",
-            activityCode: entry.activityCode,
-            activityCategory: entry.activityCategory || "",        // NEW
-            approvalRequire: entry.approvalLevel || "",        // Yes / No
-            approvers: getApproversFromLevels(entry.approvalLevels) || "",
-            performBy: entry.performBy || "",
-            crqType: entry.crRequired ? "CRQ" : "PE",
-            crqNo: "CRQ00000",
-            activityStartTime: entry.activityStartTime && entry.activityStartTime.trim() !== ""
-              ? entry.activityStartTime
-              : "10:00 AM", // ✅ Default Start Time
-            activityEndTime: entry.activityEndTime && entry.activityEndTime.trim() !== ""
-              ? entry.activityEndTime
-              : "06:00 PM", // ✅ Default End Time
-            createdFromPmId: entry.id || null,
-            pmEntry: entry,
-          });
-        }
-      });
-    });
-
-    if (matches.length === 0) {
-      alert("No scheduled PM items for selected date.");
+    if (!dateFrom || !dateTo) return alert("Select date range.");
+    // ✅ NEW CHECK
+    if (!hasPmActivitiesForRange(pmDoc, dateFrom, dateTo)) {
+      alert("ℹ️ No PM activities scheduled for the selected date range.");
       return;
     }
 
-    // Merge into existing dailyRows, avoid duplicates by nodeName + pmEntry.id
-    const merged = [...dailyRows];
-    matches.forEach(m => {
-      const exists = merged.some(r => (r.nodeName === m.nodeName) && (r.createdFromPmId && r.createdFromPmId === m.createdFromPmId));
-      if (!exists) {
-        merged.push(m);
-      }
-    });
+    const dates = getDatesBetween(dateFrom, dateTo);
 
-    // save to daily_activity_sheets
-    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
-    try {
-      await setDoc(doc(db, "daily_activity_sheets", docId), {
-        siteId: userData?.siteId || site,
-        siteName: userData?.site || site,
-        date: selectedDate,
-        rows: merged,
-        lastUpdatedBy: userData?.uid || null,
-        lastUpdatedAt: serverTimestamp()
-      }, { merge: true });
+    let totalAdded = 0;
+
+    for (const date of dates) {
+      const month = monthOfISO(date);
+      const day = dayOfISO(date);
+
+      const matches = [];
+
+      Object.entries(pmDoc.equipmentSchedules || {}).forEach(([eq, arr]) => {
+        (arr || []).forEach(entry => {
+          const months = entry.months || [];
+          const scheduleDates = entry.scheduleDates || [];
+
+          const byMonth =
+            months.includes(month) &&
+            (!entry.dayOfMonth || entry.dayOfMonth === day);
+
+          const byDate = scheduleDates.includes(date);
+
+          if (byMonth || byDate) {
+            matches.push({
+              nodeName: eq,
+              activityDetails: entry.pmType || "",
+              vendor: entry.vendor || "",
+              activityType: entry.activityType || "Major",
+              siteCategory: siteConfig.siteCategory || entry.siteCategory,
+              mopRequired: entry.mopRequired ? "Yes" : "No",
+              activityCode: entry.activityCode,
+              activityCategory: entry.activityCategory || "",
+              approvalRequire: entry.approvalLevel || "",
+              approvers: getApproversFromLevels(entry.approvalLevels),
+              performBy: entry.performBy || "",
+              crqType: entry.crRequired ? "CRQ" : "PE",
+              crqNo: entry.crRequired ? "CRQ00000" : "PE0",
+              activityStartTime: entry.activityStartTime || "10:00 AM",
+              activityEndTime: entry.activityEndTime || "06:00 PM",
+              createdFromPmId: entry.id,
+              notes: entry.notes || "",
+              pmEntry: entry,
+              quantity: entry.quantity || 1, // default quantity for PM tasks
+            });
+          }
+        });
+      });
+
+      if (!matches.length) continue;
+
+      const docId = `${siteId}_${date}`.replace(/\s+/g, "_");
+      const snap = await getDoc(doc(db, "daily_activity_sheets", docId));
+      const existingRows = snap.exists() ? snap.data().rows || [] : [];
+
+      const merged = [...existingRows];
+      let addedForDate = 0;
+
+      matches.forEach(m => {
+        if (!isDuplicateDailyRow(merged, m)) {
+          merged.push(m);
+          addedForDate++;
+        }
+      });
+
+      await setDoc(
+        doc(db, "daily_activity_sheets", docId),
+        sanitize({
+          siteId: siteId || "",
+          region: region || "",
+          circle: circle || "",
+          siteName: site || "",
+          date,
+          rows: merged,
+          lastUpdatedBy: userData?.uid,
+          lastUpdatedAt: serverTimestamp(),
+        }),
+        { merge: true }
+
+      );
+      totalAdded += addedForDate;
       setDailyRows(merged);
-      alert(`Added ${matches.length} scheduled item(s) to daily sheet.`);
-    } catch (e) {
-      console.error("addScheduledItemsToDailySheet error", e);
-      alert("Failed to add scheduled items.");
     }
+
+    alert(`✅ Scheduled PM items added for date range (${dateFrom} → ${dateTo})`);
   }
+
 
   // Update / delete a daily row (simple operations for site users)
   async function updateDailyRow(index, key, value) {
     const updated = [...dailyRows];
     updated[index] = { ...(updated[index] || {}), [key]: value };
-    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
+    const docId = `${siteId || userData?.siteId}_${editingRowDate}`.replace(/\s+/g, "_");
     try {
       await setDoc(doc(db, "daily_activity_sheets", docId), {
         siteId: userData?.siteId || site,
         siteName: userData?.site || site,
-        date: selectedDate,
+        date: editingRowDate,
         rows: updated,
         lastUpdatedBy: userData?.uid || null,
         lastUpdatedAt: serverTimestamp()
@@ -515,20 +954,77 @@ export default function DailyActivityManage({ userData }) {
       setDailyRows(updated);
     } catch (e) { console.error("updateDailyRow", e); alert("Save failed"); }
   }
-  async function deleteDailyRow(index) {
-    const updated = dailyRows.filter((_, i) => i !== index);
-    const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
+  async function deleteDailyRow(index, sheetDate) {
+    if (!sheetDate) {
+      alert("Invalid row date. Cannot delete.");
+      return;
+    }
+
+    // 🔹 Remove row from UI list
+    const updatedAll = dailyRows.filter((_, i) => i !== index);
+
+    // 🔹 Keep only rows of the same date (without helper field)
+    const rowsForDate = updatedAll
+      .filter(r => r._sheetDate === sheetDate)
+      .map(({ _sheetDate, ...rest }) => rest);
+
+    const docId = `${siteId || userData?.siteId}_${sheetDate}`.replace(/\s+/g, "_");
+
     try {
-      await setDoc(doc(db, "daily_activity_sheets", docId), {
-        siteId: userData?.siteId || site,
-        siteName: userData?.site || site,
-        date: selectedDate,
-        rows: updated,
-        lastUpdatedBy: userData?.uid || null,
-        lastUpdatedAt: serverTimestamp()
-      }, { merge: true });
-      setDailyRows(updated);
-    } catch (e) { console.error("deleteDailyRow", e); alert("Delete failed"); }
+      await setDoc(
+        doc(db, "daily_activity_sheets", docId),
+        {
+          siteId: siteId || userData?.siteId,
+          siteName: site,
+          date: sheetDate,
+          rows: rowsForDate,
+          lastUpdatedBy: userData?.uid || null,
+          lastUpdatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      // 🔹 Update UI instantly
+      setDailyRows(updatedAll);
+    } catch (e) {
+      console.error("deleteDailyRow error", e);
+      alert("Delete failed");
+    }
+  }
+
+
+  async function deleteAllDailySheetsInRange() {
+    if (!dateFrom || !dateTo) {
+      alert("Select From and To date");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `⚠️ This will DELETE ALL daily activities from ${dateFrom} to ${dateTo}.\nThis action cannot be undone.\n\nDo you want to continue?`
+      )
+    ) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const dates = getDatesBetween(dateFrom, dateTo);
+
+      for (const date of dates) {
+        const docId = `${userData?.siteId || site}_${date}`.replace(/\s+/g, "_");
+        await deleteDoc(doc(db, "daily_activity_sheets", docId));
+      }
+
+      setDailyRows([]);
+      alert("✅ All Daily Sheet data deleted for selected date range");
+    } catch (e) {
+      console.error("deleteAllDailySheetsInRange error", e);
+      alert("❌ Failed to delete daily sheets");
+    } finally {
+      setLoading(false);
+    }
   }
 
   // UI helpers
@@ -582,6 +1078,50 @@ export default function DailyActivityManage({ userData }) {
     (_, i) => `Level-${i + 1}`
   );
 
+  const ACTIVITY_CODE_BG = {
+    RED: "#ffb7af",
+    GREEN: "#8fe496",
+    BLUE: "#a1d5fa",
+    AMBER: "#fde7a0",
+  };
+
+  function formatSchedule(entry) {
+    // Explicit fixed dates (best priority)
+    if (Array.isArray(entry.scheduleDates) && entry.scheduleDates.length) {
+      return entry.scheduleDates.join(", ");
+    }
+
+    // Month + day based schedule
+    if (Array.isArray(entry.months) && entry.months.length) {
+      const months = entry.months
+        .map(m => new Date(0, m - 1).toLocaleString("en", { month: "short" }))
+        .join(", ");
+
+      return `${months} - ${entry.dayOfMonth || "Any day"}`;
+    }
+
+    return "Not scheduled";
+  }
+
+  const handleGenerateMOP = (row) => {
+    const mop = getMopByActivity(row.activityDetails);
+
+    if (!mop) {
+      alert("MOP format not found for this activity");
+      return;
+    }
+
+    const choice = window.confirm(
+      "Click OK for PDF\nClick Cancel for Excel"
+    );
+
+    if (choice) {
+      generateMopPDF(mop);
+    } else {
+      generateMopExcel(mop);
+    }
+  };
+
   return (
     <div className="dhr-dashboard-container">
       {loading && (
@@ -633,7 +1173,7 @@ export default function DailyActivityManage({ userData }) {
         <div className="daily-activity-subtitle">Admins / assigned users maintain PM registers. Site users add scheduled PM to daily sheet.</div>
       </div>
 
-      {(userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.isAdminAssigned || userData.designation === "Vertiv CIH" || userData.designation === "Vertiv ZM") && (
+      {(userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.isAdminAssigned || userData.designation === "Vertiv CIH" || userData.designation === "Vertiv ZM" || userData.designation === "Vertiv Site Infra Engineer") && (
         <Link to="/pm-register"><span className="pm-manage-btn">📜Manage PM Register</span></Link>
       )}
 
@@ -728,24 +1268,36 @@ export default function DailyActivityManage({ userData }) {
                 {equipmentKeys.length === 0 ? <div className="daily-activity-empty">No equipment</div> : equipmentKeys.map(eq => {
                   const entries = (pmDoc && pmDoc.equipmentSchedules && Array.isArray(pmDoc.equipmentSchedules[eq])) ? pmDoc.equipmentSchedules[eq] : [];
                   return (
-                    <div key={eq} style={{ border: "1px solid #f3f3f3", padding: 10, borderRadius: 6 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div key={eq} style={{ border: "1px solid #f3f3f3", padding: 10, borderRadius: 6, background: "#515169a9" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f9f9f9", padding: "6px 10px", borderRadius: "4px" }}>
                         <div style={{ fontWeight: 600 }}>{eq}</div>
                         <div style={{ display: "flex", gap: 8 }}>
                           <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => ensureEquipmentSlot(eq)} disabled={!canEdit}>Ensure</button>
                           <button className="daily-activity-btn daily-activity-btn-primary" onClick={() => addSchedule(eq)} disabled={!canEdit}>+ Add Schedule</button>
                         </div>
                       </div>
-
-
+                      <p style={{ color: "#091727", fontSize: "12px" }}>{entries.length} schedule entries</p>
                       <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
                         {entries.length === 0 ? (
                           <div style={{ color: "#666" }}>No schedule entries</div>
-                        ) : entries.map(entry => (
-                          <div key={entry.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, alignItems: "center", padding: 8, borderTop: "1px dashed #eee", width: "inherit", background: "#adababd2" }}>
-                            <div>
-                              <div style={{ fontSize: 13, fontWeight: 600 }}>
-                                {entry.pmType ||
+                        ) : entries.map((entry, idx) => (
+                          <>
+                            <b
+                              onClick={() => toggleEntry(eq, idx)}
+                              style={{ cursor: "pointer", color: "#fff", borderRadius: "3px" }}
+                            >
+                              {idx + 1}) {entry.pmType}
+                              <br />
+                              (
+                              {entry.notes || "No notes"} - {formatSchedule(entry)}
+                              )
+                            </b>
+
+                            {isEntryToggeled[`${eq}_${idx}`] && (
+                              <div key={entry.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, alignItems: "center", padding: 8, borderTop: "1px dashed #eee", width: "inherit", background: "#adababd2" }}>
+                                <div>
+                                  <div style={{ fontSize: 13, fontWeight: 600 }}>
+                                    {/* {entry.pmType ||
                                   <>
                                     <select>
                                       <option value="">Select Activity</option>
@@ -754,42 +1306,123 @@ export default function DailyActivityManage({ userData }) {
                                       ))}
                                     </select>
                                   </>
-                                }
-                              </div>
-                              <div style={{ fontSize: 12, color: "#444" }}>{entry.notes || ""}</div>
-                            </div>
-                            <div>
-                              <label style={{ fontSize: 12, color: "#666" }}>Frequency</label>
-                              <select className="daily-activity-select" value={entry.frequency || "monthly"} onChange={(e) => updateSchedule(eq, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
-                                {FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <label style={{ fontSize: 12, color: "#666" }}>Months (comma separated)</label>
-                              <input className="daily-activity-input" value={(entry.months || []).join(",")} onChange={(e) => {
-                                const months = (e.target.value || "").split(/[,\s]+/).map(x => parseInt(x, 10)).filter(n => !isNaN(n) && n >= 1 && n <= 12);
-                                updateSchedule(eq, entry.id, "months", Array.from(new Set(months)).sort((a, b) => a - b));
-                              }} disabled={!canEdit} />
-                              <div style={{ fontSize: 11, color: "#666" }}>{(entry.months || []).length ? `Months: ${(entry.months || []).join(",")}` : "No months set"}</div>
-                            </div>
-                            <div style={{ textAlign: "right" }}>
-                              <div style={{ marginBottom: 6 }}>
-                                <label style={{ display: "block", fontSize: 12, color: "#666" }}>Day (1-31)</label>
-                                <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1} onChange={(e) => updateSchedule(eq, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1", 10))))} disabled={!canEdit} />
-                              </div>
-                              <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                                {/* <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
+                                } */}
+                                    <label style={{ fontSize: 12, color: "#666" }}>Activity Description</label>
+                                    <select
+                                      className="daily-activity-select"
+                                      value={entry.pmType || ""}
+                                      disabled={!canEdit}
+                                      onChange={(e) => {
+                                        const selected = (ACTIVITY_MASTER[eq] || ACTIVITY_MASTER["Other"] || [])
+                                          .find(a => a.activityDescription === e.target.value);
+
+                                        if (!selected) return;
+
+                                        updateSchedule(eq, entry.id, "pmType", selected.activityDescription);
+                                        updateSchedule(eq, entry.id, "activityCode", selected.activityCode);
+                                        updateSchedule(eq, entry.id, "activityCategory", selected.activityCategory);
+                                        updateSchedule(eq, entry.id, "performBy", selected.performBy);
+                                        updateSchedule(eq, entry.id, "approvalLevels", selected.approvalLevels || []);
+                                        updateSchedule(eq, entry.id, "approvalLevel", selected.approvalLevel || "");
+                                        updateSchedule(eq, entry.id, "crRequired", selected.crRequired || false);
+                                        updateSchedule(eq, entry.id, "crDaysBefore", selected.crDaysBefore || 0);
+                                        updateSchedule(eq, entry.id, "activityType", selected.activityType || "Major");
+                                        updateSchedule(eq, entry.id, "siteCategory", selected.siteCategory || "Super Critical");
+                                      }}
+                                    >
+                                      <option value="">Select Activity</option>
+                                      {(ACTIVITY_MASTER[eq] || ACTIVITY_MASTER["Other"] || []).map(a => (
+                                        <option key={a.activityDescription} value={a.activityDescription}>
+                                          {a.activityDescription}
+                                        </option>
+                                      ))}
+                                    </select>
+
+                                  </div>
+                                  <div style={{ fontSize: 12, color: "#444" }}>Activity Owner: {entry.performBy || ""}</div>
+                                  <div style={{ fontSize: 12, color: "#444" }}>Activity Type: {entry.activityType || ""}</div>
+                                  <div style={{
+                                    fontSize: 12, color: "#444",
+                                    background: ACTIVITY_CODE_BG[entry.activityCode] || "transparent",
+                                    display: "inline-block",
+                                    padding: "2px 6px",
+                                    borderRadius: 4,
+                                  }}>
+                                    Activity Code: {entry.activityCode || ""}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: "#444" }}>Activity Category: {entry.activityCategory || ""}</div>
+                                  <div style={{ fontSize: 12, color: "#444" }}>CR Required: {entry.crRequired ? "Yes" : "No"}</div>
+                                  <div style={{ fontSize: 12, color: "#444" }}>CR Days Before: {entry.crRequired ? entry.crDaysBefore : "0"}</div>
+                                  <div style={{ fontSize: 12, color: "#444" }}>Notes: {entry.notes || ""}</div>
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: 12, color: "#666" }}>Frequency</label>
+                                  <select className="daily-activity-select" value={entry.frequency || "monthly"} onChange={(e) => updateSchedule(eq, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
+                                    {FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: 12, color: "#666" }}>Months (comma separated)</label>
+                                  <input className="daily-activity-input" value={(entry.months || []).join(",")} onChange={(e) => {
+                                    const months = (e.target.value || "").split(/[,\s]+/).map(x => parseInt(x, 10)).filter(n => !isNaN(n) && n >= 1 && n <= 12);
+                                    updateSchedule(eq, entry.id, "months", Array.from(new Set(months)).sort((a, b) => a - b));
+                                  }} disabled={!canEdit} />
+                                  <div style={{ fontSize: 11, color: "#666" }}>{(entry.months || []).length ? `Months: ${(entry.months || []).join(",")}` : "No months set"}</div>
+                                </div>
+                                <div>
+                                  <select
+                                    value={entry.vendor || vendorName}
+                                    onChange={(e) => updateSchedule(eq, entry.id, "vendor", e.target.value)}
+                                  >
+                                    <option value="">Select Vendor Name</option>
+                                    {vendorList.map(v => (
+                                      <option key={v} value={v}>{v}</option>
+                                    ))}
+                                  </select>
+                                  <p>
+                                    <label style={{ fontSize: 12, color: "#666" }}>Notes</label>
+                                    Notes: <input type="text" className="daily-activity-input" value={entry.notes || ""} onChange={(e) => updateSchedule(eq, entry.id, "notes", e.target.value)} disabled={!canEdit} />
+                                  </p>
+                                </div>
+                                <div style={{ textAlign: "right" }}>
+                                  <div style={{ marginBottom: 6 }}>
+                                    <label style={{ display: "block", fontSize: 12, color: "#666" }}>Day (1-31)</label>
+                                    <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1} onChange={(e) => updateSchedule(eq, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1", 10))))} disabled={!canEdit} />
+                                  </div>
+                                  <div style={{ marginBottom: 6 }}>
+                                    <label style={{ display: "block", fontSize: 12, color: "#666" }}>
+                                      Approvers
+                                    </label>
+
+                                    <textarea
+                                      className="daily-activity-input"
+                                      value={formatApproversFromArray(getApproversFromLevels(entry.approvalLevels || []))}
+                                      readOnly
+                                      disabled
+                                      rows={3}
+                                      style={{
+                                        resize: "none",
+                                        background: "#f5f5f5",
+                                        cursor: "not-allowed",
+                                      }}
+                                    />
+                                  </div>
+
+                                  <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                                    {/* <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
                                 // quick toggle pmType between In-House and Vendor
                                 updateSchedule(eq, entry.id, "pmType", entry.pmType === "Vendor" ? "In-House" : "Vendor");
                               }} disabled={!canEdit}>Toggle Type</button> */}
-                                <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => {
-                                  if (!canEdit) return;
-                                  if (!window.confirm("Remove this schedule entry?")) return;
-                                  removeSchedule(eq, entry.id);
-                                }} disabled={!canEdit}>Remove</button>
+                                    <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => {
+                                      if (!canEdit) return;
+                                      if (!window.confirm("Remove this schedule entry?")) return;
+                                      removeSchedule(eq, entry.id);
+                                    }} disabled={!canEdit}>Remove</button>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
+                            )}
+                          </>
                         ))}
                       </div>
                     </div>
@@ -805,6 +1438,12 @@ export default function DailyActivityManage({ userData }) {
         <h4>➕ Add Dynamic Activity (Site User)</h4>
 
         {/* Equipment */}
+        <input
+          type="date"
+          className="daily-activity-date-picker"
+          value={selectDate}
+          onChange={(e) => setSelectDate(e.target.value)}
+        />
         <select
           className="daily-activity-select"
           value={dynamicEquip}
@@ -820,15 +1459,7 @@ export default function DailyActivityManage({ userData }) {
           <option value="Others" >Others</option>
         </select>
 
-        <select
-          value={vendorName}
-          onChange={(e) => setVendorName(e.target.value)}
-        >
-          <option value="">Select Vendor Name</option>
-          {vendorList.map(v => (
-            <option key={v} value={v}>{v}</option>
-          ))}
-        </select>
+
 
         {/* Activity */}
         {dynamicEquip && (
@@ -843,6 +1474,38 @@ export default function DailyActivityManage({ userData }) {
               <option key={a.activityDescription} value={a.activityDescription}>{a.activityDescription}</option>
             ))}
           </select>
+        )}
+
+        <select
+          value={vendorName}
+          onChange={(e) => setVendorName(e.target.value)}
+        >
+          <option value="">Select Vendor Name</option>
+          {vendorList.map(v => (
+            <option key={v} value={v}>{v}</option>
+          ))}
+          <option value="In-House">In-House</option>
+          <option value="Others">Others</option>
+        </select>
+
+        {vendorName === "In-House" && (
+          <input
+            type="text"
+            className="daily-activity-input"
+            placeholder="Enter In-House Name"
+            value={vendorNameInHouse || "Vertiv"}
+            onChange={(e) => setVendorNameInHouse(e.target.value || "Vertiv")}
+          />
+        )}
+
+        {vendorName === "Others" && (
+          <input
+            type="text"
+            className="daily-activity-input"
+            placeholder="Enter Vendor Name"
+            value={vendorNameOthers}
+            onChange={(e) => setVendorNameOthers(e.target.value)}
+          />
         )}
 
         {/* Add Button */}
@@ -861,7 +1524,7 @@ export default function DailyActivityManage({ userData }) {
               activityType: meta.activityType ?? "Major",
               activityCategory: meta.activityCategory ?? "PM",
               performBy: meta.performBy ?? "In-House",
-              vendor: vendorName || "In-House",
+              vendor: vendorName === "In-House" ? `${vendorNameInHouse}(In-House)` : vendorName === "Others" ? vendorNameOthers : vendorName,
               mopRequired: meta.mopRequired ? "Yes" : "No",
               activityCode: meta.activityCode ?? "*",
 
@@ -886,13 +1549,15 @@ export default function DailyActivityManage({ userData }) {
             const updated = [...dailyRows, newRow];
             setDailyRows(updated);
 
-            const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
+            const docId = `${siteId}_${selectDate}`.replace(/\s+/g, "_");
             await setDoc(
               doc(db, "daily_activity_sheets", docId),
               sanitize({
-                siteId: userData?.siteId || site,
+                siteId: siteId || "",
+                region: region || "",
+                circle: circle || "",
                 siteName: site,
-                date: selectedDate,
+                date: selectDate,
                 rows: updated,
                 lastUpdatedBy: userData?.uid || null,
                 lastUpdatedAt: serverTimestamp()
@@ -910,23 +1575,72 @@ export default function DailyActivityManage({ userData }) {
       </div>
       {/* Daily sheet */}
       <div style={{ marginTop: 12, border: "1px solid #eee", padding: 12, borderRadius: 8 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <div style={{ fontWeight: 700 }}>Daily Sheet — {site} — {selectedDate}</div>
+        <div style={{ fontWeight: 700 }}>Daily Sheet — {site} — {dateFrom} — {dateTo}({dailyRows.length})</div>
+        <div style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 8, overflowX: "auto" }}>
+          <div style={{ display: "grid", gap: 8, alignItems: "center" }}>
+            <input
+              type="date"
+              className="daily-activity-date-picker"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+
+            <input
+              type="date"
+              className="daily-activity-date-picker"
+              value={dateTo}
+              min={dateFrom}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input type="date" className="daily-activity-date-picker" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
             <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
               // reload daily
               (async () => {
                 setLoadingDaily(true);
                 try {
-                  const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
+                  const docId = `${siteId || userData?.siteId}_${editingRowDate}`.replace(/\s+/g, "_");
                   const snap = await getDoc(doc(db, "daily_activity_sheets", docId));
                   setDailyRows(snap.exists() ? snap.data().rows || [] : []);
                 } catch (e) { console.error(e); } finally { setLoadingDaily(false); }
               })();
             }}>Reload</button>
 
-            <button className="daily-activity-btn daily-activity-btn-primary" onClick={addScheduledItemsToDailySheet}>Add Scheduled Items</button>
+            <button
+              className="daily-activity-btn daily-activity-btn-primary"
+              disabled={
+                !canAddScheduledItems(
+                  pmDoc,
+                  dateFrom,
+                  dateTo,
+                  dailyRowsByDate
+                )
+              }
+              onClick={addScheduledItemsToDailySheet}
+            >
+              {canAddScheduledItems(pmDoc,
+                dateFrom,
+                dateTo,
+                dailyRowsByDate) ? "Add Scheduled Items" : ""}
+              {!canAddScheduledItems(pmDoc,
+                dateFrom,
+                dateTo,
+                dailyRowsByDate) && (
+                  <small style={{ color: "#888" }}>
+                    All PM activities already added for this date range
+                  </small>
+                )}
+
+            </button>
+
+
+            {/* <button className="daily-activity-btn daily-activity-btn-primary" onClick={addScheduledItemsToDailySheet}>Add Scheduled Items</button> */}
+            <button
+              className="daily-activity-btn daily-activity-btn-danger"
+              onClick={deleteAllDailySheetsInRange}
+            >
+              🗑️ Delete All
+            </button>
           </div>
         </div>
 
@@ -936,7 +1650,12 @@ export default function DailyActivityManage({ userData }) {
               <thead>
                 <tr>
                   <th>Sl.No</th>
+                  <th>Date</th>
+                  <th>Region</th>
+                  <th>Circle</th>
+                  <th>Site</th>
                   <th>Node Name</th>
+                  <th>Quantity</th>
                   <th>Activity Details</th>
                   <th>Site Category</th>
                   <th>Activity Category</th>
@@ -945,6 +1664,7 @@ export default function DailyActivityManage({ userData }) {
                   <th>Activity Owner</th>
                   <th>OEM/Vendor Name</th>
                   <th>MOP Required</th>
+                  <th>MOP</th>
                   <th>Approval Required</th>
                   <th>Approval Level</th>
                   {/* 👇 DYNAMIC LEVEL HEADERS */}
@@ -967,12 +1687,19 @@ export default function DailyActivityManage({ userData }) {
                       background: r.activitySource === "DYNAMIC" ? "#f0fbff" : "transparent"
                     }}
                   >
-                    <td>{idx + 1}</td>
-                    <td className="daily-activity-input" value={r.nodeName || ""} onChange={(e) => updateDailyRow(idx, "nodeName", e.target.value)} >
+                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{idx + 1}</td>
+                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r._sheetDate || selectDate || "-"}</td>
+                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{region}</td>
+                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{circle}</td>
+                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{site}</td>
+                    <td className="daily-activity-input" style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} > {/* value={r.nodeName || ""} onChange={(e) => updateDailyRow(idx, "nodeName", e.target.value)}  */}
                       {r.nodeName || ""}
                     </td>
-                    <td className="daily-activity-input" value={r.activityDetails || ""} onChange={(e) => updateDailyRow(idx, "activityDetails", e.target.value)} >
-                      {r.activityDetails || ""}
+                    <td className="daily-activity-input" style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} > {/* value={r.quantity || ""} onChange={(e) => updateDailyRow(idx, "quantity", e.target.value)} */}
+                      {r.quantity || ""}
+                    </td>
+                    <td className="daily-activity-input" style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} > {/*value={r.activityDetails || ""} onChange={(e) => updateDailyRow(idx, "activityDetails", e.target.value)} */}
+                      {r.activityDetails || ""} - {r.notes || ""}
                     </td>
 
                     {/* Site Category dropdown */}
@@ -983,12 +1710,13 @@ export default function DailyActivityManage({ userData }) {
                         <option value="Major">Major</option>
                       </select>
                     </td> */}
-                    <td>{siteConfig?.siteCategory || r.siteCategory}</td>
+                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} >{siteConfig?.siteCategory || r.siteCategory}</td>
 
                     {/* Activity Type dropdown */}
                     <td
                       className="daily-activity-select"
                       value={r.activityCategory || "Minor"}
+                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.activityCategory || "Minor"}
@@ -997,6 +1725,7 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-select"
                       value={r.activityCode || "*"}
+                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.activityCode || "*"}
@@ -1005,6 +1734,7 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-select"
                       value={r.activityType || ""}
+                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.activityType || ""}
@@ -1013,6 +1743,7 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-select"
                       value={r.performBy || "In-House"}
+                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.performBy || "In-House"}
@@ -1021,6 +1752,7 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-select"
                       value={r.vendor || "In-House"}
+                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.vendor || "In-House"}
@@ -1048,14 +1780,31 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-input"
                       value={r.mopRequired}
+                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.mopRequired}
                     </td>
 
                     <td
+                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                    >
+                      {r.mopRequired === "Yes" ? (
+                        <button
+                        style={{ height:"fit-content", width:"100%", fontSize:"15px", padding:"2px 2px"}}
+                          onClick={() => handleGenerateMOP(r)}
+                        >
+                          Generate MOP
+                        </button>
+                      ) : (
+                        <span style={{ color: "#999" }}>N/A</span>
+                      )}
+                    </td>
+
+                    <td
                       className="daily-activity-input"
                       value={r.approvalRequire || "No"}
+                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.approvalRequire || "No"}
@@ -1065,38 +1814,11 @@ export default function DailyActivityManage({ userData }) {
                       <textarea
                         className="daily-activity-input"
                         value={formatApproversFromArray(r.approvers)}
+                        style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", width: "150px", height: "150px" }}
                         disabled
-                        style={{ width: "150px", height: "150px" }}
                       />
                     </td>
 
-
-                    {/* <td>
-                    <select
-                      className="daily-activity-select"
-                      value={r.approvalLevel || "NA"}
-                      disabled={r.approvalRequired === "No"}
-                      onChange={(e) => updateDailyRow(idx, "approvalLevel", e.target.value)}
-                    >
-                      <option value="NA">NA</option>
-                      <option value="CIH">CIH</option>
-                      <option value="Central Infra">Central Infra</option>
-                      <option value="Ops Head">Ops Head</option>
-                    </select>
-                  </td> */}
-
-
-                    {/* Approval Required dropdown */}
-                    {/* <td>
-                    <select className="daily-activity-select" value={r.approvalRequire || "CIH"} onChange={(e) => updateDailyRow(idx, "approvalRequire", e.target.value)}>
-                      <option value="CIH">CIH</option>
-                      <option value="Central Infra">Central Infra</option>
-                      <option value="RAN Ops Head">RAN Ops Head</option>
-                      <option value="Core Ops Head">Core Ops Head</option>
-                      <option value="Fiber Ops Head">Fiber Ops Head</option>
-                    </select>
-                  </td> */}
-                    {/* Individual approvals – Level based */}
                     {/* Individual approvals – dynamic by max level */}
                     {headerLevels.map((level) => {
                       const rowLevels = Array.isArray(r.approvers)
@@ -1106,8 +1828,8 @@ export default function DailyActivityManage({ userData }) {
                       const hasLevel = rowLevels.includes(level);
 
                       return (
-                        <td key={level}>
-                          <select
+                        <td key={level} style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>
+                          {/* <select
                             className="daily-activity-select"
                             value={r.approvalStatusByLevel?.[level] || "NA"}
                             disabled={!hasLevel}
@@ -1118,73 +1840,72 @@ export default function DailyActivityManage({ userData }) {
                                 ...(r.approvalStatusByLevel || {}),
                                 [level]: e.target.value,
                               });
+                              // setEditRowData({ ...(r.approvalStatusByLevel || {}), [level]: e.target.value });
+                              setEditingRowDate(r._sheetDate);
                             }}
                             style={{ cursor: !hasLevel ? "not-allowed" : "pointer" }}
                           >
                             <option value="NA">NA</option>
                             <option value="Y">Y</option>
                             <option value="N">N</option>
-                          </select>
+                          </select> */}
+                          {!hasLevel ? "NA" : r.approvalStatusByLevel?.[level] || "N"}
                         </td>
                       );
                     })}
 
-                    <td>
-                      <select
+                    <td
+                      className="daily-activity-select"
+                      value={r.crqType}
+                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      disabled
+                    >
+                      {/* <select
                         className="daily-activity-select"
                         value={r.crqType}
                         onChange={(e) => updateDailyRow(idx, "crqType", e.target.value)}
                       >
                         <option value="CRQ" disabled={!r.crRequired}>CRQ</option>
                         <option value="PE">PE</option>
-                      </select>
+                      </select> */}
+                      {r.crqType}
                     </td>
 
                     {/* CRQ No input with suggestions */}
-                    <td>
-                      <input
-                        className="daily-activity-input"
-                        list={`crq-options-${idx}`}
-                        value={r.crqNo || ""}
-                        placeholder={r.crqType === "CRQ" ? "CRQ Number required" : "PE Number required"}
-                        required={r.crqType === "CRQ"}
-                        onChange={(e) => updateDailyRow(idx, "crqNo", e.target.value)}
-                      />
-                      <datalist id={`crq-options-${idx}`}>
-                        <option value="CRQ00000" />
-                        <option value="PE" />
-                      </datalist>
-                    </td>
-
-                    {/* <td>
-                    <input
+                    <td
                       className="daily-activity-input"
                       list={`crq-options-${idx}`}
                       value={r.crqNo || ""}
-                      placeholder="Enter CRQ No"
+                      placeholder={r.crqType === "CRQ" ? "CRQ Number required" : "PE Number required"}
+                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      required={r.crqType === "CRQ"}
                       onChange={(e) => updateDailyRow(idx, "crqNo", e.target.value)}
-                    />
-                    <datalist id={`crq-options-${idx}`}>
-                      <option value="CRQ00000" />
-                      <option value="PE" />
-                      <option value="REQ" />
-                    </datalist>
-                  </td> */}
+                    >
+                      {/* <datalist id={`crq-options-${idx}`}>
+                        <option value="CRQ00000" />
+                        <option value="PE" />
+                      </datalist> */}
+                      {r.crqNo || ""}
+                    </td>
+
                     {/* Start/End time */}
-                    <td className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e) => updateDailyRow(idx, "activityStartTime", e.target.value)} >{r.activityStartTime || ""}</td>
-                    <td className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e) => updateDailyRow(idx, "activityEndTime", e.target.value)} >{r.activityEndTime || ""}</td>
+                    <td className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e) => updateDailyRow(idx, "activityStartTime", e.target.value)} style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r.activityStartTime || ""}</td>
+                    <td className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e) => updateDailyRow(idx, "activityEndTime", e.target.value)} style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} >{r.activityEndTime || ""}</td>
                     {/* Delete */}
-                    <td>
+                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} >
                       <button
                         className="daily-activity-btn daily-activity-btn-secondary"
-                        onClick={() => openEditModal(r, idx)}
+                        onClick={() => {
+                          openEditModal(r, idx);
+                          setEditingRowDate(r._sheetDate)
+                        }}
                       >
                         Edit
                       </button>
 
                       <button
                         className="daily-activity-btn daily-activity-btn-danger"
-                        onClick={() => deleteDailyRow(idx)}
+                        onClick={() => deleteDailyRow(idx, r._sheetDate)}
                       >
                         Delete
                       </button>
@@ -1197,9 +1918,9 @@ export default function DailyActivityManage({ userData }) {
             </table>
 
             {editRowData && (
-              <div className="modal-overlay">
-                <div className="modal-box">
-                  <h3>Edit Daily Activity</h3>
+              <div className="modal-overlay" style={{ zIndex: "1000" }}>
+                <div className="modal-box" style={{ overflowY: "auto", padding: "20px 20px" }}>
+                  <h3>Edit Daily Activity — {editingRowDate}</h3>
 
                   <label>Node Name</label>
                   <input
@@ -1208,6 +1929,7 @@ export default function DailyActivityManage({ userData }) {
                     onChange={(e) =>
                       setEditRowData({ ...editRowData, nodeName: e.target.value })
                     }
+                    disabled
                   />
 
                   <label>Activity Details</label>
@@ -1217,7 +1939,62 @@ export default function DailyActivityManage({ userData }) {
                     onChange={(e) =>
                       setEditRowData({ ...editRowData, activityDetails: e.target.value })
                     }
+                    disabled
                   />
+
+                  <label>CRQ/PE Type</label>
+                  {/* <select
+                    className="daily-activity-select"
+                    value={editRowData.crqType}
+                    onChange={(e) =>
+                      setEditRowData({ ...editRowData, crqType: e.target.value })
+                    }
+                  >
+                    <option value="CRQ" disabled={!editRowData.crRequired}>CRQ</option>
+                    <option value="PE">PE</option>
+                  </select> */}
+                  <input
+                    className="daily-activity-input"
+
+                    value={editRowData.crqNo || ""}
+                    placeholder={editRowData.crqType === "CRQ" ? "CRQ Number required" : "PE Number required"}
+                    required={editRowData.crqType === "CRQ"}
+                    onChange={(e) => setEditRowData({ ...editRowData, crqNo: e.target.value })}
+                  />
+                  <datalist>
+                    <option value="CRQ00000" />
+                    <option value="PE" />
+                  </datalist>
+
+                  {/* Individual approvals – row specific */}
+                  <label>Approval Status by Level</label>
+
+                  {Array.isArray(editRowData?.approvers) &&
+                    editRowData.approvers.map(({ level }) => (
+                      <div key={level} style={{ marginBottom: "8px" }}>
+                        <label style={{ marginRight: "8px" }}>{level}</label>
+
+                        <select
+                          className="daily-activity-select"
+                          value={editRowData.approvalStatusByLevel?.[level] || "N"}
+                          onChange={(e) => {
+                            const value = e.target.value;
+
+                            setEditRowData((prev) => ({
+                              ...prev,
+                              approvalStatusByLevel: {
+                                ...(prev.approvalStatusByLevel || {}),
+                                [level]: value,
+                              },
+                            }));
+                          }}
+                        >
+                          <option value="N">N</option>
+                          <option value="Y">Y</option>
+                          {/* <option value="NA">NA</option> */}
+                        </select>
+                      </div>
+                    ))}
 
                   <label>Start Time</label>
                   <input

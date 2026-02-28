@@ -108,6 +108,10 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
           <Link to="/assets-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Assets Dashboard" : ""} onClick={() => setCollapsed(true)}>💼 <span className="label">Assets Dashboard</span></Link>
         )}
 
+        {(role === "Super User" || role === "Admin" || role === "Super Admin" || role === "User") && (
+          <Link to="/all-registerBook" className="sidepanel-manage-btn" title={collapsed ? "Dynamic Register" : ""} onClick={() => setCollapsed(true)}>📋 <span className="label">Register Books</span></Link>
+        )}
+
         {(role === "Admin" || role === "Super Admin") && (
           <Link to="/thermal-analysis-report" className="sidepanel-manage-btn" title={collapsed ? "IR Thermal Analysis & Report Generate" : ""} onClick={() => setCollapsed(true)}>🌡️ <span className="label">IR Thermography</span></Link>
         )}

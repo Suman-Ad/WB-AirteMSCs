@@ -4,7 +4,7 @@ import { db } from "../firebase";
 import * as XLSX from "xlsx";
 import "../assets/DHRStyle.css";
 import { collection, doc, setDoc, updateDoc, onSnapshot, getDoc, serverTimestamp, getDocs, deleteDoc, writeBatch } from "firebase/firestore";
-
+import { useParams } from "react-router-dom";
 
 /*
   - Authoritative nested storage: assets_register/{Circle}/{SiteID}/{EquipmentDoc}
@@ -31,7 +31,7 @@ const DEFAULT_COLUMNS = [
   { key: "InstallationDate", label: "Equipment Installation date" },
 ];
 
-export default function AssetsRegister({ userData }) {
+export default function DynamicRegister({ userData }) {
   // user & role
   const userRole = userData?.role;
   const isAdmin =
@@ -45,6 +45,8 @@ export default function AssetsRegister({ userData }) {
 
   // columns state (load from firestore or fallback to DEFAULT_COLUMNS)
   const [columns, setColumns] = useState(DEFAULT_COLUMNS);
+
+  const { registerName } = useParams();
 
 
   const BATCH_LIMIT = 500;
@@ -243,7 +245,7 @@ export default function AssetsRegister({ userData }) {
       const nestedRefs = [];
       for (const key of siteKeys) {
         const [circle, siteId] = key.split("__");
-        const snap = await getDocs(collection(db, "assets_register", circle, siteId));
+        const snap = await getDocs(collection(db, "dynamic_register", registerName, circle, siteId));
         snap.docs.forEach(d => {
           if (d.data()?.[field] === oldValue) {
             nestedRefs.push(d.ref);
@@ -268,7 +270,7 @@ export default function AssetsRegister({ userData }) {
       for (const r of flatDocs) {
         await waitIfPaused();
 
-        batch.update(doc(db, "assets_flat", r.id), {
+        batch.update(doc(db, "dynamic_register_flat", registerName, "data", r.id), {
           [field]: newValue,
           updatedAt: serverTimestamp(),
         });
@@ -344,7 +346,7 @@ export default function AssetsRegister({ userData }) {
       );
 
       // 🔹 NESTED docs (single site)
-      const siteRef = collection(db, "assets_register", circle, siteId);
+      const siteRef = collection(db, "dynamic_register", registerName, circle, siteId);
       const snap = await getDocs(siteRef);
 
       const nestedRefs = snap.docs.map(d => d.ref);
@@ -366,7 +368,7 @@ export default function AssetsRegister({ userData }) {
       for (const r of flatDocs) {
         await waitIfPaused();
 
-        batch.update(doc(db, "assets_flat", r.id), {
+        batch.update(doc(db, "dynamic_register_flat", registerName, "data", r.id), {
           SiteName: newSiteName,
           updatedAt: serverTimestamp(),
         });
@@ -614,7 +616,11 @@ export default function AssetsRegister({ userData }) {
   // ---------- Firestore column load/save ----------
   const loadColumnsFromFirestore = async () => {
     try {
-      const docRef = doc(db, "assets_columns", "default");
+      const docRef = doc(db,
+        "dynamic_columns",
+        registerName,
+        "meta",
+        "columns");
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const data = snap.data();
@@ -632,7 +638,11 @@ export default function AssetsRegister({ userData }) {
 
   const saveColumnsToFirestore = async (cols) => {
     try {
-      await setDoc(doc(db, "assets_columns", "default"), {
+      await setDoc(doc(db,
+        "dynamic_columns",
+        registerName,
+        "meta",
+        "columns"), {
         columns: cols,
         updatedAt: serverTimestamp(),
       }, { merge: true });
@@ -675,7 +685,7 @@ export default function AssetsRegister({ userData }) {
     if (rec.EquipmentNameAndNo) {
       equipDoc = rec.EquipmentNameAndNo.toString().replace(/\s+/g, "");
     } else if (rec.DedicatedNo !== undefined && rec.DedicatedNo !== "") {
-      equipDoc = `ACDB${rec.DedicatedNo}`;
+      equipDoc = `UnNamedEquip${rec.DedicatedNo}`;
     }
     equipDoc = equipDoc.toString().trim();
 
@@ -688,7 +698,7 @@ export default function AssetsRegister({ userData }) {
     if (!circle || !siteId || !equipDoc) {
       throw new Error("Missing Circle / Site ID / Equipment Doc to write nested record.");
     }
-    const nestedRef = doc(db, "assets_register", circle, siteId, equipDoc);
+    const nestedRef = doc(db, "dynamic_register", registerName, circle, siteId, "records", equipDoc);
     await setDoc(nestedRef, payload, { merge: true });
   };
 
@@ -696,8 +706,8 @@ export default function AssetsRegister({ userData }) {
     const { circle, siteId, equipDoc } = getPathParts(payload);
     if (!circle || !siteId || !equipDoc) return;
     const uniqueId = `${circle}/${siteId}/${equipDoc}`; // store in payload
-    const flatId = uniqueId.replace(/\//g, "-"); // doc id for assets_flat
-    const flatRef = doc(db, "assets_flat", flatId);
+    const flatId = uniqueId.replace(/\//g, "-"); // doc id for dynamic_register_flat
+    const flatRef = doc(db, "dynamic_register_flat", registerName, "data", flatId);
     const flatPayload = {
       ...payload,
       UniqueID: uniqueId,
@@ -743,7 +753,7 @@ export default function AssetsRegister({ userData }) {
     setLoading(true);
     setLoadProgress({ percent: 0, total: 0, loaded: 0 });
 
-    const unsub = onSnapshot(collection(db, "assets_flat"), (snap) => {
+    const unsub = onSnapshot(collection(db, "dynamic_register_flat", registerName, "data"), (snap) => {
       const total = snap.size;
       const list = snap.docs.map((d) => {
         const data = d.data() || {};
@@ -766,7 +776,7 @@ export default function AssetsRegister({ userData }) {
       setLoadProgress({ percent: 100, total, loaded: total });
       setLoading(false);
     }, (err) => {
-      console.error("assets_flat subscribe error:", err);
+      console.error(`${registerName} subscribe error:`, err);
       setLoading(false);
     });
 
@@ -981,6 +991,7 @@ export default function AssetsRegister({ userData }) {
           const payload = preparePayload(rec);
           loaded++;
 
+          // 🔍 DUPLICATE CHECK
           if (!payload || existingIds.has(payload.UniqueID)) {
             skipped++;
             continue;
@@ -989,9 +1000,11 @@ export default function AssetsRegister({ userData }) {
           // 🔹 Nested doc
           const nestedRef = doc(
             db,
-            "assets_register",
+            "dynamic_register",
+            registerName,
             payload.Circle,
             payload.UniqueCode,
+            "records",
             payload.EquipmentDoc
           );
 
@@ -1000,7 +1013,7 @@ export default function AssetsRegister({ userData }) {
 
           // 🔹 Flat doc
           const flatId = `${payload.Circle}-${payload.UniqueCode}-${payload.EquipmentDocId}`;
-          const flatRef = doc(db, "assets_flat", flatId);
+          const flatRef = doc(db, "dynamic_register_flat", registerName, "data", flatId);
 
           batch.set(flatRef, payload, { merge: true });
           batchCount++;
@@ -1073,7 +1086,7 @@ export default function AssetsRegister({ userData }) {
 
     try {
       const flatId = payload.UniqueID.replace(/\//g, "-");
-      const ref = doc(db, "assets_flat", flatId);
+      const ref = doc(db, "dynamic_register_flat", registerName, "data", flatId);
       const snap = await getDoc(ref);
 
       // 🚫 DUPLICATE FOUND
@@ -1128,12 +1141,12 @@ export default function AssetsRegister({ userData }) {
       // remove nested
       const { circle, siteId, equipDoc } = getPathParts(row._raw || row);
       if (circle && siteId && equipDoc) {
-        const nestedRef = doc(db, "assets_register", circle, siteId, equipDoc);
+        const nestedRef = doc(db, "dynamic_register", registerName, circle, siteId, "records", equipDoc);
         await deleteDoc(nestedRef);
       }
       // remove flat
       const flatId = (row.UniqueID || (row.id ? row.id.replace(/-/g, "/") : "")).replace(/\//g, "-");
-      const flatRef = doc(db, "assets_flat", flatId);
+      const flatRef = doc(db, "dynamic_register_flat", registerName, "data", flatId);
       await deleteDoc(flatRef);
     } catch (e) {
       console.error("deleteRow err:", e);
@@ -1147,7 +1160,7 @@ export default function AssetsRegister({ userData }) {
   const [editText, setEditText] = useState("");
   useEffect(() => {
     const fetchInstruction = async () => {
-      const docRef = doc(db, "config", "assets_register_instruction");
+      const docRef = doc(db, "config", "dynamic_register_instruction");
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setInstructionText(docSnap.data().text || "");
@@ -1237,7 +1250,7 @@ export default function AssetsRegister({ userData }) {
     XLSX.utils.book_append_sheet(wb, assetsSheet, "Assets_Import");
     XLSX.utils.book_append_sheet(wb, instructionsSheet, "Instructions");
 
-    XLSX.writeFile(wb, "Assets_Import_Dynamic_Format.xlsx");
+    XLSX.writeFile(wb, `${registerName}_Import_Format.xlsx`);
   };
 
   const downloadFilteredExcel = () => {
@@ -1266,7 +1279,7 @@ export default function AssetsRegister({ userData }) {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Filtered_Data");
 
-    XLSX.writeFile(wb, "Filtered_Assets_Data.xlsx");
+    XLSX.writeFile(wb, "Filtered_Dynamic_Data.xlsx");
   };
 
 
@@ -1359,7 +1372,7 @@ export default function AssetsRegister({ userData }) {
       )}
       <h1 className="dashboard-header">
         <strong>
-          🏷️💼 Assets Management
+          🏷️💼 {registerName} Management
         </strong>
       </h1>
 
@@ -1813,7 +1826,7 @@ export default function AssetsRegister({ userData }) {
                 setShowAddAssetModal(true);
               }}
             >
-              ➕💼 Add New Asset
+              ➕💼 Add New {registerName}
             </button>
           )}
 
@@ -1824,7 +1837,7 @@ export default function AssetsRegister({ userData }) {
                 {/* Header */}
                 <div className="modal-header">
                   <h3>
-                    {modalMode === "add" ? "➕💼 Add New Asset" : "✏️ Edit Asset"}
+                    {modalMode === "add" ? `➕💼 Add New ${registerName}` : `✏️ Edit ${registerName}`}
                   </h3>
                   <button
                     className="modal-close"
@@ -1884,7 +1897,7 @@ export default function AssetsRegister({ userData }) {
                       setShowAddAssetModal(false);
                     }}
                   >
-                    {modalMode === "add" ? "Add Asset" : "Save Changes"}
+                    {modalMode === "add" ? `Add New ${registerName}` : "Save Changes"}
                   </button>
                 </div>
               </div>
@@ -2035,7 +2048,7 @@ export default function AssetsRegister({ userData }) {
                 className="daily-activity-btn"
                 style={{ background: "#16a34a", color: "#fff", marginLeft: 8 }}
               >
-                ⬇ Download Asset Data
+                ⬇ Download {registerName} Data
               </button>
             )}
           </div>
@@ -2045,7 +2058,7 @@ export default function AssetsRegister({ userData }) {
       {/* Table */}
       {isAdmin && (
         <div style={{ overflowX: "auto", overflowY: "auto", height: "700px" }}>
-          <h4><strong>💼 Asset Data</strong></h4>
+          <h4><strong>💼 {registerName} Data</strong></h4>
           {!loading && (
             <table className="dhr-table" style={{ width: "100%", minWidth: 900 }}>
               <thead>

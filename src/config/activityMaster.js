@@ -1,4 +1,5 @@
 import { APPROVAL_LEVELS } from "./approvalLevels";
+import { MOP_MASTER } from "./mopMaster";
 
 // activityMaster.js
 export const getApproversFromLevels = (levels = []) => {
@@ -8,6 +9,10 @@ export const getApproversFromLevels = (levels = []) => {
       approver
     }))
   );
+};
+
+export const getMopByActivity = (activityDescription) => {
+  return MOP_MASTER[activityDescription] || null;
 };
 
 export const ACTIVITY_MASTER = {
@@ -23,7 +28,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 5,
       approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
       information: "Mr. Deepak Sanghi"
     },
     {
@@ -38,7 +43,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
       information: ""
     },
     {
@@ -53,7 +58,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -68,7 +73,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 0,
       approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
       information: "Mr. Deepak Sanghi"
     }
   ],
@@ -86,7 +91,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 5,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
       information: ""
     },
     {
@@ -101,7 +106,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -115,7 +120,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -129,7 +134,21 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
+      information: ""
+    },
+    {
+      activityDescription: "UPS BB IR Test Activity (In-House)",
+      performBy: "In-House",
+      activityCategory: "Major",
+      activityCode: "BLUE",
+      activityType: "IR Testing",
+      avgMonthlyCount: 127,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
   ],
@@ -146,7 +165,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 5,
       approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
       information: "Mr. Deepak Sanghi"
     },
     {
@@ -160,7 +179,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
       information: ""
     },
     {
@@ -174,7 +193,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -188,9 +207,23 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 0,
       approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
       information: "Mr. Deepak Sanghi"
-    }
+    },
+    {
+      activityDescription: "Battery Bank Online Discharge Test(In-House)",
+      performBy: "In-House",
+      activityCategory: "Major",
+      activityCode: "BLUE",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 56,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
+      information: ""
+    },
   ],
 
   "SMPS BB": [
@@ -205,7 +238,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 5,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
       information: ""
     },
     {
@@ -219,7 +252,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -233,7 +266,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -247,11 +280,11 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
-      activityDescription: "Battery Bank Discharge test C-10",
+      activityDescription: "Battery Bank Discharge test C-10(In-House)",
       performBy: "In-House",
       activityCategory: "Critical",
       activityCode: "AMBER",
@@ -261,7 +294,22 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
+      information: ""
+    },
+
+    {
+      activityDescription: "SMPS BB IR Test Activity (In-House)",
+      performBy: "In-House",
+      activityCategory: "Major",
+      activityCode: "BLUE",
+      activityType: "IR Testing",
+      avgMonthlyCount: 127,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
   ],
@@ -278,7 +326,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 5,
       approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
       information: "Mr. Deepak Sanghi"
     },
     {
@@ -292,7 +340,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
       information: ""
     },
     {
@@ -306,7 +354,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -320,7 +368,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
       information: ""
     },
     {
@@ -334,12 +382,12 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 0,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: ""
     }
   ],
 
-  "Air conditioner": [
+  "Air Conditioner": [
     {
       activityDescription: "PAC EOL replacement/upgradation",
       performBy: "OEM",
@@ -351,7 +399,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
       information: ""
     },
     {
@@ -365,7 +413,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -379,7 +427,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -393,7 +441,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 0,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -407,7 +455,80 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
+      information: ""
+    }
+  ],
+
+  "Comfort AC": [
+    {
+      activityDescription: "SRC/Comfort AC EOL replacement/upgradation",
+      performBy: "OEM",
+      activityCategory: "Major",
+      activityCode: "BLUE",
+      activityType: "Replacement/upgradation",
+      avgMonthlyCount: 92,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
+      information: ""
+    },
+    {
+      activityDescription: "SRC/Comfort AC Preventive maintenance (OEM)",
+      performBy: "OEM",
+      activityCategory: "Major",
+      activityCode: "BLUE",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 15,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 2,
+      approvalLevel: "Circle",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
+      information: ""
+    },
+    {
+      activityDescription: "SRC/Comfort AC Preventive maintenance (In House)",
+      performBy: "In-House",
+      activityCategory: "Major",
+      activityCode: "BLUE",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 108,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 2,
+      approvalLevel: "Circle",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
+      information: ""
+    },
+    {
+      activityDescription: "SRC/Comfort AC Compressor replacement",
+      performBy: "OEM",
+      activityCategory: "Major",
+      activityCode: "BLUE",
+      activityType: "Corrective maintenance",
+      avgMonthlyCount: 212,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 0,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
+      information: ""
+    },
+    {
+      activityDescription: "SRC/Comfort AC ODU replacement",
+      performBy: "OEM",
+      activityCategory: "Major",
+      activityCode: "BLUE",
+      activityType: "Replacement/upgradation",
+      avgMonthlyCount: 0,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     }
   ],
@@ -424,7 +545,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 5,
       approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
       information: "Mr. Deepak Sanghi"
     },
     {
@@ -438,7 +559,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -452,7 +573,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -467,7 +588,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 0,
       approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
       information: ""
     }
 
@@ -485,7 +606,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 5,
       approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
       information: "Mr. Deepak Sanghi"
     },
     {
@@ -499,7 +620,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -513,7 +634,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -527,7 +648,66 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 0,
       approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
+      information: ""
+    }
+  ],
+
+"Solar system": [
+    {
+      activityDescription: "Solar system replacement/upgradation",
+      performBy: "OEM",
+      activityCategory: "Super Critical",
+      activityCode: "RED",
+      activityType: "Replacement/upgradation",
+      avgMonthlyCount: 124,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 5,
+      approvalLevel: "NLT",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
+      information: "Mr. Deepak Sanghi"
+    },
+    {
+      activityDescription: "Solar system Preventive maintenance (OEM)",
+      performBy: "OEM",
+      activityCategory: "Major",
+      activityCode: "BLUE",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 32,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
+      information: ""
+    },
+    {
+      activityDescription: "Solar system Preventive maintenance (In-House)",
+      performBy: "In-House",
+      activityCategory: "Major",
+      activityCode: "BLUE",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 32,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 2,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
+      information: ""
+    },
+    {
+      activityDescription: "Fault / Alarm / Break Down - Solar system",
+      performBy: "OEM",
+      activityCategory: "Critical",
+      activityCode: "AMBER",
+      activityType: "Corrective maintenance",
+      avgMonthlyCount: 324,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 0,
+      approvalLevel: "NLT",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
       information: ""
     }
   ],
@@ -544,7 +724,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 5,
       approvalLevel: "NLT",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
       information: "Mr. Deepak Sanghi"
     },
     {
@@ -558,7 +738,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 5,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
       information: ""
     },
 {
@@ -572,7 +752,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -586,7 +766,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
   ],
@@ -603,7 +783,7 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: ""
     }
   ],
@@ -620,7 +800,7 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: ""
     }
   ],
@@ -636,7 +816,7 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: ""
     }
   ],
@@ -653,7 +833,7 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: ""
     }
   ],
@@ -670,7 +850,41 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
+      information: ""
+    }
+  ],
+
+  "Exhaust Fan": [
+    {
+      activityDescription: "Exhaust Fan Preventive maintenance (In-House) ",
+      performBy: "In-House",
+      activityCategory: "Minor",
+      activityCode: "GREEN",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 0,
+      mopRequired: false,
+      crRequired: false,
+      crDaysBefore: 2,
+      approvalLevel: "Circle",
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
+      information: ""
+    }
+  ],
+
+  "Inverter": [
+    {
+      activityDescription: "Inverter Preventive maintenance (In-House) ",
+      performBy: "In-House",
+      activityCategory: "Minor",
+      activityCode: "GREEN",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 0,
+      mopRequired: false,
+      crRequired: false,
+      crDaysBefore: 2,
+      approvalLevel: "Circle",
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: ""
     }
   ],
@@ -687,7 +901,7 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: ""
     },
     {
@@ -701,7 +915,7 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: ""
     },
     {
@@ -715,7 +929,7 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 2,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: ""
     }
   ],
@@ -732,7 +946,7 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -746,7 +960,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -760,7 +974,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
   ],
@@ -777,7 +991,7 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -791,7 +1005,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -806,12 +1020,12 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
   ],
 
-  Other: [
+  Others: [
 
     {
       activityDescription: "New Rack power tapping",
@@ -820,11 +1034,11 @@ export const ACTIVITY_MASTER = {
       activityCode: "BLUE",
       activityType: "Replacement/upgradation",
       avgMonthlyCount: 0,
-      mopRequired: true,
+      mopRequired: false,
       crRequired: true,
       crDaysBefore: 0,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
       information: ""
     },
     {
@@ -838,7 +1052,7 @@ export const ACTIVITY_MASTER = {
       crRequired: true,
       crDaysBefore: 5,
       approvalLevel: "CIRCLE",
-      approvalLevels: ["Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
       information: ""
     },
     {
@@ -852,7 +1066,7 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 0,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: ""
     },
     {
@@ -866,7 +1080,7 @@ export const ACTIVITY_MASTER = {
       crRequired: false,
       crDaysBefore: 1,
       approvalLevel: "Circle",
-      approvalLevels: ["Level-1", "Level-2"],
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: ""
     }
   ]

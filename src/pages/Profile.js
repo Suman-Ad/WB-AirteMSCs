@@ -20,6 +20,13 @@ import "../assets/Profile.css";
 import { updateLocalUserData } from "../utils/userStorage";
 
 const ProfilePage = ({ userData }) => {
+  // permissions
+  const isAdmin = userData?.role === "Admin" ||
+    userData?.role === "Super Admin" ||
+    userData?.designation === "Vertiv CIH" ||
+    userData?.isAdminAssigned ||
+    userData?.designation === "Vertiv ZM";
+    
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -112,7 +119,7 @@ const ProfilePage = ({ userData }) => {
         site: form.site,
         siteId: form.siteId,
         empId: form.empId,
-        mobileNo:form.mobileNo,
+        mobileNo: form.mobileNo,
         photoURL,
       });
 
@@ -179,7 +186,7 @@ const ProfilePage = ({ userData }) => {
       {/* Designation */}
       <div className="profile-row">
         <label> 🎖️ Designation:</label>
-        {editMode ? (
+        {editMode && isAdmin ? (
           <input
             type="text"
             name="designation"

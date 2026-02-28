@@ -58,6 +58,8 @@ import MyLeaveStatus from "./pages/MyLeaveStatus";
 import MonthlyCLSummary from "./pages/MonthlyCLSummary";
 import MyDutySchedule from "./components/MyDutySchedule";
 import DGRunHistory from "./pages/DGRunHistory";
+import DynamicRegister from "./pages/DynamicRegister";
+import AllRegisterBook from "./pages/AllRegisterBook";
 
 export default function AppContent() {
     const [userData, setUserData] = useState(null);
@@ -504,6 +506,20 @@ export default function AppContent() {
                     <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
                         <Layout userData={userData}>
                             <DGRunHistory userData={userData} />
+                        </Layout>
+                    </RoleProtectedRoute>} />
+
+                <Route path="/all-registerBook" element={
+                    <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+                        <Layout userData={userData}>
+                            <AllRegisterBook userData={userData} />
+                        </Layout>
+                    </RoleProtectedRoute>} />
+
+                <Route path="/dynamic-register/:registerName" element={
+                    <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+                        <Layout userData={userData}>
+                            <DynamicRegister userData={userData} />
                         </Layout>
                     </RoleProtectedRoute>} />
 
