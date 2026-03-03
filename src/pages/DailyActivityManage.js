@@ -113,7 +113,9 @@ export default function DailyActivityManage({ userData }) {
 
   // equipment list
   const [equipmentList, setEquipmentList] = useState([]);
+  const [equipmentFloor, setEquipmentFloor] = useState([]);
   const [vendorList, setVendorList] = useState([]);
+  const [equipmentQtyMap, setEquipmentQtyMap] = useState({});
 
   const [dynamicEquip, setDynamicEquip] = useState("");
   const [dynamicActivity, setDynamicActivity] = useState("");
@@ -191,6 +193,9 @@ export default function DailyActivityManage({ userData }) {
     const cleanedRow = {
       ...editRowData,
       approvers: normalizeApproversByLevel(editRowData.approvers || []),
+      approvalStatusByLevel: normalizeApprovalStatusByLevel(editRowData),
+      activityTime: editRowData.activityTime || "Day", // default to "Day" if not set
+      floor: editRowData.floor || "NA",
     };
 
     // 1️⃣ Update only edited row in memory
@@ -241,49 +246,112 @@ export default function DailyActivityManage({ userData }) {
 
 
   // load site hierarchy from assets_register if available (best-effort)
-  useEffect(() => {
-    if (!circle || !(userData?.siteId || site)) return;
+  // useEffect(() => {
+  //   if (!circle || !(userData?.siteId || site)) return;
 
-    async function loadAssetsFlat() {
+  //   async function loadAssetsFlat() {
+  //     try {
+  //       setLoading(true);
+  //       const snap = await getDocs(collection(db, "assets_flat"));
+
+  //       const equipSet = new Set();
+  //       const vendorSet = new Set();
+
+  //       snap.forEach(docSnap => {
+  //         const d = docSnap.data();
+
+  //         // 🔐 Admin / Super Admin → ALL sites
+  //         if (isAdmin || isSuperAdmin) {
+  //           if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
+  //           if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
+  //           return;
+  //         }
+
+  //         // 👤 Other users → EXISTING site-based logic
+  //         if (
+  //           d.Circle === circle &&
+  //           d.UniqueCode === (userData?.siteId || site)
+  //         ) {
+  //           if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
+  //           if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
+  //         }
+  //       });
+
+  //       setEquipmentList(Array.from(equipSet).sort());
+  //       setVendorList(Array.from(vendorSet).sort());
+  //       setLoading(false);
+  //     } catch (e) {
+  //       console.error("assets_flat load failed", e);
+  //     }
+  //   }
+
+  //   fetchConfig();
+
+  //   loadAssetsFlat();
+  // }, [circle, site, userData?.siteId, siteKey]);
+
+  // load site list from assets_register with correct filtering
+  useEffect(() => {
+    if (!region || !circle || !site) return;
+
+    async function loadAssetsFlatData() {
       try {
         setLoading(true);
-        const snap = await getDocs(collection(db, "assets_flat"));
+
+        let q;
+
+        // 🔐 Admin → filter by selected Region + Circle + Site
+        if (isAdmin) {
+          q = query(
+            collection(db, "assets_flat"),
+            where("Region", "==", region),
+            where("Circle", "==", circle),
+            where("UniqueCode", "==", siteIdMap[site])
+          );
+        } else {
+          // 👤 Normal user → always their own site
+          q = query(
+            collection(db, "assets_flat"),
+            where("Circle", "==", circle),
+            where("UniqueCode", "==", siteIdMap[site])
+          );
+        }
+
+        const snap = await getDocs(q);
 
         const equipSet = new Set();
+        const equipQty = {};
         const vendorSet = new Set();
+        const equipFloor = new Set();
 
         snap.forEach(docSnap => {
           const d = docSnap.data();
 
-          // 🔐 Admin / Super Admin → ALL sites
-          if (isAdmin || isSuperAdmin) {
-            if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
-            if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
-            return;
+          if (d.EquipmentCategory) {
+            equipSet.add(d.EquipmentCategory);
+            equipQty[d.EquipmentCategory] =
+              (equipQty[d.EquipmentCategory] || 0) + (Number(d.Qty) || 0);
           }
 
-          // 👤 Other users → EXISTING site-based logic
-          if (
-            d.Circle === circle &&
-            d.UniqueCode === (userData?.siteId || site)
-          ) {
-            if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
-            if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
-          }
+          if (d.Floor) equipFloor.add(d.Floor);
+          if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
         });
 
         setEquipmentList(Array.from(equipSet).sort());
+        setEquipmentFloor(Array.from(equipFloor).sort());
+        setEquipmentQtyMap(equipQty);
         setVendorList(Array.from(vendorSet).sort());
+
         setLoading(false);
       } catch (e) {
         console.error("assets_flat load failed", e);
+        setLoading(false);
       }
     }
 
     fetchConfig();
-
-    loadAssetsFlat();
-  }, [circle, site, userData?.siteId, siteKey]);
+    loadAssetsFlatData();
+  }, [region, circle, site, isAdmin]);
 
 
   // load pm doc for selected site/year
@@ -893,6 +961,8 @@ export default function DailyActivityManage({ userData }) {
               notes: entry.notes || "",
               pmEntry: entry,
               quantity: entry.quantity || 1, // default quantity for PM tasks
+              activityTime: entry.activityTime || "Day", // Day / Night
+              floor: entry.floor || "",
             });
           }
         });
@@ -1104,21 +1174,27 @@ export default function DailyActivityManage({ userData }) {
   }
 
   const handleGenerateMOP = (row) => {
-    const mop = getMopByActivity(row.activityDetails);
+    const mop = getMopByActivity(row, userData, siteConfig);
 
     if (!mop) {
       alert("MOP format not found for this activity");
       return;
     }
 
-    const choice = window.confirm(
-      "Click OK for PDF\nClick Cancel for Excel"
+    // First alert
+    alert("MOP Generated Successfully!");
+
+    // Ask user for format
+    const choice = window.prompt(
+      "Choose Download Format:\nType 1 for PDF\nType 2 for Excel"
     );
 
-    if (choice) {
+    if (choice === "1") {
       generateMopPDF(mop);
-    } else {
+    } else if (choice === "2") {
       generateMopExcel(mop);
+    } else {
+      alert("Invalid selection. Please type 1 or 2.");
     }
   };
 
@@ -1527,7 +1603,8 @@ export default function DailyActivityManage({ userData }) {
               vendor: vendorName === "In-House" ? `${vendorNameInHouse}(In-House)` : vendorName === "Others" ? vendorNameOthers : vendorName,
               mopRequired: meta.mopRequired ? "Yes" : "No",
               activityCode: meta.activityCode ?? "*",
-
+              activityTime: meta.activityTime ?? "Day",
+              floor: equipmentFloor || "",
               siteCategory: siteConfig?.siteCategory ?? "Major",
 
               approvalRequire: meta.approvalLevel ?? "No",
@@ -1675,6 +1752,8 @@ export default function DailyActivityManage({ userData }) {
                   <th>CRQ/PE Number</th>
                   <th>Start</th>
                   <th>End</th>
+                  <th>Activity Time</th>
+                  <th>Equipment Location</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -1791,7 +1870,7 @@ export default function DailyActivityManage({ userData }) {
                     >
                       {r.mopRequired === "Yes" ? (
                         <button
-                        style={{ height:"fit-content", width:"100%", fontSize:"15px", padding:"2px 2px"}}
+                          style={{ height: "fit-content", width: "100%", fontSize: "15px", padding: "2px 2px" }}
                           onClick={() => handleGenerateMOP(r)}
                         >
                           Generate MOP
@@ -1891,6 +1970,8 @@ export default function DailyActivityManage({ userData }) {
                     {/* Start/End time */}
                     <td className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e) => updateDailyRow(idx, "activityStartTime", e.target.value)} style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r.activityStartTime || ""}</td>
                     <td className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e) => updateDailyRow(idx, "activityEndTime", e.target.value)} style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} >{r.activityEndTime || ""}</td>
+                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r.activityTime || "Day"}</td>
+                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r.floor || "Unknown Location"}</td>
                     {/* Delete */}
                     <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} >
                       <button
@@ -1965,6 +2046,30 @@ export default function DailyActivityManage({ userData }) {
                     <option value="CRQ00000" />
                     <option value="PE" />
                   </datalist>
+
+                  <label>Activity Time</label>
+                  <select
+                    className="daily-activity-input"
+
+                    value={editRowData.activityTime || ""}
+                    placeholder={"Activity Time (e.g. Day, Night, 10:00-18:00)"}
+                    required
+                    onChange={(e) => setEditRowData({ ...editRowData, activityTime: e.target.value })}
+                  >
+                    <option value="Day">Day</option>
+                    <option value="Night">Night</option>
+                    <option value="Flexible">Flexible</option>
+                  </select>
+
+                  <label>Equipment Location</label>
+                  <input
+                    className="daily-activity-input"
+
+                    value={editRowData.floor || ""}
+                    placeholder={"Equipment Floor"}
+                    required
+                    onChange={(e) => setEditRowData({ ...editRowData, floor: e.target.value })}
+                  />
 
                   {/* Individual approvals – row specific */}
                   <label>Approval Status by Level</label>

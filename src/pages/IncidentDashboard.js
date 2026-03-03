@@ -26,6 +26,7 @@ const IncidentDashboard = ({ userData }) => {
     siteId: userData?.siteId || '',
     status: '',
     equipment: '',
+    type: '',
     rcaStatus: '',
     search: '',
     ompPartner: '',
@@ -77,6 +78,9 @@ const IncidentDashboard = ({ userData }) => {
       if (filters.equipment) {
         data = data.filter(i => i.equipmentCategory === filters.equipment);
       }
+      if (filters.type) {
+        data = data.filter(i => i.type === filters.type);
+      }
       if (filters.rcaStatus) {
         data = data.filter(i => i.rcaStatus === filters.rcaStatus);
       }
@@ -93,7 +97,8 @@ const IncidentDashboard = ({ userData }) => {
           (item.ompPartner || "").toLowerCase().includes(searchText) ||
           (item.status || "").toLowerCase().includes(searchText) ||
           (item.dateOfIncident || "").toLowerCase().includes(searchText) ||
-          (item.dateKey || "").toLowerCase().includes(searchText)
+          (item.dateKey || "").toLowerCase().includes(searchText) ||
+          (item.type || "").toLowerCase().includes(searchText)
         );
       }
 
@@ -392,6 +397,18 @@ const IncidentDashboard = ({ userData }) => {
               ))}
             </select>
 
+            {/* Incident Type Filter */}
+            <select
+              value={filters.type}
+              onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+            >
+              <option value="">All Incident Types</option>
+              {/* Dynamically extract unique OEM names from incidents */}
+              {[...new Set(incidents.map(i => i.type).filter(Boolean))].map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+
             {/* OEM Partner Filter */}
             <select
               value={filters.ompPartner}
@@ -447,6 +464,7 @@ const IncidentDashboard = ({ userData }) => {
                 <th>Date</th>
                 <th>Time</th>
                 <th>Equipment</th>
+                <th>Incident Type</th>
                 <th>Title</th>
                 <th>Description</th>
                 <th>OEM Name</th>
@@ -470,6 +488,7 @@ const IncidentDashboard = ({ userData }) => {
                   <td>{formatDate(incident.dateKey)}</td>
                   <td>{incident.timeOfIncident}</td>
                   <td>{incident.equipmentCategory}</td>
+                  <td>{incident.type}</td>
                   <td>{incident.incidentTitle}</td>
                   <td>{incident.incidentDescription}</td>
                   <td>{incident.ompPartner}</td>

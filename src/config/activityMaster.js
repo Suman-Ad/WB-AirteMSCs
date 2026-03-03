@@ -1,5 +1,5 @@
 import { APPROVAL_LEVELS } from "./approvalLevels";
-import { MOP_MASTER } from "./mopMaster";
+import { getMopMaster } from "./mopMaster";
 
 // activityMaster.js
 export const getApproversFromLevels = (levels = []) => {
@@ -11,8 +11,9 @@ export const getApproversFromLevels = (levels = []) => {
   );
 };
 
-export const getMopByActivity = (activityDescription) => {
-  return MOP_MASTER[activityDescription] || null;
+export const getMopByActivity = (row, userData, siteConfig) => {
+  const MOP_MASTER = getMopMaster(userData, row, siteConfig);
+  return MOP_MASTER[row.activityDetails] || null;
 };
 
 export const ACTIVITY_MASTER = {
@@ -29,7 +30,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 5,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
-      information: "Mr. Deepak Sanghi"
+      information: "Mr. Deepak Sanghi",
+      activityTime: "Night"
     },
     {
       activityDescription: "UPS Preventive maintenance (OEM)",
@@ -39,12 +41,12 @@ export const ACTIVITY_MASTER = {
       activityType: "Preventive maintenance",
       avgMonthlyCount: 8,
       mopRequired: true,
-
       crRequired: true,
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
-      information: ""
+      information: "",
+      activityTime: "Night"
     },
     {
       activityDescription: "UPS Preventive maintenance (In House)",
@@ -59,7 +61,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Fault / Alarm / Break Down - UPS",
@@ -69,12 +72,12 @@ export const ACTIVITY_MASTER = {
       activityType: "Corrective maintenance",
       avgMonthlyCount: 127,
       mopRequired: true,
-
       crRequired: true,
       crDaysBefore: 0,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
-      information: "Mr. Deepak Sanghi"
+      information: "Mr. Deepak Sanghi",
+      activityTime: "Flexible"
     }
   ],
 
@@ -87,12 +90,12 @@ export const ACTIVITY_MASTER = {
       activityType: "Replacement/Upgradation",
       avgMonthlyCount: 127,
       mopRequired: true,
-
       crRequired: true,
       crDaysBefore: 5,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
-      information: ""
+      information: "",
+      activityTime: "Night"
     },
     {
       activityDescription: "UPS BB Preventive Maintenance(In-House)",
@@ -107,7 +110,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "UPS BB Preventive Maintenance(OEM)",
@@ -121,7 +125,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Night"
     },
     {
       activityDescription: "UPS BB Cell Replacement",
@@ -135,7 +140,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Night"
     },
     {
       activityDescription: "UPS BB IR Test Activity (In-House)",
@@ -149,7 +155,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
   ],
 
@@ -166,7 +173,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 5,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
-      information: "Mr. Deepak Sanghi"
+      information: "Mr. Deepak Sanghi",
+      activityTime: "Night"
     },
     {
       activityDescription: "SMPS Preventive maintenance (OEM)",
@@ -180,7 +188,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
-      information: ""
+      information: "",
+      activityTime: "Night"
     },
     {
       activityDescription: "SMPS Preventive maintenance (In House)",
@@ -194,7 +203,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Fault / Alarm / Break Down - SMPS",
@@ -208,7 +218,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 0,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
-      information: "Mr. Deepak Sanghi"
+      information: "Mr. Deepak Sanghi",
+      activityTime: "Night"
     },
     {
       activityDescription: "Battery Bank Online Discharge Test(In-House)",
@@ -222,7 +233,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Night"
     },
   ],
 
@@ -239,7 +251,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 5,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
-      information: ""
+      information: "",
+      activityTime: "Night"
     },
     {
       activityDescription: "SMPS BB Preventive Maintenance(In-House)",
@@ -253,7 +266,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "SMPS BB Preventive Maintenance(OEM)",
@@ -267,7 +281,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Night"
     },
     {
       activityDescription: "SMPS BB Cell Replacement",
@@ -281,7 +296,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Night"
     },
     {
       activityDescription: "Battery Bank Discharge test C-10(In-House)",
@@ -295,7 +311,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
-      information: ""
+      information: "",
+      activityTime: "Night"
     },
 
     {
@@ -310,7 +327,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
   ],
 
@@ -327,7 +345,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 5,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
-      information: "Mr. Deepak Sanghi"
+      information: "Mr. Deepak Sanghi",
+      activityTime: "Day"
     },
     {
       activityDescription: "DG Set Preventive maintenance(OEM)",
@@ -341,7 +360,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "DG Set Preventive maintenance(In-House)",
@@ -355,7 +375,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "DG Set Radiator & Fuel tank cleaning activity",
@@ -369,7 +390,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Daily DG test run",
@@ -383,7 +405,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 0,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -400,7 +423,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "PAC Preventive maintenance (OEM)",
@@ -414,7 +438,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "PAC Preventive maintenance (In House)",
@@ -428,7 +453,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "PAC Compressor replacement",
@@ -442,7 +468,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 0,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "PAC ODU replacement",
@@ -456,7 +483,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -473,7 +501,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "SRC/Comfort AC Preventive maintenance (OEM)",
@@ -487,7 +516,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "SRC/Comfort AC Preventive maintenance (In House)",
@@ -501,7 +531,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "SRC/Comfort AC Compressor replacement",
@@ -515,7 +546,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 0,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "SRC/Comfort AC ODU replacement",
@@ -529,7 +561,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -546,7 +579,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 5,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
-      information: "Mr. Deepak Sanghi"
+      information: "Mr. Deepak Sanghi",
+      activityTime: "Day"
     },
     {
       activityDescription: "HT panel Preventive maintenance (OEM)",
@@ -560,7 +594,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "HT panel Preventive maintenance (In-House)",
@@ -574,7 +609,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Fault / Alarm / Break Down - HT Panel",
@@ -589,7 +625,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 0,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
 
   ],
@@ -607,7 +644,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 5,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
-      information: "Mr. Deepak Sanghi"
+      information: "Mr. Deepak Sanghi",
+      activityTime: "Day"
     },
     {
       activityDescription: "LT panel Preventive maintenance (OEM)",
@@ -621,7 +659,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "LT panel Preventive maintenance (In-House)",
@@ -635,7 +674,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Fault / Alarm / Break Down - HT Panel",
@@ -649,7 +689,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 0,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -666,7 +707,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 5,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
-      information: "Mr. Deepak Sanghi"
+      information: "Mr. Deepak Sanghi",
+      activityTime: "Day"
     },
     {
       activityDescription: "Solar system Preventive maintenance (OEM)",
@@ -680,7 +722,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Solar system Preventive maintenance (In-House)",
@@ -694,7 +737,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Fault / Alarm / Break Down - Solar system",
@@ -708,7 +752,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 0,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -725,7 +770,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 5,
       approvalLevel: "NLT",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5", "Level-6", "Level-7"],
-      information: "Mr. Deepak Sanghi"
+      information: "Mr. Deepak Sanghi",
+      activityTime: "Day"
     },
     {
       activityDescription: "Transformer Preventive maintenance Oil filtration",
@@ -739,7 +785,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 5,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
 {
       activityDescription: "Transformer Preventive maintenance (OEM)",
@@ -753,7 +800,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Transformer Preventive maintenance (In-House)",
@@ -767,7 +815,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
   ],
 
@@ -784,7 +833,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -801,7 +851,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
   PFE: [
@@ -817,7 +868,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -834,7 +886,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -851,7 +904,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -868,7 +922,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -885,7 +940,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -902,7 +958,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Access Control System Preventive maintenance (OEM)",
@@ -916,7 +973,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Fault / Alarm / Break Down - Access Control System",
@@ -930,7 +988,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ],
 
@@ -947,7 +1006,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Fire Panel Preventive maintenance(OEM)",
@@ -961,7 +1021,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Fire Panel maintenance OEM",
@@ -975,7 +1036,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
   ],
 
@@ -992,7 +1054,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "FSS Preventive maintenance(OEM)",
@@ -1006,7 +1069,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "FSS maintenance OEM",
@@ -1021,7 +1085,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 2,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
   ],
 
@@ -1039,7 +1104,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 0,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Checking Power Dual Redundancy Of Racks",
@@ -1053,7 +1119,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 5,
       approvalLevel: "CIRCLE",
       approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4", "Level-5"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "MSC Floor cleaning activity",
@@ -1067,7 +1134,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 0,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     },
     {
       activityDescription: "Pest Control activity",
@@ -1081,7 +1149,8 @@ export const ACTIVITY_MASTER = {
       crDaysBefore: 1,
       approvalLevel: "Circle",
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
-      information: ""
+      information: "",
+      activityTime: "Day"
     }
   ]
 };

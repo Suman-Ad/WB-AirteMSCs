@@ -116,6 +116,7 @@ export default function PMRegister({ userData }) {
 
   // equipment list
   const [equipmentList, setEquipmentList] = useState([]);
+  const [equipmentFloor, setEquipmentFloor] = useState([]);
   const [vendorList, setVendorList] = useState([]);
 
   // pm document (loaded for site+year)
@@ -243,6 +244,7 @@ export default function PMRegister({ userData }) {
         const equipSet = new Set();
         const equipQty = {};
         const vendorSet = new Set();
+        const equipFloor = new Set();
 
         snap.forEach(docSnap => {
           const d = docSnap.data();
@@ -253,10 +255,14 @@ export default function PMRegister({ userData }) {
               (equipQty[d.EquipmentCategory] || 0) + (Number(d.Qty) || 0);
           }
 
+          if (d.Floor) {
+            equipFloor.add(d.Floor);
+          }
           if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
         });
 
         setEquipmentList(Array.from(equipSet).sort());
+        setEquipmentFloor(Array.from(equipFloor).sort());
         setEquipmentQtyMap(equipQty);
         setVendorList(Array.from(vendorSet).sort());
 
@@ -442,6 +448,7 @@ export default function PMRegister({ userData }) {
         approvalLevels: activity.approvalLevels,
         information: activity.information || "",
         quantity: equipmentQtyMap[equipmentName] || "",
+        floor: "",
 
         // 🔹 schedule fields
         frequency: "monthly",
@@ -1366,6 +1373,29 @@ export default function PMRegister({ userData }) {
                                   >
                                     <option value="">Select Vendor</option>
                                     {vendorList.map(v => (
+                                      <option key={v} value={v}>{v}</option>
+                                    ))}
+                                  </select>
+                                </label>
+
+                                <label>
+                                  Floor:
+                                  <select
+                                    className="daily-activity-select"
+                                    value={entry.floor || ""}
+                                    // onChange={(e) =>
+                                    //   updateScheduleEntry(equipmentName, entry.id, "vendor", e.target.value)
+                                    // }
+                                    onChange={(e) =>
+                                      updateScheduleEntryFull(equipmentName, entry.id, {
+                                        floor: e.target.value
+                                      })
+                                    }
+
+                                    disabled={!canEdit}
+                                  >
+                                    <option value="">Select Floor</option>
+                                    {equipmentFloor.map(v => (
                                       <option key={v} value={v}>{v}</option>
                                     ))}
                                   </select>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { act, useEffect, useMemo, useRef, useState } from "react";
 import { db } from "../firebase";
 import { collection, getDocs, getDoc, updateDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import * as XLSX from "xlsx";
@@ -16,6 +16,7 @@ const LABELS = [
   "Site Category",
   "Node Name",
   "Quantity",
+  "Activity Time (Day/Night)", // ✅ NEW
   "Activity Details",
   "Activity Descriptions",
   "Activity Category",
@@ -31,6 +32,7 @@ const LABELS = [
   "Activity Start Time",
   "Activity End Time",
   "PM Status",
+  "Equipment Location",
 ];
 
 /** Field keys mapped to the TABLE cells (excluding Sl.No) */
@@ -42,6 +44,7 @@ const KEYS = [
   "siteCategory",
   "nodeName",
   "quantity",
+  "activityTime",
   "activityDetails",
   "notes",
   "activityCategory",
@@ -57,6 +60,7 @@ const KEYS = [
   "activityStartTime",
   "activityEndTime",
   "pmStatus",
+  "floor",
 ];
 
 const EDITABLE_KEYS = [
@@ -164,6 +168,7 @@ export default function DailyActivityDashboard({ userData }) {
     approvalStatus: "", // "", "done", "pending" (based on Approval Require)
     pmStatus: "",
     activityCode: "",
+    activityTime: "", // ✅ NEW (Day/Night)
   });
 
   /** chart refs */
@@ -261,6 +266,8 @@ export default function DailyActivityDashboard({ userData }) {
               // ✅ ADD THIS
               approvalStatusByLevel: r.approvalStatusByLevel || {},
               pmStatus: r.pmStatus || "Pending", // ✅ NEW
+              activityTime: r.activityTime || "", // ✅ NEW
+              floor: r.floor || "", // ✅ NEW
             });
           });
         });
@@ -398,6 +405,11 @@ export default function DailyActivityDashboard({ userData }) {
     // activity type
     if (filters.activityType) {
       data = data.filter((r) => (r.activityType || "") === filters.activityType);
+    }
+
+    // activity time
+    if (filters.activityTime) {
+      data = data.filter((r) => (r.activityTime || "") === filters.activityTime);
     }
 
     // site category
@@ -773,9 +785,14 @@ export default function DailyActivityDashboard({ userData }) {
       const baseRow = {
         "Sl.No": i + 1,
         Date: r.date || "",
+        "Region": r.region || "",
+        "Circle": r.circle || "",
         "Site Name": r.siteName || "",
+        "siteId": r.siteId || "",
         "Site Category": r.siteCategory || "",
         "Node Name": r.nodeName || "",
+        "Quantity": r.quantity || "",
+        "Activity Time (Day/Night)": r.activityTime || "",
         "Activity Details": r.activityDetails || "",
         "Activity Descriptions": r.notes || "",
         "Activity Category": r.activityCategory || "",
@@ -796,6 +813,7 @@ export default function DailyActivityDashboard({ userData }) {
         "Activity Start Time": r.activityStartTime || "",
         "Activity End Time": r.activityEndTime || "",
         "PM Status": r.pmStatus || "Pending",
+        "Equpment Location": r.floor || "",
       };
 
       // 🔹 add level-wise approval status
@@ -1407,12 +1425,12 @@ export default function DailyActivityDashboard({ userData }) {
             <thead>
               <tr>
                 {LABELS.map((label) => (
-                  <th key={label}  style={{ border: "1px solid #6b6868", }}>{label}</th>
+                  <th key={label} style={{ border: "1px solid #6b6868", }}>{label}</th>
                 ))}
 
                 {/* 🔹 Dynamic approval level headers */}
                 {headerLevels.map((level) => (
-                  <th key={level}  style={{ border: "1px solid #6b6868", }}>{level}</th>
+                  <th key={level} style={{ border: "1px solid #6b6868", }}>{level}</th>
                 ))}
 
                 {(isAdmin || (userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor")) && <th>Actions</th>}
@@ -1763,6 +1781,19 @@ export default function DailyActivityDashboard({ userData }) {
                   setFilters((f) => ({ ...f, dateTo: e.target.value }))
                 }
               />
+
+              <select
+                className="daily-activity-select"
+                value={filters.activityTime}
+                onChange={(e) =>
+                  setFilters((f) => ({ ...f, activityTime: e.target.value }))
+                }
+              >
+                <option value="">All Activity Times</option>
+                <option value="Day">Day Activity</option>
+                <option value="Night">Night Activity</option>
+              </select>
+
               <select
                 className="daily-activity-select"
                 value={filters.activityType}
