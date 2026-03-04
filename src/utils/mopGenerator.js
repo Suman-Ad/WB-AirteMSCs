@@ -766,6 +766,61 @@ export const generateMopExcel = (mop) => {
 
   // rowIndex++;
 
+  // ================= NETWORK =================
+
+  // Header row
+  addRow(["Network Resources :", "Role", "", "Name", ""], greyHeader);
+
+  const networkStartRow = rowIndex - 1;
+
+  // Add network rows
+  mop.network.forEach((row) => {
+    addRow([
+      "",           // left vertical label column
+      row[0],       // Role
+      "",           // merge with col1
+      row[1],       // Name
+      ""            // merge with col3
+    ], normalCell);
+  });
+
+  const networkEndRow = rowIndex - 1;
+
+  if (!ws["!merges"]) ws["!merges"] = [];
+
+  // ✅ Merge left vertical label
+  ws["!merges"].push({
+    s: { r: networkStartRow, c: 0 },
+    e: { r: networkEndRow, c: 0 }
+  });
+
+  // ✅ Merge Role header (col 1–2)
+  ws["!merges"].push({
+    s: { r: networkStartRow, c: 1 },
+    e: { r: networkStartRow, c: 2 }
+  });
+
+  // ✅ Merge Name header (col 3–4)
+  ws["!merges"].push({
+    s: { r: networkStartRow, c: 3 },
+    e: { r: networkStartRow, c: 4 }
+  });
+
+  // ✅ Merge Role cells horizontally (each row)
+  for (let r = networkStartRow + 1; r <= networkEndRow; r++) {
+    ws["!merges"].push({
+      s: { r: r, c: 1 },
+      e: { r: r, c: 2 }
+    });
+
+    ws["!merges"].push({
+      s: { r: r, c: 3 },
+      e: { r: r, c: 4 }
+    });
+  }
+
+  // rowIndex++;
+  
   // ================= SPARES =================
 
   // Header row
