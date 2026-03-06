@@ -3,323 +3,392 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import XLSX from "xlsx-js-style";
 
+// This file contains functions to generate MOP documents in PDF and Excel formats based on the provided MOP data structure. The PDF generation uses jsPDF and autoTable to create a well-formatted document, while the Excel generation uses xlsx-js-style to create a styled workbook with merged cells for better readability.
+// export const generateMopPDF = (mop) => {
+//   const doc = new jsPDF("p", "mm", "a4");
+
+//   doc.setFontSize(14);
+//   doc.text(`${mop.header.title}`, 105, 12, { align: "center" });
+
+//   doc.setFontSize(9);
+//   doc.text(
+//     `DOC NO - ${mop.header.docNo}     Release Date : ${mop.header.releaseDate}`,
+//     14,
+//     18
+//   );
+
+//   autoTable(doc, {
+//     startY: 22,
+//     body: [
+//       [
+//         "City", mop.siteInfo.city,
+//         "Location", mop.siteInfo.location,
+//         "Floor", mop.siteInfo.floor,
+//         "Tier", mop.siteInfo.tier,
+//         "T2", mop.siteInfo.t2
+//       ]
+//     ],
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   autoTable(doc, {
+//     startY: doc.lastAutoTable.finalY + 2,
+//     body: [
+//       ["Nature of Activity", mop.activityInfo.nature],
+//       ["Start Date", mop.activityInfo.startDate],
+//       ["Start Time", mop.activityInfo.startTime],
+//       ["End Date", mop.activityInfo.endDate],
+//       ["End Time", mop.activityInfo.endTime],
+//       ["Duration", mop.activityInfo.duration],
+//       ["Activity Owner", mop.activityInfo.owner],
+//       ["OEM", mop.activityInfo.oem],
+//       ["Stake Holders", mop.activityInfo.stakeholders],
+//       ["Service Impact", mop.activityInfo.serviceImpact]
+//     ],
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   autoTable(doc, {
+//     startY: doc.lastAutoTable.finalY + 3,
+//     head: [["Pre Activity Checkpoints", "Status", "Parameters"]],
+//     body: mop.preChecks,
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   autoTable(doc, {
+//     startY: doc.lastAutoTable.finalY + 3,
+//     head: [["UPS No", "Rating", "Floor", "Loading %"]],
+//     body: mop.loadDetails,
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   autoTable(doc, {
+//     startY: doc.lastAutoTable.finalY + 3,
+//     head: [["Risk Analysis"]],
+//     body: mop.risk.map(r => [r]),
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   autoTable(doc, {
+//     startY: doc.lastAutoTable.finalY + 3,
+//     head: [["Mitigation / Backup Plan"]],
+//     body: mop.mitigation.map(m => [m]),
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   autoTable(doc, {
+//     startY: doc.lastAutoTable.finalY + 3,
+//     head: [["Activity Steps"]],
+//     body: mop.activitySteps.map(a => [a]),
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   autoTable(doc, {
+//     startY: doc.lastAutoTable.finalY + 3,
+//     head: [["Fallback / Rollback Plan"]],
+//     body: mop.rollback.map(r => [r]),
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   autoTable(doc, {
+//     startY: doc.lastAutoTable.finalY + 3,
+//     head: [["Role", "Name"]],
+//     body: mop.infra,
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   autoTable(doc, {
+//     startY: doc.lastAutoTable.finalY + 3,
+//     head: [["Additional Proactive Measures"]],
+//     body: mop.proactive.map(p => [p]),
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   autoTable(doc, {
+//     startY: doc.lastAutoTable.finalY + 3,
+//     head: [["Spares Description", "Specification", "Qty", "Availability"]],
+//     body: mop.spares,
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   autoTable(doc, {
+//     startY: doc.lastAutoTable.finalY + 3,
+//     body: [
+//       ["Created By", mop.approval.createdBy],
+//       ["Reviewer", mop.approval.reviewer],
+//       ["Approver", mop.approval.approver],
+//       ["CR Number", mop.approval.crNumber]
+//     ],
+//     theme: "grid",
+//     styles: { fontSize: 8 }
+//   });
+
+//   doc.save(`${mop.header.title}.pdf`);
+// };
+
 export const generateMopPDF = (mop) => {
+
   const doc = new jsPDF("p", "mm", "a4");
 
+  let startY = 10;
+
+  // ================= TITLE =================
   doc.setFontSize(14);
-  doc.text(`${mop.header.title}`, 105, 12, { align: "center" });
+  doc.text(mop.header.title.toUpperCase(), 105, startY, { align: "center" });
+
+  startY += 6;
 
   doc.setFontSize(9);
   doc.text(
     `DOC NO - ${mop.header.docNo}     Release Date : ${mop.header.releaseDate}`,
     14,
-    18
+    startY
   );
 
+  startY += 4;
+
+  // ================= SITE INFO =================
   autoTable(doc, {
-    startY: 22,
+    startY,
+    body: [[
+      `City : ${mop.siteInfo.city}`,
+      `Location : ${mop.siteInfo.location}`,
+      `Floor : ${mop.siteInfo.floor}`,
+      `Tier : ${mop.siteInfo.tier}`,
+      `T2 : ${mop.siteInfo.t2 || ""}`
+    ]],
+    styles: { fontSize: 8 },
+    theme: "grid",
+    columnStyles: {
+      0: { cellWidth: 38 },
+      1: { cellWidth: 38 },
+      2: { cellWidth: 32 },
+      3: { cellWidth: 35 },
+      4: { cellWidth: 35 }
+    }
+  });
+
+  startY = doc.lastAutoTable.finalY + 2;
+
+  // ================= ACTIVITY INFO =================
+  autoTable(doc, {
+    startY,
     body: [
+
       [
-        "City", mop.siteInfo.city,
-        "Location", mop.siteInfo.location,
-        "Floor", mop.siteInfo.floor,
-        "Tier", mop.siteInfo.tier,
-        "T2", mop.siteInfo.t2
+        { content: "Nature of Activity / Work :", styles: { fontStyle: "bold" } },
+        { content: mop.activityInfo.nature, colSpan: 4 }
+      ],
+
+      [
+        "Activity Start Date",
+        mop.activityInfo.startDate,
+        "Activity End Date",
+        mop.activityInfo.endDate,
+        ""
+      ],
+
+      [
+        "Start Time",
+        mop.activityInfo.startTime,
+        "End Time",
+        mop.activityInfo.endTime,
+        `Duration : ${mop.activityInfo.duration}`
+      ],
+
+      [
+        "Activity Owner",
+        mop.activityInfo.owner,
+        "UPS OEM",
+        mop.activityInfo.oem,
+        ""
+      ],
+
+      [
+        "Service Impact",
+        { content: mop.activityInfo.serviceImpact, colSpan: 4 }
       ]
+
     ],
-    theme: "grid",
-    styles: { fontSize: 8 }
+    styles: { fontSize: 8 },
+    theme: "grid"
   });
 
+  startY = doc.lastAutoTable.finalY + 3;
+
+  // ================= PRE ACTIVITY CHECK =================
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 2,
-    body: [
-      ["Nature of Activity", mop.activityInfo.nature],
-      ["Start Date", mop.activityInfo.startDate],
-      ["Start Time", mop.activityInfo.startTime],
-      ["End Date", mop.activityInfo.endDate],
-      ["End Time", mop.activityInfo.endTime],
-      ["Duration", mop.activityInfo.duration],
-      ["Activity Owner", mop.activityInfo.owner],
-      ["OEM", mop.activityInfo.oem],
-      ["Stake Holders", mop.activityInfo.stakeholders],
-      ["Service Impact", mop.activityInfo.serviceImpact]
-    ],
+    startY,
+
+    head: [[
+      "Pre Activity Check Points",
+      "Checkpoints",
+      "Checkpoints",
+      "Status",
+      "Parameters"
+    ]],
+
+    body: mop.preChecks.map(r => [
+      "",
+      r[0],
+      "",
+      r[1],
+      r[2]
+    ]),
+
+    styles: {
+      fontSize: 8,
+      cellPadding: 2
+    },
+
     theme: "grid",
-    styles: { fontSize: 8 }
+
+    columnStyles: {
+      0: { cellWidth: 45 },
+      1: { cellWidth: 60 },
+      2: { cellWidth: 20 },
+      3: { cellWidth: 30 },
+      4: { cellWidth: 25 }
+    }
   });
 
-  autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 3,
-    head: [["Pre Activity Checkpoints", "Status", "Parameters"]],
-    body: mop.preChecks,
-    theme: "grid",
-    styles: { fontSize: 8 }
-  });
+  startY = doc.lastAutoTable.finalY + 3;
 
+  // ================= LOAD DETAILS =================
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 3,
-    head: [["UPS No", "Rating", "Floor", "Loading %"]],
+    startY,
+    head: [[
+      "UPS No",
+      "Rating",
+      "Serving Floor",
+      "Loading Percentage"
+    ]],
     body: mop.loadDetails,
-    theme: "grid",
-    styles: { fontSize: 8 }
+    styles: { fontSize: 8 },
+    theme: "grid"
   });
 
+  startY = doc.lastAutoTable.finalY + 3;
+
+  // ================= RISK =================
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 3,
+    startY,
     head: [["Risk Analysis"]],
     body: mop.risk.map(r => [r]),
-    theme: "grid",
-    styles: { fontSize: 8 }
+    styles: { fontSize: 8 },
+    theme: "grid"
   });
 
+  startY = doc.lastAutoTable.finalY + 3;
+
+  // ================= MITIGATION =================
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 3,
+    startY,
     head: [["Mitigation / Backup Plan"]],
-    body: mop.mitigation.map(m => [m]),
-    theme: "grid",
-    styles: { fontSize: 8 }
+    body: mop.mitigation.map(r => [r]),
+    styles: { fontSize: 8 },
+    theme: "grid"
   });
 
+  startY = doc.lastAutoTable.finalY + 3;
+
+  // ================= ACTIVITY =================
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 3,
+    startY,
     head: [["Activity Steps"]],
-    body: mop.activitySteps.map(a => [a]),
-    theme: "grid",
-    styles: { fontSize: 8 }
+    body: mop.activitySteps.map(r => [r]),
+    styles: { fontSize: 8 },
+    theme: "grid"
   });
 
+  startY = doc.lastAutoTable.finalY + 3;
+
+  // ================= ROLLBACK =================
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 3,
-    head: [["Fallback / Rollback Plan"]],
+    startY,
+    head: [["Fall Back / Rollback Plan"]],
     body: mop.rollback.map(r => [r]),
-    theme: "grid",
-    styles: { fontSize: 8 }
+    styles: { fontSize: 8 },
+    theme: "grid"
   });
 
+  startY = doc.lastAutoTable.finalY + 3;
+
+  // ================= INFRA =================
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 3,
+    startY,
     head: [["Role", "Name"]],
     body: mop.infra,
-    theme: "grid",
-    styles: { fontSize: 8 }
+    styles: { fontSize: 8 },
+    theme: "grid"
   });
 
-  autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 3,
-    head: [["Additional Proactive Measures"]],
-    body: mop.proactive.map(p => [p]),
-    theme: "grid",
-    styles: { fontSize: 8 }
-  });
+  startY = doc.lastAutoTable.finalY + 3;
 
+  // ================= NETWORK =================
+  if (mop.network) {
+
+    autoTable(doc, {
+      startY,
+      head: [["Role", "Name"]],
+      body: mop.network,
+      styles: { fontSize: 8 },
+      theme: "grid"
+    });
+
+    startY = doc.lastAutoTable.finalY + 3;
+  }
+
+  // ================= SPARES =================
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 3,
-    head: [["Spares Description", "Specification", "Qty", "Availability"]],
+    startY,
+    head: [[
+      "Spares Description",
+      "Specification",
+      "Quantity",
+      "Availability"
+    ]],
     body: mop.spares,
-    theme: "grid",
-    styles: { fontSize: 8 }
+    styles: { fontSize: 8 },
+    theme: "grid"
   });
 
+  startY = doc.lastAutoTable.finalY + 3;
+
+  // ================= APPROVAL =================
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 3,
+    startY,
     body: [
+
       ["Created By", mop.approval.createdBy],
+
       ["Reviewer", mop.approval.reviewer],
+
       ["Approver", mop.approval.approver],
+
       ["CR Number", mop.approval.crNumber]
+
     ],
-    theme: "grid",
-    styles: { fontSize: 8 }
+    styles: { fontSize: 8 },
+    theme: "grid"
   });
 
   doc.save(`${mop.header.title}.pdf`);
+
 };
 
-// export const generateMopExcel = (mop) => {
-//   const wb = XLSX.utils.book_new();
-//   const ws = {};
-
-//   let rowIndex = 0;
-
-//   const addRow = (data, style = {}) => {
-//     data.forEach((cell, colIndex) => {
-//       const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
-//       ws[cellRef] = {
-//         v: cell,
-//         t: "s",
-//         s: style
-//       };
-//     });
-//     rowIndex++;
-//   };
-
-//   const sectionHeaderStyle = {
-//     font: { bold: true },
-//     fill: { fgColor: { rgb: "D9D9D9" } },
-//     border: {
-//       top: { style: "thin" },
-//       bottom: { style: "thin" },
-//       left: { style: "thin" },
-//       right: { style: "thin" }
-//     }
-//   };
-
-//   const tableHeaderStyle = {
-//     font: { bold: true },
-//     fill: { fgColor: { rgb: "FFFF00" } },
-//     alignment: { horizontal: "center" },
-//     border: {
-//       top: { style: "thin" },
-//       bottom: { style: "thin" },
-//       left: { style: "thin" },
-//       right: { style: "thin" }
-//     }
-//   };
-
-//   const normalBorderStyle = {
-//     border: {
-//       top: { style: "thin" },
-//       bottom: { style: "thin" },
-//       left: { style: "thin" },
-//       right: { style: "thin" }
-//     },
-//     alignment: { wrapText: true }
-//   };
-
-//   // =========================
-//   // TITLE
-//   // =========================
-//   addRow([mop.header.title], {
-//     font: { bold: true, sz: 16 },
-//     alignment: { horizontal: "center" }
-//   });
-
-//   ws["!merges"] = [
-//     {
-//       s: { r: 0, c: 0 },
-//       e: { r: 0, c: 4 }
-//     }
-//   ];
-
-//   addRow([
-//     `DOC NO - ${mop.header.docNo}     Release Date : ${mop.header.releaseDate}`
-//   ]);
-//   rowIndex++;
-
-//   // =========================
-//   // SITE INFO
-//   // =========================
-//   addRow(["City", mop.siteInfo.city, "Location", mop.siteInfo.location], sectionHeaderStyle);
-//   addRow(["Floor", mop.siteInfo.floor, "Tier Category- Core/TX", mop.siteInfo.tier]);
-//   rowIndex++;
-
-//   // =========================
-//   // ACTIVITY INFO
-//   // =========================
-//   addRow(["Nature of Activity", mop.activityInfo.nature], sectionHeaderStyle);
-//   addRow(["Start Date", mop.activityInfo.startDate, "End Date", mop.activityInfo.endDate]);
-//   addRow(["Start Time", mop.activityInfo.startTime, "End Time", mop.activityInfo.endTime]);
-//   addRow(["Duration", mop.activityInfo.duration]);
-//   addRow(["Owner", mop.activityInfo.owner, "OEM", mop.activityInfo.oem]);
-//   addRow(["Stakeholders", mop.activityInfo.stakeholders]);
-//   addRow(["Service Impact", mop.activityInfo.serviceImpact]);
-//   rowIndex++;
-
-//   // =========================
-//   // PRE CHECKS
-//   // =========================
-//   addRow(["Pre Activity Check Points"], sectionHeaderStyle);
-//   addRow(["Checkpoints", "Status", "Parameters"], tableHeaderStyle);
-
-//   mop.preChecks.forEach((row) => {
-//     addRow(row, normalBorderStyle);
-//   });
-
-//   rowIndex++;
-
-//   // =========================
-//   // LOAD DETAILS
-//   // =========================
-//   addRow(["Load / Floor Details"], sectionHeaderStyle);
-//   addRow(["UPS No", "Rating", "Serving Floor", "Loading %"], tableHeaderStyle);
-
-//   mop.loadDetails.forEach((row) => {
-//     addRow(row, normalBorderStyle);
-//   });
-
-//   rowIndex++;
-
-//   // =========================
-//   // RISK
-//   // =========================
-//   addRow(["Risk Analysis"], sectionHeaderStyle);
-//   mop.risk.forEach((r) => addRow([r], normalBorderStyle));
-//   rowIndex++;
-
-//   // =========================
-//   // MITIGATION
-//   // =========================
-//   addRow(["Mitigation / Backup Plan"], sectionHeaderStyle);
-//   mop.mitigation.forEach((m) => addRow([m], normalBorderStyle));
-//   rowIndex++;
-
-//   // =========================
-//   // ACTIVITY
-//   // =========================
-//   addRow(["Activity Steps"], sectionHeaderStyle);
-//   mop.activitySteps.forEach((a) => addRow([a], normalBorderStyle));
-//   rowIndex++;
-
-//   // =========================
-//   // ROLLBACK
-//   // =========================
-//   addRow(["Fallback / Rollback Plan"], sectionHeaderStyle);
-//   mop.rollback.forEach((r) => addRow([r], normalBorderStyle));
-//   rowIndex++;
-
-//   // =========================
-//   // INFRA
-//   // =========================
-//   addRow(["Infra Resources"], sectionHeaderStyle);
-//   addRow(["Role", "Name"], tableHeaderStyle);
-//   mop.infra.forEach((row) => addRow(row, normalBorderStyle));
-//   rowIndex++;
-
-//   // =========================
-//   // SPARES
-//   // =========================
-//   addRow(["Additional Spares Required"], sectionHeaderStyle);
-//   addRow(["Description", "Specification", "Qty", "Availability"], tableHeaderStyle);
-//   mop.spares.forEach((row) => addRow(row, normalBorderStyle));
-//   rowIndex++;
-
-//   // =========================
-//   // APPROVAL
-//   // =========================
-//   addRow(["Created By", mop.approval.createdBy], normalBorderStyle);
-//   addRow(["Reviewer", mop.approval.reviewer], normalBorderStyle);
-//   addRow(["Approver", mop.approval.approver], normalBorderStyle);
-//   addRow(["CR Number", mop.approval.crNumber], normalBorderStyle);
-
-//   // Column Width
-//   ws["!cols"] = [
-//     { wch: 40 },
-//     { wch: 25 },
-//     { wch: 20 },
-//     { wch: 25 },
-//     { wch: 20 }
-//   ];
-
-//   ws["!ref"] = XLSX.utils.encode_range({
-//     s: { r: 0, c: 0 },
-//     e: { r: rowIndex, c: 4 }
-//   });
-
-//   XLSX.utils.book_append_sheet(wb, ws, "MOP");
-//   XLSX.writeFile(wb, `${mop.header.title}.xlsx`);
-// };
-
+// For Excel generation, we will use the xlsx-js-style library to create a styled workbook based on the MOP data structure. The code will create a new workbook, add a worksheet, and populate it with the MOP data while applying styles for better readability.
 export const generateMopExcel = (mop) => {
   const wb = XLSX.utils.book_new();
   const ws = {};
@@ -820,7 +889,7 @@ export const generateMopExcel = (mop) => {
   }
 
   // rowIndex++;
-  
+
   // ================= SPARES =================
 
   // Header row

@@ -709,7 +709,7 @@ export const ACTIVITY_MASTER = {
     }
   ],
 
-"Solar system": [
+  "Solar system": [
     {
       activityDescription: "Solar system replacement/upgradation",
       performBy: "OEM",
@@ -803,7 +803,7 @@ export const ACTIVITY_MASTER = {
       information: "",
       activityTime: "Day"
     },
-{
+    {
       activityDescription: "Transformer Preventive maintenance (OEM)",
       performBy: "OEM",
       activityCategory: "Critical",
