@@ -626,7 +626,7 @@ export const generateMopExcel = (mop) => {
   // ================= ACTIVITY =================
   addRow([
     "Activity :",
-    `Activity - ${mop.activityInfo.startDate} ${mop.activityInfo.startTime} hrs to  ${mop.activityInfo.endDate} ${mop.activityInfo.endTime} hrs ( Considered UPS1- PM work activity case )`,
+    `Activity - ${mop.activityInfo.startDate} ${mop.activityInfo.startTime} hrs to  ${mop.activityInfo.endDate} ${mop.activityInfo.endTime} hrs ( Considered ${mop.activityInfo.nature}- PM work activity case )`,
     // mop.activitySteps[0],
     "",
     "",

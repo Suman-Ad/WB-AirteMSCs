@@ -394,6 +394,21 @@ export const ACTIVITY_MASTER = {
       activityTime: "Day"
     },
     {
+      activityDescription: "DG Turbo Charger Replacement activity",
+      performBy: "OEM",
+      activityCategory: "Critical",
+      activityCode: "AMBER",
+      activityType: "Corrective maintenance",
+      avgMonthlyCount: 63,
+      mopRequired: true,
+      crRequired: true,
+      crDaysBefore: 2,
+      approvalLevel: "Circle",
+      approvalLevels: ["Initiator", "Level-1", "Level-2", "Level-3", "Level-4"],
+      information: "",
+      activityTime: "Day"
+    },
+    {
       activityDescription: "Daily DG test run",
       performBy: "In-House",
       activityCategory: "Critical",
