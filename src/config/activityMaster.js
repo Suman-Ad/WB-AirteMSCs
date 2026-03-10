@@ -1105,7 +1105,25 @@ export const ACTIVITY_MASTER = {
     },
   ],
 
-  Others: [
+  "ACDB/DCDB": [
+    {
+      activityDescription: "ACDB/DCDB Preventive maintenance(In-House)",
+      performBy: "In-House",
+      activityCategory: "Major",
+      activityCode: "GREEN",
+      activityType: "Preventive maintenance",
+      avgMonthlyCount: 0,
+      mopRequired: false,
+      crRequired: false,
+      crDaysBefore: 0,
+      approvalLevel: "CIRCLE",
+      approvalLevels: ["Initiator", "Level-1", "Level-2"],
+      information: "",
+      activityTime: "Day"
+    },
+  ],
+
+  "Rack Power Tapping": [
 
     {
       activityDescription: "New Rack power tapping",
@@ -1122,6 +1140,9 @@ export const ACTIVITY_MASTER = {
       information: "",
       activityTime: "Day"
     },
+  ],
+
+  "DR Test Activity": [
     {
       activityDescription: "Checking Power Dual Redundancy Of Racks",
       performBy: "OEM",
@@ -1137,6 +1158,10 @@ export const ACTIVITY_MASTER = {
       information: "",
       activityTime: "Day"
     },
+
+  ],
+
+  Others: [
     {
       activityDescription: "MSC Floor cleaning activity",
       performBy: "In-House",

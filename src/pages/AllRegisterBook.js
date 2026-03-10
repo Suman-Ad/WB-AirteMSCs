@@ -71,14 +71,16 @@ export default function AllRegisterBook({ userData }) {
         <table className="daily-activity-table">
           <thead>
             <tr>
+              <th>Sl. No.</th>
               <th>Register Name</th>
               <th>Firestore Path</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {registers.map((r) => (
+            {registers.map((r, idx) => (
               <tr key={r.id}>
+                <td>{idx + 1}. </td>
                 <td>{r.name}</td>
                 <td>{r.path}</td>
                 <td>

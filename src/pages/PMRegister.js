@@ -1188,7 +1188,8 @@ export default function PMRegister({ userData }) {
             {/* equipment selection quick add */}
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               <select className="daily-activity-select" value={selectedEquipment} onChange={(e) => setSelectedEquipment(e.target.value)}>
-                {Array.from(new Set([...equipmentList, ...Object.keys(pmDoc.equipmentSchedules || {})])).map(eq => <option key={eq} value={eq}>{eq}{equipmentQtyMap[eq] ? ` (${equipmentQtyMap[eq]} units)` : ""}</option>)}
+                {Array.from(new Set([...equipmentList, ...Object.keys(pmDoc.equipmentSchedules || {})])).map(eq => 
+                <option key={eq} value={eq}>{eq}{equipmentQtyMap[eq] ? ` (${equipmentQtyMap[eq]} units)` : ""}</option>)}
               </select>
               <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => ensureEquipmentSlot(selectedEquipment)} disabled={!canEdit}>Ensure Slot</button>
               <button
@@ -1197,7 +1198,7 @@ export default function PMRegister({ userData }) {
                 onClick={() => {
                   const activities =
                     ACTIVITY_MASTER[selectedEquipment] ||
-                    ACTIVITY_MASTER.Other ||
+                    ACTIVITY_MASTER.Others ||
                     [];
 
                   if (!activities.length) {

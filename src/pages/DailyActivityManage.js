@@ -1532,6 +1532,9 @@ export default function DailyActivityManage({ userData }) {
           {equipmentKeys.map(eq => (
             <option key={eq} value={eq}>{eq}</option>
           ))}
+          <option value="ACDB/DCDB">ACDB/DCDB</option>
+          <option value="Rack Power Tapping">Rack Power Tapping</option>
+          <option value="DR Test Activity">DR Test Activity</option>
           <option value="Others" >Others</option>
         </select>
 
@@ -1546,7 +1549,7 @@ export default function DailyActivityManage({ userData }) {
             style={{ marginLeft: 8 }}
           >
             <option value="">Select Activity</option>
-            {(ACTIVITY_MASTER[dynamicEquip] || ACTIVITY_MASTER["Other"] || []).map(a => (
+            {(ACTIVITY_MASTER[dynamicEquip] || ACTIVITY_MASTER["Others"] || []).map(a => (
               <option key={a.activityDescription} value={a.activityDescription}>{a.activityDescription}</option>
             ))}
           </select>

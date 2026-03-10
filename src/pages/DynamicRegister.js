@@ -600,7 +600,7 @@ export default function DynamicRegister({ userData }) {
   const updateAsset = async () => {
     if (!editingRowId) return;
 
-    const ref = doc(db, "assets_flat", editingRowId);
+    const ref = doc(db, "dynamic_register_flat", editingRowId);
 
     const cleanData = {};
     columns.forEach((c) => {
