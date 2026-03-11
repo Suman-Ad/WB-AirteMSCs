@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { db } from "../firebase";
 import * as XLSX from "xlsx";
 import "../assets/DHRStyle.css";
-import { collection, doc, setDoc, updateDoc, onSnapshot, getDoc, serverTimestamp, getDocs, deleteDoc, writeBatch } from "firebase/firestore";
+import { collection, doc, setDoc, updateDoc, onSnapshot, getDoc, serverTimestamp, getDocs, deleteDoc, writeBatch, arrayUnion } from "firebase/firestore";
 import { useParams } from "react-router-dom";
 
 /*
@@ -12,24 +12,24 @@ import { useParams } from "react-router-dom";
   - Column definitions stored at: assets_columns/default { columns: [...] }
 */
 
-const DEFAULT_COLUMNS = [
-  { key: "UniqueID", label: "Unique ID" },
-  { key: "DedicatedNo", label: "Dedicated No" },
-  { key: "Region", label: "Region" },
-  { key: "Circle", label: "Circle" },
-  { key: "SiteName", label: "Site Name" },
-  { key: "UniqueCode", label: "Unique Code" }, // Site ID
-  { key: "EquipmentCategory", label: "Equipment Category" },
-  { key: "EquipmentNameAndNo", label: "Equipment Name and No" },
-  { key: "EquipmentMake", label: "Equipment Make" },
-  { key: "EquipmentModel", label: "Equipment Model" },
-  { key: "EquipmentSerialNumber", label: "Equipment Serial Number" },
-  { key: "UnitOfMeasure", label: "Unit of measure" },
-  { key: "RatingCapacity", label: "Rating Capacity" },
-  { key: "Qty", label: "Qty" },
-  { key: "ManufacturingDate", label: "Equipment Manufacturing date" },
-  { key: "InstallationDate", label: "Equipment Installation date" },
-];
+// const DEFAULT_COLUMNS = [
+//   { key: "UniqueID", label: "Unique ID" },
+//   { key: "DedicatedNo", label: "Dedicated No" },
+//   { key: "Region", label: "Region" },
+//   { key: "Circle", label: "Circle" },
+//   { key: "SiteName", label: "Site Name" },
+//   { key: "UniqueCode", label: "Unique Code" }, // Site ID
+//   { key: "EquipmentCategory", label: "Equipment Category" },
+//   { key: "EquipmentNameAndNo", label: "Equipment Name and No" },
+//   { key: "EquipmentMake", label: "Equipment Make" },
+//   { key: "EquipmentModel", label: "Equipment Model" },
+//   { key: "EquipmentSerialNumber", label: "Equipment Serial Number" },
+//   { key: "UnitOfMeasure", label: "Unit of measure" },
+//   { key: "RatingCapacity", label: "Rating Capacity" },
+//   { key: "Qty", label: "Qty" },
+//   { key: "ManufacturingDate", label: "Equipment Manufacturing date" },
+//   { key: "InstallationDate", label: "Equipment Installation date" },
+// ];
 
 export default function DynamicRegister({ userData }) {
   // user & role
@@ -44,9 +44,25 @@ export default function DynamicRegister({ userData }) {
     userData?.designation === "Vertiv ZM";
 
   // columns state (load from firestore or fallback to DEFAULT_COLUMNS)
-  const [columns, setColumns] = useState(DEFAULT_COLUMNS);
+  const [columns, setColumns] = useState([]);
 
   const { registerName } = useParams();
+
+  useEffect(() => {
+    const loadColumns = async () => {
+      const snap = await getDocs(collection(db, "register_books"));
+
+      const reg = snap.docs.find(
+        (d) => d.data().name === registerName
+      );
+
+      if (reg) {
+        setColumns(reg.data().columns || []);
+      }
+    };
+
+    loadColumns();
+  }, [registerName]);
 
 
   const BATCH_LIMIT = 500;
@@ -629,10 +645,10 @@ export default function DynamicRegister({ userData }) {
           return;
         }
       }
-      setColumns(DEFAULT_COLUMNS);
+      setColumns([]);
     } catch (e) {
       console.error("loadColumnsFromFirestore err:", e);
-      setColumns(DEFAULT_COLUMNS);
+      setColumns([]);
     }
   };
 
@@ -670,50 +686,35 @@ export default function DynamicRegister({ userData }) {
 
   // ---------- utility: derive path parts ----------
   const getPathParts = (rec) => {
-    // allow rec.UniqueID if present
-    const uidRaw = rec.UniqueID || rec.UniqueId || rec.uniqueid || "";
-    const uid = uidRaw.toString().trim();
-    if (uid && uid.split("/").length === 3) {
-      const [circle, siteId, equipDoc] = uid.split("/");
-      return { circle, siteId, equipDoc };
-    }
-
     const circle = (rec.Circle || rec.circle || "").toString().trim();
-    const siteId = (rec.UniqueCode || rec.Uniquecode || rec.SiteID || "").toString().trim();
+    const siteId = (rec.UniqueCode || rec.SiteID || rec.siteId || "").toString().trim();
 
-    let equipDoc = "";
-    if (rec.EquipmentNameAndNo) {
-      equipDoc = rec.EquipmentNameAndNo.toString().replace(/\s+/g, "");
-    } else if (rec.DedicatedNo !== undefined && rec.DedicatedNo !== "") {
-      equipDoc = `UnNamedEquip${rec.DedicatedNo}`;
-    }
-    equipDoc = equipDoc.toString().trim();
-
-    return { circle, siteId, equipDoc };
+    return { circle, siteId };
   };
 
   // ---------- nested + flat write helpers ----------
   const upsertNested = async (payload) => {
-    const { circle, siteId, equipDoc } = getPathParts(payload);
-    if (!circle || !siteId || !equipDoc) {
+    const { circle, siteId } = getPathParts(payload);
+    if (!circle || !siteId) {
       throw new Error("Missing Circle / Site ID / Equipment Doc to write nested record.");
     }
-    const nestedRef = doc(db, "dynamic_register", registerName, circle, siteId, "records", equipDoc);
-    await setDoc(nestedRef, payload, { merge: true });
+    const nestedRef = doc(db, "dynamic_register", circle, siteId, registerName);;
+    await setDoc(nestedRef, {
+      records: arrayUnion(payload),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
   };
 
   const upsertFlat = async (payload) => {
-    const { circle, siteId, equipDoc } = getPathParts(payload);
-    if (!circle || !siteId || !equipDoc) return;
-    const uniqueId = `${circle}/${siteId}/${equipDoc}`; // store in payload
-    const flatId = uniqueId.replace(/\//g, "-"); // doc id for dynamic_register_flat
-    const flatRef = doc(db, "dynamic_register_flat", registerName, "data", flatId);
+    const { circle, siteId } = getPathParts(payload);
+    if (!circle || !siteId) return;
+    const flatId = `${circle}-${siteId}-${registerName}`;
+    const flatRef = doc(db, "dynamic_register_flat", flatId);
     const flatPayload = {
-      ...payload,
-      UniqueID: uniqueId,
-      Circle: payload.Circle || circle,
-      UniqueCode: payload.UniqueCode || siteId,
-      EquipmentDoc: equipDoc,
+      circle,
+      siteId,
+      registerName,
+      data: payload,
       updatedAt: serverTimestamp(),
     };
     await setDoc(flatRef, flatPayload, { merge: true });

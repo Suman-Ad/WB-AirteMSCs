@@ -1055,8 +1055,8 @@ const DailyDGLog = ({ userData }) => {
         (parseFloat(form["DG-4 Fuel Opening"]) || 0);
       const currentFuel = availableFuel - dayFuelCon + dayFuelFill + dayExFuelFill;
       const currentHrs = currentFuel / (totalOnLoadCon / totalOnLoadHrs)
-      setFuelAlert(currentHrs < 20 && currentFuel > 0);
-      if (currentHrs < 20 && currentFuel > 0) alert("Give Fuel Requisition");
+      setFuelAlert(currentHrs < (siteConfig?.fuelAlertThreshold || 23)&& currentFuel > 0);
+      if (currentHrs < (siteConfig?.fuelAlertThreshold || 23) && currentFuel > 0) alert("Give Fuel Requisition");
 
     }
 

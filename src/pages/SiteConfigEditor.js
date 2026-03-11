@@ -183,6 +183,15 @@ const SiteConfigEdit = ({ userData }) => {
                 value={config.pf || ""}
                 onChange={handleChange}
               />
+
+              <label>Fuel Alert Threshold</label>
+              <input
+                type="number"
+                step="0.01"
+                name="fuelAlertThreshold"
+                value={config.fuelAlertThreshold || ""}
+                onChange={handleChange}
+              />
             </div>
           )}
           {activeSection === "ccms" && (
