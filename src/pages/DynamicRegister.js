@@ -976,7 +976,7 @@ export default function DynamicRegister({ userData }) {
           for (const fh of Object.keys(row)) {
             let val = row[fh];
 
-            // Excel date fix (unchanged)
+            // Excel date fix
             if (typeof val === "number" && val > 30000 && val < 60000) {
               const d = XLSX.SSF.parse_date_code(val);
               if (d) {
@@ -992,42 +992,70 @@ export default function DynamicRegister({ userData }) {
           const payload = preparePayload(rec);
           loaded++;
 
-          // 🔍 DUPLICATE CHECK
-          if (!payload || existingIds.has(payload.UniqueID)) {
+          if (!payload) {
             skipped++;
             continue;
           }
 
-          // 🔹 Nested doc
-          const nestedRef = doc(
+          const circle = payload.Circle;
+          const siteId = payload.UniqueCode;
+
+          if (!circle || !siteId) {
+            skipped++;
+            continue;
+          }
+
+          // 🔹 MAIN REGISTER DOC
+          const registerRef = doc(
             db,
             "dynamic_register",
-            registerName,
-            payload.Circle,
-            payload.UniqueCode,
-            "records",
-            payload.EquipmentDoc
+            circle,
+            siteId,
+            registerName
           );
 
-          batch.set(nestedRef, payload, { merge: true });
+          batch.set(
+            registerRef,
+            {
+              records: arrayUnion({
+                ...payload,
+                importedAt: serverTimestamp()
+              })
+            },
+            { merge: true }
+          );
+
           batchCount++;
 
-          // 🔹 Flat doc
-          const flatId = `${payload.Circle}-${payload.UniqueCode}-${payload.EquipmentDocId}`;
-          const flatRef = doc(db, "dynamic_register_flat", registerName, "data", flatId);
+          // 🔹 FLAT TABLE
+          const flatId = `${circle}-${siteId}-${registerName}-${Date.now()}`;
 
-          batch.set(flatRef, payload, { merge: true });
+          const flatRef = doc(
+            db,
+            "dynamic_register_flat",
+            flatId
+          );
+
+          batch.set(
+            flatRef,
+            {
+              circle,
+              siteId,
+              registerName,
+              ...payload,
+              importedAt: serverTimestamp()
+            },
+            { merge: true }
+          );
+
           batchCount++;
 
           success++;
-          existingIds.add(payload.UniqueID);
 
-          // 🔥 Commit batch
           if (batchCount >= BATCH_LIMIT) {
             await commitBatch();
           }
 
-          // 🔹 UI update (throttled)
           if (i % 25 === 0 || i === json.length - 1) {
             setImportProgress({
               total,
