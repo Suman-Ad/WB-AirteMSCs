@@ -406,12 +406,67 @@ export const generateMopExcel = (mop) => {
     rowIndex++;
   };
 
+  const thinBorder = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+  const thickBorder = { top: { style: "thick" }, bottom: { style: "thick" }, left: { style: "thick" }, right: { style: "thick" } };
+
+  const applyOuterBorderToSheet = (ws, totalRows, totalCols) => {
+  for (let r = 0; r < totalRows; r++) {
+    for (let c = 0; c < totalCols; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r, c });
+
+      // Ensure cell exists
+      if (!ws[cellRef]) ws[cellRef] = { v: "", t: "s" };
+      ws[cellRef].s = ws[cellRef].s || {};
+      ws[cellRef].s.border = ws[cellRef].s.border || {};
+
+      // Apply thin border by default
+      ws[cellRef].s.border.top = { style: "thin" };
+      ws[cellRef].s.border.bottom = { style: "thin" };
+      ws[cellRef].s.border.left = { style: "thin" };
+      ws[cellRef].s.border.right = { style: "thin" };
+
+      // Override with thick border on outer edges
+      if (r === 0) ws[cellRef].s.border.top = { style: "thick", color: { rgb: "000000" } };
+      if (r === totalRows - 1) ws[cellRef].s.border.bottom = { style: "thick", color: { rgb: "000000" } };
+      if (c === 0) ws[cellRef].s.border.left = { style: "thick", color: { rgb: "000000" } };
+      if (c === totalCols - 1) ws[cellRef].s.border.right = { style: "thick", color: { rgb: "000000" } };
+    }
+  }
+};
+
+
+
+  const applyBorderToMerge = (ws, mergeRange, border) => {
+    const startRow = mergeRange.s.r;
+    const endRow = mergeRange.e.r;
+    const startCol = mergeRange.s.c;
+    const endCol = mergeRange.e.c;
+
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        if (!ws[cellRef]) ws[cellRef] = { v: "", t: "s" };
+        ws[cellRef].s = ws[cellRef].s || {};
+        ws[cellRef].s.border = border; // default thin border for all cells in the merge
+      }
+    }
+  };
+
+
   const borderAll = {
     top: { style: "thin" },
     bottom: { style: "thin" },
     left: { style: "thin" },
     right: { style: "thin" }
   };
+
+  const outLineborder = {
+    top: { style: "thick", color: { rgb: "000000" } },
+    bottom: { style: "thick", color: { rgb: "000000" } },
+    left: { style: "thick", color: { rgb: "000000" } },
+    right: { style: "thick", color: { rgb: "000000" } },
+  };
+
 
   const titleStyle = {
     font: { bold: true, sz: 16, color: { rgb: "000000" } },
@@ -454,10 +509,14 @@ export const generateMopExcel = (mop) => {
   // ================= TITLE =================
   addRow([mop.header.title.toUpperCase()], titleStyle);
 
-  ws["!merges"] = [{
-    s: { r: 0, c: 0 },
-    e: { r: 0, c: 4 },
-  }];
+  // ws["!merges"] = [{
+  //   s: { r: 0, c: 0 },
+  //   e: { r: 0, c: 4 },
+  // }];
+  const titleMerge = { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } };
+  ws["!merges"] = [titleMerge];
+  applyBorderToMerge(ws, titleMerge, borderAll);
+
 
   addRow([
     `DOC NO - ${mop.header.docNo}    Release Date : ${mop.header.releaseDate}`
@@ -471,6 +530,10 @@ export const generateMopExcel = (mop) => {
     s: { r: docRow, c: 0 },
     e: { r: docRow, c: 4 }
   });
+  applyBorderToMerge(ws, {
+    s: { r: docRow, c: 0 },
+    e: { r: docRow, c: 4 }
+  }, borderAll);
 
   // rowIndex++;
 
@@ -488,6 +551,10 @@ export const generateMopExcel = (mop) => {
     s: { r: naturRow, c: 1 },
     e: { r: naturRow, c: 4 }
   });
+  applyBorderToMerge(ws, {
+    s: { r: naturRow, c: 1 },
+    e: { r: naturRow, c: 4 }
+  }, borderAll);
   addRow(["Activity Start :", `Activity Start Date : ${mop.activityInfo.startDate}`, `Activity End Date : ${mop.activityInfo.endDate}`, "Duration of Activity : ", mop.activityInfo.duration], yellowBlock);
   addRow(["Activity Start :", `Activity Start Time : ${mop.activityInfo.startTime}Hrs`, `Activity End Time : ${mop.activityInfo.endTime}Hrs`, "Duration of Activity : ", mop.activityInfo.duration], yellowBlock);
   const startRow = rowIndex - 2; // first of the two rows
@@ -514,7 +581,7 @@ export const generateMopExcel = (mop) => {
   });
 
   addRow(["Activity Owner :", mop.activityInfo.owner,
-    `UPS OEM : ${mop.activityInfo.oem}`, "Other Stake Holders :", mop.activityInfo.stakeholders], yellowBlock);
+    `${mop.activityInfo.node} OEM : ${mop.activityInfo.oem}`, "Other Stake Holders :", mop.activityInfo.stakeholders], yellowBlock);
   addRow(["Service Impact :", mop.activityInfo.serviceImpact], yellowBlock);
   const nsaRow = rowIndex - 1;
 
@@ -524,6 +591,10 @@ export const generateMopExcel = (mop) => {
     s: { r: nsaRow, c: 1 },
     e: { r: nsaRow, c: 4 }
   });
+  applyBorderToMerge(ws, {
+    s: { r: nsaRow, c: 1 },
+    e: { r: nsaRow, c: 4 }
+  }, borderAll);
 
   // rowIndex++;
 
@@ -576,7 +647,7 @@ export const generateMopExcel = (mop) => {
 
   // ================= LOAD DETAILS =================
   // addRow(["Load / Floor Details"], greyHeader);
-  addRow(["Load / Floor Details :", "UPS No", "Rating", "Serving Floor", "Loading Percentage"], blueHeader);
+  addRow(["Load / Floor Details :", `${mop.activityInfo.node} No`, "Rating", "Serving Floor", "Loading Percentage"], blueHeader);
 
   mop.loadDetails.forEach(row => addRow(["", row[0], row[1], row[2], row[3]], normalCell));
   const loadFloorStartRow = rowIndex - mop.loadDetails.length - 1;
@@ -691,6 +762,10 @@ export const generateMopExcel = (mop) => {
     s: { r: rowIndex - 1, c: 1 },
     e: { r: rowIndex - 1, c: 4 }
   });
+  applyBorderToMerge(ws, {
+    s: { r: rowIndex - 1, c: 1 },
+    e: { r: rowIndex - 1, c: 4 }
+  }, borderAll);
 
   // ================= ACTIVITY =================
   addRow([
@@ -941,8 +1016,16 @@ export const generateMopExcel = (mop) => {
 
   ws["!ref"] = XLSX.utils.encode_range({
     s: { r: 0, c: 0 },
-    e: { r: rowIndex, c: 5 }
+    e: { r: rowIndex - 1, c: 4 }
   });
+
+  // ws["!ref"] already calculated
+  // const range = XLSX.utils.decode_range(ws["!ref"]);
+  // const totalRows = range.e.r + 1;
+  // const totalCols = range.e.c + 1;
+
+  // applyOuterBorderToSheet(ws, totalRows, totalCols);
+
 
   XLSX.utils.book_append_sheet(wb, ws, "MOP");
   XLSX.writeFile(wb, `${mop.header.title}.xlsx`);

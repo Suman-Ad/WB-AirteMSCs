@@ -27,6 +27,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Inhouse PM of UPS System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -157,6 +158,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM PM of UPS System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -287,6 +289,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Replacement/Upgradation of UPS",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -417,6 +420,8 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Fault / Alarm / Break Down - UPS",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -528,7 +533,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
   "UPS BB EOL Replacement/Upgradation": {
     header: {
       title: "UPS BB EOL Replacement/Upgradationn activity MOP",
-      docNo: "Nxtra/MOP/BB Replacement/DOC No. 4.10/Rev.00",
+      docNo: "Nxtra/MOP/UPS BB Replacement/DOC No. 4.10/Rev.00",
       releaseDate: "01-01-2026"
     },
 
@@ -540,6 +545,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Replacement/Upgradation of Battery Bank System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -661,7 +667,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
   "UPS BB Preventive Maintenance(OEM)": {
     header: {
       title: "UPS BB Preventive Maintenance(OEM) activity MOP",
-      docNo: "Nxtra/MOP/BB Maintenance/DOC No. 4.11/Rev.00",
+      docNo: "Nxtra/MOP/UPS BB Maintenance/DOC No. 4.11/Rev.00",
       releaseDate: "01-01-2026"
     },
 
@@ -673,6 +679,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM PM of Battery Bank System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -778,7 +785,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
   "UPS BB Preventive Maintenance(In-House)": {
     header: {
       title: "UPS BB Preventive Maintenance(In-House) activity MOP",
-      docNo: "Nxtra/MOP/BB Maintenance/DOC No. 4.11/Rev.00",
+      docNo: "Nxtra/MOP/UPS BB Maintenance/DOC No. 4.11/Rev.00",
       releaseDate: "01-01-2026"
     },
 
@@ -790,6 +797,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "In-House PM of Battery Bank System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -895,7 +903,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
   "UPS BB Cell Replacement": {
     header: {
       title: "UPS BB Cell Replacement activity MOP",
-      docNo: "Nxtra/MOP/BB Replacement/DOC No. 4.13/Rev.00",
+      docNo: "Nxtra/MOP/UPS BB Replacement/DOC No. 4.13/Rev.00",
       releaseDate: "01-01-2026"
     },
 
@@ -907,6 +915,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Replacement/Upgradation of Battery Bank System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -1033,6 +1042,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Replacement/Upgradation of SMPS",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -1162,6 +1172,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM PM of SMPS System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -1285,6 +1296,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "In House PM of SMPS System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -1408,6 +1420,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Fault / Alarm / Break Down - SMPS",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -1519,7 +1532,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
   "Battery Bank Online Discharge Test(In-House)": {
     header: {
       title: "Battery Bank Online Discharge Test(In-House) activity MOP",
-      docNo: "Nxtra/MOP/BB Maintenance/DOC No. 4.11/Rev.00",
+      docNo: `Nxtra/MOP/${row.nodeName} BB Maintenance/DOC No. 4.11/Rev.00`,
       releaseDate: "01-01-2026"
     },
 
@@ -1531,6 +1544,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "In House PM of SMPS Battery Bank Online Discharge Test",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -1632,7 +1646,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
   "SMPS BB EOL Replacement/Upgradation": {
     header: {
       title: "SMPS BB EOL Replacement/Upgradation activity MOP",
-      docNo: "Nxtra/MOP/BB Replacement/DOC No. 4.10/Rev.00",
+      docNo: "Nxtra/MOP/SMPS BB Replacement/DOC No. 4.10/Rev.00",
       releaseDate: "01-01-2026"
     },
 
@@ -1644,6 +1658,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Replacement/Upgradation of Battery Bank System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -1765,7 +1780,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
   "SMPS BB Preventive Maintenance(OEM)": {
     header: {
       title: "SMPS BB Preventive Maintenance(OEM) activity MOP",
-      docNo: "Nxtra/MOP/BB Maintenance/DOC No. 4.11/Rev.00",
+      docNo: "Nxtra/MOP/SMPS BB Maintenance/DOC No. 4.11/Rev.00",
       releaseDate: "01-01-2026"
     },
 
@@ -1777,6 +1792,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM PM of Battery Bank System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -1882,7 +1898,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
   "SMPS BB Preventive Maintenance(In-House)": {
     header: {
       title: "SMPS BB Preventive Maintenance(In-House) activity MOP",
-      docNo: "Nxtra/MOP/BB Maintenance/DOC No. 4.11/Rev.00",
+      docNo: "Nxtra/MOP/SMPS BB Maintenance/DOC No. 4.11/Rev.00",
       releaseDate: "01-01-2026"
     },
 
@@ -1894,6 +1910,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "In-House PM of Battery Bank System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -1999,7 +2016,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
   "SMPS BB Cell Replacement": {
     header: {
       title: "SMPS BB Cell Replacement activity MOP",
-      docNo: "Nxtra/MOP/BB Replacement/DOC No. 4.13/Rev.00",
+      docNo: "Nxtra/MOP/SMPS BB Replacement/DOC No. 4.13/Rev.00",
       releaseDate: "01-01-2026"
     },
 
@@ -2011,6 +2028,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Replacement/Upgradation of Battery Bank System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -2125,7 +2143,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
   "Battery Bank Discharge test C-10(In-House)": {
     header: {
       title: "SMPS Battery Bank Discharge test C-10(In-House) activity MOP",
-      docNo: "Nxtra/MOP/BB Maintenance/DOC No. 4.11/Rev.00",
+      docNo: `Nxtra/MOP/${row?.nodeName} BB Maintenance/DOC No. 4.11/Rev.00`,
       releaseDate: "01-01-2026"
     },
 
@@ -2137,6 +2155,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Discharge test C-10(In-House) of Battery Bank System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -2254,6 +2273,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "EOL Replacement/Upgradation of DG (Diesel Generator)",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -2386,6 +2406,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM PM of DGs A/B/C check activity MOP",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -2515,6 +2536,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "In-House PM of DGs A check activity MOP",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -2644,6 +2666,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "DG Set Radiator & Fuel tank cleaning activity MOP",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -2773,6 +2796,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "DG Turbo Charger Replacement activity MOP",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -2895,6 +2919,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Replacement/Upgradation of HT panel System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -3052,6 +3077,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM PM of HT panel System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -3209,6 +3235,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "In-House PM of HT panel System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -3366,6 +3393,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Fault / Alarm / Break Down - HT Panel",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -3523,6 +3551,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Replacement/Upgradation of LT panel System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -3680,6 +3709,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM PM of LT panel System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -3837,6 +3867,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "In-House PM of LT panel System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -3994,6 +4025,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Fault / Alarm / Break Down - LT Panel",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -4151,6 +4183,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Replacement/Upgradation of PAC System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -4262,6 +4295,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM PM of PAC System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -4373,6 +4407,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "In-House PM of PAC System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -4484,6 +4519,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM PAC Compressor Replacement",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -4594,6 +4630,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM PAC ODU Replacement",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -4704,6 +4741,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Replacement/Upgradation of SRC/Comfort AC System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -4815,6 +4853,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM PM of SRC/Comfort AC System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -4926,6 +4965,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "In-House PM of SRC/Comfort AC System",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -5037,6 +5077,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM SRC/Comfort AC Compressor Replacement",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",
@@ -5147,6 +5188,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
+      node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "OEM SRC/Comfort AC ODU Replacement",
       startDate: row?._sheetDate || "",
       endDate: row?._sheetDate || "",

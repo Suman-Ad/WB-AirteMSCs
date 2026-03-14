@@ -440,7 +440,7 @@ export default function AppContent() {
                     </RoleProtectedRoute>} />
 
                 <Route path="/all-sites-dg-logs" element={
-                    <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin"]}>
+                    <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
                         <Layout userData={userData}>
                             <AllSitesDGLogs userData={userData} />
                         </Layout>

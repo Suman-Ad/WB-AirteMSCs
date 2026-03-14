@@ -135,14 +135,68 @@ const calculateMonthlySummary = (logs, calculateFields, siteConfig) => {
   };
 };
 
+const normalizeSite = (site) => {
+  if (!site) return "";
+  return site.charAt(0) + site.slice(1).toLowerCase();
+};
+
 
 const DailyDGLog = ({ userData }) => {
-  const siteName = userData?.site || "UnknownSite";
+  /** permissions */
+  const isAdmin =
+    userData?.role === "Super Admin" ||
+    userData?.role === "Admin" ||
+    userData.isAdminAssigned ||
+    // isAdminAssignmentValid(userData) ||
+    // userData?.designation === "Vertiv Site Infra Engineer" ||
+    userData?.designation === "Vertiv CIH" ||
+    userData?.designation === "Vertiv ZM";
+
   const fmt = (val) => (val !== undefined && val !== null ? Number(val).toFixed(2) : "0.0");
   const fmt1 = (val) => (val !== undefined && val !== null ? Number(val).toFixed(1) : "0.0");
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().slice(0, 7) // YYYY-MM
   );
+
+  const [selectedSite, setSelectedSite] = useState(userData?.site || "");
+
+  const siteName = isAdmin ? normalizeSite(selectedSite) : userData?.site;
+
+  const [allSites, setAllSites] = useState([]);
+
+  useEffect(() => {
+    const fetchSites = async () => {
+      try {
+
+        const snap = await getDocs(collection(db, "siteConfigs"));
+
+        const sites = snap.docs.map(doc => doc.id);
+
+        console.log("Sites:", sites);
+
+        setAllSites(sites);
+
+        if (sites.length > 0 && !selectedSite) {
+          setSelectedSite(sites[0]);
+        }
+
+      } catch (error) {
+        console.error("Site fetch error:", error);
+      }
+    };
+
+    if (isAdmin) {
+      fetchSites();
+    }
+
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (siteName) {
+      fetchLogs();
+    }
+  }, [siteName, selectedMonth]);
+
   const [logs, setLogs] = useState([]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [totalkW, setTotalkW] = useState([]);
@@ -293,17 +347,6 @@ const DailyDGLog = ({ userData }) => {
     // 🔹 reset used counter
     setDgExternalUsed(prev => ({ ...prev, [dgKey]: 0 }));
   };
-
-  /** permissions */
-  const isAdmin =
-    userData?.role === "Super Admin" ||
-    userData?.role === "Admin" ||
-    userData.isAdminAssigned ||
-    // isAdminAssignmentValid(userData) ||
-    userData?.designation === "Vertiv Site Infra Engineer" ||
-    userData?.designation === "Vertiv CIH" ||
-    userData?.designation === "Vertiv ZM";
-
 
   // compute individual DG averages
   const allValues = logs.flatMap((entry) => calculateFields(entry, siteConfig));
@@ -1055,7 +1098,7 @@ const DailyDGLog = ({ userData }) => {
         (parseFloat(form["DG-4 Fuel Opening"]) || 0);
       const currentFuel = availableFuel - dayFuelCon + dayFuelFill + dayExFuelFill;
       const currentHrs = currentFuel / (totalOnLoadCon / totalOnLoadHrs)
-      setFuelAlert(currentHrs < (siteConfig?.fuelAlertThreshold || 23)&& currentFuel > 0);
+      setFuelAlert(currentHrs < (siteConfig?.fuelAlertThreshold || 23) && currentFuel > 0);
       if (currentHrs < (siteConfig?.fuelAlertThreshold || 23) && currentFuel > 0) alert("Give Fuel Requisition");
 
     }
@@ -2017,12 +2060,46 @@ const DailyDGLog = ({ userData }) => {
 
   return (
     <div className="daily-log-container" style={{ overflowX: "hidden" }}>
-      <h1 style={{ color: "white", textAlign: "center", paddingBottom: "20px" }}> {/* dashboard-header */}
+      <h1 style={{ color: "white", textAlign: "center" }}> {/* dashboard-header */}
         <strong>
           ☣️ Daily DG Log Book
         </strong>
-
       </h1>
+      <h2
+        className={`month ${formatMonthName(selectedMonth)}`}
+        style={{ cursor: "pointer", textAlign: "center" }}
+        onClick={() => navigate("/all-sites-dg-logs",
+          { state: { monthKey: selectedMonth } })}
+      >
+        <b style={{ textDecoration: 'underline dotted blue' }}>
+          🖥️ All Sites DG Logs ⭆
+        </b>
+      </h2>
+      <p>
+        {isAdmin && (
+          <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", paddingBottom: "20px" }}>
+
+            <label style={{ marginRight: "8px", whiteSpace: "nowrap" }}>
+              Select Site
+            </label>
+
+            <select
+              value={selectedSite}
+              onChange={(e) => setSelectedSite(e.target.value)}
+            >
+              <option value="">Select Site</option>
+
+              {allSites.map((site) => (
+                <option key={site} value={site}>
+                  {site}
+                </option>
+              ))}
+
+            </select>
+
+          </div>
+        )}
+      </p>
 
       <h1 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "20px" }}>
         <label style={{ fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
@@ -2402,18 +2479,6 @@ const DailyDGLog = ({ userData }) => {
               >
                 Site Live On:- <strong>{powerSource || "N/A"}</strong> Source
               </span>
-              {(userData.role === 'Admin' || userData.role === 'Super Admin') && (
-                <h2
-                  className={`month ${formatMonthName(selectedMonth)}`}
-                  style={{ cursor: "pointer", textAlign: "center" }}
-                  onClick={() => navigate("/all-sites-dg-logs",
-                    { state: { monthKey: selectedMonth } })}
-                >
-                  <b style={{ textDecoration: 'underline dotted blue' }}>
-                    🖥️ All Sites DG Logs ⭆
-                  </b>
-                </h2>
-              )}
               <h1 style={{ background: powerSource === "DG" ? "#d17272ff" : "#6ce9e35d", borderBottom: "3px solid #fff", borderTop: "3px solid #fff", borderRadius: "10px", color: "#746212ff" }}>
                 <span onClick={() => window.location.reload()} style={{ cursor: "pointer" }} title="Refresh">🔄</span>
                 Current Site Status
@@ -2597,7 +2662,6 @@ const DailyDGLog = ({ userData }) => {
                 const externalStock = dgExternalFuel?.[dgCNo] || 0;   // MAX
                 const externalUsed = dgExternalUsed?.[dgCNo] || 0;  // CURRENT
 
-
                 return (
                   <div key={dgNo} style={{ marginBottom: "4px", display: "flex" }}>
                     <div>
@@ -2699,58 +2763,6 @@ const DailyDGLog = ({ userData }) => {
                     </div>
 
                     {/* 🔹 External Fuel Input */}
-                    {/* {externalAvailable > 0 && (
-                      <div style={{ marginLeft: "5px", fontSize: "9px" }}>
-                        Ex.🛢️Fuel:
-                        <input
-                          type="number"
-                          value={externalAvailable}
-                          onChange={(e) =>
-                            saveExternalFuel(dgNo, e.target.value)
-                          }
-                          style={{
-                            width: "50px",
-                            height: "14px",
-                            marginLeft: "2px",
-                            fontSize: "9px",
-                          }}
-                          disabled={externalAvailable <= 0}
-                        />{" "}
-                        Ltrs
-                      </div>
-                    )} */}
-
-                    {/* 🔹 External Fuel Input */}
-                    {/* {externalAvailable > 0 && (
-                      <div style={{ marginLeft: "5px", fontSize: "9px", display: "flex", alignItems: "center", gap: "4px" }}>
-                        Ex.🛢️Fuel:
-
-                        <button
-                          type="button"
-                          style={{ fontSize: "10px", height: "14px", width: "16px" }}
-                          onClick={() => saveExternalFuel(dgNo, Math.max(0, externalAvailable - 1))}
-                          disabled={externalAvailable <= 0}
-                        >
-                          –
-                        </button>
-
-                        <strong style={{ minWidth: "20px", textAlign: "center" }}>
-                          {externalAvailable}
-                        </strong>
-
-                        <button
-                          type="button"
-                          style={{ fontSize: "10px", height: "14px", width: "16px" }}
-                          onClick={() => saveExternalFuel(dgNo, externalAvailable + 1)}
-                        >
-                          +
-                        </button>
-
-                        <span>Ltrs</span>
-                      </div>
-                    )} */}
-
-                    {/* 🔹 External Fuel Input */}
                     {externalStock > 0 && (
                       <div style={{ fontSize: "9px", display: "flex", gap: "4px", alignItems: "center" }}>
                         Drow Ex.🛢️:
@@ -2809,124 +2821,6 @@ const DailyDGLog = ({ userData }) => {
                   </div>
                 );
               })}
-
-              {/* <div style={{ display: "flex", gap: "5px", marginTop: "10px" }}>
-                <p
-                  style={{
-                    textAlign: "Center",
-                    color: "black", fontSize: "12px",
-                    fontWeight: "bold",
-                    border: "1px solid #fff",
-                    borderRadius: "10px",
-                    background: "#6ce9e35d"
-                  }}
-                >
-                  <p>Today Consumption </p>
-                  <span>
-                    <strong>{dayFuelCon} ltrs.</strong>
-                    <p style={{ fontSize: "9px" }}>DG-1 {dayDG1FuelCon} & DG-2 {dayDG2FuelCon}</p>
-                  </span>
-                </p>
-                <p
-                  style={{
-                    textAlign: "Center",
-                    color: "black",
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    border: "1px solid #fff",
-                    borderRadius: "10px",
-                    background: "#6ce9e35d"
-                  }}
-                >
-                  <p>Today DG Run</p>
-                  <span>
-                    <strong>{(dayRunningHrs).toFixed(1)} Hrs.</strong>
-                    <p style={{ fontSize: "8px" }}>({(dayRunningHrs * 60).toFixed(2)} Min.)</p>
-                    <p style={{ fontSize: "9px" }}>
-                      DG-1 {(dayDG1RunningHrs).toFixed(1)} & DG-2 {(dayDG2RunningHrs).toFixed(1)}
-                    </p>
-                  </span>
-                </p>
-                <p
-                  style={{
-                    textAlign: "Center",
-                    color: "black",
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    border: "1px solid #fff",
-                    borderRadius: "10px",
-                    background: "#6ce9e35d"
-                  }}
-                >
-                  <p>Total Power</p>
-                  <span>
-                    <strong>{(dayonLoadRunHrs).toFixed(1)} Hrs.</strong>
-                    <p style={{ fontSize: "8px" }}>({(dayonLoadRunHrs * 60).toFixed(2)} Min.)</p>
-                    <p style={{ fontSize: "9px" }}>
-                      DG-1 {(dayDG1OnLoadRunHrs).toFixed(1)} & DG-2 {(dayDG2OnLoadRunHrs).toFixed(1)}
-                    </p>
-                  </span>
-                </p>
-                <p
-                  style={{
-                    textAlign: "Center",
-                    color: "black",
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    border: "1px solid #fff",
-                    borderRadius: "10px",
-                    background: "#6ce9e35d"
-                  }}
-                >
-                  <p>Total Fuel Filled</p>
-                  <span>
-                    <strong>{dayFuelFill} ltrs.</strong>
-                    <p style={{ fontSize: "9px" }}>
-                      DG-1 {dayDG1FuelFill} & DG-2 {dayDG2FuelFill}
-                    </p>
-                    <strong>{dayExFuelFill} ltrs.</strong>
-                    <p style={{ fontSize: "9px" }}>
-                      Ex. DG-1 {dayExDG1FuelFill} & DG-2 {dayExDG2FuelFill}
-                    </p>
-                  </span>
-                </p>
-                <p
-                  style={{
-                    textAlign: "Center",
-                    color: "black",
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    border: "1px solid #fff",
-                    borderRadius: "10px",
-                    background: "#6ce9e35d"
-                  }}
-                >
-                  <p>Yesterday EB Units</p>
-                  <span>
-                    <strong>{yesterdayEBUnits} kW.</strong>
-                  </span>
-                  <p>Yesterday DG Units</p>
-                  <span>
-                    <strong>{yesterdayDGUnits} kW.</strong>
-                  </span>
-                </p>
-                <p
-                  style={{
-                    textAlign: "Center",
-                    color: "black",
-                    fontSize: "12px",
-                    fontWeight: "bold",
-                    border: "1px solid #fff",
-                    borderRadius: "10px",
-                    background: "#6ce9e35d"
-                  }}
-                >
-                  <p>Yesterday Total Units</p>
-                  <span>
-                    <strong>{yesterdayEBUnits + yesterdayDGUnits} kW.</strong>
-                  </span>
-                </p>
-              </div> */}
 
               <div style={{ display: "flex", gap: "5px", marginTop: "10px", flexWrap: "wrap" }}>
 
