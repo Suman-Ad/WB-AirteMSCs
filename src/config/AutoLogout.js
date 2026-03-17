@@ -87,7 +87,7 @@ export default function AutoLogout({ timeoutMs = 12 * 60 * 60 * 1000 }) {
           // Optionally show an alert
           try {
             // guard: window may not be available in some test env
-            window.alert("You were logged out after 12 hours of inactivity.");
+            window.alert("You were logged out after 8 hours of inactivity.");
           } catch (e) { }
         }
       } catch (err) {

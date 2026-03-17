@@ -18,7 +18,7 @@ const formatTime = (hours) => {
 
 const DGLogTable = ({ userData }) => {
   const { state } = useLocation();
-  const { totalkW, fuelAvalable, siteConfig, dayFuelCon } = state || {};
+  const { totalkW, fuelAvalable, siteConfig, dayFuelCon, siteName } = state || {};
   const [logs, setLogs] = useState([]);
   const [summary, setSummary] = useState({
     DG1_OnLoad: 0,
@@ -31,7 +31,7 @@ const DGLogTable = ({ userData }) => {
     new Date().toISOString().slice(0, 10) // default today
   );
 
-  const siteName = userData?.site;
+  // const siteName = userData?.site;
 
   // State for DHR Preview Modal
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -788,7 +788,7 @@ const DGLogTable = ({ userData }) => {
       </h2>
       <button
         className="segr-manage-btn warning"
-        onClick={() => Navigate("/dg-log-entry", { state: { siteConfig, isDGOnLoad: false } })}
+        onClick={() => Navigate("/dg-log-entry", { state: { isDGOnLoad: false , siteName } })}
       >
         ✎ DG No Load Run / Fuel Filling Log Entry
       </button>

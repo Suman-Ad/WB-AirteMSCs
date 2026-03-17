@@ -19,8 +19,9 @@ const getTodayDate = () => {
 };
 
 const DGLogForm = ({ userData }) => {
+    const { state } = useLocation();
     const [siteConfig, setSiteConfig] = useState({});
-    const siteKey = userData?.site?.toUpperCase();
+    const siteKey = state?.siteName?.toUpperCase() || userData?.site?.toUpperCase();
     const [dgNumber, setDgNumber] = useState("DG-1");
     const [form, setForm] = useState({
         date: getTodayDate(),
@@ -73,7 +74,6 @@ const DGLogForm = ({ userData }) => {
     };
 
     const navigate = useNavigate();
-    const { state } = useLocation();
     // const isEdit = state?.editMode;
     const isEditMode = Boolean(state?.editMode);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -880,7 +880,7 @@ const DGLogForm = ({ userData }) => {
         <div className="daily-log-container">
             <h2 className="dashboard-header">
                 <strong>
-                    🎯 {isEditMode ? `Update ${siteConfig.dgConfigs?.[dgNumber]?.capacityKva}kVA DG Log` : `New Entry ${siteConfig.dgConfigs?.[dgNumber]?.capacityKva}kVA DG Log`} - {userData.site}
+                    🎯 {isEditMode ? `Update ${siteConfig.dgConfigs?.[dgNumber]?.capacityKva}kVA DG Log` : `New Entry ${siteConfig.dgConfigs?.[dgNumber]?.capacityKva}kVA DG Log`} - {siteKey}
                 </strong>
             </h2>
 

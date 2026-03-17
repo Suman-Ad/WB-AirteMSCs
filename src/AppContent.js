@@ -148,7 +148,7 @@ export default function AppContent() {
 
     return (
         <>
-            <AutoLogout timeoutMs={12 * 60 * 60 * 1000} />
+            <AutoLogout timeoutMs={8 * 60 * 60 * 1000} />
             <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login setUserData={setUserData} />} />

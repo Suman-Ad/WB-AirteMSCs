@@ -158,7 +158,7 @@ const DailyDGLog = ({ userData }) => {
     new Date().toISOString().slice(0, 7) // YYYY-MM
   );
 
-  const [selectedSite, setSelectedSite] = useState(userData?.site || "");
+  const [selectedSite, setSelectedSite] = useState(userData?.site?.toUpperCase() || "");
 
   const siteName = isAdmin ? normalizeSite(selectedSite) : userData?.site;
 
@@ -232,7 +232,7 @@ const DailyDGLog = ({ userData }) => {
   const [EBRate, setEBRate] = useState(0.00); // default value
   const [fuelRate, setFuelRate] = useState(0.00); // default value
   const [siteConfig, setSiteConfig] = useState({});
-  const siteKey = userData?.site?.toUpperCase();
+  const siteKey = selectedSite || userData?.site?.toUpperCase();
   const [lastFilling, setLastFilling] = useState(null);
   const [loadingFilling, setLoadingFilling] = useState(true);
   const [fuelAvalable, setFuelAvalable] = useState();
@@ -2874,16 +2874,16 @@ const DailyDGLog = ({ userData }) => {
                 {/* 🔹 Yesterday Units */}
                 <p style={cardStyle}>
                   <p>Yesterday EB Units</p>
-                  <strong>{yesterdayEBUnits} kW</strong>
+                  <strong>{yesterdayEBUnits.toFixed(2)} kW</strong>
 
                   <p>Yesterday DG Units</p>
-                  <strong>{yesterdayDGUnits} kW</strong>
+                  <strong>{yesterdayDGUnits.toFixed(2)} kW</strong>
                 </p>
 
                 {/* 🔹 Yesterday Total */}
                 <p style={cardStyle}>
                   <p>Yesterday Total Units</p>
-                  <strong>{yesterdayEBUnits + yesterdayDGUnits} kW</strong>
+                  <strong>{(yesterdayEBUnits + yesterdayDGUnits).toFixed(2)} kW</strong>
                 </p>
 
               </div>
@@ -3267,7 +3267,7 @@ const DailyDGLog = ({ userData }) => {
 
         <button
           className="segr-manage-btn warning"
-          onClick={() => navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig, dayFuelCon } })}
+          onClick={() => navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig, dayFuelCon, siteName } })}
         >
           🔰 DG Run Logs
         </button>
