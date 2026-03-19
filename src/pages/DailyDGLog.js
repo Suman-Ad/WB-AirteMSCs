@@ -454,7 +454,7 @@ const DailyDGLog = ({ userData }) => {
     timeoutEB = setTimeout(async () => {
       try {
         // Save fuel rate site-wise
-        await setDoc(doc(db, "EBRates", userData?.site), { rate }, { merge: true });
+        await setDoc(doc(db, "EBRates", siteName), { rate }, { merge: true });
         console.log("EB rate saved:", rate);
       } catch (err) {
         console.error("Error saving EB rate:", err);
@@ -469,7 +469,7 @@ const DailyDGLog = ({ userData }) => {
     timeout = setTimeout(async () => {
       try {
         // Save fuel rate site-wise
-        await setDoc(doc(db, "fuelRates", userData?.site), { rate }, { merge: true });
+        await setDoc(doc(db, "fuelRates", siteName), { rate }, { merge: true });
         console.log("Fuel rate saved:", rate);
       } catch (err) {
         console.error("Error saving fuel rate:", err);
@@ -530,7 +530,7 @@ const DailyDGLog = ({ userData }) => {
 
   // Fetch logs from dgLogs DB and set calculating data in log form 
   const fetchAndAggregateRuns = async (selectedDate) => {
-    if (!userData.site || !selectedDate) return;
+    if (!siteName || !selectedDate) return;
 
     try {
       const dateObj = new Date(selectedDate);
@@ -542,7 +542,7 @@ const DailyDGLog = ({ userData }) => {
       const runsCollectionRef = collection(
         db,
         "dgLogs",
-        userData.site,
+        siteName,
         monthKey,
         selectedDate,
         "runs"
@@ -941,7 +941,7 @@ const DailyDGLog = ({ userData }) => {
     // Fetch EB rate from Firestore
     const fetchEBRate = async () => {
       try {
-        const docRef = doc(db, "EBRates", userData?.site);
+        const docRef = doc(db, "EBRates", siteName);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setEBRate(docSnap.data().rate || 0);
@@ -956,7 +956,7 @@ const DailyDGLog = ({ userData }) => {
     // Fetch fuel rate from Firestore
     const fetchFuelRate = async () => {
       try {
-        const docRef = doc(db, "fuelRates", userData?.site);
+        const docRef = doc(db, "fuelRates", siteName);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setFuelRate(docSnap.data().rate || 0);
@@ -992,7 +992,7 @@ const DailyDGLog = ({ userData }) => {
             prev.getFullYear();
 
           const prevSnap = await getDocs(
-            collection(db, "dailyDGLogs", userData.site, prevMonthKey)
+            collection(db, "dailyDGLogs", siteName, prevMonthKey)
           );
 
           if (!prevSnap.empty) {
@@ -1005,7 +1005,7 @@ const DailyDGLog = ({ userData }) => {
       }
 
       if (!lf) {
-        lf = await findLastFillingInDGLogs(userData.site, 3);
+        lf = await findLastFillingInDGLogs(siteName, 3);
       }
 
       setLastFilling(lf);
@@ -1019,7 +1019,7 @@ const DailyDGLog = ({ userData }) => {
     fetchEBRate();
     fetchFuelRate();
 
-  }, [logs, userData?.site, siteKey]);
+  }, [logs, siteName, siteKey]);
 
 
   // Get Yesterday Log
@@ -1374,9 +1374,9 @@ const DailyDGLog = ({ userData }) => {
   // 🔹 Input fields
   const inputFields = [];
 
-  const eb = siteConfig.siteName === userData?.site?.toUpperCase() ? siteConfig.ebCount : 0;
-  const dg = siteConfig.siteName === userData?.site?.toUpperCase() ? siteConfig.dgCount : 0;
-  const solar = siteConfig.siteName === userData?.site?.toUpperCase() ? siteConfig.solarCount : 0;
+  const eb = siteConfig.siteName === selectedSite ? siteConfig.ebCount : 0;
+  const dg = siteConfig.siteName === selectedSite ? siteConfig.dgCount : 0;
+  const solar = siteConfig.siteName === selectedSite ? siteConfig.solarCount : 0;
 
   // EBs
   for (let i = 1; i <= eb; i++) {
@@ -2021,9 +2021,9 @@ const DailyDGLog = ({ userData }) => {
 
   // Power Source Listener
   useEffect(() => {
-    if (!userData?.site) return;
+    if (!siteName) return;
 
-    const powerRef = doc(db, "sitePowerStatus", userData.site);
+    const powerRef = doc(db, "sitePowerStatus", siteName);
 
     const unsub = onSnapshot(powerRef, (snap) => {
       if (!snap.exists()) return;
@@ -2056,7 +2056,7 @@ const DailyDGLog = ({ userData }) => {
     });
 
     return () => unsub();
-  }, [userData?.site]);
+  }, [siteName]);
 
   return (
     <div className="daily-log-container" style={{ overflowX: "hidden" }}>
