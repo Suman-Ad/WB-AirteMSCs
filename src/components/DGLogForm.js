@@ -18,6 +18,12 @@ const getTodayDate = () => {
     return d.toISOString().split("T")[0];
 };
 
+// Normalize site name to match Firestore keys (e.g., "SiteA" → "Sitea")
+const normalizeSite = (site) => {
+  if (!site) return "";
+  return site.charAt(0) + site.slice(1).toLowerCase();
+};
+
 const DGLogForm = ({ userData }) => {
     const { state } = useLocation();
     const [siteConfig, setSiteConfig] = useState({});
@@ -473,7 +479,7 @@ const DGLogForm = ({ userData }) => {
                     { merge: true }
                 );
                 alert("Log updated ✅");
-                navigate("/dg-log-table")
+                navigate("/dg-log-table", { state: { siteName: normalizeSite(siteKey) } })
             } else {
 
                 // 🔥 SAVE HSD DATA ON EVERY FUEL FILLING
@@ -559,7 +565,7 @@ const DGLogForm = ({ userData }) => {
                     fuelFill: "",
                     exFuelFill: "",
                 });
-                navigate("/dg-log-table")
+                navigate("/dg-log-table", { state: { siteName: normalizeSite(siteKey) } })
             }
         } catch (err) {
             console.error("Error saving log: ", err);
