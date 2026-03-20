@@ -254,19 +254,16 @@ const AllSitesDGLogs = ({ userData }) => {
 
         // Compute tank capacity from config
 
-        const dayTankCapacity = (
-            Number(siteConfig.dgConfigs?.[`DG-1`]?.dayTankLtrs) +
-            Number(siteConfig.dgConfigs?.[`DG-2`]?.dayTankLtrs) +
-            Number(siteConfig.dgConfigs?.[`DG-3`]?.dayTankLtrs) +
-            Number(siteConfig.dgConfigs?.[`DG-4`]?.dayTankLtrs)
-        );
+        const dgCount = siteConfig.dgCount || 0;
+        const getVal = (val) => Number(val) || 0;
 
-        const externalTankCapacity = (
-            Number(siteConfig.dgConfigs?.[`DG-1`]?.externalTankLtrs) +
-            Number(siteConfig.dgConfigs?.[`DG-2`]?.externalTankLtrs) +
-            Number(siteConfig.dgConfigs?.[`DG-3`]?.externalTankLtrs) +
-            Number(siteConfig.dgConfigs?.[`DG-4`]?.externalTankLtrs)
-        );
+        let dayTankCapacity = 0;
+        let externalTankCapacity = 0;
+
+        for (let i = 1; i <= dgCount; i++) {
+            dayTankCapacity += getVal(siteConfig.dgConfigs?.[`DG-${i}`]?.dayTankLtrs);
+            externalTankCapacity += getVal(siteConfig.dgConfigs?.[`DG-${i}`]?.externalTankLtrs);
+        }
 
         const tankCapacity = dayTankCapacity + externalTankCapacity;
 

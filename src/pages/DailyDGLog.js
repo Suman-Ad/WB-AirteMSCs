@@ -2100,11 +2100,11 @@ const DailyDGLog = ({ userData }) => {
               value={selectedSite}
               onChange={(e) => setSelectedSite(e.target.value)}
             >
-              <option value="">Select Site</option>
+              {/* <option value="">Select Site</option> */}
 
               {allSites.map((site) => (
                 <option key={site} value={site}>
-                  {site}
+                  {normalizeSite(site)}
                 </option>
               ))}
 
