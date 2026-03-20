@@ -193,6 +193,7 @@ const DailyDGLog = ({ userData }) => {
 
   useEffect(() => {
     if (siteName) {
+      setDgExternalFuel({});
       fetchLogs();
     }
   }, [siteName, selectedMonth]);
@@ -476,7 +477,6 @@ const DailyDGLog = ({ userData }) => {
       }
     }, 500); // wait 500ms after typing stops
   };
-
 
 
   // Change Function For Fuel Rate
@@ -923,7 +923,7 @@ const DailyDGLog = ({ userData }) => {
       const nextDate = await getNextUnfilledDate();
 
       setForm(prev => ({
-        ...prev,
+        // ...prev,
         Date: nextDate
       }));
 
@@ -935,6 +935,19 @@ const DailyDGLog = ({ userData }) => {
     fetchAndAggregateRuns(form.Date)
     initDate();
   }, [siteName]);
+
+  // Reset form and logs when site changes
+  useEffect(() => {
+  if (!siteName) return;
+
+  // 🔥 FULL RESET
+  setForm({ Date: "" });
+  setLogs([]);
+  setYesterdayLog(null);
+  setDgExternalFuel({});
+  setDgExternalUsed({});
+  
+}, [selectedSite]);
 
   // Fetch EB rate from Firestore / Fetch fuel rate from Firestore / Fetch Site Configs from Firestore / Fetch Last Fuel Filling from dailyDGLogs db from Firestore 
   useEffect(() => {
