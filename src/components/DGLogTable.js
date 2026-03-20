@@ -33,6 +33,13 @@ const DGLogTable = ({ userData }) => {
 
   // const siteName = userData?.site;
 
+  const uploadedBy = {
+    uid: userData.uid,
+    name: userData.name || "",
+    role: userData.role,
+    empId: userData.empId,
+  };
+
   // State for DHR Preview Modal
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [dhrDataForPreview, setDhrDataForPreview] = useState(null);
@@ -397,6 +404,9 @@ const DGLogTable = ({ userData }) => {
             "HR Meter Start": d.hrMeterStart || "",
             "HR Meter End": d.hrMeterEnd || "",
             "Total Run Hours": d.totalRunHours || 0,
+            "Opening kWH Reading": d.kwhMeterStart || 0,
+            "Closing kWH Reading": d.kwhMeterEnd || 0,
+            "kWH Reading": d.kWHReading || "",
             "Fuel Consumption (Ltrs)": d.fuelConsumption || 0,
             "Fuel Filled (Ltrs)": d.fuelFill || 0,
             "OEM CPH": d.oemCPH || "",
@@ -404,7 +414,6 @@ const DGLogTable = ({ userData }) => {
             "SEGR": d.segr || "",
             "DG Run %": d.dgRunPercentage || "",
             "Remarks": d.remarks || "",
-            "kWH Reading": d.kWHReading || "",
           });
         });
       }
@@ -452,8 +461,9 @@ const DGLogTable = ({ userData }) => {
         "HR Meter End": "",
         "Fuel Consumption": "",
         "Fuel Filled": "",
-        "Remarks": "",
-        "kWH Reading": "",
+        "Remarks": "On Load / No Load",
+        "Opening kWH Reading": "",
+        "Closing kWH Reading": "",
       },
     ];
 
@@ -725,9 +735,11 @@ const DGLogTable = ({ userData }) => {
         segr: Number(row["SEGR"]) || 0,
         dgRunPercentage: Number(row["DG Run %"]) || 0,
         remarks: row.Remarks,
-        kWHReading: Number(row["kWH Reading"]) || 0,
+        kwhMeterStart: Number(row["Opening kWH Reading"]) || 0, // Assuming kWH Reading is the end reading. Adjust if needed.
+        kwhMeterEnd: Number(row["Closing kWH Reading"]) || 0, // Assuming kWH Reading is the end reading. Adjust if needed.
+        kWHReading: (Number(row["Closing kWH Reading"]) - Number(row["Opening kWH Reading"])) || 0,
         createdAt: new Date(),
-        createdBy: userData?.email,
+        createdBy: uploadedBy,
         uploadSource: "EXCEL",
       });
     }
@@ -788,7 +800,7 @@ const DGLogTable = ({ userData }) => {
       </h2>
       <button
         className="segr-manage-btn warning"
-        onClick={() => Navigate("/dg-log-entry", { state: { isDGOnLoad: false , siteName } })}
+        onClick={() => Navigate("/dg-log-entry", { state: { isDGOnLoad: false, siteName } })}
       >
         ✎ DG No Load Run / Fuel Filling Log Entry
       </button>
