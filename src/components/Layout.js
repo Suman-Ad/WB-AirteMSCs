@@ -1496,6 +1496,9 @@ const Layout = ({ userData, children }) => {
             </>
           )}
           <h4>© 2025 Crash Algo. All rights reserved.</h4>
+          <h4 onClick={() => navigate("/vendor-dashboard")} style={{ textDecoration: "underline", cursor: "pointer" }}>
+            Vendor Escalation Matrix
+          </h4>
         </div>
       </div>
     </div>

@@ -168,163 +168,294 @@ const AllSitesDGLogs = ({ userData }) => {
     ).length;
 
 
+    // function getMonthlySummary(siteLogs, siteConfig) {
+    //     if (!siteLogs.length) return {};
+
+    //     // Calculate with correct config for each card/table row
+    //     const calculatedLogs = siteLogs.map(e => calculateFields(e, siteConfig));
+
+    //     // Averages
+    //     const cphValues = calculatedLogs.flatMap(cl => [cl["DG-1 CPH"], cl["DG-2 CPH"]]).filter(v => v > 0);
+    //     const monthlyAvgCPH = cphValues.length ? (cphValues.reduce((a, b) => a + b, 0) / cphValues.length).toFixed(2) : 0;
+
+    //     const pueValues = calculatedLogs.flatMap(cl => Number(cl["PUE"])).filter(v => v > 0);
+    //     const monthlyAvgPUE = pueValues.length ? (pueValues.reduce((a, b) => a + b, 0) / pueValues.length).toFixed(2) : 0;
+
+    //     // SEGR Averages
+    //     const segrValues = calculatedLogs.flatMap(cl => [Number(cl["DG-1 SEGR"]), Number(cl["DG-2 SEGR"])]).filter(v => v > 0);
+    //     const monthlyAvgSEGR = segrValues.length ? (segrValues.reduce((a, b) => a + b, 0) / segrValues.length).toFixed(2) : 0;
+
+    //     const segrValuesDG1 = calculatedLogs.flatMap(cl => Number(cl["DG-1 SEGR"])).filter(v => v > 0);
+    //     const monthlyAvgDG1SEGR = segrValuesDG1.length ? (segrValuesDG1.reduce((a, b) => a + b, 0) / segrValuesDG1.length).toFixed(2) : 0;
+
+    //     const segrValuesDG2 = calculatedLogs.flatMap(cl => Number(cl["DG-2 SEGR"])).filter(v => v > 0);
+    //     const monthlyAvgDG2SEGR = segrValuesDG2.length ? (segrValuesDG2.reduce((a, b) => a + b, 0) / segrValuesDG2.length).toFixed(2) : 0;
+
+    //     // IT Load and Cooling Load Averages
+    //     const itLoadValues = calculatedLogs.map(cl => cl["Total IT Load KWH"]).filter(v => v > 0);
+    //     const monthlyAvgITLoad = itLoadValues.length ? (itLoadValues.reduce((a, b) => a + b, 0) / itLoadValues.length).toFixed(2) : 0;
+
+    //     const coolingLoadValues = calculatedLogs.map(cl => cl["Cooling kW Consumption"]).filter(v => v > 0);
+    //     const monthlyAvgCoolingLoad = coolingLoadValues.length ? (coolingLoadValues.reduce((a, b) => a + b, 0) / coolingLoadValues.length).toFixed(2) : 0;
+
+    //     const officeLoadValues = calculatedLogs.map(cl => cl["Office kW Consumption"]).filter(v => v > 0);
+    //     const monthlyAvgOfficeLoad = officeLoadValues.length ? ((officeLoadValues.reduce((a, b) => a + b, 0) / officeLoadValues.length) / 24).toFixed(2) : 0;
+
+    //     // Site Running Load Average
+    //     const avgSiteRunningKw = calculatedLogs.map(cl => cl["Site Running kW"]).filter(v => v > 0);
+    //     const totalSiteRuningLoad = avgSiteRunningKw.length ? (avgSiteRunningKw.reduce((a, b) => a + b, 0) / avgSiteRunningKw.length).toFixed(2) : 0;
+
+    //     // Totals
+    //     const totalKwh = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG KWH"] || 0), 0);
+    //     const totalEBKWH = calculatedLogs.reduce((sum, cl) => sum + (cl["Total EB KWH"] || 0), 0);
+    //     const totalSolarKWH = calculatedLogs.reduce((sum, cl) => sum + (cl["Total Solar KWH"] || 0), 0);
+    //     const totalFuel = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Fuel"] || 0), 0);
+    //     const totalHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Hours"] || 0), 0);
+    //     const totalFilling = calculatedLogs.reduce((sum, cl) => sum + (cl["Total Fuel Filling"] || 0), 0);
+
+    //     // DG and Fuel breakdowns
+    //     const totalDG1Kw = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 KWH Generation"] || 0), 0);
+    //     const totalDG2Kw = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 KWH Generation"] || 0), 0);
+
+    //     const totalDG1Filling = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 Fuel Filling"] || 0), 0);
+    //     const totalDG2Filling = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 Fuel Filling"] || 0), 0);
+
+    //     const totalOnLoadCon = calculatedLogs.reduce((sum, cl) =>
+    //         sum + (cl["DG-1 ON Load Consumption"] || 0) + (cl["DG-2 ON Load Consumption"] || 0), 0);
+    //     const totalDG1OnLoadCon = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 ON Load Consumption"] || 0), 0);
+    //     const totalDG2OnLoadCon = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 ON Load Consumption"] || 0), 0);
+
+    //     const totalOffLoadCon = calculatedLogs.reduce((sum, cl) =>
+    //         sum + (cl["DG-1 OFF Load Consumption"] || 0) + (cl["DG-2 OFF Load Consumption"] || 0), 0);
+    //     const totalDG1OffLoadCon = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 OFF Load Consumption"] || 0), 0);
+    //     const totalDG2OffLoadCon = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 OFF Load Consumption"] || 0), 0);
+
+    //     const totalOnLoadHrs = calculatedLogs.reduce((sum, cl) =>
+    //         sum + (cl["DG-1 ON Load Hour"] || 0) + (cl["DG-2 ON Load Hour"] || 0), 0);
+    //     const totalDG1OnLoadHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 ON Load Hour"] || 0), 0);
+    //     const totalDG2OnLoadHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 ON Load Hour"] || 0), 0);
+
+    //     const totalOffLoadHrs = calculatedLogs.reduce((sum, cl) =>
+    //         sum + (cl["DG-1 OFF Load Hour"] || 0) + (cl["DG-2 OFF Load Hour"] || 0), 0);
+    //     const totalDG1OffLoadHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 OFF Load Hour"] || 0), 0);
+    //     const totalDG2OffLoadHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 OFF Load Hour"] || 0), 0);
+
+    //     // Minutes
+    //     const totalHrsMin = (totalHrs * 60).toFixed(0);
+    //     const totalDG1HrsMin = ((totalDG1OnLoadHrs + totalDG1OffLoadHrs) * 60).toFixed(0);
+    //     const totalDG2HrsMin = ((totalDG2OnLoadHrs + totalDG2OffLoadHrs) * 60).toFixed(0);
+    //     const totalDG1OnLoadHrsMin = (totalDG1OnLoadHrs * 60).toFixed(0);
+    //     const totalDG2OnLoadHrsMin = (totalDG2OnLoadHrs * 60).toFixed(0);
+    //     const totalDG1OffLoadHrsMin = (totalDG1OffLoadHrs * 60).toFixed(0);
+    //     const totalDG2OffLoadHrsMin = (totalDG2OffLoadHrs * 60).toFixed(0);
+
+    //     // Extra stats (expand as needed)
+    //     // Add PUE/SEGR/Running Load etc. if you want monthly averages for those (e.g. from calculatedLogs or another helper)
+
+    //     // Compute tank capacity from config
+
+    //     const dgCount = siteConfig.dgCount || 0;
+    //     const getVal = (val) => Number(val) || 0;
+
+    //     let dayTankCapacity = 0;
+    //     let externalTankCapacity = 0;
+
+    //     for (let i = 1; i <= dgCount; i++) {
+    //         dayTankCapacity += getVal(siteConfig.dgConfigs?.[`DG-${i}`]?.dayTankLtrs);
+    //         externalTankCapacity += getVal(siteConfig.dgConfigs?.[`DG-${i}`]?.externalTankLtrs);
+    //     }
+
+    //     const tankCapacity = dayTankCapacity + externalTankCapacity;
+
+    //     const dgExternalFuel = {
+    //         "DG-1": calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 External Fuel Filling"] || 0), 0),
+    //         "DG-2": calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 External Fuel Filling"] || 0), 0),
+    //         "DG-3": calculatedLogs.reduce((sum, cl) => sum + (cl["DG-3 External Fuel Filling"] || 0), 0),
+    //         "DG-4": calculatedLogs.reduce((sum, cl) => sum + (cl["DG-4 External Fuel Filling"] || 0), 0)
+    //     };
+
+    //     return {
+    //         totalDays: siteLogs.length,
+    //         monthlyAvgCPH,
+    //         monthlyAvgITLoad,
+    //         monthlyAvgCoolingLoad,
+    //         monthlyAvgOfficeLoad,
+    //         monthlyAvgPUE,
+    //         monthlyAvgSEGR,
+    //         monthlyAvgDG1SEGR,
+    //         monthlyAvgDG2SEGR,
+    //         totalKwh,
+    //         totalEBKWH,
+    //         totalSolarKWH,
+    //         totalFuel,
+    //         totalHrs,
+    //         totalFilling,
+    //         totalDG1Kw,
+    //         totalDG2Kw,
+    //         totalDG1Filling,
+    //         totalDG2Filling,
+    //         totalOnLoadCon,
+    //         totalOffLoadCon,
+    //         totalDG1OnLoadCon,
+    //         totalDG2OnLoadCon,
+    //         totalDG1OffLoadCon,
+    //         totalDG2OffLoadCon,
+    //         totalOnLoadHrs,
+    //         totalDG1OnLoadHrs,
+    //         totalDG2OnLoadHrs,
+    //         totalOffLoadHrs,
+    //         totalDG1OffLoadHrs,
+    //         totalDG2OffLoadHrs,
+    //         totalHrsMin,
+    //         totalDG1HrsMin,
+    //         totalDG2HrsMin,
+    //         totalDG1OnLoadHrsMin,
+    //         totalDG2OnLoadHrsMin,
+    //         totalDG1OffLoadHrsMin,
+    //         totalDG2OffLoadHrsMin,
+    //         dayTankCapacity,
+    //         externalTankCapacity,
+    //         tankCapacity,
+    //         totalSiteRuningLoad,
+    //         dgExternalFuel,
+    //         dayExDG1FuelFill: calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 External Fuel Filling"] || 0), 0),
+    //         dayExDG2FuelFill: calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 External Fuel Filling"] || 0), 0),
+    //         dayExDG3FuelFill: calculatedLogs.reduce((sum, cl) => sum + (cl["DG-3 External Fuel Filling"] || 0), 0),
+    //         dayExDG4FuelFill: calculatedLogs.reduce((sum, cl) => sum + (cl["DG-4 External Fuel Filling"] || 0), 0),
+    //     };
+    // }
+
     function getMonthlySummary(siteLogs, siteConfig) {
         if (!siteLogs.length) return {};
 
-        // Calculate with correct config for each card/table row
         const calculatedLogs = siteLogs.map(e => calculateFields(e, siteConfig));
+        const dgCount = siteConfig.dgCount || 0;
 
-        // Averages
-        const cphValues = calculatedLogs.flatMap(cl => [cl["DG-1 CPH"], cl["DG-2 CPH"]]).filter(v => v > 0);
-        const monthlyAvgCPH = cphValues.length ? (cphValues.reduce((a, b) => a + b, 0) / cphValues.length).toFixed(2) : 0;
+        const getVal = (v) => Number(v) || 0;
 
-        const pueValues = calculatedLogs.flatMap(cl => Number(cl["PUE"])).filter(v => v > 0);
+        // ------------------ AVERAGES ------------------
+        const pueValues = calculatedLogs.map(cl => getVal(cl["PUE"])).filter(v => v > 0);
         const monthlyAvgPUE = pueValues.length ? (pueValues.reduce((a, b) => a + b, 0) / pueValues.length).toFixed(2) : 0;
 
-        // SEGR Averages
-        const segrValues = calculatedLogs.flatMap(cl => [Number(cl["DG-1 SEGR"]), Number(cl["DG-2 SEGR"])]).filter(v => v > 0);
+        // Dynamic CPH & SEGR
+        let cphValues = [];
+        let segrValues = [];
+
+        for (let i = 1; i <= dgCount; i++) {
+            cphValues.push(...calculatedLogs.map(cl => getVal(cl[`DG-${i} CPH`])));
+            segrValues.push(...calculatedLogs.map(cl => getVal(cl[`DG-${i} SEGR`])));
+        }
+
+        cphValues = cphValues.filter(v => v > 0);
+        segrValues = segrValues.filter(v => v > 0);
+
+        const monthlyAvgCPH = cphValues.length ? (cphValues.reduce((a, b) => a + b, 0) / cphValues.length).toFixed(2) : 0;
         const monthlyAvgSEGR = segrValues.length ? (segrValues.reduce((a, b) => a + b, 0) / segrValues.length).toFixed(2) : 0;
 
-        const segrValuesDG1 = calculatedLogs.flatMap(cl => Number(cl["DG-1 SEGR"])).filter(v => v > 0);
-        const monthlyAvgDG1SEGR = segrValuesDG1.length ? (segrValuesDG1.reduce((a, b) => a + b, 0) / segrValuesDG1.length).toFixed(2) : 0;
+        // ------------------ LOADS ------------------
+        const monthlyAvgITLoad = avg(calculatedLogs.map(cl => getVal(cl["Total IT Load KWH"])));
+        const monthlyAvgCoolingLoad = avg(calculatedLogs.map(cl => getVal(cl["Cooling kW Consumption"])));
+        const monthlyAvgOfficeLoad = avg(calculatedLogs.map(cl => getVal(cl["Office kW Consumption"]))) / 24;
+        const totalSiteRuningLoad = avg(calculatedLogs.map(cl => getVal(cl["Site Running kW"])));
 
-        const segrValuesDG2 = calculatedLogs.flatMap(cl => Number(cl["DG-2 SEGR"])).filter(v => v > 0);
-        const monthlyAvgDG2SEGR = segrValuesDG2.length ? (segrValuesDG2.reduce((a, b) => a + b, 0) / segrValuesDG2.length).toFixed(2) : 0;
+        function avg(arr) {
+            const f = arr.filter(v => v > 0);
+            return f.length ? (f.reduce((a, b) => a + b, 0) / f.length).toFixed(2) : 0;
+        }
 
-        // IT Load and Cooling Load Averages
-        const itLoadValues = calculatedLogs.map(cl => cl["Total IT Load KWH"]).filter(v => v > 0);
-        const monthlyAvgITLoad = itLoadValues.length ? (itLoadValues.reduce((a, b) => a + b, 0) / itLoadValues.length).toFixed(2) : 0;
+        // ------------------ TOTALS ------------------
+        const totalKwh = sum(calculatedLogs, "Total DG KWH");
+        const totalEBKWH = sum(calculatedLogs, "Total EB KWH");
+        const totalSolarKWH = sum(calculatedLogs, "Total Solar KWH");
+        const totalFuel = sum(calculatedLogs, "Total DG Fuel");
+        const totalHrs = sum(calculatedLogs, "Total DG Hours");
+        const totalFilling = sum(calculatedLogs, "Total Fuel Filling") + sum(calculatedLogs, "Total External Fuel");
 
-        const coolingLoadValues = calculatedLogs.map(cl => cl["Cooling kW Consumption"]).filter(v => v > 0);
-        const monthlyAvgCoolingLoad = coolingLoadValues.length ? (coolingLoadValues.reduce((a, b) => a + b, 0) / coolingLoadValues.length).toFixed(2) : 0;
+        function sum(arr, key) {
+            return arr.reduce((s, cl) => s + getVal(cl[key]), 0);
+        }
 
-        const officeLoadValues = calculatedLogs.map(cl => cl["Office kW Consumption"]).filter(v => v > 0);
-        const monthlyAvgOfficeLoad = officeLoadValues.length ? ((officeLoadValues.reduce((a, b) => a + b, 0) / officeLoadValues.length) / 24).toFixed(2) : 0;
+        // ------------------ DG DYNAMIC BREAKDOWN ------------------
+        let dgData = {};
+        let totalOnLoadCon = 0;
+        let totalOffLoadCon = 0;
+        let totalOnLoadHrs = 0;
+        let totalOffLoadHrs = 0;
 
-        // Site Running Load Average
-        const avgSiteRunningKw = calculatedLogs.map(cl => cl["Site Running kW"]).filter(v => v > 0);
-        const totalSiteRuningLoad = avgSiteRunningKw.length ? (avgSiteRunningKw.reduce((a, b) => a + b, 0) / avgSiteRunningKw.length).toFixed(2) : 0;
-
-        // Totals
-        const totalKwh = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG KWH"] || 0), 0);
-        const totalEBKWH = calculatedLogs.reduce((sum, cl) => sum + (cl["Total EB KWH"] || 0), 0);
-        const totalSolarKWH = calculatedLogs.reduce((sum, cl) => sum + (cl["Total Solar KWH"] || 0), 0);
-        const totalFuel = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Fuel"] || 0), 0);
-        const totalHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["Total DG Hours"] || 0), 0);
-        const totalFilling = calculatedLogs.reduce((sum, cl) => sum + (cl["Total Fuel Filling"] || 0), 0);
-
-        // DG and Fuel breakdowns
-        const totalDG1Kw = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 KWH Generation"] || 0), 0);
-        const totalDG2Kw = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 KWH Generation"] || 0), 0);
-
-        const totalDG1Filling = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 Fuel Filling"] || 0), 0);
-        const totalDG2Filling = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 Fuel Filling"] || 0), 0);
-
-        const totalOnLoadCon = calculatedLogs.reduce((sum, cl) =>
-            sum + (cl["DG-1 ON Load Consumption"] || 0) + (cl["DG-2 ON Load Consumption"] || 0), 0);
-        const totalDG1OnLoadCon = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 ON Load Consumption"] || 0), 0);
-        const totalDG2OnLoadCon = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 ON Load Consumption"] || 0), 0);
-
-        const totalOffLoadCon = calculatedLogs.reduce((sum, cl) =>
-            sum + (cl["DG-1 OFF Load Consumption"] || 0) + (cl["DG-2 OFF Load Consumption"] || 0), 0);
-        const totalDG1OffLoadCon = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 OFF Load Consumption"] || 0), 0);
-        const totalDG2OffLoadCon = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 OFF Load Consumption"] || 0), 0);
-
-        const totalOnLoadHrs = calculatedLogs.reduce((sum, cl) =>
-            sum + (cl["DG-1 ON Load Hour"] || 0) + (cl["DG-2 ON Load Hour"] || 0), 0);
-        const totalDG1OnLoadHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 ON Load Hour"] || 0), 0);
-        const totalDG2OnLoadHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 ON Load Hour"] || 0), 0);
-
-        const totalOffLoadHrs = calculatedLogs.reduce((sum, cl) =>
-            sum + (cl["DG-1 OFF Load Hour"] || 0) + (cl["DG-2 OFF Load Hour"] || 0), 0);
-        const totalDG1OffLoadHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 OFF Load Hour"] || 0), 0);
-        const totalDG2OffLoadHrs = calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 OFF Load Hour"] || 0), 0);
-
-        // Minutes
-        const totalHrsMin = (totalHrs * 60).toFixed(0);
-        const totalDG1HrsMin = ((totalDG1OnLoadHrs + totalDG1OffLoadHrs) * 60).toFixed(0);
-        const totalDG2HrsMin = ((totalDG2OnLoadHrs + totalDG2OffLoadHrs) * 60).toFixed(0);
-        const totalDG1OnLoadHrsMin = (totalDG1OnLoadHrs * 60).toFixed(0);
-        const totalDG2OnLoadHrsMin = (totalDG2OnLoadHrs * 60).toFixed(0);
-        const totalDG1OffLoadHrsMin = (totalDG1OffLoadHrs * 60).toFixed(0);
-        const totalDG2OffLoadHrsMin = (totalDG2OffLoadHrs * 60).toFixed(0);
-
-        // Extra stats (expand as needed)
-        // Add PUE/SEGR/Running Load etc. if you want monthly averages for those (e.g. from calculatedLogs or another helper)
-
-        // Compute tank capacity from config
-
-        const dgCount = siteConfig.dgCount || 0;
-        const getVal = (val) => Number(val) || 0;
-
+        let dgExternalFuel = {};
         let dayTankCapacity = 0;
         let externalTankCapacity = 0;
 
         for (let i = 1; i <= dgCount; i++) {
-            dayTankCapacity += getVal(siteConfig.dgConfigs?.[`DG-${i}`]?.dayTankLtrs);
-            externalTankCapacity += getVal(siteConfig.dgConfigs?.[`DG-${i}`]?.externalTankLtrs);
+            const dgKey = `DG-${i}`;
+
+            const kwh = sum(calculatedLogs, `${dgKey} KWH Generation`);
+            const filling = sum(calculatedLogs, `${dgKey} Fuel Filling`) + sum(calculatedLogs, `${dgKey} External Fuel Filling`);
+            const onLoadCon = sum(calculatedLogs, `${dgKey} ON Load Consumption`);
+            const offLoadCon = sum(calculatedLogs, `${dgKey} OFF Load Consumption`);
+            const onLoadHrs = sum(calculatedLogs, `${dgKey} ON Load Hour`);
+            const offLoadHrs = sum(calculatedLogs, `${dgKey} OFF Load Hour`);
+            const externalFuel = sum(calculatedLogs, `${dgKey} External Fuel Filling`);
+
+            dgData[dgKey] = {
+                kwh,
+                filling,
+                onLoadCon,
+                offLoadCon,
+                onLoadHrs,
+                offLoadHrs,
+                totalHrs: onLoadHrs + offLoadHrs,
+                totalHrsMin: ((onLoadHrs + offLoadHrs) * 60).toFixed(0),
+                onLoadHrsMin: (onLoadHrs * 60).toFixed(0),
+                offLoadHrsMin: (offLoadHrs * 60).toFixed(0),
+            };
+
+            dgExternalFuel[dgKey] = externalFuel;
+
+            totalOnLoadCon += onLoadCon;
+            totalOffLoadCon += offLoadCon;
+            totalOnLoadHrs += onLoadHrs;
+            totalOffLoadHrs += offLoadHrs;
+
+            // Tank capacity
+            dayTankCapacity += getVal(siteConfig.dgConfigs?.[dgKey]?.dayTankLtrs);
+            externalTankCapacity += getVal(siteConfig.dgConfigs?.[dgKey]?.externalTankLtrs);
         }
 
         const tankCapacity = dayTankCapacity + externalTankCapacity;
 
-        const dgExternalFuel = {
-            "DG-1": calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 External Fuel Filling"] || 0), 0),
-            "DG-2": calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 External Fuel Filling"] || 0), 0),
-            "DG-3": calculatedLogs.reduce((sum, cl) => sum + (cl["DG-3 External Fuel Filling"] || 0), 0),
-            "DG-4": calculatedLogs.reduce((sum, cl) => sum + (cl["DG-4 External Fuel Filling"] || 0), 0)
-        };
-
+        // ------------------ FINAL RETURN ------------------
         return {
             totalDays: siteLogs.length,
             monthlyAvgCPH,
-            monthlyAvgITLoad,
-            monthlyAvgCoolingLoad,
-            monthlyAvgOfficeLoad,
             monthlyAvgPUE,
             monthlyAvgSEGR,
-            monthlyAvgDG1SEGR,
-            monthlyAvgDG2SEGR,
+            monthlyAvgITLoad,
+            monthlyAvgCoolingLoad,
+            monthlyAvgOfficeLoad: monthlyAvgOfficeLoad.toFixed(2),
+            totalSiteRuningLoad,
+
             totalKwh,
             totalEBKWH,
             totalSolarKWH,
             totalFuel,
             totalHrs,
             totalFilling,
-            totalDG1Kw,
-            totalDG2Kw,
-            totalDG1Filling,
-            totalDG2Filling,
+
             totalOnLoadCon,
             totalOffLoadCon,
-            totalDG1OnLoadCon,
-            totalDG2OnLoadCon,
-            totalDG1OffLoadCon,
-            totalDG2OffLoadCon,
             totalOnLoadHrs,
-            totalDG1OnLoadHrs,
-            totalDG2OnLoadHrs,
             totalOffLoadHrs,
-            totalDG1OffLoadHrs,
-            totalDG2OffLoadHrs,
-            totalHrsMin,
-            totalDG1HrsMin,
-            totalDG2HrsMin,
-            totalDG1OnLoadHrsMin,
-            totalDG2OnLoadHrsMin,
-            totalDG1OffLoadHrsMin,
-            totalDG2OffLoadHrsMin,
+            totalHrsMin: (totalHrs * 60).toFixed(0),
+
+            dgData,              // 🔥 MAIN DYNAMIC OBJECT
+            dgExternalFuel,
+
             dayTankCapacity,
             externalTankCapacity,
             tankCapacity,
-            totalSiteRuningLoad,
-            dgExternalFuel,
-            dayExDG1FuelFill: calculatedLogs.reduce((sum, cl) => sum + (cl["DG-1 External Fuel Filling"] || 0), 0),
-            dayExDG2FuelFill: calculatedLogs.reduce((sum, cl) => sum + (cl["DG-2 External Fuel Filling"] || 0), 0),
-            dayExDG3FuelFill: calculatedLogs.reduce((sum, cl) => sum + (cl["DG-3 External Fuel Filling"] || 0), 0),
-            dayExDG4FuelFill: calculatedLogs.reduce((sum, cl) => sum + (cl["DG-4 External Fuel Filling"] || 0), 0),
         };
     }
-
     // Excel export function
     function exportSiteToExcel(siteKey, siteLogs, thisConfig) {
         if (!siteLogs.length || !thisConfig) return;
@@ -661,26 +792,56 @@ const AllSitesDGLogs = ({ userData }) => {
                 const currentEBRate = ebRate[site] || 10;
 
                 // Handler for this specific site's fuel rate
-                const handleFuelChange = (e) => {
+                const handleChangeFuelRate = (e) => {
                     const newRate = Number(e.target.value);
                     setFuelRates(prev => ({ ...prev, [site]: newRate }));
                 };
 
+                // Handler for this specific site's EB rate
+                const handleChangeEBRate = (e) => {
+                    const newRate = Number(e.target.value);
+                    setEbRate(prev => ({ ...prev, [site]: newRate }));
+                };
+
                 // For DG bar
-                const availableFuel = (parseFloat(form["DG-1 Fuel Closing"] || 0) + parseFloat(form["DG-2 Fuel Closing"] || 0) + parseFloat(form["DG-3 Fuel Closing"] || 0) + parseFloat(form["DG-4 Fuel Closing"] || 0)).toFixed(2);
+                const dgCount = thisConfig.dgCount || 0;
+
+                // 🔥 Available Fuel (Dynamic DG closing)
+                const availableFuel = Array.from({ length: dgCount }, (_, i) => {
+                    const dgNo = i + 1;
+                    return parseFloat(form[`DG-${dgNo} Fuel Closing`] || 0);
+                }).reduce((a, b) => a + b, 0).toFixed(2);
+
+                // 🔥 External Fuel (Dynamic)
+                const dgExternalFuel = summary.dgExternalFuel || {};
+
+                const exAvailableFuel = Object.values(dgExternalFuel)
+                    .reduce((a, b) => a + (parseFloat(b) || 0), 0);
+
+                // 🔥 Total Fuel
+                const totalFuelAvailable = parseFloat(availableFuel) + parseFloat(exAvailableFuel);
+
+                // Tank capacity
                 const dayTankCapacity = summary.dayTankCapacity || 0;
                 const externalTankCapacity = summary.externalTankCapacity || 0;
                 const tankCapacity = summary.tankCapacity || 0;
-                const dayExDG1FuelFill = summary.dayExDG1FuelFill || 0;
-                const dayExDG2FuelFill = summary.dayExDG2FuelFill || 0;
-                const dayExDG3FuelFill = summary.dayExDG3FuelFill || 0;
-                const dayExDG4FuelFill = summary.dayExDG4FuelFill || 0;
-                const dgExternalFuel = summary.dgExternalFuel || {};
-                const exAvailableFuel = (thisConfig?.dgCount > 0 ? dayExDG1FuelFill : 0) + (thisConfig?.dgCount > 1 ? dayExDG2FuelFill : 0) + (thisConfig?.dgCount > 2 ? dayExDG3FuelFill : 0) + (thisConfig?.dgCount > 3 ? dayExDG4FuelFill : 0);
-                // const totalExternalFuelFill = dayExDG1FuelFill + dayExDG2FuelFill + dayExDG3FuelFill + dayExDG4FuelFill;
-                const totalFuelAvailable = parseFloat(availableFuel) + parseFloat(exAvailableFuel);
+
                 // Convert totalHrs to minutes
                 const totalHrsMin = ((summary.totalHrs || 0) * 60).toFixed(0);
+
+                const dgSummary = Object.entries(summary.dgData || {}).map(([dg, data]) => {
+                    const segr =
+                        data.kwh && data.onLoadCon
+                            ? (data.kwh / data.onLoadCon).toFixed(2)
+                            : 0;
+
+                    return {
+                        dg,
+                        ...data,
+                        segr,
+                        oemCph: thisConfig.designCph?.[dg] || "-"
+                    };
+                });
 
                 return (
                     <div className="chart-container" key={site}
@@ -805,66 +966,172 @@ const AllSitesDGLogs = ({ userData }) => {
                             Total Stock Capacity: <strong>{tankCapacity} Ltrs</strong>
                         </p>
 
-                        {/* D/G fuel bars */}
-                        <div>
-                            <div style={{ display: "flex", fontSize: "10px", height: "13px" }}>
-                                🛢️DG-1 :<div className="fuel-bar-container" style={{ display: "flex" }}>
-                                    <p className="fuel-bar"
-                                        style={{
-                                            width: `${(form["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100}%`,
-                                            background: `linear-gradient(to right, blue)`,
-                                            color: "white", fontSize: "7px"
-                                        }}>
-                                        ⛽ {form["DG-1 Fuel Closing"]} ltrs
-                                    </p>
-                                    <p style={{ color: "black", fontSize: "6px" }}>
-                                        /{tankCapacity / 2}ltrs.
-                                    </p>
-                                </div>
-                                <strong style={{ color: (((form["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100) < 60 ? "red" : "blue") }}>
-                                    {((form["DG-1 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%
-                                </strong>
+                        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "10px", justifyContent: "space-between" }}>
+                            <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
+                                <h4 style={{ textDecoration: "underline" }}>⛽ DG Wise Fuel Stock</h4>
+                                {Array.from({ length: thisConfig?.dgCount || 0 }).map((_, idx) => {
+                                    const dgNo = idx + 1;
+                                    const dgCNo = `DG-${dgNo}`
+
+                                    const lastFuelClosing = Number(form?.[`DG-${dgNo} Fuel Closing`] || 0);
+
+                                    const dayTank =
+                                        Number(thisConfig.dgConfigs?.[`DG-${dgNo}`]?.dayTankLtrs || 0);
+
+                                    const externalTankConfig =
+                                        Number(thisConfig.dgConfigs?.[`DG-${dgNo}`]?.externalTankLtrs || 0);
+
+                                    const externalAvailable =
+                                        Number((dgExternalFuel?.[`DG-${dgNo}`]) || 0);
+
+                                    const perDgCapacity = dayTank;
+                                    const fuelClosing = lastFuelClosing
+
+                                    const percent = perDgCapacity
+                                        ? Math.min((fuelClosing / perDgCapacity) * 100, 100)
+                                        : 0;
+                                    const exPercent = externalTankConfig
+                                        ? Math.min((externalAvailable / externalTankConfig) * 100, 100)
+                                        : 0;
+
+                                    const externalStock = dgExternalFuel?.[dgCNo] || 0;   // MAX
+                                    // const externalUsed = dgExternalUsed?.[dgCNo] || 0;  // CURRENT
+
+                                    return (
+                                        <div key={dgNo} style={{ marginBottom: "4px", display: "flex" }}>
+                                            <div>
+                                                {/* 🔹 Fuel Bar */}
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        fontSize: "10px",
+                                                        maxWidth: "240px",
+                                                        height: "14px",
+                                                    }}
+                                                >
+                                                    🛢️
+                                                    <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
+                                                        DG-{dgNo}:
+                                                    </p>
+
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            width: "120px",
+                                                            background: "#eee",
+                                                            borderRadius: "3px",
+                                                            overflow: "hidden",
+                                                        }}
+                                                    >
+                                                        <p
+                                                            style={{
+                                                                width: `${percent}%`,
+                                                                background: "linear-gradient(to right, blue)",
+                                                                color: "white",
+                                                                fontSize: "7px",
+                                                                margin: 0,
+                                                                textAlign: "center",
+                                                                whiteSpace: "nowrap",
+                                                            }}
+                                                        >
+                                                            ⛽{fuelClosing}/{perDgCapacity.toFixed(1)}L
+                                                        </p>
+                                                    </div>
+
+                                                    <strong
+                                                        style={{
+                                                            marginLeft: "4px",
+                                                            color: percent < 60 ? "red" : "blue",
+                                                        }}
+                                                    >
+                                                        {percent.toFixed(0)}%
+                                                    </strong>
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        fontSize: "10px",
+                                                        maxWidth: "240px",
+                                                        height: "14px",
+                                                    }}
+                                                >
+                                                    🛢️
+                                                    <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
+                                                        DG-{dgNo}Ex.:
+                                                    </p>
+
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            width: "120px",
+                                                            background: "#eee",
+                                                            borderRadius: "3px",
+                                                            overflow: "hidden",
+                                                        }}
+                                                    >
+                                                        <p
+                                                            style={{
+                                                                width: `${exPercent}%`,
+                                                                background: "linear-gradient(to right, blue)",
+                                                                color: "white",
+                                                                fontSize: "7px",
+                                                                margin: 0,
+                                                                textAlign: "center",
+                                                                whiteSpace: "nowrap",
+                                                            }}
+                                                        >
+                                                            ⛽{externalAvailable}/{externalTankConfig.toFixed(1)}L
+                                                        </p>
+                                                    </div>
+
+                                                    <strong
+                                                        style={{
+                                                            marginLeft: "4px",
+                                                            color: exPercent < 60 ? "red" : "blue",
+                                                        }}
+                                                    >
+                                                        {exPercent.toFixed(0)}%
+                                                    </strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+
+                                })}
                             </div>
-                            <div style={{ display: "flex", fontSize: "10px", height: "13px" }}>
-                                🛢️DG-2 :<div className="fuel-bar-container" style={{ display: "flex" }}>
-                                    <p className="fuel-bar"
-                                        style={{
-                                            width: `${(form["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100}%`,
-                                            background: `linear-gradient(to right, blue)`,
-                                            color: "white", fontSize: "7px"
-                                        }}>
-                                        ⛽ {form["DG-2 Fuel Closing"]} ltrs
+                            <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
+                                {/* Average PUE */}
+                                <p className={summary.monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
+                                    <strong>Average PUE – {summary.monthlyAvgPUE}</strong>
+                                </p>
+                                {/* Average SEGR */}
+                                <p className={(summary.totalKwh / summary.totalOnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"}>
+                                    <strong>Average SEGR – {(summary.totalKwh / summary.totalOnLoadCon).toFixed(2)}</strong>
+                                </p>
+
+                                {/* Per DG SEGR */}
+                                {dgSummary.map(dg => (
+                                    <p
+                                        key={dg.dg}
+                                        className={dg.segr < 3 ? "avg-segr low" : "avg-segr high"}
+                                        style={{ fontSize: "10px" }}
+                                    >
+                                        {dg.dg} Average SEGR – {dg.segr}
                                     </p>
-                                    <p style={{ color: "black", fontSize: "6px" }}>
-                                        /{tankCapacity / 2}ltrs.
-                                    </p>
-                                </div>
-                                <strong style={{ color: (((form["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100) < 60 ? "red" : "blue") }}>
-                                    {((form["DG-2 Fuel Closing"] / (tankCapacity / 2)) * 100).toFixed(0)}%
-                                </strong>
+                                ))}
                             </div>
                         </div>
 
                         <h4 style={{ borderTop: "3px solid #eee", textAlign: "center" }}>
                             📊 Summary – of Last {summary.totalDays} Days Logs
                         </h4>
-                        {/* Average PUE */}
-                        <p className={summary.monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
-                            <strong>Average PUE – {summary.monthlyAvgPUE}</strong>
-                        </p>
-                        {/* Average SEGR */}
-                        <p className={(summary.totalKwh / summary.totalOnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"}>
-                            <strong>Average SEGR – {(summary.totalKwh / summary.totalOnLoadCon).toFixed(2)}</strong>
-                        </p>
-                        <p className={(summary.totalDG1Kw / summary.totalDG1OnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
-                            DG-1 Average SEGR – {(summary.totalDG1Kw / summary.totalDG1OnLoadCon).toFixed(2)}
-                        </p>
-                        <p className={(summary.totalDG2Kw / summary.totalDG2OnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "10px" }} >
-                            DG-2 Average SEGR – {(summary.totalDG2Kw / summary.totalDG2OnLoadCon).toFixed(2)}
-                        </p>
+
                         {/* <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p> */}
                         <p style={{ color: "#302f74ff" }}><strong>[Total Cost (EB + DG) – ₹{fmt((summary.totalEBKWH * currentEBRate) + (summary.totalFuel * currentFuelRate))}]</strong></p>
 
+                        {/* Summary Cards */}
                         <div style={{ display: "flex", borderTop: "3px solid #eee" }}>
                             <div>
                                 <p><strong>⚡ Site Running Load – {summary.totalSiteRuningLoad} kWh</strong></p>
@@ -873,101 +1140,98 @@ const AllSitesDGLogs = ({ userData }) => {
                                 <p><strong>🏢 Avg Office Load – {summary.monthlyAvgOfficeLoad} kWh</strong></p>
                                 <p><strong>⛽ Avg DG CPH – {fmt1(summary.totalOnLoadCon / summary.totalOnLoadHrs)} Ltrs/Hrs</strong></p>
                             </div>
-                            <div style={{ fontSize: "10px" }}>
-                                <p>⛽DG-1 OEM CPH – <strong>{thisConfig.designCph?.["DG-1" || ""]}Ltrs/⏱️</strong></p>
 
-                                <p>⛽DG-2 OEM CPH – <strong>{thisConfig.designCph?.["DG-2"] || ""}Ltrs/⏱️</strong></p>
+                            {/* Per DG CPH */}
+                            <div style={{ fontSize: "10px" }}>
+                                {dgSummary.map(dg => (
+                                    <p key={dg.dg}>
+                                        ⛽{dg.dg} OEM CPH – <strong>{dg.oemCph} Ltrs/⏱️</strong>
+                                    </p>
+                                ))}
                             </div>
                         </div>
+
+                        {/* Conditional rendering based on available data */}
                         {summary.totalEBKWH > 0 && (
                             <p style={{ borderTop: "1px solid #eee" }}>Total EB Unit Generation - <strong>{fmt(summary.totalEBKWH)} Units </strong>
                                 ₹<input
                                     type="number"
                                     step="0.01"
                                     value={currentEBRate}
-                                    onChange={handleFuelChange}
+                                    onChange={handleChangeEBRate}
                                     style={{ width: "70px", marginLeft: "4px", height: "20px" }}
                                 /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "#302f74ff" }}>Cost: ₹{fmt(summary.totalEBKWH * currentEBRate)}</b></strong>
                             </p>
                         )}
+
+                        {/* If solar data exists, show solar generation summary */}
                         {summary.totalSolarKWH > 0 && (
                             <p style={{ borderTop: "1px solid #eee" }}><strong>Total Solar Unit Generation - {fmt(summary.totalSolarKWH)} Units</strong></p>
                         )}
 
+                        {/* Per DG KW */}
                         <p style={{ borderTop: "1px solid #eee" }}><strong>⚡ Total DG KW Generation – {fmt(summary.totalKwh)} kW</strong> <b style={{ fontSize: "10px", color: "#302f74ff" }}>(Cost: ₹{fmt((summary.totalFuel * currentFuelRate) / summary.totalKwh)}/Unit.)</b></p>
-                        <div style={{ display: "flex" }}>
-                            <p style={{ marginLeft: "20px" }}>
-                                • DG-1: <strong>{fmt1(summary.totalDG1Kw)} kW</strong>
-                            </p>
-                            <p style={{ marginLeft: "20px" }}>
-                                • DG-2: <strong>{fmt1(summary.totalDG2Kw)} kW</strong>
-                            </p>
+                        <div style={{ display: "flex", flexWrap: "wrap" }}>
+                            {dgSummary.map(dg => (
+                                <p key={dg.dg} style={{ marginLeft: "20px" }}>
+                                    • {dg.dg}: <strong>{fmt1(dg.kwh)} kW</strong>
+                                </p>
+                            ))}
                         </div>
+
+                        {/* Total Fuel Filling & Consumption */}
                         <p style={{ borderTop: "1px solid #eee" }}>
                             <strong>⛽ Total Fuel Filling – {fmt(summary.totalFilling)}Ltrs. x </strong>
                             ₹<input
                                 type="number"
                                 step="0.01"
                                 value={currentFuelRate}
-                                onChange={handleFuelChange}
+                                onChange={handleChangeFuelRate}
                                 style={{ width: "70px", marginLeft: "4px", height: "20px" }}
                             /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "#302f74ff" }}>Cost: ₹{fmt(summary.totalFilling * currentFuelRate)}</b></strong>
                         </p>
-                        <div style={{ display: "flex" }}>
-                            <p style={{ marginLeft: "20px" }}>
-                                • DG-1: <strong>{fmt1(summary.totalDG1Filling)} Ltrs</strong>
-                            </p>
-                            <p style={{ marginLeft: "20px" }}>
-                                • DG-2: <strong>{fmt1(summary.totalDG2Filling)} Ltrs</strong>
-                            </p>
+
+                        <div style={{ display: "flex", flexWrap: "wrap" }}>
+                            {dgSummary.map(dg => (
+                                <p key={dg.dg} style={{ marginLeft: "20px" }}>
+                                    • {dg.dg}: <strong>{fmt1(dg.filling)} Ltrs</strong>
+                                </p>
+                            ))}
                         </div>
 
+                        {/* Total Fuel Consumption */}
                         <p style={{ borderTop: "1px solid #eee" }}><strong>⛽ Total Fuel Consumption – {fmt(summary.totalFuel)}Ltrs.</strong> <b style={{ fontSize: "10px", color: "#302f74ff" }}>(Cost: ₹{fmt(summary.totalFuel * currentFuelRate)})</b></p>
-                        <div style={{ display: "flex" }}>
-                            <p style={{ marginLeft: "20px" }}>
-                                • DG-1: <strong>{fmt1(summary.totalDG1OnLoadCon + summary.totalDG1OffLoadCon)} Ltrs</strong>
-                            </p>
-                            <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                - ON Load: <strong>{fmt1(summary.totalDG1OnLoadCon)} Ltrs</strong>
-                            </p>
-                            <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                - OFF Load: <strong>{fmt1(summary.totalDG1OffLoadCon)} Ltrs</strong>
-                            </p>
-                        </div>
-                        <div style={{ display: "flex" }}>
-                            <p style={{ marginLeft: "20px" }}>
-                                • DG-2: <strong>{fmt1(summary.totalDG2OnLoadCon + summary.totalDG2OffLoadCon)} Ltrs</strong>
-                            </p>
-                            <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                - ON Load: <strong>{fmt1(summary.totalDG2OnLoadCon)} Ltrs</strong>
-                            </p>
-                            <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                - OFF Load: <strong>{fmt1(summary.totalDG2OffLoadCon)} Ltrs</strong>
-                            </p>
-                        </div>
+
+                        {dgSummary.map(dg => (
+                            <div key={dg.dg} style={{ display: "flex" }}>
+                                <p style={{ marginLeft: "20px" }}>
+                                    • {dg.dg}: <strong>{fmt1(dg.onLoadCon + dg.offLoadCon)} Ltrs</strong>
+                                </p>
+                                <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                                    - ON Load: <strong>{fmt1(dg.onLoadCon)} Ltrs</strong>
+                                </p>
+                                <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                                    - OFF Load: <strong>{fmt1(dg.offLoadCon)} Ltrs</strong>
+                                </p>
+                            </div>
+                        ))}
+
+                        {/* Total DG Run Hours */}
                         <p style={{ borderTop: "1px solid #eee" }}><strong>⏱️ Total DG Run Hours – {fmt1(summary.totalHrs)} Hour</strong> ({totalHrsMin} min)</p>
-                        <div style={{ display: "flex" }}>
-                            <p style={{ marginLeft: "20px" }}>
-                                • DG-1: <strong>{fmt1(summary.totalDG1OnLoadHrs + summary.totalDG1OffLoadHrs)} hrs</strong> ({summary.totalDG1HrsMin} min)
-                            </p>
-                            <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                - ON Load: <strong>{fmt1(summary.totalDG1OnLoadHrs)} hrs</strong> ({summary.totalDG1OnLoadHrsMin} min)
-                            </p>
-                            <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                - OFF Load: <strong>{fmt1(summary.totalDG1OffLoadHrs)} hrs</strong> ({summary.totalDG1OffLoadHrsMin} min)
-                            </p>
-                        </div>
-                        <div style={{ display: "flex" }}>
-                            <p style={{ marginLeft: "20px" }}>
-                                • DG-2: <strong>{fmt1(summary.totalDG2OnLoadHrs + summary.totalDG2OffLoadHrs)} hrs</strong> ({summary.totalDG2HrsMin} min)
-                            </p>
-                            <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                - ON Load: <strong>{fmt1(summary.totalDG2OnLoadHrs)} hrs</strong> ({summary.totalDG2OnLoadHrsMin} min)
-                            </p>
-                            <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                - OFF Load: <strong>{fmt1(summary.totalDG2OffLoadHrs)} hrs</strong> ({summary.totalDG2OffLoadHrsMin} min)
-                            </p>
-                        </div>
+
+                        {dgSummary.map(dg => (
+                            <div key={dg.dg} style={{ display: "flex" }}>
+                                <p style={{ marginLeft: "20px" }}>
+                                    • {dg.dg}: <strong>{fmt1(dg.onLoadHrs + dg.offLoadHrs)} hrs</strong>
+                                </p>
+                                <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                                    - ON Load: <strong>{fmt1(dg.onLoadHrs)} hrs</strong>
+                                </p>
+                                <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                                    - OFF Load: <strong>{fmt1(dg.offLoadHrs)} hrs</strong>
+                                </p>
+                            </div>
+                        ))}
                         {/* Add more breakdowns, load, filling, DG-1/2 metrics, etc. from your summary if desired */}
                         <div>
                             <p style={{ textAlign: "right", color: "gray", textSizeAdjust: "10px", cursor: "pointer" }} onClick={() => setPopupSite(siteKey)}>View Day-wise Details 📄</p>

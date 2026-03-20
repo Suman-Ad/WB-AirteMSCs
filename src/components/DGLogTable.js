@@ -34,10 +34,10 @@ const DGLogTable = ({ userData }) => {
   // const siteName = userData?.site;
 
   const uploadedBy = {
-    uid: userData.uid,
+    uid: userData.uid || "",
     name: userData.name || "",
-    role: userData.role,
-    empId: userData.empId,
+    role: userData.role || "",
+    empId: userData.empId || "",
   };
 
   // State for DHR Preview Modal
