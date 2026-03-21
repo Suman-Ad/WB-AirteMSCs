@@ -7,7 +7,7 @@ import "../assets/VendorEscalation.css";
 const emptyLevel = { level: "", name: "", phone: "", email: "", responseTime: "" };
 const emptyForm = { id: null, vendorName: "", category: "", logoFile: "", pmFrequency: "", escalationLevels: [] };
 
-const CATEGORY_OPTIONS = ["DG", "PAC", "SRC", "HVAC", "UPS", "SMPS", "SMPS Battery", "UPS Battery", "Fire Safety", "General", "Fuel", "Transformer, HT/LT Panel", "Non-Critical UPS", "Small Battery", "WLD", "EB", "IT", "Other"];
+const CATEGORY_OPTIONS = ["DG", "PAC", "SRC", "HVAC", "UPS", "SMPS", "SMPS Battery", "UPS Battery", "Fire Safety", "General", "Fuel", "Transformer, HT/LT Panel", "Non-Critical UPS", "ACS", "Small Battery", "WLD", "EB", "IT", "Other"];
 
 // ⏱️ Parse "30 min", "1 hr", "90" → minutes
 const parseMinutes = (val) => {
