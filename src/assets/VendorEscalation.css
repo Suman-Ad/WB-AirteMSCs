@@ -1,0 +1,383 @@
+/* ===== Page Container ===== */
+.vendor-page {
+    padding: 20px;
+    background: #f4f6f9;
+    min-height: 100vh;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ===== Header ===== */
+.vendor-header {
+    font-size: 24px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+/* ===== Top Controls ===== */
+.vendor-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.vendor-controls select,
+.vendor-controls input[type="file"] {
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fff;
+    font-size: 14px;
+}
+
+/* ===== Buttons ===== */
+.btn {
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: #fff;
+}
+
+.btn-success {
+    background: #28a745;
+    color: #fff;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: #fff;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: #fff;
+}
+
+/* ===== Form Card ===== */
+.vendor-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+}
+
+/* ===== Input Fields ===== */
+.vendor-card input,
+.vendor-card select {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    width: 100%;
+    font-size: 14px;
+}
+
+.vendor-card input:focus,
+.vendor-card select:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+/* ===== Escalation Level Box ===== */
+.level-box {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fafafa;
+    transition: 0.2s;
+}
+
+.level-box:hover {
+    border-color: #007bff;
+}
+
+/* ===== Vendor Grid ===== */
+.vendor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+/* ===== Vendor Card ===== */
+.vendor-item {
+    background: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    transition: 0.2s;
+}
+
+.vendor-item:hover {
+    transform: translateY(-3px);
+}
+
+/* ===== Vendor Header ===== */
+.vendor-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.vendor-category {
+    font-size: 12px;
+    color: #888;
+}
+
+/* ===== Level List ===== */
+.level-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 13px;
+}
+
+.level-row span:first-child {
+    font-weight: 600;
+    color: #333;
+}
+
+/* ===== Progress Bar ===== */
+.progress-bar {
+    height: 8px;
+    background: #eee;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #007bff, #00c6ff);
+    transition: width 0.3s ease;
+}
+
+/* ===== Error Box ===== */
+.error-box {
+    margin-top: 10px;
+    padding: 10px;
+    background: #ffe6e6;
+    border-left: 4px solid red;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .vendor-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* ===== Vendor List Table (Excel style) ===== */
+
+.vendor-table-wrapper {
+    margin-top: 20px;
+    background: #fff;
+    padding: 12px;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+}
+
+.vendor-table {
+    border: 1px solid #ddd;
+    font-size: 11px;
+    overflow-x: auto;
+}
+
+/* header row */
+.vendor-table-header {
+    display: grid;
+    grid-template-columns: 70px 90px 130px 90px 170px 200px repeat(4, 180px) 120px;
+    /* + actions */
+    background: #ffe1b3;
+    font-weight: 600;
+    text-align: center;
+}
+
+.vendor-table-header .col {
+    border-right: 1px solid #ddd;
+    padding: 4px 6px;
+}
+
+/* data rows */
+.vendor-row .vendor-meta {
+    display: grid;
+    grid-template-columns: 70px 90px 130px 90px 170px 200px repeat(4, 180px) 120px;
+    /* + actions */
+}
+
+.vendor-row:nth-child(odd) .vendor-meta {
+    background: #ffffff;
+}
+
+.vendor-row:nth-child(even) .vendor-meta {
+    background: #fafafa;
+}
+
+.vendor-meta .cell {
+    border-right: 1px solid #eee;
+    border-top: 1px solid #eee;
+    padding: 4px 6px;
+    vertical-align: top;
+}
+
+.vendor-meta .cell:last-child,
+.vendor-table-header .col:last-child {
+    border-right: none;
+}
+
+.vendor-name {
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.level-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+/* circle/site/equipment small tweaks */
+.cell.circle,
+.col.circle {
+    text-align: center;
+}
+
+.cell.freq,
+.col.freq {
+    text-align: center;
+}
+
+/* ===== Control bar adjustments ===== */
+.vendor-controls {
+    justify-content: flex-start;
+}
+
+.vendor-controls .file-btn {
+    display: inline-flex;
+    align-items: center;
+}
+
+/* ===== Vendor form aligned with table design ===== */
+.vendor-card-header {
+    display: grid;
+    grid-template-columns: 2fr 2fr auto;
+    gap: 12px;
+    margin-bottom: 12px;
+    align-items: end;
+}
+
+.vendor-card-header label {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.vendor-card-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* Escalation table */
+.level-table-header,
+.level-table-row {
+    display: grid;
+    grid-template-columns: 80px 1.2fr 1.1fr 1.4fr 120px 70px;
+    gap: 6px;
+    align-items: center;
+}
+
+.level-table-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 4px;
+    margin-top: 4px;
+}
+
+.level-table-row {
+    padding: 6px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.level-table-row input,
+.level-table-row select {
+    font-size: 13px;
+}
+
+.add-level-btn {
+    margin-top: 8px;
+}
+
+/* small button for delete */
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-xs {
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+.vendor-logo-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vendor-logo {
+  width: 40px;
+  height: 24px;
+  object-fit: contain;
+}
+
+
+/* responsive (stack columns a bit) */
+@media (max-width: 1024px) {
+
+    .vendor-table-header,
+    .vendor-row .vendor-meta {
+        grid-template-columns: 60px 80px 120px 80px 150px 180px repeat(4, 160px);
+    }
+}
+
+@media (max-width: 768px) {
+    .vendor-table-wrapper {
+        padding: 8px;
+    }
+
+    .vendor-table {
+        font-size: 10px;
+    }
+}
