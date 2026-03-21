@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import "../assets/VendorEscalation.css";
 
 const emptyLevel = { level: "", name: "", phone: "", email: "", responseTime: "" };
-const emptyForm = { id: null, vendorName: "", category: "", logoFile: "", escalationLevels: [] };
+const emptyForm = { id: null, vendorName: "", category: "", logoFile: "", pmFrequency: "", escalationLevels: [] };
 
 const CATEGORY_OPTIONS = ["DG", "PAC", "SRC", "HVAC", "UPS", "SMPS", "SMPS Battery", "UPS Battery", "Fire Safety", "General", "Fuel", "Transformer, HT/LT Panel", "Non-Critical UPS", "Small Battery", "WLD", "EB", "IT", "Other"];
 
@@ -49,6 +49,21 @@ const VendorEscalation = ({ userData }) => {
 
     const [isUploading, setIsUploading] = useState(false);
 
+    const makeCall = (phone) => {
+        if (!phone) return alert("No phone number available");
+        window.location.href = `tel:${phone}`;
+    };
+
+    const makeMail = (email) => {
+        if (!email) return alert("No email available");
+
+        const subject = encodeURIComponent("Support Required");
+        const body = encodeURIComponent(
+            "Dear Team,\n\nPlease support regarding the issue.\n\nThanks."
+        );
+
+        window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+    };
 
     // Fetch Sites
     useEffect(() => {
@@ -114,6 +129,7 @@ const VendorEscalation = ({ userData }) => {
             vendorName: form.vendorName,
             category: form.category || "Other",
             logoFile: form.logoFile || "",
+            pmFrequency: form.pmFrequency || "",
             escalationLevels: form.escalationLevels || [],
             updatedAt: new Date(),
         };
@@ -136,6 +152,7 @@ const VendorEscalation = ({ userData }) => {
             vendorName: vendor.vendorName || "",
             category: vendor.category || "",
             logoFile: vendor.logoFile || "",
+            pmFrequency: vendor.pmFrequency || "",
             escalationLevels: vendor.escalationLevels || [],
         });
         setIsEditing(true);
@@ -152,9 +169,9 @@ const VendorEscalation = ({ userData }) => {
     // Download Excel Template
     const downloadTemplate = () => {
         const data = [
-            ["vendorName", "category", "level", "name", "phone", "email", "responseTime"],
-            ["ABC Vendor", "DG", "L1", "John Doe", "9999999999", "john@mail.com", "30 min"],
-            ["ABC Vendor", "DG", "L2", "Manager", "8888888888", "manager@mail.com", "1 hr"],
+            ["vendorName", "category", "pmFrequency", "level", "name", "phone", "email", "responseTime"],
+            ["ABC Vendor", "DG", "Monthly", "L1", "John Doe", "9999999999", "john@mail.com", "30 min"],
+            ["ABC Vendor", "DG", "Monthly", "L2", "Manager", "8888888888", "manager@mail.com", "1 hr"],
         ];
 
         const ws = XLSX.utils.aoa_to_sheet(data);
@@ -215,6 +232,7 @@ const VendorEscalation = ({ userData }) => {
                     grouped[key] = {
                         vendorName: key,
                         category: row.category || "Other",
+                        pmFrequency: row.pmFrequency || "",
                         escalationLevels: []
                     };
                 }
@@ -222,6 +240,7 @@ const VendorEscalation = ({ userData }) => {
                 grouped[key].escalationLevels.push({
                     level: row.level || "",
                     name: row.name || "",
+                    designation: row.designation || "",
                     phone: row.phone || "",
                     email: row.email || "",
                     responseTime: row.responseTime || ""
@@ -296,8 +315,10 @@ const VendorEscalation = ({ userData }) => {
                 rows.push({
                     vendorName: v.vendorName,
                     category: v.category,
+                    pmFrequency: v.pmFrequency,
                     level: lvl.level,
                     name: lvl.name,
+                    designation: lvl.designation,
                     phone: lvl.phone,
                     email: lvl.email,
                     responseTime: lvl.responseTime
@@ -346,65 +367,163 @@ const VendorEscalation = ({ userData }) => {
                 </select>
 
                 {/* Buttons in one row – similar to Excel actions */}
-                <button className="btn btn-primary" onClick={downloadTemplate}>
-                    Download Template
-                </button>
+                {(isAdmin || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Site Supervisor") && (
+                    <div>
+                        <button className="btn btn-primary" onClick={downloadTemplate}>
+                            Download Template
+                        </button>
 
-                <label className="btn btn-secondary file-btn">
-                    Import Excel
-                    <input
-                        type="file"
-                        accept=".xlsx,.xls"
-                        onChange={handleFileUpload}
-                        style={{ display: "none" }}
-                    />
-                </label>
+                        <label className="btn btn-secondary file-btn">
+                            Import Excel
+                            <input
+                                type="file"
+                                accept=".xlsx,.xls"
+                                onChange={handleFileUpload}
+                                style={{ display: "none" }}
+                            />
+                        </label>
+                    </div>
+                )}
 
                 <button className="btn btn-info" onClick={exportToExcel}>
                     Export Vendors
                 </button>
             </div>
 
-            <div className="vendor-card">
-                <div className="vendor-card-header">
-                    <div>
-                        <label>Vendor Name</label>
-                        <input
-                            name="vendorName"
-                            value={form.vendorName}
-                            onChange={handleChange}
-                            placeholder="Vertiv, Cummins, Honeywell…"
-                        />
+            {(isAdmin || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Site Supervisor") && (
+                <div className="vendor-card">
+                    <div className="vendor-card-header">
+                        <div>
+                            <label>Vendor Name</label>
+                            <input
+                                name="vendorName"
+                                value={form.vendorName}
+                                onChange={handleChange}
+                                placeholder="Vertiv, Cummins, Honeywell…"
+                            />
+                        </div>
+
+                        {/* in vendor-card-header */}
+                        <div>
+                            <label>Logo file (from public/vendor-logos)</label>
+                            <input
+                                name="logoFile"
+                                value={form.logoFile || ""}
+                                onChange={handleChange}
+                                placeholder={`${form.logoFile || form.vendorName?.toLowerCase() || "vendor"}.png`}
+                                onFocus={() => {
+                                    if (!form.logoFile) {
+                                        const cleanName = (form.vendorName || "vendor")
+                                            .toLowerCase()
+                                            .replace(/\s+/g, "-"); // replace spaces with dash
+
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            logoFile: `${cleanName}.png`
+                                        }));
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        <div>
+                            <label>Equipment Category</label>
+                            <select
+                                name="category"
+                                value={form.category}
+                                onChange={handleChange}
+                            >
+                                <option value="">Select</option>
+                                {CATEGORY_OPTIONS.map((c) => (
+                                    <option key={c} value={c}>
+                                        {c}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label>PM Frequency</label>
+                            <select
+                                name="pmFrequency"
+                                value={form.pmFrequency}
+                                onChange={handleChange}
+                            >
+                                <option value="">Select</option>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Quarterly">Quarterly</option>
+                                <option value="Half-Yearly">Half-Yearly</option>
+                                <option value="Yearly">Yearly</option>
+                            </select>
+                        </div>
                     </div>
 
-                    {/* in vendor-card-header */}
-                    <div>
-                        <label>Logo file (from public/vendor-logos)</label>
-                        <input
-                            name="logoFile"
-                            value={form.logoFile || ""}
-                            onChange={handleChange}
-                            placeholder={`${form.logoFile || form.vendorName?.toLowerCase() || "vendor"}.png`}
-                        />
+                    {/* Escalation levels – column style like L1–L4 */}
+                    <div className="level-table-header">
+                        <span className="col-level">Level</span>
+                        <span className="col-name">Name</span>
+                        <span className="col-designation">Designation</span>
+                        <span className="col-phone">Phone</span>
+                        <span className="col-email">Email</span>
+                        <span className="col-rt">Resp. Time</span>
+                        <span className="col-actions">Action</span>
                     </div>
 
+                    {form.escalationLevels.map((lvl, idx) => (
+                        <div className="level-table-row" key={idx}>
+                            <select
+                                value={lvl.level}
+                                onChange={(e) => updateLevel(idx, "level", e.target.value)}
+                            >
+                                <option value="">Level</option>
+                                <option value="L1">L1</option>
+                                <option value="L2">L2</option>
+                                <option value="L3">L3</option>
+                                <option value="L4">L4</option>
+                            </select>
 
-                    <div>
-                        <label>Equipment Category</label>
-                        <select
-                            name="category"
-                            value={form.category}
-                            onChange={handleChange}
-                        >
-                            <option value="">Select</option>
-                            {CATEGORY_OPTIONS.map((c) => (
-                                <option key={c} value={c}>
-                                    {c}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                            <input
+                                placeholder="Name"
+                                value={lvl.name}
+                                onChange={(e) => updateLevel(idx, "name", e.target.value)}
+                            />
 
+                            <input
+                                placeholder="Designation"
+                                value={lvl.designation}
+                                onChange={(e) => updateLevel(idx, "designation", e.target.value)}
+                            />
+
+                            <input
+                                placeholder="Phone"
+                                value={lvl.phone}
+                                onChange={(e) => updateLevel(idx, "phone", e.target.value)}
+                            />
+
+                            <input
+                                placeholder="Email"
+                                value={lvl.email}
+                                onChange={(e) => updateLevel(idx, "email", e.target.value)}
+                            />
+
+                            <input
+                                placeholder="30 min / 1 hr"
+                                value={lvl.responseTime}
+                                onChange={(e) => updateLevel(idx, "responseTime", e.target.value)}
+                            />
+
+                            <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => deleteLevel(idx)}
+                            >
+                                X
+                            </button>
+                        </div>
+                    ))}
+
+                    <button className="btn btn-secondary add-level-btn" onClick={addLevel}>
+                        + Add Level
+                    </button>
                     <div className="vendor-card-actions">
                         <button className="btn btn-success" onClick={saveVendor}>
                             {isEditing ? "Update Vendor" : "Save Vendor"}
@@ -416,71 +535,11 @@ const VendorEscalation = ({ userData }) => {
                         )}
                     </div>
                 </div>
-
-                {/* Escalation levels – column style like L1–L4 */}
-                <div className="level-table-header">
-                    <span className="col-level">Level</span>
-                    <span className="col-name">Name</span>
-                    <span className="col-phone">Phone</span>
-                    <span className="col-email">Email</span>
-                    <span className="col-rt">Resp. Time</span>
-                    <span className="col-actions">Action</span>
-                </div>
-
-                {form.escalationLevels.map((lvl, idx) => (
-                    <div className="level-table-row" key={idx}>
-                        <select
-                            value={lvl.level}
-                            onChange={(e) => updateLevel(idx, "level", e.target.value)}
-                        >
-                            <option value="">Level</option>
-                            <option value="L1">L1</option>
-                            <option value="L2">L2</option>
-                            <option value="L3">L3</option>
-                            <option value="L4">L4</option>
-                        </select>
-
-                        <input
-                            placeholder="Name"
-                            value={lvl.name}
-                            onChange={(e) => updateLevel(idx, "name", e.target.value)}
-                        />
-
-                        <input
-                            placeholder="Phone"
-                            value={lvl.phone}
-                            onChange={(e) => updateLevel(idx, "phone", e.target.value)}
-                        />
-
-                        <input
-                            placeholder="Email"
-                            value={lvl.email}
-                            onChange={(e) => updateLevel(idx, "email", e.target.value)}
-                        />
-
-                        <input
-                            placeholder="30 min / 1 hr"
-                            value={lvl.responseTime}
-                            onChange={(e) => updateLevel(idx, "responseTime", e.target.value)}
-                        />
-
-                        <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => deleteLevel(idx)}
-                        >
-                            X
-                        </button>
-                    </div>
-                ))}
-
-                <button className="btn btn-secondary add-level-btn" onClick={addLevel}>
-                    + Add Level
-                </button>
-            </div>
+            )}
 
             {/* Vendor List – Excel style */}
             <div className="vendor-table-wrapper">
-                <h2 className="vendor-header">Vendor List</h2>
+                <h2 className="vendor-header">Vendor List With Escalation Levels</h2>
 
                 <div className="vendor-table">
                     <div className="vendor-table-header">
@@ -494,7 +553,9 @@ const VendorEscalation = ({ userData }) => {
                         <div className="col level">L2</div>
                         <div className="col level">L3</div>
                         <div className="col level">L4</div>
-                        <div className="col actions">Actions</div> {/* NEW */}
+                        {(isAdmin || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Site Supervisor") && (
+                            <div className="col actions">Actions</div> 
+                        )}
                     </div>
 
 
@@ -511,7 +572,7 @@ const VendorEscalation = ({ userData }) => {
                                     <div className="cell circle">{userData?.circle || "-"}</div>
                                     <div className="cell site-name">{selectedSite}</div>
                                     <div className="cell equipment">{v.category || "-"}</div>
-                                    <div className="cell freq">QTLy</div>
+                                    <div className="cell freq">{v.pmFrequency || "-"}</div>
 
                                     <div className="cell vendor">
                                         <div className="vendor-logo-name">
@@ -526,14 +587,30 @@ const VendorEscalation = ({ userData }) => {
                                         </div>
                                     </div>
 
-
-
+                                    {/* Show L1 contact in main column, rest in their respective columns */}
                                     <div className="cell customer-support">
                                         {v.escalationLevels?.[0] ? (
                                             <>
-                                                <div>{v.escalationLevels[0].name}</div>
-                                                <div>{v.escalationLevels[0].phone}</div>
-                                                <div>{v.escalationLevels[0].email}</div>
+                                                <div>👷 {v.escalationLevels[0].name}</div>
+                                                <div style={{ borderRadius: "5px", borderTop: "1px solid #070707", padding: "5px 5px" }}>✨ {v.escalationLevels[0].designation}</div>
+                                                <div style={{ borderRadius: "5px", borderTop: "1px solid #070707", padding: "5px 5px" }}>
+                                                    <span
+                                                        style={{ cursor: "pointer", color: "green" }}
+                                                        onClick={() => makeCall(v.escalationLevels[0].phone)}
+                                                    >
+                                                        📞 {v.escalationLevels[0].phone}
+                                                    </span>
+                                                </div>
+                                                <div style={{ borderRadius: "5px", borderTop: "1px solid #070707", padding: "5px 5px" }}>
+                                                    {v.escalationLevels[0].email && (
+                                                        <span
+                                                            style={{ cursor: "pointer", color: "#007bff" }}
+                                                            onClick={() => makeMail(v.escalationLevels[0].email)}
+                                                        >
+                                                            📧 {v.escalationLevels[0].email}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </>
                                         ) : (
                                             <span>-</span>
@@ -545,27 +622,44 @@ const VendorEscalation = ({ userData }) => {
                                         return (
                                             <div className="cell level" key={key}>
                                                 <div className="level-title">{key}</div>
-                                                <div>{lvl.name || "-"}</div>
-                                                <div>{lvl.phone}</div>
-                                                <div>{lvl.email}</div>
+                                                <div style={{ borderRadius: "5px", borderTop: "1px solid #070707", padding: "5px 5px", fontWeight: "bold" }}>👷 {lvl.name || "-"}</div>
+                                                <div style={{ borderRadius: "5px", borderTop: "1px solid #070707", padding: "5px 5px" }}>✨ {lvl.designation || "-"}</div>
+                                                <div style={{ borderRadius: "5px", borderTop: "1px solid #070707" }}><span
+                                                    style={{ cursor: "pointer", color: "green" }}
+                                                    onClick={() => makeCall(v.escalationLevels[0].phone)}
+                                                >
+                                                    📞 {lvl.phone}
+                                                </span></div>
+                                                <div style={{ borderRadius: "5px", borderTop: "1px solid #070707", padding: "5px 5px" }}>
+                                                    {lvl.email && (
+                                                        <span
+                                                            style={{ cursor: "pointer", color: "#007bff" }}
+                                                            onClick={() => makeMail(lvl.email)}
+                                                        >
+                                                            📧 {lvl.email}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         );
                                     })}
                                     {/* Actions cell – per row */}
-                                    <div className="cell actions-cell">
-                                        <button
-                                            className="btn btn-info btn-xs"
-                                            onClick={() => editVendor(v)}
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            className="btn btn-danger btn-xs"
-                                            onClick={() => deleteVendor(v.id)}
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
+                                    {(isAdmin || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Site Supervisor") && (
+                                        <div className="cell actions-cell">
+                                            <button
+                                                className="btn btn-info btn-xs"
+                                                onClick={() => editVendor(v)}
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                className="btn btn-danger btn-xs"
+                                                onClick={() => deleteVendor(v.id)}
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                             </div>

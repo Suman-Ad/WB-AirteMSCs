@@ -181,14 +181,6 @@
     font-size: 13px;
 }
 
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-    .vendor-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-}
-
 /* ===== Vendor List Table (Excel style) ===== */
 
 .vendor-table-wrapper {
@@ -203,6 +195,7 @@
     border: 1px solid #ddd;
     font-size: 11px;
     overflow-x: auto;
+    scrollbar-width: thin;
 }
 
 /* header row */
@@ -237,7 +230,7 @@
 
 .vendor-meta .cell {
     border-right: 1px solid #eee;
-    border-top: 1px solid #eee;
+    border-top: 1px solid #000000;
     padding: 4px 6px;
     vertical-align: top;
 }
@@ -255,6 +248,7 @@
 .level-title {
     font-weight: 600;
     margin-bottom: 2px;
+    font-weight: bold;
 }
 
 /* circle/site/equipment small tweaks */
@@ -339,45 +333,70 @@
 }
 
 .actions-cell {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  align-items: center;
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
 }
 
 .btn-xs {
-  padding: 3px 8px;
-  font-size: 10px;
+    padding: 3px 8px;
+    font-size: 10px;
 }
 
 .vendor-logo-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .vendor-logo {
-  width: 40px;
-  height: 24px;
-  object-fit: contain;
+    width: 40px;
+    height: 24px;
+    object-fit: contain;
 }
 
 
 /* responsive (stack columns a bit) */
 @media (max-width: 1024px) {
 
-    .vendor-table-header,
+    .vendor-table-header {
+        display: grid;
+        grid-template-columns: 70px 90px 130px 90px 170px 200px repeat(4, 180px) 120px;
+        /* + actions */
+        background: #ffe1b3;
+        font-weight: 600;
+        text-align: center;
+
+    }
+
     .vendor-row .vendor-meta {
-        grid-template-columns: 60px 80px 120px 80px 150px 180px repeat(4, 160px);
+        display: grid;
+        grid-template-columns: 70px 90px 130px 90px 170px 200px repeat(4, 180px) 120px;
+        /* + actions */
+    }
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .vendor-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 15px;
     }
 }
 
 @media (max-width: 768px) {
     .vendor-table-wrapper {
         padding: 8px;
+        scrollbar-width: thin;
     }
 
     .vendor-table {
         font-size: 10px;
+        scrollbar-width: thin;
+
     }
 }
