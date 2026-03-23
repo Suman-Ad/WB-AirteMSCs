@@ -199,14 +199,15 @@ const DailyDGLog = ({ userData }) => {
   }, [siteName, selectedMonth]);
 
   const uploadedBy = {
-        uid: userData.uid,
-        name: userData.name || "",
-        role: userData.role || "",
-        empId: userData.empId || "",
-    };
+    uid: userData.uid | "",
+    name: userData.name || "",
+    role: userData.role || "",
+    empId: userData.empId || "",
+  };
 
   const [logs, setLogs] = useState([]);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [entryUpdate, setEntryUpdate] = useState(false);
   const [totalkW, setTotalkW] = useState([]);
   const [fuelAlert, setFuelAlert] = useState(false);
   const [dayLogs, setDayLogs] = useState();
@@ -1362,7 +1363,12 @@ const DailyDGLog = ({ userData }) => {
     const monthKey = selectedMonth;
     const docRef = doc(db, "dailyDGLogs", siteName, monthKey, form.Date);
 
-    await setDoc(docRef, { ...form, updatedBy: uploadedBy, updatedAt: serverTimestamp() }, { merge: true });
+    {entryUpdate ? (
+        await setDoc(docRef, { ...form, updatedBy: uploadedBy, updatedAt: serverTimestamp() }, { merge: true })
+      ) : (
+        await setDoc(docRef, { ...form, entryBy: uploadedBy, updatedAt: serverTimestamp() }, { merge: true })
+      )
+    }
 
     setForm({ Date: nextDate });
     setSelectedMonth(nextDate.slice(0, 7));
@@ -3075,21 +3081,21 @@ const DailyDGLog = ({ userData }) => {
             })}
 
             {/* Last update info */}
-            {(userData?.role === "Super Admin" ||
+            {/* {(userData?.role === "Super Admin" ||
               userData?.role === "Admin" ||
               userData?.role === "Super User") &&
               (() => {
                 const entry = logs.find((e) => e.Date === form.Date);
                 return entry ? (
                   <p style={{ fontSize: 12, color: "#666" }}>
-                    Last Update By: <strong>{entry.updatedBy}</strong>{" "}
+                    Last Update By: <strong>{entry.updatedBy?.name}</strong>{" "}
                     {entry.updatedAt && (typeof entry.updatedAt.toDate === 'function'
                       ? entry.updatedAt.toDate().toLocaleString()
                       : new Date(entry.updatedAt).toLocaleString())}
                   </p>
                 ) : null;
               })()
-            }
+            } */}
           </div>
         );
       })()}
@@ -3164,7 +3170,7 @@ const DailyDGLog = ({ userData }) => {
           <div className="modal-overlay" style={{ overflowY: "auto", width: "inherit" }}>
             <div className="modal-content">
               <h1 onClick={(() => setShowEditModal(false))} className="pm-manage-btn" style={{ position: "sticky", top: "0", zIndex: "2" }}>X</h1>
-              <p>View & Edit</p>
+              <p>{entryUpdate ? "Update Entry" : "View & Edit Entry"}</p>
               <div>
                 Selected Date: <strong style={{ color: "blue" }}>
                   {form.Date}
@@ -3239,7 +3245,7 @@ const DailyDGLog = ({ userData }) => {
                   );
                 })}
 
-                <button className="submit-btn" type="submit">Save Entry</button>
+                <button className="submit-btn" type="submit">{entryUpdate ? "Update Entry" : "Save Entry"}</button>
               </form>
             </div>
           </div>
@@ -3743,6 +3749,7 @@ const DailyDGLog = ({ userData }) => {
               {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM") && (
                 <th>Actions</th>
               )}
+              <th>Entry By</th>
               <th>Update By</th>
               <th>ℹ️</th>
             </tr>
@@ -3768,7 +3775,7 @@ const DailyDGLog = ({ userData }) => {
               }
 
               return (
-                <tr key={entry.id} className={rowClass} onClick={() => { setForm(entry); setShowEditModal(true); }}>
+                <tr key={entry.id} className={rowClass} onClick={() => { setForm(entry); setShowEditModal(true); setEntryUpdate(true)}}>
 
                   {/* Merge Site Name and ID for all rows */}
                   {showSiteInfo && (
@@ -3874,9 +3881,14 @@ const DailyDGLog = ({ userData }) => {
                     </td>
                   )}
                   <td>
-                    <strong>{entry.updatedBy.name ? entry.updatedBy.name : entry.updatedBy}</strong>
-                        <br />
-                        <small style={{ color: "#666" }}>{entry.updatedBy.empId}</small>
+                    <strong>{entry.entryBy?.name ? entry.entryBy?.name : ""}</strong>
+                    <br />
+                    <small style={{ color: "#666" }}>{(entry?.entryBy?.empId ? entry?.entryBy?.empId : "")}</small>
+                  </td>
+                  <td>
+                    <strong>{entry.updatedBy?.name ? entry.updatedBy?.name : ""}</strong>
+                    <br />
+                    <small style={{ color: "#666" }}>{(entry.updatedBy?.empId || "")}</small>
                   </td>
                 </tr>
               );
