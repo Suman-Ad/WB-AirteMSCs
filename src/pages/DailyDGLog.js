@@ -198,6 +198,13 @@ const DailyDGLog = ({ userData }) => {
     }
   }, [siteName, selectedMonth]);
 
+  const uploadedBy = {
+        uid: userData.uid,
+        name: userData.name || "",
+        role: userData.role || "",
+        empId: userData.empId || "",
+    };
+
   const [logs, setLogs] = useState([]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [totalkW, setTotalkW] = useState([]);
@@ -1355,7 +1362,7 @@ const DailyDGLog = ({ userData }) => {
     const monthKey = selectedMonth;
     const docRef = doc(db, "dailyDGLogs", siteName, monthKey, form.Date);
 
-    await setDoc(docRef, { ...form, updatedBy: userData?.name, updatedAt: serverTimestamp() }, { merge: true });
+    await setDoc(docRef, { ...form, updatedBy: uploadedBy, updatedAt: serverTimestamp() }, { merge: true });
 
     setForm({ Date: nextDate });
     setSelectedMonth(nextDate.slice(0, 7));
@@ -2497,7 +2504,7 @@ const DailyDGLog = ({ userData }) => {
               </h1>
               <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}><strong>⛽Present Stock – {totalFuelAvailable} ltrs. </strong></h1>
               <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
-              
+
               {/* ✅ Split Fuel Level Bar */}
               <div style={{ display: "flex", alignItems: "center", marginTop: "6px", fontSize: "18px" }}>
                 🛢️
@@ -2568,7 +2575,7 @@ const DailyDGLog = ({ userData }) => {
               </div>
 
               <p style={{ fontSize: "10px", textAlign: "left", color: "#5c3c6ece" }}>Total Stock Capacity (Day Tank: {dayTankCapacity}L + External Tank: {externalTankCapacity}L) : <strong>{tankCapacity}Ltrs.</strong></p>
-              
+
               {/* 🔹 Individual DG Fuel Bars */}
               {Array.from({ length: siteConfig?.dgCount || 0 }).map((_, idx) => {
                 const dgNo = idx + 1;
@@ -2649,53 +2656,55 @@ const DailyDGLog = ({ userData }) => {
                           {percent.toFixed(0)}%
                         </strong>
                       </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          fontSize: "10px",
-                          maxWidth: "240px",
-                          height: "14px",
-                        }}
-                      >
-                        🛢️
-                        <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
-                          DG-{dgNo}Ex.:
-                        </p>
-
+                      {externalTankConfig > 0 && (
                         <div
                           style={{
                             display: "flex",
-                            width: "120px",
-                            background: "#eee",
-                            borderRadius: "3px",
-                            overflow: "hidden",
+                            alignItems: "center",
+                            fontSize: "10px",
+                            maxWidth: "240px",
+                            height: "14px",
                           }}
                         >
-                          <p
+                          🛢️
+                          <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
+                            DG-{dgNo}Ex.:
+                          </p>
+
+                          <div
                             style={{
-                              width: `${exPercent}%`,
-                              background: "linear-gradient(to right, blue)",
-                              color: "white",
-                              fontSize: "7px",
-                              margin: 0,
-                              textAlign: "center",
-                              whiteSpace: "nowrap",
+                              display: "flex",
+                              width: "120px",
+                              background: "#eee",
+                              borderRadius: "3px",
+                              overflow: "hidden",
                             }}
                           >
-                            ⛽{externalAvailable}/{externalTankConfig.toFixed(1)}L
-                          </p>
-                        </div>
+                            <p
+                              style={{
+                                width: `${exPercent}%`,
+                                background: "linear-gradient(to right, blue)",
+                                color: "white",
+                                fontSize: "7px",
+                                margin: 0,
+                                textAlign: "center",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              ⛽{externalAvailable}/{externalTankConfig.toFixed(1)}L
+                            </p>
+                          </div>
 
-                        <strong
-                          style={{
-                            marginLeft: "4px",
-                            color: exPercent < 60 ? "red" : "blue",
-                          }}
-                        >
-                          {exPercent.toFixed(0)}%
-                        </strong>
-                      </div>
+                          <strong
+                            style={{
+                              marginLeft: "4px",
+                              color: exPercent < 60 ? "red" : "blue",
+                            }}
+                          >
+                            {exPercent.toFixed(0)}%
+                          </strong>
+                        </div>
+                      )}
                     </div>
 
                     {/* 🔹 External Fuel Input */}
@@ -2801,10 +2810,14 @@ const DailyDGLog = ({ userData }) => {
                     {renderDGWise(dayDGFuelFill)}
                   </p>
 
-                  <strong>Ex.🛢️: {dayExFuelFill} ltrs.</strong>
-                  <p style={{ fontSize: "9px" }}>
-                    Ex. {renderDGWise(dayExDGFuelFill)}
-                  </p>
+                  {externalTankCapacity > 0 && (
+                    <div>
+                      <strong>Ex.🛢️: {dayExFuelFill} ltrs.</strong>
+                      <p style={{ fontSize: "9px" }}>
+                        Ex. {renderDGWise(dayExDGFuelFill)}
+                      </p>
+                    </div>
+                  )}
                 </p>
 
                 {/* 🔹 Yesterday Units */}
@@ -3730,6 +3743,7 @@ const DailyDGLog = ({ userData }) => {
               {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM") && (
                 <th>Actions</th>
               )}
+              <th>Update By</th>
               <th>ℹ️</th>
             </tr>
           </thead>
@@ -3859,6 +3873,11 @@ const DailyDGLog = ({ userData }) => {
                       </button>
                     </td>
                   )}
+                  <td>
+                    <strong>{entry.updatedBy.name ? entry.updatedBy.name : entry.updatedBy}</strong>
+                        <br />
+                        <small style={{ color: "#666" }}>{entry.updatedBy.empId}</small>
+                  </td>
                 </tr>
               );
             })}

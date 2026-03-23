@@ -26,6 +26,15 @@ const AllSitesDGLogs = ({ userData }) => {
     const [showOnlyDG, setShowOnlyDG] = useState(false);
     const [dgLogs, setDgLogs] = useState([]);
     const todayKey = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const [collaps, setCollaps] = useState({})
+
+    const toggleSite = (siteName) => {
+        setCollaps((prev) => ({
+            ...prev,
+            [siteName]: !prev[siteName],
+        }));
+    };
+
     const todayDGLogs = dgLogs.filter(
         log => log.date === todayKey
     );
@@ -248,7 +257,11 @@ const AllSitesDGLogs = ({ userData }) => {
             const offLoadCon = sum(calculatedLogs, `${dgKey} OFF Load Consumption`);
             const onLoadHrs = sum(calculatedLogs, `${dgKey} ON Load Hour`);
             const offLoadHrs = sum(calculatedLogs, `${dgKey} OFF Load Hour`);
-            const externalFuel = sum(calculatedLogs, `${dgKey} External Fuel Filling`);
+            // const externalFuel = calculatedLogs.map(cl => (getVal(cl[`${dgKey} External Fuel Stock`])));
+            // const externalFuel = sum(calculatedLogs, `${dgKey} External Fuel Filling`);
+            const externalFuel = getVal(
+                calculatedLogs[calculatedLogs.length - 1]?.[`${dgKey} External Fuel Stock`]
+            );
 
             dgData[dgKey] = {
                 kwh,
@@ -710,29 +723,80 @@ const AllSitesDGLogs = ({ userData }) => {
                                 powerSource === "DG"
                                     ? "#fee2e2"
                                     : "",
+                            display: "grid"
                         }}
                     >
 
-                        <span
+                        <button
                             style={{
-                                marginLeft: "8px",
-                                padding: "2px 10px",
-                                borderRadius: "6px",
-                                fontSize: "12px",
-                                fontWeight: "600",
-                                color: "#fff",
-                                background:
-                                    powerSource === "DG"
-                                        ? "#dc2626"
-                                        : powerSource === "EB"
-                                            ? "#16a34a"
-                                            : "#6b7280",
-                            }}
-                        >
-                            Site Live On:- <strong>{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
-                        </span>
+                                background: collaps[site] ? "#a75555" : "",
 
-                        {/* {fuelConsumptionBySiteDG[site] &&
+                            }}
+                            onClick={() => toggleSite(site)}
+                        >
+                            <strong
+                                style={{
+                                    background: collaps[site] ? "" : "#7ca9e49d",
+                                    padding: collaps[site] ? "" : "10px 10px",
+                                    borderRadius:"5px",
+                                    // height: "100%",
+                                    // justifyContent: "center"                             
+                                }}
+                            >
+                                {collaps[site] ? "▶ Collaps" : `${site} MSC ▼`}
+                            </strong> :
+                            {collaps[site] ? (
+                                ""
+                            ) : (
+                                <div>
+                                    <span
+                                        style={{
+                                            marginLeft: "8px",
+                                            padding: "2px 10px",
+                                            borderRadius: "6px",
+                                            fontSize: "12px",
+                                            fontWeight: "600",
+                                            color: "#fff",
+                                            background:
+                                                powerSource === "DG"
+                                                    ? "#dc2626"
+                                                    : powerSource === "EB"
+                                                        ? "#16a34a"
+                                                        : "#6b7280",
+                                        }}
+                                    >
+                                        Site Live On:- <strong>{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
+                                    </span>
+                                    <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>||
+                                    <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong>||
+                                    <strong>⚡ Site Running Load – {summary.totalSiteRuningLoad} kWh</strong>
+                                </div>
+                            )}
+                        </button>
+
+                        {collaps[site] && (
+
+                            <div>
+                                <span
+                                    style={{
+                                        marginLeft: "8px",
+                                        padding: "2px 10px",
+                                        borderRadius: "6px",
+                                        fontSize: "12px",
+                                        fontWeight: "600",
+                                        color: "#fff",
+                                        background:
+                                            powerSource === "DG"
+                                                ? "#dc2626"
+                                                : powerSource === "EB"
+                                                    ? "#16a34a"
+                                                    : "#6b7280",
+                                    }}
+                                >
+                                    Site Live On:- <strong>{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
+                                </span>
+
+                                {/* {fuelConsumptionBySiteDG[site] &&
                             Object.entries(fuelConsumptionBySiteDG[site]).map(
                                 ([dg, data]) => (
                                     <div key={dg} style={{ display:"flex"}}>
@@ -746,361 +810,368 @@ const AllSitesDGLogs = ({ userData }) => {
                                     </div>
                                 )
                             )} */}
-                        {/* Fuel, load, backups */}
-                        <h2 style={{ color: powerSource == "DG" ? "RED" : "", fontWeight: "bold" }}>{site} MSC</h2>
-                        <h1 style={{ fontSize: "20px", color: "green", textAlign: "left" }}>
-                            <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>
-                        </h1>
-                        <h1 style={((totalFuelAvailable) / summary.monthlyAvgCPH) < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong></h1>
+                                {/* Fuel, load, backups */}
+                                <h2 style={{ color: powerSource == "DG" ? "RED" : "", fontWeight: "bold" }}>{site} MSC</h2>
+                                <h1 style={{ fontSize: "20px", color: "green", textAlign: "left" }}>
+                                    <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>
+                                </h1>
+                                <h1 style={((totalFuelAvailable) / summary.monthlyAvgCPH) < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong></h1>
 
-                        {/* ✅ Split Fuel Level Bar */}
-                        <div style={{ display: "flex", alignItems: "center", marginTop: "6px", fontSize: "18px" }}>
-                            🛢️
-                            <div
-                                className="fuel-bar-container"
-                                style={{
-                                    display: "flex",
-                                    width: `${(tankCapacity) * 100}%`,
-                                    height: "22px",
-                                    background: "#eee",
-                                    borderRadius: "4px",
-                                    overflow: "hidden",
-                                    marginLeft: "4px",
-                                }}
-                            >
-                                {/* 🔴 Day Tank */}
-                                <div
-                                    style={{
-                                        width: `${(dayTankCapacity / tankCapacity) * 100}%`,
-                                        background: "#f5c6c6",
-                                        position: "relative",
-                                        whiteSpace: "nowrap"
-                                    }}
-                                >
-                                    <p
-                                        // className="fuel-bar"
+                                {/* ✅ Split Fuel Level Bar */}
+                                <div style={{ display: "flex", alignItems: "center", marginTop: "6px", fontSize: "18px" }}>
+                                    🛢️
+                                    <div
+                                        className="fuel-bar-container"
                                         style={{
-                                            width: `${((availableFuel - todayFuelUsed) / dayTankCapacity) * 100 || 0}%`,
-                                            height: "100%",
-                                            background: "linear-gradient(to right, red, orange, green)",
-                                            fontSize: "10px",
-                                            alignContent: "center"
+                                            display: "flex",
+                                            width: `${(tankCapacity) * 100}%`,
+                                            height: "22px",
+                                            background: "#eee",
+                                            borderRadius: "4px",
+                                            overflow: "hidden",
+                                            marginLeft: "4px",
                                         }}
                                     >
-                                        ⛽{(availableFuel - todayFuelUsed) || 0}/{dayTankCapacity || 0}L
-                                    </p>
+                                        {/* 🔴 Day Tank */}
+                                        <div
+                                            style={{
+                                                width: `${(dayTankCapacity / tankCapacity) * 100}%`,
+                                                background: "#f5c6c6",
+                                                position: "relative",
+                                                whiteSpace: "nowrap"
+                                            }}
+                                        >
+                                            <p
+                                                // className="fuel-bar"
+                                                style={{
+                                                    width: `${((availableFuel - todayFuelUsed) / dayTankCapacity) * 100 || 0}%`,
+                                                    height: "100%",
+                                                    background: "linear-gradient(to right, red, orange, green)",
+                                                    fontSize: "10px",
+                                                    alignContent: "center"
+                                                }}
+                                            >
+                                                ⛽{(availableFuel - todayFuelUsed) || 0}/{dayTankCapacity || 0}L
+                                            </p>
 
-                                </div>
-
-                                {/* 🔵 External Tank */}
-                                <div
-                                    style={{
-                                        width: `${(externalTankCapacity / tankCapacity) * 100}%`,
-                                        background: "#cce5ff",
-                                        position: "relative",
-                                        borderLeft: "2px solid black",
-                                        whiteSpace: "nowrap",
-                                        color: (dgExternalFuel?.["DG-1"] + dgExternalFuel?.["DG-2"] + dgExternalFuel?.["DG-3"]) > 0 ? "white" : "black",
-                                    }}
-                                >
-                                    <p
-                                        style={{
-                                            width: `${(((((thisConfig?.dgCount > 0 ? dgExternalFuel?.["DG-1"] : 0) + (thisConfig?.dgCount > 1 ? dgExternalFuel?.["DG-2"] : 0) + (thisConfig?.dgCount > 2 ? dgExternalFuel?.["DG-3"] : 0) + (thisConfig?.dgCount > 3 ? dgExternalFuel?.["DG-4"] : 0)) || 0)) / externalTankCapacity) * 100 || 0}%`,
-                                            height: "100%",
-                                            background: "linear-gradient(to right, blue, green)",
-                                            fontSize: "8px",
-                                            alignContent: "center"
-                                        }}
-                                    >
-                                        ⛽{((((thisConfig?.dgCount > 0 ? dgExternalFuel?.["DG-1"] : 0) + (thisConfig?.dgCount > 1 ? dgExternalFuel?.["DG-2"] : 0) + (thisConfig?.dgCount > 2 ? dgExternalFuel?.["DG-3"] : 0) + (thisConfig?.dgCount > 3 ? dgExternalFuel?.["DG-4"] : 0)) || 0)) || 0}/{externalTankCapacity || 0}L
-                                    </p>
-                                </div>
-                            </div>
-                            <strong style={((totalFuelAvailable / tankCapacity) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((totalFuelAvailable / tankCapacity) * 100).toFixed(0)}%</strong>
-                        </div>
-                        <p style={{ fontSize: "10px", textAlign: "left", color: "#5c3c6ece" }}>
-                            Total Stock Capacity: <strong>{tankCapacity} Ltrs</strong>
-                        </p>
-
-                        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "10px", justifyContent: "space-between" }}>
-                            <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
-                                <h4 style={{ textDecoration: "underline" }}>⛽ DG Wise Fuel Stock</h4>
-                                {Array.from({ length: thisConfig?.dgCount || 0 }).map((_, idx) => {
-                                    const dgNo = idx + 1;
-                                    const dgCNo = `DG-${dgNo}`
-
-                                    const lastFuelClosing = Number(form?.[`DG-${dgNo} Fuel Closing`] || 0);
-
-                                    const dayTank =
-                                        Number(thisConfig.dgConfigs?.[`DG-${dgNo}`]?.dayTankLtrs || 0);
-
-                                    const externalTankConfig =
-                                        Number(thisConfig.dgConfigs?.[`DG-${dgNo}`]?.externalTankLtrs || 0);
-
-                                    const dgExternalUsed =
-                                        fuelConsumptionBySiteDG[siteKey]?.[`DG-${dgNo}`]?.fuel || 0;
-
-                                    const externalAvailable =
-                                        Math.max((dgExternalFuel?.[`DG-${dgNo}`] || 0) - dgExternalUsed, 0);
-
-                                    const perDgCapacity = dayTank;
-                                    const dgTodayUsed =
-                                        fuelConsumptionBySiteDG[siteKey]?.[`DG-${dgNo}`]?.fuel || 0;
-
-                                    const fuelClosing = Math.max(lastFuelClosing - dgTodayUsed, 0);
-
-                                    const percent = perDgCapacity
-                                        ? Math.min((fuelClosing / perDgCapacity) * 100, 100)
-                                        : 0;
-                                    const exPercent = externalTankConfig
-                                        ? Math.min((externalAvailable / externalTankConfig) * 100, 100)
-                                        : 0;
-
-                                    const externalStock = dgExternalFuel?.[dgCNo] || 0;   // MAX
-                                    // const externalUsed = dgExternalUsed?.[dgCNo] || 0;  // CURRENT
-
-                                    return (
-                                        <div key={dgNo} style={{ marginBottom: "4px", display: "flex" }}>
-                                            <div>
-                                                {/* 🔹 Fuel Bar */}
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        fontSize: "10px",
-                                                        maxWidth: "240px",
-                                                        height: "14px",
-                                                    }}
-                                                >
-                                                    🛢️
-                                                    <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
-                                                        DG-{dgNo}:
-                                                    </p>
-
-                                                    <div
-                                                        style={{
-                                                            display: "flex",
-                                                            width: "120px",
-                                                            background: "#eee",
-                                                            borderRadius: "3px",
-                                                            overflow: "hidden",
-                                                        }}
-                                                    >
-                                                        <p
-                                                            style={{
-                                                                width: `${percent}%`,
-                                                                background: "linear-gradient(to right, blue)",
-                                                                color: "white",
-                                                                fontSize: "7px",
-                                                                margin: 0,
-                                                                textAlign: "center",
-                                                                whiteSpace: "nowrap",
-                                                            }}
-                                                        >
-                                                            ⛽{fuelClosing}/{perDgCapacity.toFixed(1)}L
-                                                            <small style={{ color: "red" }}>
-                                                                🔻 Used Today: {dgTodayUsed.toFixed(2)}L
-                                                            </small>
-                                                        </p>
-                                                    </div>
-
-                                                    <strong
-                                                        style={{
-                                                            marginLeft: "4px",
-                                                            color: percent < 60 ? "red" : "blue",
-                                                        }}
-                                                    >
-                                                        {percent.toFixed(0)}%
-                                                    </strong>
-                                                </div>
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        fontSize: "10px",
-                                                        maxWidth: "240px",
-                                                        height: "14px",
-                                                    }}
-                                                >
-                                                    🛢️
-                                                    <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
-                                                        DG-{dgNo}Ex.:
-                                                    </p>
-
-                                                    <div
-                                                        style={{
-                                                            display: "flex",
-                                                            width: "120px",
-                                                            background: "#eee",
-                                                            borderRadius: "3px",
-                                                            overflow: "hidden",
-                                                        }}
-                                                    >
-                                                        <p
-                                                            style={{
-                                                                width: `${exPercent}%`,
-                                                                background: "linear-gradient(to right, blue)",
-                                                                color: "white",
-                                                                fontSize: "7px",
-                                                                margin: 0,
-                                                                textAlign: "center",
-                                                                whiteSpace: "nowrap",
-                                                            }}
-                                                        >
-                                                            ⛽{externalAvailable}/{externalTankConfig.toFixed(1)}L
-                                                        </p>
-                                                    </div>
-
-                                                    <strong
-                                                        style={{
-                                                            marginLeft: "4px",
-                                                            color: exPercent < 60 ? "red" : "blue",
-                                                        }}
-                                                    >
-                                                        {exPercent.toFixed(0)}%
-                                                    </strong>
-                                                </div>
-                                            </div>
                                         </div>
-                                    );
 
-                                })}
-                            </div>
-                            <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
-                                {/* Average PUE */}
-                                <p className={summary.monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
-                                    <strong>Average PUE – {summary.monthlyAvgPUE}</strong>
+                                        {/* 🔵 External Tank */}
+                                        <div
+                                            style={{
+                                                width: `${(externalTankCapacity / tankCapacity) * 100}%`,
+                                                background: "#cce5ff",
+                                                position: "relative",
+                                                borderLeft: "2px solid black",
+                                                whiteSpace: "nowrap",
+                                                color: (dgExternalFuel?.["DG-1"] + dgExternalFuel?.["DG-2"] + dgExternalFuel?.["DG-3"]) > 0 ? "white" : "black",
+                                            }}
+                                        >
+                                            <p
+                                                style={{
+                                                    width: `${(((((thisConfig?.dgCount > 0 ? dgExternalFuel?.["DG-1"] : 0) + (thisConfig?.dgCount > 1 ? dgExternalFuel?.["DG-2"] : 0) + (thisConfig?.dgCount > 2 ? dgExternalFuel?.["DG-3"] : 0) + (thisConfig?.dgCount > 3 ? dgExternalFuel?.["DG-4"] : 0)) || 0)) / externalTankCapacity) * 100 || 0}%`,
+                                                    height: "100%",
+                                                    background: "linear-gradient(to right, blue, green)",
+                                                    fontSize: "8px",
+                                                    alignContent: "center"
+                                                }}
+                                            >
+                                                ⛽{((((thisConfig?.dgCount > 0 ? dgExternalFuel?.["DG-1"] : 0) + (thisConfig?.dgCount > 1 ? dgExternalFuel?.["DG-2"] : 0) + (thisConfig?.dgCount > 2 ? dgExternalFuel?.["DG-3"] : 0) + (thisConfig?.dgCount > 3 ? dgExternalFuel?.["DG-4"] : 0)) || 0)) || 0}/{externalTankCapacity || 0}L
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <strong style={((totalFuelAvailable / tankCapacity) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((totalFuelAvailable / tankCapacity) * 100).toFixed(0)}%</strong>
+                                </div>
+                                <p style={{ fontSize: "10px", textAlign: "left", color: "#5c3c6ece" }}>
+                                    Total Stock Capacity: <strong>{tankCapacity} Ltrs</strong>
                                 </p>
-                                {/* Average SEGR */}
-                                <p className={(summary.totalKwh / summary.totalOnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"}>
-                                    <strong>Average SEGR – {(summary.totalKwh / summary.totalOnLoadCon).toFixed(2)}</strong>
+
+                                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "10px", justifyContent: "space-between" }}>
+                                    <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
+                                        <h4 style={{ textDecoration: "underline" }}>⛽ DG Wise Fuel Stock</h4>
+                                        {Array.from({ length: thisConfig?.dgCount || 0 }).map((_, idx) => {
+                                            const dgNo = idx + 1;
+                                            const dgCNo = `DG-${dgNo}`
+
+                                            const lastFuelClosing = Number(form?.[`DG-${dgNo} Fuel Closing`] || 0);
+
+                                            const dayTank =
+                                                Number(thisConfig.dgConfigs?.[`DG-${dgNo}`]?.dayTankLtrs || 0);
+
+                                            const externalTankConfig =
+                                                Number(thisConfig.dgConfigs?.[`DG-${dgNo}`]?.externalTankLtrs || 0);
+
+                                            const dgExternalUsed =
+                                                fuelConsumptionBySiteDG[siteKey]?.[`DG-${dgNo}`]?.fuel || 0;
+
+                                            const externalAvailable =
+                                                Math.max((dgExternalFuel?.[`DG-${dgNo}`] || 0));
+
+                                            const perDgCapacity = dayTank;
+                                            const dgTodayUsed =
+                                                fuelConsumptionBySiteDG[siteKey]?.[`DG-${dgNo}`]?.fuel || 0;
+
+                                            const fuelClosing = Math.max(lastFuelClosing - dgTodayUsed, 0);
+
+                                            const percent = perDgCapacity
+                                                ? Math.min((fuelClosing / perDgCapacity) * 100, 100)
+                                                : 0;
+                                            const exPercent = externalTankConfig
+                                                ? Math.min((externalAvailable / externalTankConfig) * 100, 100)
+                                                : 0;
+
+                                            const externalStock = dgExternalFuel?.[dgCNo] || 0;   // MAX
+                                            // const externalUsed = dgExternalUsed?.[dgCNo] || 0;  // CURRENT
+
+                                            return (
+                                                <div key={dgNo} style={{ marginBottom: "4px", display: "flex" }}>
+                                                    <div>
+                                                        {/* 🔹 Fuel Bar */}
+                                                        <div
+                                                            style={{
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                fontSize: "10px",
+                                                                maxWidth: "240px",
+                                                                height: "14px",
+                                                            }}
+                                                        >
+                                                            🛢️
+                                                            <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
+                                                                DG-{dgNo}:
+                                                            </p>
+
+                                                            <div
+                                                                style={{
+                                                                    display: "flex",
+                                                                    width: "120px",
+                                                                    background: "#eee",
+                                                                    borderRadius: "3px",
+                                                                    overflow: "hidden",
+                                                                }}
+                                                            >
+                                                                <p
+                                                                    style={{
+                                                                        width: `${percent}%`,
+                                                                        background: "linear-gradient(to right, blue)",
+                                                                        color: "white",
+                                                                        fontSize: "7px",
+                                                                        margin: 0,
+                                                                        textAlign: "center",
+                                                                        whiteSpace: "nowrap",
+                                                                    }}
+                                                                >
+                                                                    ⛽{fuelClosing}/{perDgCapacity.toFixed(1)}L
+                                                                    <small style={{ color: "red" }}>
+                                                                        🔻 Used Today: {dgTodayUsed.toFixed(2)}L
+                                                                    </small>
+                                                                </p>
+                                                            </div>
+
+                                                            <strong
+                                                                style={{
+                                                                    marginLeft: "4px",
+                                                                    color: percent < 60 ? "red" : "blue",
+                                                                }}
+                                                            >
+                                                                {percent.toFixed(0)}%
+                                                            </strong>
+                                                        </div>
+                                                        {externalTankConfig > 0 && (
+
+                                                            <div
+                                                                style={{
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    fontSize: "10px",
+                                                                    maxWidth: "240px",
+                                                                    height: "14px",
+                                                                }}
+                                                            >
+                                                                🛢️
+                                                                <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
+                                                                    DG-{dgNo}Ex.:
+                                                                </p>
+
+                                                                <div
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        width: "120px",
+                                                                        background: "#eee",
+                                                                        borderRadius: "3px",
+                                                                        overflow: "hidden",
+                                                                    }}
+                                                                >
+                                                                    <p
+                                                                        style={{
+                                                                            width: `${exPercent}%`,
+                                                                            background: "linear-gradient(to right, blue)",
+                                                                            color: "white",
+                                                                            fontSize: "7px",
+                                                                            margin: 0,
+                                                                            textAlign: "center",
+                                                                            whiteSpace: "nowrap",
+                                                                        }}
+                                                                    >
+                                                                        ⛽{externalAvailable}/{externalTankConfig.toFixed(1)}L
+                                                                    </p>
+                                                                </div>
+
+                                                                <strong
+                                                                    style={{
+                                                                        marginLeft: "4px",
+                                                                        color: exPercent < 60 ? "red" : "blue",
+                                                                    }}
+                                                                >
+                                                                    {exPercent.toFixed(0)}%
+                                                                </strong>
+                                                            </div>
+                                                        )}
+
+                                                    </div>
+                                                </div>
+                                            );
+
+                                        })}
+                                    </div>
+                                    <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
+                                        {/* Average PUE */}
+                                        <p className={summary.monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
+                                            <strong>Average PUE – {summary.monthlyAvgPUE}</strong>
+                                        </p>
+                                        {/* Average SEGR */}
+                                        <p className={(summary.totalKwh / summary.totalOnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"}>
+                                            <strong>Average SEGR – {(summary.totalKwh / summary.totalOnLoadCon).toFixed(2)}</strong>
+                                        </p>
+
+                                        {/* Per DG SEGR */}
+                                        {dgSummary.map(dg => (
+                                            <p
+                                                key={dg.dg}
+                                                className={dg.segr < 3 ? "avg-segr low" : "avg-segr high"}
+                                                style={{ fontSize: "10px" }}
+                                            >
+                                                {dg.dg} Average SEGR – {dg.segr}
+                                            </p>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <h4 style={{ borderTop: "3px solid #eee", textAlign: "center" }}>
+                                    📊 Summary – of Last {summary.totalDays} Days Logs
+                                </h4>
+
+                                {/* <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p> */}
+                                <p style={{ color: "#302f74ff" }}><strong>[Total Cost (EB + DG) – ₹{fmt((summary.totalEBKWH * currentEBRate) + (summary.totalFuel * currentFuelRate))}]</strong></p>
+
+                                {/* Summary Cards */}
+                                <div style={{ display: "flex", borderTop: "3px solid #eee" }}>
+                                    <div>
+                                        <p><strong>⚡ Site Running Load – {summary.totalSiteRuningLoad} kWh</strong></p>
+                                        <p><strong>📡 Avg IT Load – {summary.monthlyAvgITLoad} kWh</strong></p>
+                                        <p><strong>❄️ Avg Cooling Load – {summary.monthlyAvgCoolingLoad} kWh</strong></p>
+                                        <p><strong>🏢 Avg Office Load – {summary.monthlyAvgOfficeLoad} kWh</strong></p>
+                                        <p><strong>⛽ Avg DG CPH – {fmt1(summary.totalOnLoadCon / summary.totalOnLoadHrs)} Ltrs/Hrs</strong></p>
+                                    </div>
+
+                                    {/* Per DG CPH */}
+                                    <div style={{ fontSize: "10px" }}>
+                                        {dgSummary.map(dg => (
+                                            <p key={dg.dg}>
+                                                ⛽{dg.dg} OEM CPH – <strong>{dg.oemCph} Ltrs/⏱️</strong>
+                                            </p>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Conditional rendering based on available data */}
+                                {summary.totalEBKWH > 0 && (
+                                    <p style={{ borderTop: "1px solid #eee" }}>Total EB Unit Generation - <strong>{fmt(summary.totalEBKWH)} Units </strong>
+                                        ₹<input
+                                            type="number"
+                                            step="0.01"
+                                            value={currentEBRate}
+                                            onChange={handleChangeEBRate}
+                                            style={{ width: "70px", marginLeft: "4px", height: "20px" }}
+                                        /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "#302f74ff" }}>Cost: ₹{fmt(summary.totalEBKWH * currentEBRate)}</b></strong>
+                                    </p>
+                                )}
+
+                                {/* If solar data exists, show solar generation summary */}
+                                {summary.totalSolarKWH > 0 && (
+                                    <p style={{ borderTop: "1px solid #eee" }}><strong>Total Solar Unit Generation - {fmt(summary.totalSolarKWH)} Units</strong></p>
+                                )}
+
+                                {/* Per DG KW */}
+                                <p style={{ borderTop: "1px solid #eee" }}><strong>⚡ Total DG KW Generation – {fmt(summary.totalKwh)} kW</strong> <b style={{ fontSize: "10px", color: "#302f74ff" }}>(Cost: ₹{fmt((summary.totalFuel * currentFuelRate) / summary.totalKwh)}/Unit.)</b></p>
+                                <div style={{ display: "flex", flexWrap: "wrap" }}>
+                                    {dgSummary.map(dg => (
+                                        <p key={dg.dg} style={{ marginLeft: "20px" }}>
+                                            • {dg.dg}: <strong>{fmt1(dg.kwh)} kW</strong>
+                                        </p>
+                                    ))}
+                                </div>
+
+                                {/* Total Fuel Filling & Consumption */}
+                                <p style={{ borderTop: "1px solid #eee" }}>
+                                    <strong>⛽ Total Fuel Filling – {fmt(summary.totalFilling)}Ltrs. x </strong>
+                                    ₹<input
+                                        type="number"
+                                        step="0.01"
+                                        value={currentFuelRate}
+                                        onChange={handleChangeFuelRate}
+                                        style={{ width: "70px", marginLeft: "4px", height: "20px" }}
+                                    /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "#302f74ff" }}>Cost: ₹{fmt(summary.totalFilling * currentFuelRate)}</b></strong>
                                 </p>
 
-                                {/* Per DG SEGR */}
+                                <div style={{ display: "flex", flexWrap: "wrap" }}>
+                                    {dgSummary.map(dg => (
+                                        <p key={dg.dg} style={{ marginLeft: "20px" }}>
+                                            • {dg.dg}: <strong>{fmt1(dg.filling)} Ltrs</strong>
+                                        </p>
+                                    ))}
+                                </div>
+
+                                {/* Total Fuel Consumption */}
+                                <p style={{ borderTop: "1px solid #eee" }}><strong>⛽ Total Fuel Consumption – {fmt(summary.totalFuel)}Ltrs.</strong> <b style={{ fontSize: "10px", color: "#302f74ff" }}>(Cost: ₹{fmt(summary.totalFuel * currentFuelRate)})</b></p>
+
                                 {dgSummary.map(dg => (
-                                    <p
-                                        key={dg.dg}
-                                        className={dg.segr < 3 ? "avg-segr low" : "avg-segr high"}
-                                        style={{ fontSize: "10px" }}
-                                    >
-                                        {dg.dg} Average SEGR – {dg.segr}
-                                    </p>
+                                    <div key={dg.dg} style={{ display: "flex" }}>
+                                        <p style={{ marginLeft: "20px" }}>
+                                            • {dg.dg}: <strong>{fmt1(dg.onLoadCon + dg.offLoadCon)} Ltrs</strong>
+                                        </p>
+                                        <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                                            - ON Load: <strong>{fmt1(dg.onLoadCon)} Ltrs</strong>
+                                        </p>
+                                        <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                                            - OFF Load: <strong>{fmt1(dg.offLoadCon)} Ltrs</strong>
+                                        </p>
+                                    </div>
                                 ))}
-                            </div>
-                        </div>
 
-                        <h4 style={{ borderTop: "3px solid #eee", textAlign: "center" }}>
-                            📊 Summary – of Last {summary.totalDays} Days Logs
-                        </h4>
+                                {/* Total DG Run Hours */}
+                                <p style={{ borderTop: "1px solid #eee" }}><strong>⏱️ Total DG Run Hours – {fmt1(summary.totalHrs)} Hour</strong> ({totalHrsMin} min)</p>
 
-                        {/* <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p> */}
-                        <p style={{ color: "#302f74ff" }}><strong>[Total Cost (EB + DG) – ₹{fmt((summary.totalEBKWH * currentEBRate) + (summary.totalFuel * currentFuelRate))}]</strong></p>
-
-                        {/* Summary Cards */}
-                        <div style={{ display: "flex", borderTop: "3px solid #eee" }}>
-                            <div>
-                                <p><strong>⚡ Site Running Load – {summary.totalSiteRuningLoad} kWh</strong></p>
-                                <p><strong>📡 Avg IT Load – {summary.monthlyAvgITLoad} kWh</strong></p>
-                                <p><strong>❄️ Avg Cooling Load – {summary.monthlyAvgCoolingLoad} kWh</strong></p>
-                                <p><strong>🏢 Avg Office Load – {summary.monthlyAvgOfficeLoad} kWh</strong></p>
-                                <p><strong>⛽ Avg DG CPH – {fmt1(summary.totalOnLoadCon / summary.totalOnLoadHrs)} Ltrs/Hrs</strong></p>
-                            </div>
-
-                            {/* Per DG CPH */}
-                            <div style={{ fontSize: "10px" }}>
                                 {dgSummary.map(dg => (
-                                    <p key={dg.dg}>
-                                        ⛽{dg.dg} OEM CPH – <strong>{dg.oemCph} Ltrs/⏱️</strong>
-                                    </p>
+                                    <div key={dg.dg} style={{ display: "flex" }}>
+                                        <p style={{ marginLeft: "20px" }}>
+                                            • {dg.dg}: <strong>{fmt1(dg.onLoadHrs + dg.offLoadHrs)} hrs</strong>
+                                        </p>
+                                        <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                                            - ON Load: <strong>{fmt1(dg.onLoadHrs)} hrs</strong>
+                                        </p>
+                                        <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                                            - OFF Load: <strong>{fmt1(dg.offLoadHrs)} hrs</strong>
+                                        </p>
+                                    </div>
                                 ))}
+                                {/* Add more breakdowns, load, filling, DG-1/2 metrics, etc. from your summary if desired */}
+                                <div>
+                                    <p style={{ textAlign: "right", color: "gray", textSizeAdjust: "10px", cursor: "pointer" }} onClick={() => setPopupSite(siteKey)}>View Day-wise Details 📄</p>
+                                </div>
                             </div>
-                        </div>
-
-                        {/* Conditional rendering based on available data */}
-                        {summary.totalEBKWH > 0 && (
-                            <p style={{ borderTop: "1px solid #eee" }}>Total EB Unit Generation - <strong>{fmt(summary.totalEBKWH)} Units </strong>
-                                ₹<input
-                                    type="number"
-                                    step="0.01"
-                                    value={currentEBRate}
-                                    onChange={handleChangeEBRate}
-                                    style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-                                /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "#302f74ff" }}>Cost: ₹{fmt(summary.totalEBKWH * currentEBRate)}</b></strong>
-                            </p>
                         )}
 
-                        {/* If solar data exists, show solar generation summary */}
-                        {summary.totalSolarKWH > 0 && (
-                            <p style={{ borderTop: "1px solid #eee" }}><strong>Total Solar Unit Generation - {fmt(summary.totalSolarKWH)} Units</strong></p>
-                        )}
-
-                        {/* Per DG KW */}
-                        <p style={{ borderTop: "1px solid #eee" }}><strong>⚡ Total DG KW Generation – {fmt(summary.totalKwh)} kW</strong> <b style={{ fontSize: "10px", color: "#302f74ff" }}>(Cost: ₹{fmt((summary.totalFuel * currentFuelRate) / summary.totalKwh)}/Unit.)</b></p>
-                        <div style={{ display: "flex", flexWrap: "wrap" }}>
-                            {dgSummary.map(dg => (
-                                <p key={dg.dg} style={{ marginLeft: "20px" }}>
-                                    • {dg.dg}: <strong>{fmt1(dg.kwh)} kW</strong>
-                                </p>
-                            ))}
-                        </div>
-
-                        {/* Total Fuel Filling & Consumption */}
-                        <p style={{ borderTop: "1px solid #eee" }}>
-                            <strong>⛽ Total Fuel Filling – {fmt(summary.totalFilling)}Ltrs. x </strong>
-                            ₹<input
-                                type="number"
-                                step="0.01"
-                                value={currentFuelRate}
-                                onChange={handleChangeFuelRate}
-                                style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-                            /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "#302f74ff" }}>Cost: ₹{fmt(summary.totalFilling * currentFuelRate)}</b></strong>
-                        </p>
-
-                        <div style={{ display: "flex", flexWrap: "wrap" }}>
-                            {dgSummary.map(dg => (
-                                <p key={dg.dg} style={{ marginLeft: "20px" }}>
-                                    • {dg.dg}: <strong>{fmt1(dg.filling)} Ltrs</strong>
-                                </p>
-                            ))}
-                        </div>
-
-                        {/* Total Fuel Consumption */}
-                        <p style={{ borderTop: "1px solid #eee" }}><strong>⛽ Total Fuel Consumption – {fmt(summary.totalFuel)}Ltrs.</strong> <b style={{ fontSize: "10px", color: "#302f74ff" }}>(Cost: ₹{fmt(summary.totalFuel * currentFuelRate)})</b></p>
-
-                        {dgSummary.map(dg => (
-                            <div key={dg.dg} style={{ display: "flex" }}>
-                                <p style={{ marginLeft: "20px" }}>
-                                    • {dg.dg}: <strong>{fmt1(dg.onLoadCon + dg.offLoadCon)} Ltrs</strong>
-                                </p>
-                                <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                    - ON Load: <strong>{fmt1(dg.onLoadCon)} Ltrs</strong>
-                                </p>
-                                <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                    - OFF Load: <strong>{fmt1(dg.offLoadCon)} Ltrs</strong>
-                                </p>
-                            </div>
-                        ))}
-
-                        {/* Total DG Run Hours */}
-                        <p style={{ borderTop: "1px solid #eee" }}><strong>⏱️ Total DG Run Hours – {fmt1(summary.totalHrs)} Hour</strong> ({totalHrsMin} min)</p>
-
-                        {dgSummary.map(dg => (
-                            <div key={dg.dg} style={{ display: "flex" }}>
-                                <p style={{ marginLeft: "20px" }}>
-                                    • {dg.dg}: <strong>{fmt1(dg.onLoadHrs + dg.offLoadHrs)} hrs</strong>
-                                </p>
-                                <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                    - ON Load: <strong>{fmt1(dg.onLoadHrs)} hrs</strong>
-                                </p>
-                                <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                                    - OFF Load: <strong>{fmt1(dg.offLoadHrs)} hrs</strong>
-                                </p>
-                            </div>
-                        ))}
-                        {/* Add more breakdowns, load, filling, DG-1/2 metrics, etc. from your summary if desired */}
-                        <div>
-                            <p style={{ textAlign: "right", color: "gray", textSizeAdjust: "10px", cursor: "pointer" }} onClick={() => setPopupSite(siteKey)}>View Day-wise Details 📄</p>
-                        </div>
                     </div>
                 );
             })}
