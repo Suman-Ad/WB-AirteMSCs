@@ -28,6 +28,14 @@ const AllSitesDGLogs = ({ userData }) => {
     const todayKey = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
     const [collaps, setCollaps] = useState({})
 
+    const [isLargeScreen, setIsLargeScreen] = useState(window.innerHeight > 512)
+    // Screen Resize Listener
+    useEffect(() => {
+        const handleResize = () => setIsLargeScreen(window.innerWidth > 512);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
     const toggleSite = (siteName) => {
         setCollaps((prev) => ({
             ...prev,
@@ -139,6 +147,7 @@ const AllSitesDGLogs = ({ userData }) => {
         const site = (log.siteName || log.site || "").toUpperCase(); // 🔥 FIX
         const dg = log.dgNumber || log.dg || "DG-1"; // fallback
         const fuel = Number(log.fuelConsumption) || 0;
+        const runHrs = (log.totalRunHours) || 0;
 
         if (!acc[site]) acc[site] = {};
         if (!acc[site][dg]) {
@@ -149,6 +158,7 @@ const AllSitesDGLogs = ({ userData }) => {
         }
 
         acc[site][dg].fuel += fuel;
+        acc[site][dg].totalDGRunHours += runHrs;
         acc[site][dg].runs.push({
             startTime: log.startTime,
             stopTime: log.stopTime,
@@ -164,6 +174,14 @@ const AllSitesDGLogs = ({ userData }) => {
 
         return Object.values(siteData).reduce((sum, dg) => {
             return sum + (dg.fuel || 0);
+        }, 0);
+    };
+
+    const getTodayDGRunHrs = (siteKey) => {
+        const siteData = fuelConsumptionBySiteDG[siteKey] || {};
+
+        return Object.values(siteData).reduce((sum, dg) => {
+            return sum + (dg.totalRunHours || 0);
         }, 0);
     };
 
@@ -686,6 +704,8 @@ const AllSitesDGLogs = ({ userData }) => {
 
                 // 🔥 Total Fuel
                 const todayFuelUsed = getTodayFuelUsed(siteKey);
+                const todayRunHrs = getTodayDGRunHrs(siteKey);
+                const ebAvailable = 24 - todayRunHrs;
 
                 const totalFuelAvailable =
                     (parseFloat(availableFuel) + parseFloat(exAvailableFuel)) - todayFuelUsed;
@@ -738,7 +758,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                 style={{
                                     background: collaps[site] ? "" : "#7ca9e49d",
                                     padding: collaps[site] ? "" : "10px 10px",
-                                    borderRadius:"5px",
+                                    borderRadius: "5px",
                                     // height: "100%",
                                     // justifyContent: "center"                             
                                 }}
@@ -767,9 +787,24 @@ const AllSitesDGLogs = ({ userData }) => {
                                     >
                                         Site Live On:- <strong>{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
                                     </span>
-                                    <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>||
-                                    <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong>||
-                                    <strong>⚡ Site Running Load – {summary.totalSiteRuningLoad} kWh</strong>
+                                    {isLargeScreen ? (
+                                        <div style={{ fontSize: "13px", display: "flex" }}>
+                                            <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>||<br></br>
+                                            <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong>||<br></br>
+                                            <strong>⚡ Site Running Load – {summary.totalSiteRuningLoad} kWh</strong>||<br></br>
+                                            <strong>⚡ DG Run Hrs – {todayRunHrs} </strong>||<br></br>
+                                            <strong>⚡ EB Avl Hrs – {ebAvailable} </strong>||<br></br>
+                                        </div>
+
+                                    ) : (
+                                        <div style={{ fontSize: "10px" }}>
+                                            <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>||<br></br>
+                                            <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong>||<br></br>
+                                            <strong>⚡ Site Running Load – {summary.totalSiteRuningLoad} kWh</strong>||<br></br>
+                                            <strong>⚡ DG Run Hrs – {todayRunHrs} </strong>||<br></br>
+                                            <strong>⚡ EB Avl Hrs – {ebAvailable} </strong>||<br></br>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </button>
@@ -796,26 +831,33 @@ const AllSitesDGLogs = ({ userData }) => {
                                     Site Live On:- <strong>{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
                                 </span>
 
-                                {/* {fuelConsumptionBySiteDG[site] &&
-                            Object.entries(fuelConsumptionBySiteDG[site]).map(
-                                ([dg, data]) => (
-                                    <div key={dg} style={{ display:"flex"}}>
-                                        <strong>{dg}</strong> — {data.fuel.toFixed(2)} L
-
-                                        {data.runs.map((r, i) => (
-                                            <div key={i} style={{ fontSize: "12px", color: "#6b7280" }}>
-                                                {r.startTime}–{r.stopTime} • {r.remarks}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )
-                            )} */}
-                                {/* Fuel, load, backups */}
                                 <h2 style={{ color: powerSource == "DG" ? "RED" : "", fontWeight: "bold" }}>{site} MSC</h2>
-                                <h1 style={{ fontSize: "20px", color: "green", textAlign: "left" }}>
-                                    <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>
-                                </h1>
-                                <h1 style={((totalFuelAvailable) / summary.monthlyAvgCPH) < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong></h1>
+                                {/* Fuel, load, backups */}
+                                <div style={{ display: "flex" }}>
+                                    <div>
+                                        <h1 style={{ fontSize: "20px", color: "green", textAlign: "left" }}>
+                                            <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>
+                                        </h1>
+                                        <h1 style={((totalFuelAvailable) / summary.monthlyAvgCPH) < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong></h1>
+                                    </div>
+                                    <div style={{ background: "#e450509f", color: "#fff", padding: "5px 5px", marginLeft: "10px", borderRadius: "7px" }}>
+                                        <p style={{ fontSize: "10px", fontWeight: "bold" }}>Today DG Run:</p>
+                                        {fuelConsumptionBySiteDG[site] &&
+                                            Object.entries(fuelConsumptionBySiteDG[site]).map(
+                                                ([dg, data]) => (
+                                                    <div key={dg} style={{ display: "flex", fontSize: "10px" }}>
+                                                        {/* <strong>{dg}</strong> — {data.fuel.toFixed(2)} L */}
+                                                        <strong>{dg}</strong> — {data.totalDGRunHours} Hrs
+                                                        {/* {data.runs.map((r, i) => (
+                                                            <div key={i} style={{ fontSize: "12px", color: "#6b7280" }}>
+                                                                {r.startTime}–{r.stopTime} • {r.runHours.toFixed(2)}Hrs • {r.remarks}
+                                                            </div>
+                                                        ))} */}
+                                                    </div>
+                                                )
+                                            )}
+                                    </div>
+                                </div>
 
                                 {/* ✅ Split Fuel Level Bar */}
                                 <div style={{ display: "flex", alignItems: "center", marginTop: "6px", fontSize: "18px" }}>

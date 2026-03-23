@@ -110,7 +110,7 @@ const findLastFillingInDGLogs = async (site, monthsToCheck = 3) => {
   return null;
 };
 
-
+// Monthy summery for YOY
 const calculateMonthlySummary = (logs, calculateFields, siteConfig) => {
   if (!logs?.length) return null;
 
@@ -245,10 +245,12 @@ const DailyDGLog = ({ userData }) => {
   const [lastFilling, setLastFilling] = useState(null);
   const [loadingFilling, setLoadingFilling] = useState(true);
   const [fuelAvalable, setFuelAvalable] = useState();
+
   // For yesterday's log auto-fill
   const [yesterdayLog, setYesterdayLog] = useState(null);
   const [yesterdayEBUnits, setYesterdayEBUnits] = useState(0);
   const [yesterdayDGUnits, setYesterdayDGUnits] = useState(0);
+
   //for Bulk excel Upload
   const [previewRows, setPreviewRows] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -256,11 +258,16 @@ const DailyDGLog = ({ userData }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadCalculate, setIsUploadCalculate] = useState(false);
+
   // Summaries for current and previous month by year
   const [currentSummary, setCurrentSummary] = useState(null);
   const [previousSummary, setPreviousSummary] = useState(null);
   const [multiYearData, setMultiYearData] = useState([]);
   const [loadingTrend, setLoadingTrend] = useState(false);
+  const [yearlyData, setYearlyData] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [yearlyLoading, setYearlyLoading] = useState(false);
+
   // Fetch Power Source Status
   const [powerSource, setPowerSource] = useState("EB");
   const [updatedByName, setUpdatedByName] = useState("");
@@ -864,6 +871,89 @@ const DailyDGLog = ({ userData }) => {
     return result.reverse(); // Old → New
   };
 
+  // Build Yearly Aggregation Function
+  useEffect(() => {
+    const loadYearly = async () => {
+      setYearlyLoading(true);   // 🔥 start loading
+
+      try {
+        const data = await fetchYearlyMonthlyData(selectedYear);
+        setYearlyData(data);
+      } catch (err) {
+        console.error("Yearly load error:", err);
+      }
+
+      setYearlyLoading(false);  // 🔥 stop loading
+    };
+
+    if (siteName && siteConfig) {
+      loadYearly();
+    }
+  }, [siteName, siteConfig, selectedYear]);
+
+  const fetchYearlyMonthlyData = async (year) => {
+    if (!siteName) return [];
+
+    const results = [];
+
+    for (let m = 1; m <= 12; m++) {
+      const monthKey = `${year}-${String(m).padStart(2, "0")}`;
+
+      try {
+        const snap = await getDocs(
+          collection(db, "dailyDGLogs", siteName, monthKey)
+        );
+
+        const logs = snap.docs.map(d => d.data());
+
+        if (!logs.length) continue;
+
+        const calculated = logs.map(e => calculateFields(e, siteConfig));
+
+        const sum = (key) =>
+          calculated.reduce((a, b) => a + (Number(b[key]) || 0), 0);
+
+        const avg = (key) => {
+          const vals = calculated.map(e => Number(e[key])).filter(v => v > 0);
+          return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+        };
+
+        // 🔥 Cooling Load Calculation
+        const coolingLoadArr = calculated.map(cl => {
+          const coolingLoad = Number(cl["Cooling kW Consumption"]) || 0;
+          return coolingLoad;
+        });
+
+        const avgCoolingLoad =
+          coolingLoadArr.length
+            ? coolingLoadArr.reduce((a, b) => a + b, 0) / coolingLoadArr.length
+            : 0;
+
+        results.push({
+          month: monthKey,
+          monthName: new Date(year, m - 1).toLocaleString("default", { month: "short" }),
+          PUE: avg("PUE").toFixed(2),
+          siteLoad: avg("Site Running kW").toFixed(2),
+          DGKWH: sum("Total DG KWH"),
+          EBKWH: sum("Total EB KWH"),
+          coolingLoad: avgCoolingLoad.toFixed(2),
+          fuel: sum("Total DG Fuel"),
+        });
+
+      } catch (err) {
+        console.error("Error fetching:", monthKey, err);
+      }
+    }
+
+    return results;
+  };
+
+  // const peakMonth = yearlyData.reduce((max, m) =>
+  //   m.coolingLoad > max.coolingLoad ? m : max, yearlyData[0]);
+
+  // const lowMonth = yearlyData.reduce((min, m) =>
+  //   m.coolingLoad < min.coolingLoad ? m : min, yearlyData[0]);
+
   // Detect Next Unfilled Date Logs
   const getNextUnfilledDate = async () => {
     if (!siteName) return getFormattedDate();
@@ -1363,7 +1453,8 @@ const DailyDGLog = ({ userData }) => {
     const monthKey = selectedMonth;
     const docRef = doc(db, "dailyDGLogs", siteName, monthKey, form.Date);
 
-    {entryUpdate ? (
+    {
+      entryUpdate ? (
         await setDoc(docRef, { ...form, updatedBy: uploadedBy, updatedAt: serverTimestamp() }, { merge: true })
       ) : (
         await setDoc(docRef, { ...form, entryBy: uploadedBy, updatedAt: serverTimestamp() }, { merge: true })
@@ -3490,65 +3581,120 @@ const DailyDGLog = ({ userData }) => {
         </div>
       ) : null} */}
 
-      {currentSummary && previousSummary && (
-        <div className="table-container" style={{ scrollbarWidth: "thin" }}>
-          <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>
 
-          <table>
-            <thead>
-              <tr>
-                <th>Metric</th>
-                <th>Current Year</th>
-                <th>Previous Year</th>
-                <th>YoY Change</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Total DG KWH</td>
-                <td>{fmt(currentSummary.totalDGKWH)}</td>
-                <td>{fmt(previousSummary.totalDGKWH)}</td>
-                <td>{yoy(currentSummary.totalDGKWH, previousSummary.totalDGKWH)}</td>
-              </tr>
+      <div style={{ position: "relative", height: 350 }}>
+        <select
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(Number(e.target.value))}
+        >
+          <option value={2026}>2026</option>
+          <option value={2025}>2025</option>
+          <option value={2024}>2024</option>
+        </select>
+        {yearlyLoading ? (
+          <div style={{ height: 350, display: "flex", alignItems: "flex-end", gap: 10, padding: "5px 5px", borderRadius: "10px", border: "1px solid #fff", background: "#5aa3d3a1" }}>
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  width: 20,
+                  height: Math.random() * 200 + 50,
+                  background: "#e0e0e0",
+                  borderRadius: 4,
+                  animation: "pulse 1.5s infinite"
+                }}
+              />
+            ))}
+            <div className="spinner"></div>
+            <span style={{ marginLeft: 10, fontWeight: "bold" }}>
+              Loading yearly data...
+            </span>
+          </div>
+        ) : (
+          <div style={{ background: "#091629b9", padding: "15px", borderRadius: "10px" }}>
+            <h2>📊 Yearly Trand Analysis-{selectedYear}</h2>
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={yearlyData}>
+                <XAxis dataKey="monthName" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
 
-              <tr>
-                <td>Total EB KWH</td>
-                <td>{fmt(currentSummary.totalEBKWH)}</td>
-                <td>{fmt(previousSummary.totalEBKWH)}</td>
-                <td>{yoy(currentSummary.totalEBKWH, previousSummary.totalEBKWH)}</td>
-              </tr>
+                {/* <Line dataKey="fuel" name="Fuel (L)" stroke="#fc2903" /> */}
+                <Line type="monotone" dataKey="PUE" stroke="#ff7300" />
+                <Line type="monotone" dataKey="siteLoad" stroke="#15ff00" />
+                <Line type="monotone" dataKey="EBKWH" stroke="#002fff" />
+                <Line type="monotone" dataKey="DGKWH" stroke="#eeff00" />
+                <Line type="monotone" dataKey="coolingLoad" stroke="#00cbfe" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
 
-              <tr>
-                <td>Total Solar KWH</td>
-                <td>{fmt(currentSummary.totalSolarKWH)}</td>
-                <td>{fmt(previousSummary.totalSolarKWH)}</td>
-                <td>{yoy(currentSummary.totalSolarKWH, previousSummary.totalSolarKWH)}</td>
-              </tr>
+      <div style={{ background: "#091629b9", borderRadius: "10px", marginTop: "95px" }}>
+        {currentSummary && previousSummary && (
+          <div style={{ padding: "15px 2px" }}>
+            <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>
 
-              <tr>
-                <td>Total Fuel Consumption</td>
-                <td>{fmt(currentSummary.totalFuel)}</td>
-                <td>{fmt(previousSummary.totalFuel)}</td>
-                <td>{yoy(currentSummary.totalFuel, previousSummary.totalFuel)}</td>
-              </tr>
+            <div className="table-container" style={{ scrollbarWidth: "thin" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Current Year</th>
+                    <th>Previous Year</th>
+                    <th>YoY Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Total DG KWH</td>
+                    <td>{fmt(currentSummary.totalDGKWH)}</td>
+                    <td>{fmt(previousSummary.totalDGKWH)}</td>
+                    <td>{yoy(currentSummary.totalDGKWH, previousSummary.totalDGKWH)}</td>
+                  </tr>
 
-              <tr>
-                <td>Avg Site Running kW</td>
-                <td>{fmt(currentSummary.avgSiteKW)}</td>
-                <td>{fmt(previousSummary.avgSiteKW)}</td>
-                <td>{yoy(currentSummary.avgSiteKW, previousSummary.avgSiteKW)}</td>
-              </tr>
+                  <tr>
+                    <td>Total EB KWH</td>
+                    <td>{fmt(currentSummary.totalEBKWH)}</td>
+                    <td>{fmt(previousSummary.totalEBKWH)}</td>
+                    <td>{yoy(currentSummary.totalEBKWH, previousSummary.totalEBKWH)}</td>
+                  </tr>
 
-              <tr>
-                <td>Avg PUE</td>
-                <td>{fmt(currentSummary.avgPUE)}</td>
-                <td>{fmt(previousSummary.avgPUE)}</td>
-                <td>{yoy(currentSummary.avgPUE, previousSummary.avgPUE)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
+                  <tr>
+                    <td>Total Solar KWH</td>
+                    <td>{fmt(currentSummary.totalSolarKWH)}</td>
+                    <td>{fmt(previousSummary.totalSolarKWH)}</td>
+                    <td>{yoy(currentSummary.totalSolarKWH, previousSummary.totalSolarKWH)}</td>
+                  </tr>
+
+                  <tr>
+                    <td>Total Fuel Consumption</td>
+                    <td>{fmt(currentSummary.totalFuel)}</td>
+                    <td>{fmt(previousSummary.totalFuel)}</td>
+                    <td>{yoy(currentSummary.totalFuel, previousSummary.totalFuel)}</td>
+                  </tr>
+
+                  <tr>
+                    <td>Avg Site Running kW</td>
+                    <td>{fmt(currentSummary.avgSiteKW)}</td>
+                    <td>{fmt(previousSummary.avgSiteKW)}</td>
+                    <td>{yoy(currentSummary.avgSiteKW, previousSummary.avgSiteKW)}</td>
+                  </tr>
+
+                  <tr>
+                    <td>Avg PUE</td>
+                    <td>{fmt(currentSummary.avgPUE)}</td>
+                    <td>{fmt(previousSummary.avgPUE)}</td>
+                    <td>{yoy(currentSummary.avgPUE, previousSummary.avgPUE)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* 🔹 Monthly Diesel Reconciliation */}
       {(() => {
@@ -3775,7 +3921,7 @@ const DailyDGLog = ({ userData }) => {
               }
 
               return (
-                <tr key={entry.id} className={rowClass} onClick={() => { setForm(entry); setShowEditModal(true); setEntryUpdate(true)}}>
+                <tr key={entry.id} className={rowClass} onClick={() => { setForm(entry); setShowEditModal(true); setEntryUpdate(true) }}>
 
                   {/* Merge Site Name and ID for all rows */}
                   {showSiteInfo && (
@@ -3881,14 +4027,14 @@ const DailyDGLog = ({ userData }) => {
                     </td>
                   )}
                   <td>
-                    <strong>{entry.entryBy?.name ? entry.entryBy?.name : ""}</strong>
-                    <br />
-                    <small style={{ color: "#666" }}>{(entry?.entryBy?.empId ? entry?.entryBy?.empId : "")}</small>
+                    <p style={{ whiteSpace: "nowrap", fontSize: "9px", color:"#131b8d" }}> • {entry.entryBy?.name ? entry.entryBy?.name : "Missing.."}</p>
+                    <p style={{ color: "#666", fontSize: "8px", color: "#fff" }}> • {(entry?.entryBy?.empId ? entry?.entryBy?.empId : "Missing..")}</p>
+                    <p style={{ color: "#666", fontSize: "8px", color: "#923f07", whiteSpace: "nowrap" }}> • {(entry.updatedAt.toDate().toLocaleString())}</p>
                   </td>
                   <td>
-                    <strong>{entry.updatedBy?.name ? entry.updatedBy?.name : ""}</strong>
-                    <br />
-                    <small style={{ color: "#666" }}>{(entry.updatedBy?.empId || "")}</small>
+                    <p style={{ whiteSpace: "nowrap", fontSize: "9px", color:"#131b8d" }}> • {entry.updatedBy?.name ? entry.updatedBy?.name : "Missing.."}</p>
+                    <p style={{ color: "#666", fontSize: "8px", color: "#fff" }}> • {(entry.updatedBy?.empId || "Missing..")}</p>
+                    <p style={{ color: "#666", fontSize: "8px", color: "#923f07", whiteSpace: "nowrap" }}> • {(entry.updatedAt.toDate().toLocaleString())}</p>
                   </td>
                 </tr>
               );
