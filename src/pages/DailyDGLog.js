@@ -267,6 +267,27 @@ const DailyDGLog = ({ userData }) => {
   const [yearlyData, setYearlyData] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [yearlyLoading, setYearlyLoading] = useState(false);
+  const [activeKeys, setActiveKeys] = useState({
+    PUE: true,
+    EBKWH: true,
+    DGKWH: true,
+    siteLoad: true,
+    coolingLoad: true,
+  });
+  const handleLegendClick = (e) => {
+    const key = e.dataKey;
+
+    setActiveKeys((prev) => ({
+      ...prev,
+      fuel: false,
+      PUE: false,
+      DGKWH: false,
+      EBKWH: false,
+      siteLoad: false,
+      coolingLoad: false,
+      [key]: !prev[key], // toggle ON/OFF
+    }));
+  };
 
   // Fetch Power Source Status
   const [powerSource, setPowerSource] = useState("EB");
@@ -2806,7 +2827,7 @@ const DailyDGLog = ({ userData }) => {
 
                     {/* 🔹 External Fuel Input */}
                     {externalStock > 0 && (
-                      <div style={{ fontSize: "9px", display: "flex", gap: "4px", alignItems: "center" }}>
+                      <div style={{ fontSize: "9px", display: "flex", gap: "4px", justifyContent:"center" }}>
                         Drow Ex.🛢️:
 
                         <p
@@ -2819,7 +2840,7 @@ const DailyDGLog = ({ userData }) => {
                           −
                         </p>
 
-                        <textarea
+                        <input
                           value={dgExternalUsed[dgCNo] || 0}
                           onChange={(e) =>
                             handleExternalUsedChange(dgCNo, e.target.value)
@@ -2827,8 +2848,8 @@ const DailyDGLog = ({ userData }) => {
                           style={{
                             width: "35px",
                             textAlign: "center",
-                            height: "30px",
-                            resize: "none"
+                            height: "20px",
+                            resize: "none",
                           }}
                         />
 
@@ -2849,7 +2870,7 @@ const DailyDGLog = ({ userData }) => {
                         <p
                           onClick={() => applyExternalFuel(dgCNo)}
                           disabled={(dgExternalUsed[dgCNo] || 0) === 0}
-                          style={{ cursor: "pointer", fontSize: "15px", fontWeight: "bolder", border: "1px solid", padding: "2px 2px", borderRadius: "2px", background: "#84be5488" }}
+                          style={{ cursor: "pointer", fontSize: "10px", fontWeight: "bolder", border: "1px solid", padding: "0px 2px", height: "17px", borderRadius: "2px", background: "#84be5488" }}
                           onMouseMove={(e) => e.currentTarget.style.backgroundColor = "#dd6c6cff"}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#84be5488"}
                         >
@@ -3618,21 +3639,55 @@ const DailyDGLog = ({ userData }) => {
                 <XAxis dataKey="monthName" />
                 <YAxis />
                 <Tooltip />
-                <Legend />
+                <Legend onClick={handleLegendClick} />
 
                 {/* <Line dataKey="fuel" name="Fuel (L)" stroke="#fc2903" /> */}
-                <Line type="monotone" dataKey="PUE" stroke="#ff7300" />
-                <Line type="monotone" dataKey="siteLoad" stroke="#15ff00" />
-                <Line type="monotone" dataKey="EBKWH" stroke="#002fff" />
-                <Line type="monotone" dataKey="DGKWH" stroke="#eeff00" />
-                <Line type="monotone" dataKey="coolingLoad" stroke="#00cbfe" />
+                {activeKeys.PUE && (
+                  <Line type="monotone" dataKey="PUE" stroke="#ff7300" strokeOpacity={activeKeys.PUE ? 1 : 0.2} />
+                )}
+                {activeKeys.siteLoad && (
+                  <Line type="monotone" dataKey="siteLoad" stroke="#15ff00" strokeOpacity={activeKeys.siteLoad ? 1 : 0.2} />
+                )}
+                {activeKeys.EBKWH && (
+                  <Line type="monotone" dataKey="EBKWH" stroke="#002fff" strokeOpacity={activeKeys.EBKWH ? 1 : 0.2} />
+                )}
+                {activeKeys.DGKWH && (
+                  <Line type="monotone" dataKey="DGKWH" stroke="#eeff00" strokeOpacity={activeKeys.DGKWH ? 1 : 0.2} />
+                )}
+                {activeKeys.coolingLoad && (
+                  <Line type="monotone" dataKey="coolingLoad" stroke="#00cbfe" strokeOpacity={activeKeys.coolingLoad ? 1 : 0.2} />
+                )}
               </LineChart>
             </ResponsiveContainer>
+            <div style={{ display: "flex", gap: 15 }}>
+              {["PUE", "siteLoad", "EBKWH", "DGKWH", "coolingLoad"].map((key) => (
+                <small
+                  key={key}
+                  onClick={() =>
+                    setActiveKeys((prev) => ({
+                      ...prev,
+                      [key]: !prev[key],
+                    }))
+                  }
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    background: activeKeys[key] ? "#007bff" : "#ccc",
+                    color: "#fff",
+                  }}
+                >
+                  {key}
+                </small>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      <div style={{ background: "#091629b9", borderRadius: "10px", marginTop: "95px" }}>
+      <div style={{ background: "#091629b9", borderRadius: "10px", marginTop: "125px" }}>
         {currentSummary && previousSummary && (
           <div style={{ padding: "15px 2px" }}>
             <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>
@@ -4027,12 +4082,12 @@ const DailyDGLog = ({ userData }) => {
                     </td>
                   )}
                   <td>
-                    <p style={{ whiteSpace: "nowrap", fontSize: "9px", color:"#131b8d" }}> • {entry.entryBy?.name ? entry.entryBy?.name : "Missing.."}</p>
+                    <p style={{ whiteSpace: "nowrap", fontSize: "9px", color: "#131b8d" }}> • {entry.entryBy?.name ? entry.entryBy?.name : "Missing.."}</p>
                     <p style={{ color: "#666", fontSize: "8px", color: "#fff" }}> • {(entry?.entryBy?.empId ? entry?.entryBy?.empId : "Missing..")}</p>
                     <p style={{ color: "#666", fontSize: "8px", color: "#923f07", whiteSpace: "nowrap" }}> • {(entry.updatedAt.toDate().toLocaleString())}</p>
                   </td>
                   <td>
-                    <p style={{ whiteSpace: "nowrap", fontSize: "9px", color:"#131b8d" }}> • {entry.updatedBy?.name ? entry.updatedBy?.name : "Missing.."}</p>
+                    <p style={{ whiteSpace: "nowrap", fontSize: "9px", color: "#131b8d" }}> • {entry.updatedBy?.name ? entry.updatedBy?.name : "Missing.."}</p>
                     <p style={{ color: "#666", fontSize: "8px", color: "#fff" }}> • {(entry.updatedBy?.empId || "Missing..")}</p>
                     <p style={{ color: "#666", fontSize: "8px", color: "#923f07", whiteSpace: "nowrap" }}> • {(entry.updatedAt.toDate().toLocaleString())}</p>
                   </td>
