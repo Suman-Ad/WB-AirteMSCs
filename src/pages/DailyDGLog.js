@@ -274,6 +274,9 @@ const DailyDGLog = ({ userData }) => {
     siteLoad: true,
     coolingLoad: true,
     fuel: true,
+    DGRun: true,
+    itLoad: true,
+    officeLoad: true,
   });
   const handleLegendClick = (e) => {
     const key = e.dataKey;
@@ -286,6 +289,9 @@ const DailyDGLog = ({ userData }) => {
       EBKWH: false,
       siteLoad: false,
       coolingLoad: false,
+      DGRun: false,
+      itLoad: false,
+      officeLoad: false,
       [key]: !prev[key], // toggle ON/OFF
     }));
   };
@@ -951,15 +957,26 @@ const DailyDGLog = ({ userData }) => {
             ? coolingLoadArr.reduce((a, b) => a + b, 0) / coolingLoadArr.length
             : 0;
 
+        // Office Load
+        const officeLoadArr = calculated.map(cl => {
+          const officeLoadkWH = Number(cl["Office kW Consumption"] || 0) / 24;
+          return officeLoadkWH;
+        });
+
+        const officeLoad = officeLoadArr.length ? officeLoadArr.reduce((a, b) => a + b, 0) / officeLoadArr.length : 0;
+
         results.push({
           month: monthKey,
           monthName: new Date(year, m - 1).toLocaleString("default", { month: "short" }),
           PUE: avg("PUE").toFixed(2),
           siteLoad: avg("Site Running kW").toFixed(2),
-          DGKWH: sum("Total DG KWH"),
-          EBKWH: sum("Total EB KWH"),
+          DGKWH: sum("Total DG KWH").toFixed(2),
+          EBKWH: sum("Total EB KWH").toFixed(2),
           coolingLoad: avgCoolingLoad.toFixed(2),
-          fuel: sum("Total DG Fuel"),
+          fuel: sum("Total DG Fuel").toFixed(2),
+          DGRun: sum("Total DG Hours").toFixed(2),
+          itLoad: avg("Total IT Load KWH").toFixed(2),
+          officeLoad: officeLoad.toFixed(2),
         });
 
       } catch (err) {
@@ -2828,7 +2845,7 @@ const DailyDGLog = ({ userData }) => {
 
                     {/* 🔹 External Fuel Input */}
                     {externalStock > 0 && (
-                      <div style={{ fontSize: "9px", display: "flex", gap: "4px", justifyContent:"center" }}>
+                      <div style={{ fontSize: "9px", display: "flex", gap: "4px", justifyContent: "center" }}>
                         Drow Ex.🛢️:
 
                         <p
@@ -3644,27 +3661,36 @@ const DailyDGLog = ({ userData }) => {
 
                 {/* <Line dataKey="fuel" name="Fuel (L)" stroke="#fc2903" /> */}
                 {activeKeys.PUE && (
-                  <Line type="monotone" dataKey="PUE" stroke="#ff7300" strokeOpacity={activeKeys.PUE ? 1 : 0.2} />
+                  <Line type="monotone" name="PUE" dataKey="PUE" stroke="#ff7300" strokeOpacity={activeKeys.PUE ? 1 : 0.2} />
                 )}
                 {activeKeys.siteLoad && (
-                  <Line type="monotone" dataKey="siteLoad" stroke="#15ff00" strokeOpacity={activeKeys.siteLoad ? 1 : 0.2} />
-                )}
-                {activeKeys.EBKWH && (
-                  <Line type="monotone" dataKey="EBKWH" stroke="#002fff" strokeOpacity={activeKeys.EBKWH ? 1 : 0.2} />
-                )}
-                {activeKeys.DGKWH && (
-                  <Line type="monotone" dataKey="DGKWH" stroke="#eeff00" strokeOpacity={activeKeys.DGKWH ? 1 : 0.2} />
-                )}
-                {activeKeys.fuel && (
-                  <Line type="monotone" dataKey="fuel" stroke="#ff0015" strokeOpacity={activeKeys.fuel ? 1 : 0.2} />
+                  <Line type="monotone" name="Site Load" dataKey="siteLoad" stroke="#15ff00" strokeOpacity={activeKeys.siteLoad ? 1 : 0.2} />
                 )}
                 {activeKeys.coolingLoad && (
-                  <Line type="monotone" dataKey="coolingLoad" stroke="#00cbfe" strokeOpacity={activeKeys.coolingLoad ? 1 : 0.2} />
+                  <Line type="monotone" name="Cooling Load" dataKey="coolingLoad" stroke="#00cbfe" strokeOpacity={activeKeys.coolingLoad ? 1 : 0.2} />
+                )}
+                {activeKeys.itLoad && (
+                  <Line type="monotone" name="IT Load" dataKey="itLoad" stroke="#0ab451" strokeOpacity={activeKeys.itLoad ? 1 : 0.2} />
+                )}
+                {activeKeys.officeLoad && (
+                  <Line type="monotone" name="Office Load" dataKey="officeLoad" stroke="#26647c" strokeOpacity={activeKeys.officeLoad ? 1 : 0.2} />
+                )}
+                {activeKeys.EBKWH && (
+                  <Line type="monotone" name="EB kWH" dataKey="EBKWH" stroke="#002fff" strokeOpacity={activeKeys.EBKWH ? 1 : 0.2} />
+                )}
+                {activeKeys.DGKWH && (
+                  <Line type="monotone" name="DG kWH" dataKey="DGKWH" stroke="#eeff00" strokeOpacity={activeKeys.DGKWH ? 1 : 0.2} />
+                )}
+                {activeKeys.DGRun && (
+                  <Line type="monotone" name="DG Run" dataKey="DGRun" stroke="#ffa600" strokeOpacity={activeKeys.DGRun ? 1 : 0.2} />
+                )}
+                {activeKeys.fuel && (
+                  <Line type="monotone" name="Fuel (L)" dataKey="fuel" stroke="#ff0015" strokeOpacity={activeKeys.fuel ? 1 : 0.2} />
                 )}
               </LineChart>
             </ResponsiveContainer>
-            <div style={{ display: "flex", gap: 15 }}>
-              {["PUE", "siteLoad", "EBKWH", "DGKWH", "coolingLoad", "fuel"].map((key) => (
+            <div style={{ display: "flex", gap: 15, overflowX: "auto", whiteSpace: "nowrap" }}>
+              {["PUE", "siteLoad", "EBKWH", "DGKWH", "coolingLoad", "fuel", "DGRun", "itLoad", "officeLoad"].map((key) => (
                 <small
                   key={key}
                   onClick={() =>
@@ -3683,7 +3709,15 @@ const DailyDGLog = ({ userData }) => {
                     color: "#fff",
                   }}
                 >
-                  {key}
+                  {key === "siteLoad" ? "Site Load (kWh)" :
+                    key === "EBKWH" ? "EB kWh" :
+                      key === "DGKWH" ? "DG kWh" :
+                        key === "coolingLoad" ? "Cooling Load (kWh)" :
+                          key === "fuel" ? "Fuel Consumption (L)" :
+                            key === "DGRun" ? "DG Run Hrs" :
+                              key === "itLoad" ? "IT Load (kWh)" :
+                                key === "officeLoad" ? "Office Load (kWh)" : key
+                  }
                 </small>
               ))}
             </div>
@@ -3691,7 +3725,7 @@ const DailyDGLog = ({ userData }) => {
         )}
       </div>
 
-      <div style={{ background: "#091629b9", borderRadius: "10px", marginTop: "125px" }}>
+      <div style={{ background: "#091629b9", borderRadius: "10px", marginTop: "135px" }}>
         {currentSummary && previousSummary && (
           <div style={{ padding: "15px 2px" }}>
             <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>

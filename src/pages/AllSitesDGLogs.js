@@ -147,12 +147,13 @@ const AllSitesDGLogs = ({ userData }) => {
         const site = (log.siteName || log.site || "").toUpperCase(); // 🔥 FIX
         const dg = log.dgNumber || log.dg || "DG-1"; // fallback
         const fuel = Number(log.fuelConsumption) || 0;
-        const runHrs = (log.totalRunHours) || 0;
+        const runHrs = log.remarks === "On Load" ? (log.totalRunHours || 0) : 0;
 
         if (!acc[site]) acc[site] = {};
         if (!acc[site][dg]) {
             acc[site][dg] = {
                 fuel: 0,
+                totalDGRunHours: 0,
                 runs: [],
             };
         }
@@ -181,7 +182,7 @@ const AllSitesDGLogs = ({ userData }) => {
         const siteData = fuelConsumptionBySiteDG[siteKey] || {};
 
         return Object.values(siteData).reduce((sum, dg) => {
-            return sum + (dg.totalRunHours || 0);
+            return sum + (dg.totalDGRunHours || 0);
         }, 0);
     };
 
@@ -749,7 +750,7 @@ const AllSitesDGLogs = ({ userData }) => {
 
                         <button
                             style={{
-                                background: collaps[site] ? "#a75555" : "",
+                                background: collaps[site] ? "#a75555" : powerSource === "DG" ? "#dc2626" : "",
 
                             }}
                             onClick={() => toggleSite(site)}
@@ -792,8 +793,8 @@ const AllSitesDGLogs = ({ userData }) => {
                                             <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>||<br></br>
                                             <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong>||<br></br>
                                             <strong>⚡ Site Running Load – {summary.totalSiteRuningLoad} kWh</strong>||<br></br>
-                                            <strong>⚡ DG Run Hrs – {todayRunHrs} </strong>||<br></br>
-                                            <strong>⚡ EB Avl Hrs – {ebAvailable} </strong>||<br></br>
+                                            <strong>⚡ DG Run Hrs – {todayRunHrs.toFixed(1)} Hrs.</strong>||<br></br>
+                                            <strong>⚡ EB Avl Hrs – {ebAvailable.toFixed(1)} Hrs.</strong>||<br></br>
                                         </div>
 
                                     ) : (
@@ -801,8 +802,8 @@ const AllSitesDGLogs = ({ userData }) => {
                                             <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>||<br></br>
                                             <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong>||<br></br>
                                             <strong>⚡ Site Running Load – {summary.totalSiteRuningLoad} kWh</strong>||<br></br>
-                                            <strong>⚡ DG Run Hrs – {todayRunHrs} </strong>||<br></br>
-                                            <strong>⚡ EB Avl Hrs – {ebAvailable} </strong>||<br></br>
+                                            <strong>⚡ DG Run Hrs – {todayRunHrs.toFixed(1)} Hrs.</strong>||<br></br>
+                                            <strong>⚡ EB Avl Hrs – {ebAvailable.toFixed(1)} Hrs.</strong>||<br></br>
                                         </div>
                                     )}
                                 </div>
@@ -847,7 +848,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                 ([dg, data]) => (
                                                     <div key={dg} style={{ display: "flex", fontSize: "10px" }}>
                                                         {/* <strong>{dg}</strong> — {data.fuel.toFixed(2)} L */}
-                                                        <strong>{dg}</strong> — {data.totalDGRunHours} Hrs
+                                                        <strong>{dg}</strong> — {(data.totalDGRunHours).toFixed(1)} Hrs
                                                         {/* {data.runs.map((r, i) => (
                                                             <div key={i} style={{ fontSize: "12px", color: "#6b7280" }}>
                                                                 {r.startTime}–{r.stopTime} • {r.runHours.toFixed(2)}Hrs • {r.remarks}
