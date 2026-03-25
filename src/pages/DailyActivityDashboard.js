@@ -169,6 +169,7 @@ export default function DailyActivityDashboard({ userData }) {
     pmStatus: "",
     activityCode: "",
     activityTime: "", // ✅ NEW (Day/Night)
+    activityOwner: "",
   });
 
   /** chart refs */
@@ -415,6 +416,11 @@ export default function DailyActivityDashboard({ userData }) {
     // site category
     if (filters.siteCategory) {
       data = data.filter((r) => (r.siteCategory || "") === filters.siteCategory);
+    }
+
+    // activity owner
+    if (filters.activityOwner) {
+      data = data.filter((r) => (r.performBy || "") === filters.activityOwner);
     }
 
     // PM Status
@@ -697,6 +703,7 @@ export default function DailyActivityDashboard({ userData }) {
       activityType: "",
       siteCategory: "",
       approvalStatus: "",
+      activityOwner: "",
     });
 
 
@@ -1167,23 +1174,6 @@ export default function DailyActivityDashboard({ userData }) {
         )}
       </div>
 
-      {/* Toolbar */}
-      <div className="daily-activity-toolbar">
-        <button
-          onClick={() => setFiltersOpen(true)}
-          className="daily-activity-btn daily-activity-btn-secondary"
-        >
-          Filters
-        </button>
-
-        <button
-          onClick={exportExcel}
-          className="daily-activity-btn daily-activity-btn-primary"
-        >
-          Export to Excel
-        </button>
-      </div>
-
       <div
         style={{
           display: "grid",
@@ -1412,6 +1402,23 @@ export default function DailyActivityDashboard({ userData }) {
           </>
         )}
         <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @{instructionEditor || "Unknown User"}</h6>
+      </div>
+
+      {/* Toolbar */}
+      <div className="daily-activity-toolbar">
+        <button
+          onClick={() => setFiltersOpen(true)}
+          className="daily-activity-btn daily-activity-btn-secondary"
+        >
+          Filters
+        </button>
+
+        <button
+          onClick={exportExcel}
+          className="daily-activity-btn daily-activity-btn-primary"
+        >
+          Export to Excel
+        </button>
       </div>
 
       {/* Table */}
@@ -1673,14 +1680,34 @@ export default function DailyActivityDashboard({ userData }) {
                 marginBottom: 12,
               }}
             >
-              <input
-                className="daily-activity-input"
-                placeholder="Search text"
-                value={filters.searchText}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, searchText: e.target.value }))
-                }
-              />
+              <div>
+                <input
+                  className="daily-activity-input"
+                  placeholder="Search text"
+                  value={filters.searchText}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, searchText: e.target.value }))
+                  }
+                />
+
+                <input
+                  type="date"
+                  className="daily-activity-input"
+                  value={filters.dateFrom}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, dateFrom: e.target.value }))
+                  }
+                />
+
+                <input
+                  type="date"
+                  className="daily-activity-input"
+                  value={filters.dateTo}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, dateTo: e.target.value }))
+                  }
+                />
+              </div>
               {isAdmin ? (
                 <div>
                   <select
@@ -1718,6 +1745,19 @@ export default function DailyActivityDashboard({ userData }) {
                       </option>
                     ))}
                   </select>
+
+                  <select
+                    className="daily-activity-select"
+                    value={filters.siteCategory}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, siteCategory: e.target.value }))
+                    }
+                  >
+                    <option value="">All Site Categories</option>
+                    <option value="Super Critical">Super Critical</option>
+                    <option value="Critical">Critical</option>
+                    <option value="Major">Major</option>
+                  </select>
                 </div>
               ) : (
                 <div>
@@ -1749,75 +1789,75 @@ export default function DailyActivityDashboard({ userData }) {
                     value={userData?.site || userData?.siteName || ""}
                     disabled
                   />
+
+                  <select
+                    className="daily-activity-select"
+                    value={filters.siteCategory}
+                    onChange={(e) =>
+                      setFilters((f) => ({ ...f, siteCategory: e.target.value }))
+                    }
+                  >
+                    <option value="">All Site Categories</option>
+                    <option value="Super Critical">Super Critical</option>
+                    <option value="Critical">Critical</option>
+                    <option value="Major">Major</option>
+                  </select>
                 </div>
               )}
 
-              <select
-                className="daily-activity-select"
-                value={filters.pmStatus}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, pmStatus: e.target.value }))
-                }
-              >
-                <option value="">All PM Status</option>
-                <option value="Pending">Pending</option>
-                <option value="WIP">WIP</option>
-                <option value="Completed">Completed</option>
-              </select>
+              <div>
+                <select
+                  className="daily-activity-select"
+                  value={filters.pmStatus}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, pmStatus: e.target.value }))
+                  }
+                >
+                  <option value="">All PM Status</option>
+                  <option value="Pending">Pending</option>
+                  <option value="WIP">WIP</option>
+                  <option value="Completed">Completed</option>
+                </select>
 
-              <input
-                type="date"
-                className="daily-activity-input"
-                value={filters.dateFrom}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, dateFrom: e.target.value }))
-                }
-              />
-              <input
-                type="date"
-                className="daily-activity-input"
-                value={filters.dateTo}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, dateTo: e.target.value }))
-                }
-              />
 
-              <select
-                className="daily-activity-select"
-                value={filters.activityTime}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, activityTime: e.target.value }))
-                }
-              >
-                <option value="">All Activity Times</option>
-                <option value="Day">Day Activity</option>
-                <option value="Night">Night Activity</option>
-              </select>
 
-              <select
-                className="daily-activity-select"
-                value={filters.activityType}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, activityType: e.target.value }))
-                }
-              >
-                <option value="">All Activity Types</option>
-                <option value="Major">Major</option>
-                <option value="Minor">Minor</option>
-              </select>
+                <select
+                  className="daily-activity-select"
+                  value={filters.activityTime}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, activityTime: e.target.value }))
+                  }
+                >
+                  <option value="">All Activity Times</option>
+                  <option value="Day">Day Activity</option>
+                  <option value="Night">Night Activity</option>
+                </select>
 
-              <select
-                className="daily-activity-select"
-                value={filters.siteCategory}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, siteCategory: e.target.value }))
-                }
-              >
-                <option value="">All Site Categories</option>
-                <option value="Super Critical">Super Critical</option>
-                <option value="Critical">Critical</option>
-                <option value="Major">Major</option>
-              </select>
+                <select
+                  className="daily-activity-select"
+                  value={filters.activityType}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, activityType: e.target.value }))
+                  }
+                >
+                  <option value="">All Activity Types</option>
+                  <option value="Major">Major</option>
+                  <option value="Minor">Minor</option>
+                </select>
+
+                <select
+                  className="daily-activity-select"
+                  value={filters.activityOwner}
+                  onChange={(e) =>
+                    setFilters((f) => ({ ...f, activityOwner: e.target.value }))
+                  }
+                >
+                  <option value="">Select Owner</option>
+                  <option value="In-House">In-House Activity</option>
+                  <option value="OEM">OEM Activity</option>
+                </select>
+
+              </div>
 
               <select
                 value={filters.approvalStatus}

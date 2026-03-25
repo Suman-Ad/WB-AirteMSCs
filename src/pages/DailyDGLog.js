@@ -273,6 +273,7 @@ const DailyDGLog = ({ userData }) => {
     DGKWH: true,
     siteLoad: true,
     coolingLoad: true,
+    fuel: true,
   });
   const handleLegendClick = (e) => {
     const key = e.dataKey;
@@ -3654,13 +3655,16 @@ const DailyDGLog = ({ userData }) => {
                 {activeKeys.DGKWH && (
                   <Line type="monotone" dataKey="DGKWH" stroke="#eeff00" strokeOpacity={activeKeys.DGKWH ? 1 : 0.2} />
                 )}
+                {activeKeys.fuel && (
+                  <Line type="monotone" dataKey="fuel" stroke="#ff0015" strokeOpacity={activeKeys.fuel ? 1 : 0.2} />
+                )}
                 {activeKeys.coolingLoad && (
                   <Line type="monotone" dataKey="coolingLoad" stroke="#00cbfe" strokeOpacity={activeKeys.coolingLoad ? 1 : 0.2} />
                 )}
               </LineChart>
             </ResponsiveContainer>
             <div style={{ display: "flex", gap: 15 }}>
-              {["PUE", "siteLoad", "EBKWH", "DGKWH", "coolingLoad"].map((key) => (
+              {["PUE", "siteLoad", "EBKWH", "DGKWH", "coolingLoad", "fuel"].map((key) => (
                 <small
                   key={key}
                   onClick={() =>
