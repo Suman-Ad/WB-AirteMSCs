@@ -111,8 +111,16 @@ const findLastFillingInDGLogs = async (site, monthsToCheck = 3) => {
 };
 
 // Monthy summery for YOY
-const calculateMonthlySummary = (logs, calculateFields, siteConfig) => {
+const calculateMonthlySummary = (logs, calculateFields, siteConfig, monthKey) => {
   if (!logs?.length) return null;
+
+  // ✅ Extract year and month from the monthKey (format: "YYYY-MM")
+  const [year, month] = monthKey.split("-").map(Number);
+  // ✅ Calculate actual days in the current month
+  // Setting day to 0 of the next month gives the last day of the current month
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const totalMonthHrs = 24 * daysInMonth;
+
 
   const calculated = logs.map(e => calculateFields(e, siteConfig));
 
@@ -124,6 +132,9 @@ const calculateMonthlySummary = (logs, calculateFields, siteConfig) => {
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
   };
 
+  const dgRunHrs = sum("Total DG Hours");
+  const officeLoad = avg("Office kW Consumption");
+
   return {
     totalDGKWH: sum("Total DG KWH"),
     totalEBKWH: sum("Total EB KWH"),
@@ -132,6 +143,13 @@ const calculateMonthlySummary = (logs, calculateFields, siteConfig) => {
     totalDGHours: sum("Total DG Hours"),
     avgSiteKW: avg("Site Running kW"),
     avgPUE: avg("PUE"),
+    dgRunHrs: dgRunHrs.toFixed(1),
+    ebAvailable: totalMonthHrs - Number(dgRunHrs),
+    siteRunningLoad: avg("Site Running kW"),
+    itLoad: avg("Total IT Load KWH"),
+    coolingLoad: avg("Cooling kW Consumption"),
+    officeLoad: Number(officeLoad) / 24,
+    MonthHrs: totalMonthHrs,
   };
 };
 
@@ -270,11 +288,12 @@ const DailyDGLog = ({ userData }) => {
   const [activeKeys, setActiveKeys] = useState({
     PUE: true,
     EBKWH: true,
+    EBAvailable: true,
     DGKWH: true,
+    DGRun: true,
+    fuel: true,
     siteLoad: true,
     coolingLoad: true,
-    fuel: true,
-    DGRun: true,
     itLoad: true,
     officeLoad: true,
   });
@@ -287,6 +306,7 @@ const DailyDGLog = ({ userData }) => {
       PUE: false,
       DGKWH: false,
       EBKWH: false,
+      EBAvailable: false,
       siteLoad: false,
       coolingLoad: false,
       DGRun: false,
@@ -881,7 +901,7 @@ const DailyDGLog = ({ userData }) => {
         );
 
         const logs = snap.docs.map(d => d.data());
-        const summary = calculateMonthlySummary(logs, calculateFields, siteConfig);
+        const summary = calculateMonthlySummary(logs, calculateFields, siteConfig, selectedMonth);
 
         if (summary) {
           result.push({
@@ -927,6 +947,11 @@ const DailyDGLog = ({ userData }) => {
     for (let m = 1; m <= 12; m++) {
       const monthKey = `${year}-${String(m).padStart(2, "0")}`;
 
+      // ✅ Calculate actual days in the current month
+      // Setting day to 0 of the next month gives the last day of the current month
+      const daysInMonth = new Date(year, m, 0).getDate();
+      const totalMonthHrs = 24 * daysInMonth;
+
       try {
         const snap = await getDocs(
           collection(db, "dailyDGLogs", siteName, monthKey)
@@ -965,18 +990,24 @@ const DailyDGLog = ({ userData }) => {
 
         const officeLoad = officeLoadArr.length ? officeLoadArr.reduce((a, b) => a + b, 0) / officeLoadArr.length : 0;
 
+        const dgOnLoadRunHrs = sum("Total DG Onload Hours");
+        // ✅ Use the calculated total month hours
+        const ebAvailableHrs = totalMonthHrs - Number(dgOnLoadRunHrs);
+
         results.push({
           month: monthKey,
           monthName: new Date(year, m - 1).toLocaleString("default", { month: "short" }),
           PUE: avg("PUE").toFixed(2),
-          siteLoad: avg("Site Running kW").toFixed(2),
-          DGKWH: sum("Total DG KWH").toFixed(2),
+          EBAvailable: ebAvailableHrs.toFixed(1),
           EBKWH: sum("Total EB KWH").toFixed(2),
-          coolingLoad: avgCoolingLoad.toFixed(2),
-          fuel: sum("Total DG Fuel").toFixed(2),
           DGRun: sum("Total DG Hours").toFixed(2),
+          DGKWH: sum("Total DG KWH").toFixed(2),
+          fuel: sum("Total DG Fuel").toFixed(2),
+          siteLoad: avg("Site Running kW").toFixed(2),
           itLoad: avg("Total IT Load KWH").toFixed(2),
+          coolingLoad: avgCoolingLoad.toFixed(2),
           officeLoad: officeLoad.toFixed(2),
+          MonthHrs: totalMonthHrs,
         });
 
       } catch (err) {
@@ -1280,11 +1311,11 @@ const DailyDGLog = ({ userData }) => {
       const prevLogs = await fetchPreviousYearLogs();
 
       setCurrentSummary(
-        calculateMonthlySummary(logs, calculateFields, siteConfig)
+        calculateMonthlySummary(logs, calculateFields, siteConfig, selectedMonth)
       );
 
       setPreviousSummary(
-        calculateMonthlySummary(prevLogs, calculateFields, siteConfig)
+        calculateMonthlySummary(prevLogs, calculateFields, siteConfig, selectedMonth)
       );
     };
 
@@ -3654,7 +3685,24 @@ const DailyDGLog = ({ userData }) => {
             <h2>📊 Yearly Trand Analysis-{selectedYear}</h2>
             <ResponsiveContainer width="100%" height={320}>
               <LineChart data={yearlyData}>
-                <XAxis dataKey="monthName" />
+                <XAxis dataKey="monthName"
+                  height={50}
+                  tick={(props) => {
+                    const { x, y, payload, index } = props;
+                    const item = yearlyData[index];
+                    return (
+                      <g transform={`translate(${x},${y})`}>
+                        <text x={0} y={0} dy={16} textAnchor="middle" fill="#666" fontSize={11}>
+                          {payload.value}
+                        </text>
+                        {item && (
+                          <text x={0} y={0} dy={30} textAnchor="middle" fill="#999" fontSize={10}>
+                            {item.MonthHrs} hrs
+                          </text>
+                        )}
+                      </g>
+                    );
+                  }} />
                 <YAxis />
                 <Tooltip />
                 <Legend onClick={handleLegendClick} />
@@ -3678,6 +3726,9 @@ const DailyDGLog = ({ userData }) => {
                 {activeKeys.EBKWH && (
                   <Line type="monotone" name="EB kWH" dataKey="EBKWH" stroke="#002fff" strokeOpacity={activeKeys.EBKWH ? 1 : 0.2} />
                 )}
+                {activeKeys.EBAvailable && (
+                  <Line type="monotone" name="EB Available Hrs" dataKey="EBAvailable" stroke="#002fff" strokeOpacity={activeKeys.EBAvailable ? 1 : 0.2} />
+                )}
                 {activeKeys.DGKWH && (
                   <Line type="monotone" name="DG kWH" dataKey="DGKWH" stroke="#eeff00" strokeOpacity={activeKeys.DGKWH ? 1 : 0.2} />
                 )}
@@ -3690,7 +3741,7 @@ const DailyDGLog = ({ userData }) => {
               </LineChart>
             </ResponsiveContainer>
             <div style={{ display: "flex", gap: 15, overflowX: "auto", whiteSpace: "nowrap" }}>
-              {["PUE", "siteLoad", "EBKWH", "DGKWH", "coolingLoad", "fuel", "DGRun", "itLoad", "officeLoad"].map((key) => (
+              {["PUE", "EBKWH", "EBAvailable", "DGKWH", "DGRun", "fuel", "siteLoad", "coolingLoad", "itLoad", "officeLoad"].map((key) => (
                 <small
                   key={key}
                   onClick={() =>
@@ -3716,7 +3767,8 @@ const DailyDGLog = ({ userData }) => {
                           key === "fuel" ? "Fuel Consumption (L)" :
                             key === "DGRun" ? "DG Run Hrs" :
                               key === "itLoad" ? "IT Load (kWh)" :
-                                key === "officeLoad" ? "Office Load (kWh)" : key
+                                key === "officeLoad" ? "Office Load (kWh)" :
+                                  key === "EBAvailable" ? "EB Available Hrs" : key
                   }
                 </small>
               ))}
@@ -3742,10 +3794,10 @@ const DailyDGLog = ({ userData }) => {
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Total DG KWH</td>
-                    <td>{fmt(currentSummary.totalDGKWH)}</td>
-                    <td>{fmt(previousSummary.totalDGKWH)}</td>
-                    <td>{yoy(currentSummary.totalDGKWH, previousSummary.totalDGKWH)}</td>
+                    <td>Avg PUE</td>
+                    <td>{fmt(currentSummary.avgPUE)}</td>
+                    <td>{fmt(previousSummary.avgPUE)}</td>
+                    <td>{yoy(currentSummary.avgPUE, previousSummary.avgPUE)}</td>
                   </tr>
 
                   <tr>
@@ -3754,14 +3806,34 @@ const DailyDGLog = ({ userData }) => {
                     <td>{fmt(previousSummary.totalEBKWH)}</td>
                     <td>{yoy(currentSummary.totalEBKWH, previousSummary.totalEBKWH)}</td>
                   </tr>
+                  <tr>
+                    <td>EB Available <span style={{ fontSize: "12px" }}>({formatMonthName(selectedMonth)} Total  {currentSummary.MonthHrs} Hrs)</span></td>
+                    <td>{fmt(currentSummary.ebAvailable)}</td>
+                    <td>{fmt(previousSummary.ebAvailable)}</td>
+                    <td>{yoy(currentSummary.ebAvailable, previousSummary.ebAvailable)}</td>
+                  </tr>
+                  {(currentSummary.totalSolarKWH || previousSummary.totalSolarKWH) > 0 && (
+                    <tr>
+                      <td>Total Solar KWH</td>
+                      <td>{fmt(currentSummary.totalSolarKWH)}</td>
+                      <td>{fmt(previousSummary.totalSolarKWH)}</td>
+                      <td>{yoy(currentSummary.totalSolarKWH, previousSummary.totalSolarKWH)}</td>
+                    </tr>
+                  )
+                  }
 
                   <tr>
-                    <td>Total Solar KWH</td>
-                    <td>{fmt(currentSummary.totalSolarKWH)}</td>
-                    <td>{fmt(previousSummary.totalSolarKWH)}</td>
-                    <td>{yoy(currentSummary.totalSolarKWH, previousSummary.totalSolarKWH)}</td>
+                    <td>Total DG KWH</td>
+                    <td>{fmt(currentSummary.totalDGKWH)}</td>
+                    <td>{fmt(previousSummary.totalDGKWH)}</td>
+                    <td>{yoy(currentSummary.totalDGKWH, previousSummary.totalDGKWH)}</td>
                   </tr>
-
+                  <tr>
+                    <td>Total DG Run Hrs</td>
+                    <td>{fmt(currentSummary.dgRunHrs)}</td>
+                    <td>{fmt(previousSummary.dgRunHrs)}</td>
+                    <td>{yoy(currentSummary.dgRunHrs, previousSummary.dgRunHrs)}</td>
+                  </tr>
                   <tr>
                     <td>Total Fuel Consumption</td>
                     <td>{fmt(currentSummary.totalFuel)}</td>
@@ -3770,18 +3842,30 @@ const DailyDGLog = ({ userData }) => {
                   </tr>
 
                   <tr>
-                    <td>Avg Site Running kW</td>
+                    <td>Avg Site Running (kW)</td>
                     <td>{fmt(currentSummary.avgSiteKW)}</td>
                     <td>{fmt(previousSummary.avgSiteKW)}</td>
                     <td>{yoy(currentSummary.avgSiteKW, previousSummary.avgSiteKW)}</td>
                   </tr>
-
                   <tr>
-                    <td>Avg PUE</td>
-                    <td>{fmt(currentSummary.avgPUE)}</td>
-                    <td>{fmt(previousSummary.avgPUE)}</td>
-                    <td>{yoy(currentSummary.avgPUE, previousSummary.avgPUE)}</td>
+                    <td>IT Load (kW)</td>
+                    <td>{fmt(currentSummary.itLoad)}</td>
+                    <td>{fmt(previousSummary.itLoad)}</td>
+                    <td>{yoy(currentSummary.itLoad, previousSummary.itLoad)}</td>
                   </tr>
+                  <tr>
+                    <td>Cooling Load (kW)</td>
+                    <td>{fmt(currentSummary.coolingLoad)}</td>
+                    <td>{fmt(previousSummary.coolingLoad)}</td>
+                    <td>{yoy(currentSummary.coolingLoad, previousSummary.coolingLoad)}</td>
+                  </tr>
+                  <tr>
+                    <td>Office Load (kW)</td>
+                    <td>{fmt(currentSummary.officeLoad)}</td>
+                    <td>{fmt(previousSummary.officeLoad)}</td>
+                    <td>{yoy(currentSummary.officeLoad, previousSummary.officeLoad)}</td>
+                  </tr>
+
                 </tbody>
               </table>
             </div>
