@@ -4,6 +4,7 @@ import { startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import "../assets/MyDutySchedule.css"
+import { useMemo } from "react";
 
 function getShiftName(code) {
   switch (code) {
@@ -52,6 +53,17 @@ export default function MyDutySchedule({ currentUser }) {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [weekdayTemplate, setWeekdayTemplate] = useState(null);
   const [userMap, setUserMap] = useState({});
+  const [allRosterDocs, setAllRosterDocs] = useState([]);
+
+  /** permissions */
+  const isAdmin =
+    currentUser?.role === "Super Admin" ||
+    currentUser?.role === "Admin" ||
+    currentUser.isAdminAssigned ||
+    // isAdminAssignmentValid(userData) ||
+    currentUser?.designation === "Vertiv Site Infra Engineer" ||
+    currentUser?.designation === "Vertiv CIH" ||
+    currentUser?.designation === "Vertiv ZM";
 
 
   // async function loadWeekdayTemplate(siteId) {
@@ -102,7 +114,7 @@ export default function MyDutySchedule({ currentUser }) {
       const allUserNames = await getAllUsersMap(); // load once
 
       const rosterSnap = await getDocs(collection(db, "dutyRoster"));
-      const allRosterDocs = rosterSnap.docs;
+      setAllRosterDocs(rosterSnap.docs);
 
       const list = [];
 
@@ -192,10 +204,60 @@ export default function MyDutySchedule({ currentUser }) {
     load();
   }, [currentUser, selectedMonth]);
 
+
+  const monthlyUserShiftSummary = useMemo(() => {
+    if (!currentUser?.site) return {};
+
+    const summary = {};
+
+    const start = startOfMonth(selectedMonth);
+    const end = endOfMonth(selectedMonth);
+
+    const days = eachDayOfInterval({ start, end });
+
+    // loop all roster docs (you already fetched earlier)
+    days.forEach(day => {
+      const iso = format(day, "yyyy-MM-dd");
+      const docId = `${currentUser.site}_${iso}`;
+
+      const docSnap = allRosterDocs?.find(d => d.id === docId);
+      if (!docSnap) return;
+
+      const data = docSnap.data();
+
+      // ✅ LOOP ALL SHIFTS
+      Object.keys(data.shifts || {}).forEach(shift => {
+        (data.shifts[shift] || []).forEach(uid => {
+
+          if (!summary[uid]) {
+            summary[uid] = { G: 0, M: 0, E: 0, N: 0, WO: 0 };
+          }
+
+          const normalizedShift = shift === "W" ? "WO" : shift;
+
+          summary[uid][normalizedShift] += 1;
+        });
+      });
+
+    });
+
+    return summary;
+  }, [selectedMonth, currentUser, allRosterDocs]);
+
+  const total = { G: 0, M: 0, E: 0, N: 0, WO: 0 };
+
+  Object.values(monthlyUserShiftSummary).forEach(u => {
+    total.G += u.G;
+    total.M += u.M;
+    total.E += u.E;
+    total.N += u.N;
+    total.WO += u.WO;
+  });
+
   return (
     <div className="daily-log-container">
       <h2>My Duty Schedule</h2>
-      <div className="mds-user-card">
+      <div className="mds-user-card" style={{ marginBottom: "5px" }}>
         {currentUser?.role === "Super Admin" && <span>Hi, 👑 <strong>{currentUser?.name || "Team Member"}</strong></span>}
         {currentUser?.role === "Admin" && <span>Hi, 🔑 <strong>{currentUser?.name || "Team Member"}</strong></span>}
         {currentUser?.role === "Super User" && <span>Hi, 🦸 <strong>{currentUser?.name || "Team Member"}</strong></span>}
@@ -206,7 +268,7 @@ export default function MyDutySchedule({ currentUser }) {
 
       {weekdayTemplate && (
         <div className="mds-weekly-template">
-          <h3>📅 Weekly Duty Template</h3>
+          <h2 style={{ color: "#092353" }}>📅 Weekly Duty Template</h2>
 
           <table className="mds-weekly-table">
             <thead>
@@ -247,7 +309,87 @@ export default function MyDutySchedule({ currentUser }) {
         </div>
       )}
 
+      {isAdmin ? (
+        <div className="mds-summary-box" style={{ background: "#08091b" }}>
+          <h2>📊 Manpower-wise Monthly Shift Count</h2>
 
+          <table className="mds-summary-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>G</th>
+                <th>M</th>
+                <th>E</th>
+                <th>N</th>
+                <th>W/O</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(monthlyUserShiftSummary)
+                .sort((a, b) =>
+                  (userMap[a]?.name || "").localeCompare(userMap[b]?.name || "")
+                )
+                .map(uid => (
+                  <tr key={uid}>
+                    <td>
+                      <strong>{userMap[uid]?.name || uid.slice(0, 6)}</strong>
+                    </td>
+                    <td>{monthlyUserShiftSummary[uid].G}</td>
+                    <td>{monthlyUserShiftSummary[uid].M}</td>
+                    <td>{monthlyUserShiftSummary[uid].E}</td>
+                    <td>{monthlyUserShiftSummary[uid].N}</td>
+                    <td>{monthlyUserShiftSummary[uid].WO}</td>
+                  </tr>
+                ))}
+              <tr style={{ fontWeight: "bold", background: "#f3f4f6" }}>
+                <td>Total</td>
+                <td>{total.G}</td>
+                <td>{total.M}</td>
+                <td>{total.E}</td>
+                <td>{total.N}</td>
+                <td>{total.WO}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="mds-summary-box">
+          <h2>📊 Monthly Shift Count</h2>
+
+          <table className="mds-summary-table">
+            <thead>
+              <div>
+                <tr>
+                  <th>Name</th>
+                  <th>G</th>
+                  <th>M</th>
+                  <th>E</th>
+                  <th>N</th>
+                  <th>W/O</th>
+                </tr>
+              </div>
+            </thead>
+            <tbody>
+              {Object.keys(monthlyUserShiftSummary).map(uid => (
+                <div>
+                  {currentUser?.name === userMap[uid]?.name && (
+                    <tr key={uid}>
+                      <td>
+                        <strong>{userMap[uid]?.name || uid.slice(0, 6)}</strong>
+                      </td>
+                      <td>{monthlyUserShiftSummary[uid].G}</td>
+                      <td>{monthlyUserShiftSummary[uid].M}</td>
+                      <td>{monthlyUserShiftSummary[uid].E}</td>
+                      <td>{monthlyUserShiftSummary[uid].N}</td>
+                      <td>{monthlyUserShiftSummary[uid].WO}</td>
+                    </tr>
+                  )}
+                </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <div className="mds-month-box">
         <label>Select Month:</label>
         <input
@@ -258,8 +400,8 @@ export default function MyDutySchedule({ currentUser }) {
         />
       </div>
 
-      <div className="mds-summary-box">
-        <h3 className="mds-summary-title">Monthly Summary</h3>
+      <div className="mds-summary-box" style={{ background: "#0c1024" }}>
+        <h2 className="mds-summary-title">Monthly Summary</h2>
 
         <table className="mds-summary-table">
           <thead>
@@ -303,15 +445,22 @@ export default function MyDutySchedule({ currentUser }) {
                     : "mds-bg-normal")
             }
           >
-            <span>{d.date}:- </span>
-            <strong>
+            <strong style={{ color: "white" }}>{d.date}:- </strong>
+            <span
+              style={{
+                color: d.mainShift === "G" ? "#fff" :
+                  d.mainShift === "M" ? "#f57e1c" :
+                    d.mainShift === "E" ? "#e5f74a" :
+                      d.mainShift === "N" ? "#ba40c5" : "#ac7a7a",
+                fontWeight: "bold",
+              }}>
               {formatDutyDisplay(d.mainShift, d.otShift, d.replacedUserName, d.cl)}
-            </strong>
+            </span>
 
             {!d.otShift && !d.cl && (
-              <p className="mds-apply-cl"
+              <span className="mds-apply-cl"
                 onClick={() => navigate("/cl-application", { state: { date: d.date } })}
-              >Apply For CL</p>
+              >Apply For CL</span>
             )}
           </div>
         ))}

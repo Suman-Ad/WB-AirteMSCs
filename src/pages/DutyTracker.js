@@ -412,6 +412,15 @@ export default function DutyTrackerPage({ currentUser }) {
     // .toUpperCase();
   }
 
+  const [dayCollaps, setDayCollaps] = useState({});
+  const toggleWDay = (wd) => {
+    setDayCollaps((prev) => ({
+      ...prev,
+      [wd]: !prev[wd],
+    }));
+  };
+
+
   return (
     <div className="daily-log-container">
       <h2>Duty Tracker</h2>
@@ -671,43 +680,45 @@ export default function DutyTrackerPage({ currentUser }) {
             Site: {selectedSite || "—"}
           </div>
 
-          {/* Shift editors */}
-          {["M", "E", "N", "G", "WO"].map((shift) => (
-            <ShiftEditor
-              key={shift}
-              shift={shift}
-              roster={activeRoster}
-              siteUsers={siteUsers}
-              onChange={(newShifts) =>
-                setActiveRoster((prev) => ({ ...prev, shifts: { ...prev.shifts, [shift]: newShifts } }))
-              }
-            />
-          ))}
+          <div style={{ padding:"9px 5px"}}>
+            {/* Shift editors */}
+            {["M", "E", "N", "G", "WO"].map((shift) => (
+              <ShiftEditor
+                key={shift}
+                shift={shift}
+                roster={activeRoster}
+                siteUsers={siteUsers}
+                onChange={(newShifts) =>
+                  setActiveRoster((prev) => ({ ...prev, shifts: { ...prev.shifts, [shift]: newShifts } }))
+                }
+              />
+            ))}
 
-          <div style={{ marginTop: "12px" }}>
-            <label style={{ display: "block", fontSize: "0.875rem" }}>Remarks</label>
-            <textarea
-              value={activeRoster?.remarks || ""}
-              onChange={(e) => setActiveRoster((prev) => ({ ...prev, remarks: e.target.value }))}
-              style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: "0.375rem", padding: "0.5rem" }}
-            />
-          </div>
+            <div style={{ marginTop: "12px" }}>
+              <label style={{ display: "block", fontSize: "0.875rem" }}>Remarks</label>
+              <textarea
+                value={activeRoster?.remarks || ""}
+                onChange={(e) => setActiveRoster((prev) => ({ ...prev, remarks: e.target.value }))}
+                style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: "0.375rem", padding: "0.5rem" }}
+              />
+            </div>
 
-          <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
-            <Button onClick={() => handleSaveRoster(activeRoster)} className="bg-green-600">Save</Button>
-            <Button onClick={handleSaveAndNotify} className="bg-green-600">
-              Save & Notify
-            </Button>
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
+              <Button onClick={() => handleSaveRoster(activeRoster)} className="bg-green-600">Save</Button>
+              <Button onClick={handleSaveAndNotify} className="bg-green-600">
+                Save & Notify
+              </Button>
+            </div>
           </div>
 
           {/* Weekly Tamplate */}
-          <div style={{ border: "2px solid #000" }}>
+          <div style={{ borderTop: "2px solid #000", padding: "5px 5px" }}>
             <h3 className="mt-4 mb-2">Weekday Template</h3>
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((wd) => (
-              <div key={wd} className="border p-2 mt-2 rounded">
-                <h4 className="font-semibold">{wd}</h4>
+              <div key={wd} className="border p-2 mt-2 rounded" style={{ border: "1px solid #4694dd", borderRadius: "5px", padding: "5px 5px" }}>
+                <h4 className="font-semibold" style={{ background: "#74bcce", cursor: "pointer", padding: "5px 5px", borderRadius: "5px" }} onClick={() => toggleWDay(wd)}>{dayCollaps[wd] ? `${wd} ▶` : `${wd} ▼`}</h4>
 
-                {["M", "E", "N", "G", "WO"].map((shift) => (
+                {dayCollaps[wd] && ["M", "E", "N", "G", "WO"].map((shift) => (
                   <ShiftEditor
                     key={shift}
                     shift={shift}
@@ -723,20 +734,24 @@ export default function DutyTrackerPage({ currentUser }) {
                 ))}
               </div>
             ))}
-          </div>
-          <button
-            className="px-3 py-1 bg-blue-600 text-white rounded"
-            onClick={() => saveWeekdayTemplate(selectedSite, weekdayTemplate)}
-          >
-            Save Weekday Template
-          </button>
+            <div>
+              <button
+                className="btn-primary"
+                onClick={() => applyTemplateToMonth(currentUser, selectedMonth, weekdayTemplate)}
+                style={{ marginTop: "5px", fontSize: "12px" }}
+              >
+                {applingTemplate ? "Appling...." : "Apply Template to This Month"}
+              </button>
 
-          <button
-            className="px-3 py-1 bg-green-600 text-white rounded"
-            onClick={() => applyTemplateToMonth(currentUser, selectedMonth, weekdayTemplate)}
-          >
-            {applingTemplate ? "Appling...." : "Apply Template to This Month"}
-          </button>
+              <button
+                className="px-3 py-1 bg-blue-600 text-white rounded"
+                onClick={() => saveWeekdayTemplate(selectedSite, weekdayTemplate)}
+                style={{ marginTop: "5px", fontSize: "12px" }}
+              >
+                Save Weekday Template
+              </button>
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>
@@ -757,50 +772,61 @@ function ShiftEditor({ shift, roster, siteUsers, onChange }) {
     onChange(current.filter((u) => u !== uid));
   }
 
+  const [shiftCollaps, setShiftCollaps] = useState({});
+  const toggleShift = (shift) => {
+    setShiftCollaps((prev) => ({
+      ...prev,
+      [shift]: !prev[shift],
+    }));
+  };
+
   return (
     <div className="shift-editor">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ fontWeight: "500" }}>Shift {shift}</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }} onClick={() => toggleShift(shift)}>
+        <div style={{ fontWeight: "500", cursor: "pointer" }}>{shiftCollaps[shift] ? `Shift "${shift}" ▶` : `Shift "${shift}" ▼`}</div>
         <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Max 3</div>
       </div>
-
-      <div style={{ marginTop: "12px" }}>
-        {current.length === 0 ? (
-          <div style={{ fontSize: "0.875rem", color: "#64748b" }}>No one assigned</div>
-        ) : (
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            {current.map((uid) => {
-              const u = siteUsers.find((su) => su.uid === uid);
-              return (
-                <div
-                  key={uid}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "0.375rem",
-                    paddingLeft: "0.5rem",
-                    paddingRight: "0.5rem",
-                    paddingTop: "0.25rem",
-                    paddingBottom: "0.25rem"
-                  }}
-                >
-                  <div style={{ fontWeight: "500" }}>{u?.name || uid}</div>
-                  <button style={{ color: "#ef4444" }} onClick={() => removeUser(uid)}>
-                    Remove
-                  </button>
-                </div>
-              );
-            })}
+      {shiftCollaps[shift] && (
+        <div>
+          <div style={{ marginTop: "12px" }}>
+            {current.length === 0 ? (
+              <div style={{ fontSize: "0.875rem", color: "#64748b" }}>No one assigned</div>
+            ) : (
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                {current.map((uid) => {
+                  const u = siteUsers.find((su) => su.uid === uid);
+                  return (
+                    <div
+                      key={uid}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "0.375rem",
+                        paddingLeft: "0.5rem",
+                        paddingRight: "0.5rem",
+                        paddingTop: "0.25rem",
+                        paddingBottom: "0.25rem"
+                      }}
+                    >
+                      <div style={{ fontWeight: "500" }}>{u?.name || uid}</div>
+                      <button style={{ color: "#ef4444" }} onClick={() => removeUser(uid)}>
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <div style={{ marginTop: "0.5rem" }}>
-        <label style={{ fontSize: "14px" }}>Add user</label>
-        <UserSelect siteUsers={siteUsers} onSelect={addUser} disabled={!siteUsers.length} />
-      </div>
+          <div style={{ marginTop: "0.5rem" }}>
+            <label style={{ fontSize: "14px" }}>Add user</label>
+            <UserSelect siteUsers={siteUsers} onSelect={addUser} disabled={!siteUsers.length} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

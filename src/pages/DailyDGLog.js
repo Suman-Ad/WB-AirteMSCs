@@ -132,7 +132,7 @@ const calculateMonthlySummary = (logs, calculateFields, siteConfig, monthKey) =>
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
   };
 
-  const dgRunHrs = sum("Total DG Hours");
+  const dgRunHrs = sum("Total DG Onload Hours");
   const officeLoad = avg("Office kW Consumption");
 
   return {
@@ -1000,7 +1000,7 @@ const DailyDGLog = ({ userData }) => {
           PUE: avg("PUE").toFixed(2),
           EBAvailable: ebAvailableHrs.toFixed(1),
           EBKWH: sum("Total EB KWH").toFixed(2),
-          DGRun: sum("Total DG Hours").toFixed(2),
+          DGRun: sum("Total DG Onload Hours").toFixed(2),
           DGKWH: sum("Total DG KWH").toFixed(2),
           fuel: sum("Total DG Fuel").toFixed(2),
           siteLoad: avg("Site Running kW").toFixed(2),

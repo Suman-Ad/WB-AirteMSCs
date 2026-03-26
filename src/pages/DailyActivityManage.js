@@ -1360,13 +1360,15 @@ export default function DailyActivityManage({ userData }) {
                           <>
                             <b
                               onClick={() => toggleEntry(eq, idx)}
-                              style={{ cursor: "pointer", color: "#fff", borderRadius: "3px" }}
+                              style={{ cursor: "pointer", color: "#fff", borderRadius: "5px", borderBottom: "1px solid #fff", fontSize: "12px" }}
+                              onMouseMove={(e) => e.currentTarget.style.backgroundColor = "#54a6bb"}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
                             >
                               {idx + 1}) {entry.pmType}
                               <br />
                               (
                               {entry.notes || "No notes"} - {formatSchedule(entry)}
-                              )
+                              ) {isEntryToggeled[`${eq}_${idx}`] ? "▶" : "▼"}
                             </b>
 
                             {isEntryToggeled[`${eq}_${idx}`] && (
@@ -1383,7 +1385,7 @@ export default function DailyActivityManage({ userData }) {
                                     </select>
                                   </>
                                 } */}
-                                    <label style={{ fontSize: 12, color: "#666" }}>Activity Description</label>
+                                    <label style={{ fontSize: window.innerWidth > 512 ? "30px" : "15px", color: "#0c145a" }}><strong>Activity Description</strong></label>
                                     <select
                                       className="daily-activity-select"
                                       value={entry.pmType || ""}
@@ -1415,37 +1417,51 @@ export default function DailyActivityManage({ userData }) {
                                     </select>
 
                                   </div>
-                                  <div style={{ fontSize: 12, color: "#444" }}>Activity Owner: {entry.performBy || ""}</div>
-                                  <div style={{ fontSize: 12, color: "#444" }}>Activity Type: {entry.activityType || ""}</div>
-                                  <div style={{
-                                    fontSize: 12, color: "#444",
-                                    background: ACTIVITY_CODE_BG[entry.activityCode] || "transparent",
-                                    display: "inline-block",
-                                    padding: "2px 6px",
-                                    borderRadius: 4,
-                                  }}>
-                                    Activity Code: {entry.activityCode || ""}
+                                  <div style={{ fontSize: window.innerWidth > 612 ? "40px" : "12px"}}>
+                                    <div style={{ fontSize: 12, color: "#444" }}>Activity Owner: {entry.performBy || ""}</div>
+                                    <div style={{ fontSize: 12, color: "#444" }}>Activity Type: {entry.activityType || ""}</div>
+                                    <div style={{
+                                      fontSize: 12, color: "#444",
+                                      background: ACTIVITY_CODE_BG[entry.activityCode] || "transparent",
+                                      display: "inline-block",
+                                      padding: "2px 6px",
+                                      borderRadius: 4,
+                                    }}>
+                                      Activity Code: {entry.activityCode || ""}
+                                    </div>
+                                    <div style={{ fontSize: 12, color: "#444" }}>Activity Category: {entry.activityCategory || ""}</div>
+                                    <div style={{ fontSize: 12, color: "#444" }}>CR Required: {entry.crRequired ? "Yes" : "No"}</div>
+                                    <div style={{ fontSize: 12, color: "#444" }}>CR Days Before: {entry.crRequired ? entry.crDaysBefore : "0"}</div>
+                                    <div style={{ fontSize: 12, color: "#444" }}>Notes: {entry.notes || ""}</div>
                                   </div>
-                                  <div style={{ fontSize: 12, color: "#444" }}>Activity Category: {entry.activityCategory || ""}</div>
-                                  <div style={{ fontSize: 12, color: "#444" }}>CR Required: {entry.crRequired ? "Yes" : "No"}</div>
-                                  <div style={{ fontSize: 12, color: "#444" }}>CR Days Before: {entry.crRequired ? entry.crDaysBefore : "0"}</div>
-                                  <div style={{ fontSize: 12, color: "#444" }}>Notes: {entry.notes || ""}</div>
+                                </div>
+
+                                <div>
+                                  <div>
+                                    <label style={{ fontSize: 12, color: "#666" }}>Frequency</label>
+                                    <select className="daily-activity-select" value={entry.frequency || "monthly"} onChange={(e) => updateSchedule(eq, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
+                                      {FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: 12, color: "#666" }}>Months (comma separated)</label>
+                                    <input className="daily-activity-input" value={(entry.months || []).join(",")} onChange={(e) => {
+                                      const months = (e.target.value || "").split(/[,\s]+/).map(x => parseInt(x, 10)).filter(n => !isNaN(n) && n >= 1 && n <= 12);
+                                      updateSchedule(eq, entry.id, "months", Array.from(new Set(months)).sort((a, b) => a - b));
+                                    }} disabled={!canEdit} />
+                                    <div style={{ fontSize: 11, color: "#666" }}>{(entry.months || []).length ? `Months: ${(entry.months || []).join(",")}` : "No months set"}</div>
+                                  </div>
+                                  <div style={{ marginBottom: 6 }}>
+                                    <label style={{ display: "block", fontSize: 12, color: "#666" }}>Day (1-31)</label>
+                                    <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1} onChange={(e) => updateSchedule(eq, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1", 10))))} disabled={!canEdit} />
+                                  </div>
+                                  <p>
+                                    <label style={{ fontSize: 12, color: "#666" }}>Location: </label>
+                                    <input type="text" className="daily-activity-input" value={entry.floor || ""} onChange={(e) => updateSchedule(eq, entry.id, "floor", e.target.value)} disabled={!canEdit} />
+                                  </p>
                                 </div>
                                 <div>
-                                  <label style={{ fontSize: 12, color: "#666" }}>Frequency</label>
-                                  <select className="daily-activity-select" value={entry.frequency || "monthly"} onChange={(e) => updateSchedule(eq, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
-                                    {FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
-                                  </select>
-                                </div>
-                                <div>
-                                  <label style={{ fontSize: 12, color: "#666" }}>Months (comma separated)</label>
-                                  <input className="daily-activity-input" value={(entry.months || []).join(",")} onChange={(e) => {
-                                    const months = (e.target.value || "").split(/[,\s]+/).map(x => parseInt(x, 10)).filter(n => !isNaN(n) && n >= 1 && n <= 12);
-                                    updateSchedule(eq, entry.id, "months", Array.from(new Set(months)).sort((a, b) => a - b));
-                                  }} disabled={!canEdit} />
-                                  <div style={{ fontSize: 11, color: "#666" }}>{(entry.months || []).length ? `Months: ${(entry.months || []).join(",")}` : "No months set"}</div>
-                                </div>
-                                <div>
+                                  <label style={{ fontSize: 12, color: "#666" }}>Vendor Name: </label>
                                   <select
                                     value={entry.vendor || vendorName}
                                     onChange={(e) => updateSchedule(eq, entry.id, "vendor", e.target.value)}
@@ -1457,14 +1473,8 @@ export default function DailyActivityManage({ userData }) {
                                   </select>
                                   <p>
                                     <label style={{ fontSize: 12, color: "#666" }}>Notes</label>
-                                    Notes: <input type="text" className="daily-activity-input" value={entry.notes || ""} onChange={(e) => updateSchedule(eq, entry.id, "notes", e.target.value)} disabled={!canEdit} />
+                                    <input type="text" className="daily-activity-input" value={entry.notes || ""} onChange={(e) => updateSchedule(eq, entry.id, "notes", e.target.value)} disabled={!canEdit} />
                                   </p>
-                                </div>
-                                <div style={{ textAlign: "right" }}>
-                                  <div style={{ marginBottom: 6 }}>
-                                    <label style={{ display: "block", fontSize: 12, color: "#666" }}>Day (1-31)</label>
-                                    <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1} onChange={(e) => updateSchedule(eq, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1", 10))))} disabled={!canEdit} />
-                                  </div>
                                   <div style={{ marginBottom: 6 }}>
                                     <label style={{ display: "block", fontSize: 12, color: "#666" }}>
                                       Approvers
@@ -1483,17 +1493,18 @@ export default function DailyActivityManage({ userData }) {
                                       }}
                                     />
                                   </div>
-
-                                  <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                                    {/* <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
+                                  <div style={{ textAlign: "right" }}>
+                                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                                      {/* <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
                                 // quick toggle pmType between In-House and Vendor
                                 updateSchedule(eq, entry.id, "pmType", entry.pmType === "Vendor" ? "In-House" : "Vendor");
                               }} disabled={!canEdit}>Toggle Type</button> */}
-                                    <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => {
-                                      if (!canEdit) return;
-                                      if (!window.confirm("Remove this schedule entry?")) return;
-                                      removeSchedule(eq, entry.id);
-                                    }} disabled={!canEdit}>Remove</button>
+                                      <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => {
+                                        if (!canEdit) return;
+                                        if (!window.confirm("Remove this schedule entry?")) return;
+                                        removeSchedule(eq, entry.id);
+                                      }} disabled={!canEdit}>Remove</button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
