@@ -547,22 +547,29 @@ const AllSitesDGLogs = ({ userData }) => {
             });
         };
 
+        // Inside useEffect for fetching rates
         const fetchEBRate = async () => {
             const siteKeys = [...new Set(logs.map(log => (log.site || "Unknown Site")))];
             if (!siteKeys.length) return;
 
             siteKeys.forEach(async (siteKey) => {
                 try {
-                    const docRef = doc(db, "EBRates", siteKey);
+                    const docRef = doc(db, "ebBillDetails", siteKey, "MonthlyBills", monthKey);
                     const docSnap = await getDoc(docRef);
                     const key = siteKey.toUpperCase();
+
                     if (docSnap.exists()) {
-                        setEbRate(prev => ({ ...prev, [key]: docSnap.data().rate || 10 }));
+                        // Store the entire data object instead of just one field
+                        setEbRate(prev => ({ ...prev, [key]: docSnap.data() }));
                     } else {
-                        setEbRate(prev => ({ ...prev, [key]: 10 })); // default if no rate stored
+                        // Provide a default object structure if no record exists
+                        setEbRate(prev => ({
+                            ...prev,
+                            [key]: { Unit: 0, Amount: 0, EBRate: 10, TDSAmount: 0 }
+                        }));
                     }
                 } catch (err) {
-                    console.error("Error fetching fuel rate", err);
+                    console.error("Error fetching EB rate", err);
                 }
             });
         };
@@ -674,7 +681,7 @@ const AllSitesDGLogs = ({ userData }) => {
 
                 // Get site-specific fuel rate (default to 90 if not found)
                 const currentFuelRate = fuelRates[site] || 90;
-                const currentEBRate = ebRate[site] || 10;
+                const currentEBRate = ebRate[siteKey] || { Unit: 0, Amount: 0, EBRate: 10, TDSAmount: 0 };
 
                 // Handler for this specific site's fuel rate
                 const handleChangeFuelRate = (e) => {
@@ -683,9 +690,30 @@ const AllSitesDGLogs = ({ userData }) => {
                 };
 
                 // Handler for this specific site's EB rate
-                const handleChangeEBRate = (e) => {
-                    const newRate = Number(e.target.value);
-                    setEbRate(prev => ({ ...prev, [site]: newRate }));
+                const handleChangeEBRate = (e, siteKey) => {
+                    const { name, value } = e.target;
+                    const numericValue = parseFloat(value) || 0;
+
+                    setEbRate(prev => {
+                        // Get the existing data for this site or provide defaults
+                        const existingData = prev[siteKey] || { Unit: 0, Amount: 0, EBRate: 10, TDSAmount: 0 };
+
+                        // Create the updated object for this site
+                        const updatedSiteData = {
+                            ...existingData,
+                            [name]: numericValue
+                        };
+
+                        // If 'Amount' is changed, automatically recalculate TDSAmount
+                        if (name === "Amount") {
+                            updatedSiteData.TDSAmount = parseFloat((numericValue * (thisConfig.ebTDS * 0.1)).toFixed(2));
+                        }
+
+                        return {
+                            ...prev,
+                            [siteKey]: updatedSiteData
+                        };
+                    });
                 };
 
                 // For DG bar
@@ -1105,7 +1133,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                 </h4>
 
                                 {/* <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p> */}
-                                <p style={{ color: "#302f74ff" }}><strong>[Total Cost (EB + DG) – ₹{fmt((summary.totalEBKWH * currentEBRate) + (summary.totalFuel * currentFuelRate))}]</strong></p>
+                                <p style={{ color: "#302f74ff" }}><strong>[Total Cost (EB + DG) – ₹{fmt((summary.totalEBKWH * currentEBRate.EBRate) + (summary.totalFuel * currentFuelRate))}]</strong></p>
 
                                 {/* Summary Cards */}
                                 <div style={{ display: "flex", borderTop: "3px solid #eee" }}>
@@ -1133,12 +1161,41 @@ const AllSitesDGLogs = ({ userData }) => {
                                         ₹<input
                                             type="number"
                                             step="0.01"
-                                            value={currentEBRate}
-                                            onChange={handleChangeEBRate}
+                                            value={currentEBRate.EBRate || ""}
+                                            onChange={(e) => handleChangeEBRate(e, siteKey)}
                                             style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-                                        /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "#302f74ff" }}>Cost: ₹{fmt(summary.totalEBKWH * currentEBRate)}</b></strong>
+                                        /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "#302f74ff" }}>Cost: ₹{fmt(summary.totalEBKWH * currentEBRate.EBRate)}</b></strong>
                                     </p>
                                 )}
+
+                                <div style={{ fontSize: "12px", display: "grid" }}>
+                                    <strong style={{ whiteSpace: "nowrap" }}>
+                                        💡 EDCOM: <input
+                                            type="number"
+                                            name="Unit" // Matches the key in setEBBill
+                                            step="0.01"
+                                            value={currentEBRate.Unit || ""}
+                                            onChange={(e) => handleChangeEBRate(e, siteKey)}
+                                            // readOnly
+                                            style={{ width: "inherit", marginLeft: "4px", height: "20px" }}
+                                        />Units
+                                    </strong>
+
+                                    <strong style={{ whiteSpace: "nowrap" }}>
+                                        🏦 Through NEFT/RTGS(RS): ₹<input
+                                            type="number"
+                                            name="Amount" // Matches the key in setEBBill
+                                            step="0.01"
+                                            value={currentEBRate.Amount || ""}
+                                            onChange={(e) => handleChangeEBRate(e, siteKey)}
+                                            // readOnly
+                                            style={{ width: "inherit", marginLeft: "4px", height: "20px" }}
+                                        />
+                                    </strong>
+
+                                    {/* TDS is calculated automatically from the state */}
+                                    <b>💰 TDS Amount: <strong>₹{currentEBRate.TDSAmount || "0.00"}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {thisConfig.ebTDS}% of Bill Amount</span></b>
+                                </div>
 
                                 {/* If solar data exists, show solar generation summary */}
                                 {summary.totalSolarKWH > 0 && (

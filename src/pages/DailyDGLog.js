@@ -256,7 +256,13 @@ const DailyDGLog = ({ userData }) => {
   const [dayonLoadRunHrs, setDayOnLoadRunHrs] = useState(0);
   const [form, setForm] = useState({ Date: "" });
   const navigate = useNavigate();
-  const [EBRate, setEBRate] = useState(0.00); // default value
+  const [EBBill, setEBBill] = useState({
+    Month: "",
+    Unit: "",
+    Amount: "",
+    TDSAmount: "",
+    EBRate: "",
+  }); // default value
   const [fuelRate, setFuelRate] = useState(0.00); // default value
   const [siteConfig, setSiteConfig] = useState({});
   const siteKey = selectedSite || userData?.site?.toUpperCase();
@@ -541,6 +547,32 @@ const DailyDGLog = ({ userData }) => {
     }, 500); // wait 500ms after typing stops
   };
 
+  // Debounce helper (optional) EB Bill Detail Fetch
+  let timeout2;
+  const saveEBBill = (bill) => {
+    clearTimeout(timeout2); // Fix: Must match the variable name 'timeout2'
+    timeout2 = setTimeout(async () => {
+      try {
+        // Ensure siteName and selectedMonth are available in the scope
+        await setDoc(
+          doc(db, "ebBillDetails", siteName, "MonthlyBills", selectedMonth),
+          {
+            Month: selectedMonth,
+            Unit: Number(bill.Unit).toFixed(2),
+            Amount: Number(bill.Amount).toFixed(2),
+            TDSAmount: Number((bill.Amount * ( (siteConfig.ebTDS *0.1) || 0.001)).toFixed(2)), // Calculate and save TDS
+            EBRate: Number(bill.Amount) > 0 ? (Number(bill.Amount) / Number(bill.Unit)).toFixed(2) : bill.EBRate,
+            updatedAt: serverTimestamp()
+          },
+          { merge: true }
+        );
+        console.log("EB Bill Details Saved:", bill);
+      } catch (err) {
+        console.error("Error saving EB Bill:", err);
+      }
+    }, 500);
+  };
+
 
   // Change Function For Fuel Rate
   const handleFuelChange = (e) => {
@@ -549,11 +581,15 @@ const DailyDGLog = ({ userData }) => {
     saveFuelRate(rate);
   };
 
+
   // Change Function For EB Rate
-  const handleEBChange = (e) => {
-    const rate = parseFloat(e.target.value) || 0;
-    setEBRate(rate);
-    saveEBRate(rate);
+  const handleEBBill = (e) => {
+    const { name, value } = e.target; // Correct destructuring
+    setEBBill((prev) => {
+      const updatedBill = { ...prev, [name]: parseFloat(value) || 0 };
+      saveEBBill(updatedBill); // Pass the updated state directly to the save function
+      return updatedBill;
+    });
   };
 
 
@@ -1117,22 +1153,38 @@ const DailyDGLog = ({ userData }) => {
 
   }, [selectedSite]);
 
-  // Fetch EB rate from Firestore / Fetch fuel rate from Firestore / Fetch Site Configs from Firestore / Fetch Last Fuel Filling from dailyDGLogs db from Firestore 
   useEffect(() => {
-    // Fetch EB rate from Firestore
-    const fetchEBRate = async () => {
+    const fetchEBBillDetails = async () => {
+      if (!siteName || !selectedMonth) return; // Guard clause
+
       try {
-        const docRef = doc(db, "EBRates", siteName);
+        const docRef = doc(db, "ebBillDetails", siteName, "MonthlyBills", selectedMonth);
         const docSnap = await getDoc(docRef);
+
         if (docSnap.exists()) {
-          setEBRate(docSnap.data().rate || 0);
+          const data = docSnap.data();
+          // Ensure you match the object structure of your state
+          setEBBill({
+            Unit: data.Unit || "0.00",
+            Amount: data.Amount || "0.00",
+            Month: data.Month || selectedMonth,
+            TDSAmount: data.TDSAmount || "0.00",
+            EBRate: data.EBRate || "0.00"
+          });
         } else {
-          setEBRate(0); // default if no rate stored
+          // Reset to default if no data exists for this specific month/site
+          setEBBill({ Unit: "", Amount: "", TDSAmount: "", EBRate: "", Month: selectedMonth });
         }
       } catch (err) {
-        console.error("Error fetching EB rate:", err);
+        console.error("Error fetching EB Bill details:", err);
       }
     };
+
+    fetchEBBillDetails();
+  }, [siteName, selectedMonth, EBBill]); // Re-run when site or month changes
+
+  // Fetch EB rate from Firestore / Fetch fuel rate from Firestore / Fetch Site Configs from Firestore / Fetch Last Fuel Filling from dailyDGLogs db from Firestore 
+  useEffect(() => {
 
     // Fetch fuel rate from Firestore
     const fetchFuelRate = async () => {
@@ -1197,7 +1249,6 @@ const DailyDGLog = ({ userData }) => {
     fetchLastFilling();
 
     fetchConfig();
-    fetchEBRate();
     fetchFuelRate();
 
   }, [logs, siteName, siteKey]);
@@ -3046,7 +3097,7 @@ const DailyDGLog = ({ userData }) => {
 
             <p style={{ color: "#302f74ff" }}>
               <strong>
-                [Total Cost (EB + DG) – ₹{fmt((totalEBKwh * EBRate) + (totalFuel * fuelRate))}]
+                [Total Cost (EB + DG) – ₹{fmt((totalEBKwh * EBBill.EBRate) + (totalFuel * fuelRate))}]
               </strong>
             </p>
 
@@ -3083,12 +3134,42 @@ const DailyDGLog = ({ userData }) => {
             <p style={{ borderTop: "1px solid #eee", borderRadius: "10px" }}><strong>⚡ Total EB KW Consumption – {fmt(totalEBKwh)} units x </strong>
               ₹<input
                 type="number"
+                name="EBRate"
                 step="0.01"
-                value={EBRate}
-                onChange={handleEBChange}
+                value={EBBill.EBRate}
+                onChange={handleEBBill}
                 style={{ width: "60px", marginLeft: "4px", height: "20px" }}
-              /><strong style={{ fontSize: "10px" }}>/Unit. = ₹{fmt(totalEBKwh * EBRate)}</strong>
+                // disabled
+              /><strong style={{ fontSize: "10px", color: "#5c3c6ce8" }}>/Unit. = ₹{fmt(totalEBKwh * Number(EBBill.EBRate))}</strong>
+
+              <div style={{ fontSize: "12px", display: "grid" }}>
+                <strong style={{ whiteSpace: "nowrap" }}>
+                  💡 EDCOM: <input
+                    type="number"
+                    name="Unit" // Matches the key in setEBBill
+                    step="0.01"
+                    value={EBBill.Unit || ""}
+                    onChange={handleEBBill}
+                    style={{ width: "inherit", marginLeft: "4px", height: "20px" }}
+                  />Units
+                </strong>
+
+                <strong style={{ whiteSpace: "nowrap" }}>
+                  🏦 Through NEFT/RTGS(RS): ₹<input
+                    type="number"
+                    name="Amount" // Matches the key in setEBBill
+                    step="0.01"
+                    value={EBBill.Amount || ""}
+                    onChange={handleEBBill}
+                    style={{ width: "inherit", marginLeft: "4px", height: "20px" }}
+                  />
+                </strong>
+
+                {/* TDS is calculated automatically from the state */}
+                <b>💰 TDS Amount: <strong>₹{EBBill.TDSAmount || 0}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {siteConfig.ebTDS}% of Bill Amount</span></b>
+              </div>
             </p>
+
             {siteConfig.solarCount > 0 && (
               <p style={{ borderTop: "1px solid #eee" }}><strong>☀️ Total Solar KW Generation – {fmt(totalSolarKwh)} kW</strong></p>
             )}
@@ -3098,7 +3179,7 @@ const DailyDGLog = ({ userData }) => {
               <strong>
                 ⚡ Total DG KW Generation – {fmt(totalKwh)} kW
               </strong>
-              <b style={{ fontSize: "10px" }}>
+              <b style={{ fontSize: "10px", color: "#5c3c6ce8" }}>
                 (Cost: ₹{fmt((totalFuel * fuelRate) / totalKwh)}/kW)
               </b>
             </p>
@@ -3131,7 +3212,7 @@ const DailyDGLog = ({ userData }) => {
                 onChange={handleFuelChange}
                 style={{ width: "70px", marginLeft: "4px", height: "20px" }}
               />
-              <strong style={{ fontSize: "10px" }}>
+              <strong style={{ fontSize: "10px", color: "#5c3c6ce8" }}>
                 /Ltr = ₹{fmt(grandFuelFill * fuelRate)}
               </strong>
             </p>
@@ -3155,9 +3236,9 @@ const DailyDGLog = ({ userData }) => {
 
             {/* ⛽ Total Fuel Consumption */}
             <p style={{ borderTop: "1px solid #eee" }}>
-              <strong>⛽ Total Fuel Consumption – {fmt(totalFuel)}</strong>
-              <b style={{ fontSize: "10px" }}>
-                Ltrs = ₹{fmt(totalFuel * fuelRate)}
+              <strong>⛽ Total Fuel Consumption – {fmt(totalFuel)} Ltrs. </strong>
+              <b style={{ fontSize: "10px", color: "#5c3c6ce8" }}>
+                Cost: ₹{fmt(totalFuel * fuelRate)}
               </b>
             </p>
 

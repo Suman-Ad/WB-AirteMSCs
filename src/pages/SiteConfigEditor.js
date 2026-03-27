@@ -175,6 +175,26 @@ const SiteConfigEdit = ({ userData }) => {
                 <option value="Critical">Critical</option>
                 <option value="Major">Major</option>
               </select>
+
+              <label>EB Sanction Load (Kva)</label>
+              <input
+                type="number"
+                step="0.01"
+                name="ebSanctionkVA"
+                value={config.ebSanctionkVA || ""}
+                onChange={handleChange}
+              />
+
+              <label>EB Bill Decleared TDS % (e.g.: 0.01%)</label>
+              <input
+                type="number"
+                step="0.01"
+                name="ebTDS"
+                value={config.ebTDS || ""}
+                placeholder="0.01"
+                onChange={handleChange}
+              />
+
               <label>Running PF</label>
               <input
                 type="number"
@@ -184,7 +204,7 @@ const SiteConfigEdit = ({ userData }) => {
                 onChange={handleChange}
               />
 
-              <label>Fuel Alert Threshold</label>
+              <label>Fuel Alert Threshold Hours</label>
               <input
                 type="number"
                 step="0.01"
