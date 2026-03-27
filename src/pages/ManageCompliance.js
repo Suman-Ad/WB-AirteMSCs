@@ -17,8 +17,10 @@ import {
   uploadBytesResumable,
   getDownloadURL,
 } from "firebase/storage";
-import "../assets/DHRStyle.css"; // uses your main style file
+import "../assets/DHRStyle.css"; // uses your main style files
 import { regions, siteList, siteIdMap } from "../config/siteConfigs";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 
 export default function ManageCompliance({ userData }) {
@@ -47,17 +49,21 @@ export default function ManageCompliance({ userData }) {
     templateId: "",
     issueDate: "",
     expiryDate: "",
-    file: null,
+    files: [],
   });
   const [newUploadProgress, setNewUploadProgress] = useState(0);
   const [newUploading, setNewUploading] = useState(false);
+  const [uploadProgressMap, setUploadProgressMap] = useState({
+    file: [],
+  });
+
 
   // Record edit state
   const [editingRecordId, setEditingRecordId] = useState(null);
   const [editingRecordForm, setEditingRecordForm] = useState({
     issueDate: "",
     expiryDate: "",
-    file: null,
+    files: [],
     site: "",
     region: "",
     circle: "",
@@ -71,7 +77,7 @@ export default function ManageCompliance({ userData }) {
   const [editText, setEditText] = useState("");
 
   const canManageTemplates = userRole === "Admin" || userRole === "Super Admin";
-  const canUploadRecords = userRole === "Super User";
+  const canUploadRecords = userRole === "Admin" || userRole === "Super Admin" || userRole === "Super User";
 
   // Fetch instruction (uses single doc id "manage_compliance_instruction")
   useEffect(() => {
@@ -159,55 +165,71 @@ export default function ManageCompliance({ userData }) {
 
   // ---------------- Upload new record (Super User) ----------------
   const handleUploadRecord = async () => {
-    // validation: template, dates, file
-    if (!newRecord.templateId || !newRecord.issueDate || !newRecord.file) {
-      return alert("Please select template, issue date, expiry date if available and file.");
+    if (!newRecord.templateId || !newRecord.issueDate || !newRecord.files.length) {
+      return alert("Please select template, issue date and at least one files.");
     }
 
     try {
       setNewUploading(true);
       const template = templates.find(t => t.id === newRecord.templateId);
       const storage = getStorage();
-      const storageRef = ref(storage, `compliance/${userSite}/${Date.now()}_${newRecord.file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, newRecord.file);
 
-      uploadTask.on(
-        "state_changed",
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setNewUploadProgress(progress);
-        },
-        (error) => {
-          console.error("Upload error", error);
-          alert("File upload failed!");
-          setNewUploading(false);
-          setNewUploadProgress(0);
-        },
-        async () => {
-          const fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          const id = Date.now().toString();
-          await setDoc(doc(db, "compliance_records", id), {
-            templateId: newRecord.templateId,
-            complianceType: template?.title || "",
-            region: template?.region || userRegion || "",
-            circle: template?.circle || userCircle || "",
-            site: userSite,
-            // store as issueDate & expiryDate (new standard)
-            issueDate: newRecord.issueDate,
-            expiryDate: newRecord.expiryDate || "NA",
-            fileUrl,
-            uploadedBy: userData.uid || "",
-            uploadedAt: serverTimestamp(),
-          });
+      let uploadedUrls = [];
 
-          // reset form
-          setNewRecord({ templateId: "", issueDate: "", expiryDate: "", file: null });
-          setNewUploadProgress(0);
-          setNewUploading(false);
-        }
-      );
+      for (let i = 0; i < newRecord.files.length; i++) {
+        const files = newRecord.files[i];
+
+        const storageRef = ref(
+          storage,
+          `compliance/${userSite}/${Date.now()}_${files.name}`
+        );
+
+        const uploadTask = uploadBytesResumable(storageRef, files);
+
+        await new Promise((resolve, reject) => {
+          uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+
+              setUploadProgressMap(prev => ({
+                ...prev,
+                [files.name]: progress
+              }));
+            },
+            (error) => reject(error),
+            async () => {
+              const fileUrls = await getDownloadURL(uploadTask.snapshot.ref);
+              uploadedUrls.push(fileUrls);
+              resolve();
+            }
+          );
+        });
+      }
+
+      // 🔥 Save ALL files URLs
+      const id = Date.now().toString();
+      await setDoc(doc(db, "compliance_records", id), {
+        templateId: newRecord.templateId,
+        complianceType: template?.title || "",
+        region: template?.region || userRegion || "",
+        circle: template?.circle || userCircle || "",
+        site: userSite,
+        issueDate: newRecord.issueDate,
+        expiryDate: newRecord.expiryDate || "NA",
+        fileUrls: uploadedUrls,   // 👈 array instead of single
+        uploadedBy: userData.uid || "",
+        uploadedAt: serverTimestamp(),
+      });
+
+      // reset
+      setNewRecord({ templateId: "", issueDate: "", expiryDate: "", files: [] });
+      setNewUploadProgress(0);
+      setNewUploading(false);
+
     } catch (err) {
-      console.error("handleUploadRecord error", err);
+      console.error("Upload error", err);
+      alert("Upload failed!");
       setNewUploading(false);
       setNewUploadProgress(0);
     }
@@ -219,13 +241,25 @@ export default function ManageCompliance({ userData }) {
     await deleteDoc(doc(db, "compliance_records", id));
   };
 
+  const handleDeleteSingleFile = async (recordId, fileUrl) => {
+    if (!window.confirm("Delete this file?")) return;
+
+    const record = records.find(r => r.id === recordId);
+
+    const updatedFiles = (record.fileUrls || []).filter(url => url !== fileUrl);
+
+    await updateDoc(doc(db, "compliance_records", recordId), {
+      fileUrls: updatedFiles
+    });
+  };
+
   // ---------------- Edit record ----------------
   const startEditRecord = (r) => {
     setEditingRecordId(r.id);
     setEditingRecordForm({
       issueDate: r.issueDate,
       expiryDate: r.expiryDate, // can be empty for non-expiring docs
-      file: null,
+      files: [],
       site: r.site || userSite,
       region: r.region || userRegion,
       circle: r.circle || userCircle,
@@ -245,40 +279,82 @@ export default function ManageCompliance({ userData }) {
         updatedAt: serverTimestamp(),
       };
 
-      // if file chosen -> upload with progress
-      if (editingRecordForm.file) {
+      // if files chosen -> upload with progress
+      if (editingRecordForm.files && editingRecordForm.files.length > 0) {
         setEditUploading(true);
-        const storage = getStorage();
-        const fileRef = ref(storage, `compliance/${updates.site}/${Date.now()}_${editingRecordForm.file.name}`);
-        const uploadTask = uploadBytesResumable(fileRef, editingRecordForm.file);
 
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setEditUploadProgress(progress);
-          },
-          (err) => {
-            console.error("edit upload error", err);
-            alert("File upload failed during edit!");
-            setEditUploading(false);
-            setEditUploadProgress(0);
-          },
-          async () => {
-            const fileUrl = await getDownloadURL(uploadTask.snapshot.ref);
-            updates.fileUrl = fileUrl;
-            await updateDoc(recordRef, updates);
-            setEditingRecordId(null);
-            setEditingRecordForm({ issueDate: "", expiryDate: "", file: null, site: "", region: "", circle: "" });
-            setEditUploadProgress(0);
-            setEditUploading(false);
-          }
-        );
-      } else {
-        // no file -> just update fields
+        const storage = getStorage();
+        let uploadedUrls = [];
+
+        for (let i = 0; i < editingRecordForm.files.length; i++) {
+          const files = editingRecordForm.files[i];
+
+          const filesRef = ref(
+            storage,
+            `compliance/${updates.site}/${Date.now()}_${files.name}`
+          );
+
+          const uploadTask = uploadBytesResumable(filesRef, files);
+
+          await new Promise((resolve, reject) => {
+            uploadTask.on(
+              "state_changed",
+              (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+
+                setUploadProgressMap(prev => ({
+                  ...prev,
+                  [files.name]: progress
+                }));
+              },
+              (err) => reject(err),
+              async () => {
+                const fileUrls = await getDownloadURL(uploadTask.snapshot.ref);
+                uploadedUrls.push(fileUrls);
+                resolve();
+              }
+            );
+          });
+        }
+
+        // 🔥 Merge with existing files (VERY IMPORTANT)
+        const existing = records.find(r => r.id === editingRecordId);
+
+        updates.fileUrls = [
+          ...(existing?.fileUrls || (existing?.fileUrl ? [existing.fileUrl] : [])), // ✅ supports old data
+          ...uploadedUrls
+        ];
+        // updates.fileUrls = [
+        //   ...(records.find(r => r.id === editingRecordId)?.fileUrls || []),
+        //   ...uploadedUrls
+        // ];
+
         await updateDoc(recordRef, updates);
+
         setEditingRecordId(null);
-        setEditingRecordForm({ issueDate: "", expiryDate: "", file: null, site: "", region: "", circle: "" });
+        setEditingRecordForm({
+          issueDate: "",
+          expiryDate: "",
+          files: [],
+          site: "",
+          region: "",
+          circle: ""
+        });
+
+        setEditUploadProgress(0);
+        setEditUploading(false);
+      } else {
+        await updateDoc(recordRef, updates); // ✅ save without file
+
+        setEditingRecordId(null);
+        setEditingRecordForm({
+          issueDate: "",
+          expiryDate: "",
+          files: [],
+          site: "",
+          region: "",
+          circle: "",
+        });
       }
     } catch (err) {
       console.error("saveEditedRecord error", err);
@@ -291,12 +367,12 @@ export default function ManageCompliance({ userData }) {
   const assignedTemplates = canManageTemplates
     ? templates
     : templates.filter((t) => {
-        if (t.scope === "global") return true;
-        if (Array.isArray(t.sites) && t.sites.length > 0) {
-          return t.sites.includes(userSite);
-        }
-        return t.site === userSite;
-      });
+      if (t.scope === "global") return true;
+      if (Array.isArray(t.sites) && t.sites.length > 0) {
+        return t.sites.includes(userSite);
+      }
+      return t.site === userSite;
+    });
 
   // Save instruction text (Admin / Super Admin)
   const saveInstruction = async () => {
@@ -309,6 +385,23 @@ export default function ManageCompliance({ userData }) {
       console.error("saveInstruction error", err);
       alert("Failed to save instruction.");
     }
+  };
+
+  const downloadAllFiles = async (files) => {
+    const zip = new JSZip();
+
+    for (let i = 0; i < files.length; i++) {
+      const url = files[i];
+      const fileName = decodeURIComponent(url.split("%2F").pop().split("?")[0]);
+
+      const response = await fetch(url);
+      const blob = await response.blob();
+
+      zip.file(fileName, blob);
+    }
+
+    const content = await zip.generateAsync({ type: "blob" });
+    saveAs(content, "compliance_files.zip");
   };
 
   return (
@@ -338,7 +431,7 @@ export default function ManageCompliance({ userData }) {
             )}
           </>
         )}
-        <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
+        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @Suman Adhikari</h6>
       </div>
 
       {/* Admin / Super Admin: create or edit templates */}
@@ -445,7 +538,7 @@ export default function ManageCompliance({ userData }) {
         </section>
       )}
 
-      {/* SUPER USER: Upload record */}
+      {/* USER: Upload record */}
       {canUploadRecords && (
         <section style={{ marginBottom: "1.25rem" }}>
           <h3>Upload Compliance Document (Site: {userSite})</h3>
@@ -463,7 +556,7 @@ export default function ManageCompliance({ userData }) {
             <input type="date" value={newRecord.expiryDate} onChange={(e) => setNewRecord({ ...newRecord, expiryDate: e.target.value })} />
 
             <label style={{ marginTop: "0.5rem" }}>File (PDF/JPG)</label>
-            <input type="file" accept=".pdf,image/*" onChange={(e) => setNewRecord({ ...newRecord, file: e.target.files[0] })} />
+            <input type="file" accept=".pdf,image/*,.doc,.docx" multiple onChange={(e) => setNewRecord({ ...newRecord, files: Array.from(e.target.files) })} />
 
             {/* progress bar for new upload */}
             {newUploading && (
@@ -482,7 +575,7 @@ export default function ManageCompliance({ userData }) {
                   !newRecord.templateId ||
                   !newRecord.issueDate ||
                   // !newRecord.expiryDate ||
-                  !newRecord.file
+                  !newRecord.files
                 }
               >
                 {newUploading ? "Uploading..." : "Upload"}
@@ -560,9 +653,9 @@ export default function ManageCompliance({ userData }) {
                 let daysLeft = null;
 
                 if (expiryVal) {
-                  daysLeft = Math.ceil((new Date(expiryVal) - new Date()) / (1000*60*60*24));
+                  daysLeft = Math.ceil((new Date(expiryVal) - new Date()) / (1000 * 60 * 60 * 24));
                   rowClass = daysLeft <= 0 ? "overdue" : (daysLeft <= 7 ? "near-expiry" : "");
-                } else if (r.fileUrl) {
+                } else if (r.fileUrls) {
                   rowClass = ""; // available, no expiry
                 }
                 return (
@@ -574,18 +667,45 @@ export default function ManageCompliance({ userData }) {
 
                     <td>
                       {editingRecordId === r.id ? (
-                        <input type="date" value={editingRecordForm.issueDate} onChange={(e) => setEditingRecordForm({...editingRecordForm, issueDate: e.target.value})} />
+                        <input type="date" value={editingRecordForm.issueDate} onChange={(e) => setEditingRecordForm({ ...editingRecordForm, issueDate: e.target.value })} />
                       ) : (issueVal || "-")}
                     </td>
 
                     <td>
                       {editingRecordId === r.id ? (
-                        <input type="date" value={editingRecordForm.expiryDate} onChange={(e) => setEditingRecordForm({...editingRecordForm, expiryDate: e.target.value})} />
+                        <input type="date" value={editingRecordForm.expiryDate} onChange={(e) => setEditingRecordForm({ ...editingRecordForm, expiryDate: e.target.value })} />
                       ) : (expiryVal || "-")}
                     </td>
 
                     <td>
-                      {r.fileUrl ? <a href={r.fileUrl} target="_blank" rel="noreferrer">View</a> : "-"}
+                      {Array.isArray(r.fileUrls) && r.fileUrls.length > 0 ? (
+                        r.fileUrls.map((url, idx) => {
+                          const fileName = decodeURIComponent(url.split("%2F").pop().split("?")[0]);
+
+                          return (
+                            <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <a href={url} target="_blank" rel="noreferrer">
+                                📄 {fileName}
+                              </a>
+
+                              {/* DELETE BUTTON */}
+                              <button
+                                style={{ color: "red", border: "none", background: "none", cursor: "pointer" }}
+                                onClick={() => handleDeleteSingleFile(r.id, url)}
+                              >
+                                ❌
+                              </button>
+                            </div>
+                          );
+                        })
+                      ) : "-"}
+
+                      <button
+                        onClick={() => downloadAllFiles(r.fileUrls)}
+                        className="btn-secondary"
+                      >
+                        📦 Download All
+                      </button>
                     </td>
 
                     <td className="action-buttons">
@@ -594,18 +714,18 @@ export default function ManageCompliance({ userData }) {
                           {/* Admin may change site/region/circle inline */}
                           {canManageTemplates && (
                             <>
-                              <select value={editingRecordForm.region} onChange={(e)=> setEditingRecordForm({...editingRecordForm, region: e.target.value, circle: "", site: ""})}>
+                              <select value={editingRecordForm.region} onChange={(e) => setEditingRecordForm({ ...editingRecordForm, region: e.target.value, circle: "", site: "" })}>
                                 <option value="">Region</option>
                                 {Object.keys(regions).map(rr => <option key={rr} value={rr}>{rr}</option>)}
                               </select>
                               {editingRecordForm.region && (
-                                <select value={editingRecordForm.circle} onChange={(e)=> setEditingRecordForm({...editingRecordForm, circle: e.target.value, site: ""})}>
+                                <select value={editingRecordForm.circle} onChange={(e) => setEditingRecordForm({ ...editingRecordForm, circle: e.target.value, site: "" })}>
                                   <option value="">Circle</option>
                                   {regions[editingRecordForm.region].map(cc => <option key={cc} value={cc}>{cc}</option>)}
                                 </select>
                               )}
                               {editingRecordForm.circle && siteList[editingRecordForm.region] && siteList[editingRecordForm.region][editingRecordForm.circle] && (
-                                <select value={editingRecordForm.site} onChange={(e)=> setEditingRecordForm({...editingRecordForm, site: e.target.value})}>
+                                <select value={editingRecordForm.site} onChange={(e) => setEditingRecordForm({ ...editingRecordForm, site: e.target.value })}>
                                   <option value="">Site</option>
                                   {siteList[editingRecordForm.region][editingRecordForm.circle].map(ss => <option key={ss} value={ss}>{ss}</option>)}
                                 </select>
@@ -613,7 +733,7 @@ export default function ManageCompliance({ userData }) {
                             </>
                           )}
 
-                          <input type="file" accept=".pdf,image/*" onChange={(e) => setEditingRecordForm({...editingRecordForm, file: e.target.files[0]})} />
+                          <input type="file" accept=".pdf,image/*,.doc,.docx" multiple onChange={(e) => setEditingRecordForm({ ...editingRecordForm, files: Array.from(e.target.files) })} />
 
                           {/* edit upload progress */}
                           {editUploading && editingRecordId === r.id && (
@@ -622,6 +742,38 @@ export default function ManageCompliance({ userData }) {
                               <span> {Math.round(editUploadProgress)}%</span>
                             </div>
                           )}
+
+                          {Object.keys(uploadProgressMap).map((fileName) => (
+                            <div key={fileName}>
+                              {fileName}
+                              <progress value={uploadProgressMap[fileName]} max="100" />
+                              {Math.round(uploadProgressMap[fileName])}%
+                            </div>
+                          ))}
+
+                          {Array.isArray(r.fileUrls) && r.fileUrls.map((url, idx) => {
+                            const isImage = url.match(/\.(jpeg|jpg|png|gif)$/i);
+                            const isPDF = url.match(/\.pdf$/i);
+                            const fileName = decodeURIComponent(url.split("%2F").pop().split("?")[0]);
+
+                            return (
+                              <div key={idx} style={{ marginBottom: "10px" }}>
+                                <strong>{fileName}</strong>
+
+                                {isImage && (
+                                  <img src={url} alt="" style={{ width: "100px", display: "block" }} />
+                                )}
+
+                                {isPDF && (
+                                  <iframe src={url} width="200" height="150" title="pdf-preview"></iframe>
+                                )}
+
+                                {!isImage && !isPDF && (
+                                  <a href={url} target="_blank" rel="noreferrer">Open File</a>
+                                )}
+                              </div>
+                            );
+                          })}
 
                           <button className="btn-primary" onClick={saveEditedRecord} disabled={editUploading}>Save</button>
                           <button className="btn-secondary" onClick={() => setEditingRecordId(null)}>Cancel</button>

@@ -18,7 +18,7 @@ export default function ComplianceDashboard({ userData }) {
   const [records, setRecords] = useState([]);
   const [instructionText, setInstructionText] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState("");  
+  const [editText, setEditText] = useState("");
 
   const userRole = userData?.role;
   const userSite = userData?.site;
@@ -145,7 +145,7 @@ export default function ComplianceDashboard({ userData }) {
     ? merged.filter(m => m.site === userSite || m.site === "All Sites")
     : merged;
 
- // Enhanced Summary: Circle -> Site -> {total, available, missing, nearestExpiry}
+  // Enhanced Summary: Circle -> Site -> {total, available, missing, nearestExpiry}
   const summary = {};
 
   filtered.forEach(item => {
@@ -200,7 +200,7 @@ export default function ComplianceDashboard({ userData }) {
     <div className="dhr-dashboard-container">
       <h1 className="dashboard-header">
         <strong>⚖️ Compliance Dashboard</strong>
-      </h1> 
+      </h1>
       <div className="instruction-tab">
         <h2 className="noticeboard-header">📌 Notice Board </h2>
         {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
@@ -245,7 +245,7 @@ export default function ComplianceDashboard({ userData }) {
             )}
           </>
         )}
-        <h6 style={{marginLeft: "90%"}}>Thanks & Regurds @Suman Adhikari</h6>
+        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @Suman Adhikari</h6>
       </div>
 
       {(userRole === "Admin" || userRole === "Super Admin" || userRole === "Super User") && (
@@ -311,7 +311,9 @@ export default function ComplianceDashboard({ userData }) {
         </thead>
         <tbody>
           {filtered.map(row => {
-            const hasDocument = !!row.fileUrl;
+            const hasDocument =
+              (Array.isArray(row.fileUrls) && row.fileUrls.length > 0) ||
+              !!row.fileUrl;
             const expiryDate = row.expiryDate ? new Date(row.expiryDate) : null;
             let statusText = "Missing Document";
             let rowClass = "missing";
@@ -347,7 +349,17 @@ export default function ComplianceDashboard({ userData }) {
                 <td>{row.issueDate || "-"}</td>
                 <td>{row.expiryDate || "-"}</td>
                 <td>
-                  {hasDocument ? <a href={row.fileUrl} target="_blank" rel="noreferrer">{statusText}</a> : statusText}
+                  {hasDocument && Array.isArray(row.fileUrls) && row.fileUrls.length > 0 ? (
+                    row.fileUrls.map((url, idx) => (
+                      <div key={idx}>
+                        <a href={url} target="_blank" rel="noreferrer">
+                          View {idx + 1}
+                        </a>
+                      </div>
+                    ))
+                  ) : row.fileUrl ? (
+                    <a href={row.fileUrl} target="_blank" rel="noreferrer">{statusText}</a>
+                  ) : statusText}
                 </td>
 
                 <td>
