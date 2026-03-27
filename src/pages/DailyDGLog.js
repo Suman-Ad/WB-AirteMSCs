@@ -1527,7 +1527,7 @@ const DailyDGLog = ({ userData }) => {
       entryUpdate ? (
         await setDoc(docRef, { ...form, updatedBy: uploadedBy, updatedAt: serverTimestamp() }, { merge: true })
       ) : (
-        await setDoc(docRef, { ...form, entryBy: uploadedBy, updatedAt: serverTimestamp() }, { merge: true })
+        await setDoc(docRef, { ...form, entryBy: uploadedBy, entryAt: serverTimestamp() }, { merge: true })
       )
     }
 
@@ -4206,12 +4206,12 @@ const DailyDGLog = ({ userData }) => {
                   <td>
                     <p style={{ whiteSpace: "nowrap", fontSize: "9px", color: "#131b8d" }}> • {entry.entryBy?.name ? entry.entryBy?.name : "Missing.."}</p>
                     <p style={{ color: "#666", fontSize: "8px", color: "#fff" }}> • {(entry?.entryBy?.empId ? entry?.entryBy?.empId : "Missing..")}</p>
-                    <p style={{ color: "#666", fontSize: "8px", color: "#923f07", whiteSpace: "nowrap" }}> • {(entry.updatedAt.toDate().toLocaleString())}</p>
+                    <p style={{ color: "#666", fontSize: "8px", color: "#923f07", whiteSpace: "nowrap" }}> • {(entry.entryAt?.toDate().toLocaleString()) || "00:00:00Hrs"}</p>
                   </td>
                   <td>
                     <p style={{ whiteSpace: "nowrap", fontSize: "9px", color: "#131b8d" }}> • {entry.updatedBy?.name ? entry.updatedBy?.name : "Missing.."}</p>
                     <p style={{ color: "#666", fontSize: "8px", color: "#fff" }}> • {(entry.updatedBy?.empId || "Missing..")}</p>
-                    <p style={{ color: "#666", fontSize: "8px", color: "#923f07", whiteSpace: "nowrap" }}> • {(entry.updatedAt.toDate().toLocaleString())}</p>
+                    <p style={{ color: "#666", fontSize: "8px", color: "#923f07", whiteSpace: "nowrap" }}> • {(entry.updatedAt?.toDate().toLocaleString()) || "00:00:00Hrs"}</p>
                   </td>
                 </tr>
               );

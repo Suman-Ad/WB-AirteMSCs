@@ -700,9 +700,16 @@ export default function ManageCompliance({ userData }) {
                         })
                       ) : "-"}
 
+                      {r.fileUrl && (
+
+                        <a href={r.fileUrl} target="_blank" rel="noreferrer">
+                          📄 FileName
+                        </a>)
+                      }
                       <button
                         onClick={() => downloadAllFiles(r.fileUrls)}
                         className="btn-secondary"
+                        style={{ fontSize: "12px", padding: "2px 2px" }}
                       >
                         📦 Download All
                       </button>

@@ -349,17 +349,44 @@ export default function ComplianceDashboard({ userData }) {
                 <td>{row.issueDate || "-"}</td>
                 <td>{row.expiryDate || "-"}</td>
                 <td>
-                  {hasDocument && Array.isArray(row.fileUrls) && row.fileUrls.length > 0 ? (
-                    row.fileUrls.map((url, idx) => (
-                      <div key={idx}>
-                        <a href={url} target="_blank" rel="noreferrer">
-                          View {idx + 1}
-                        </a>
-                      </div>
-                    ))
-                  ) : row.fileUrl ? (
-                    <a href={row.fileUrl} target="_blank" rel="noreferrer">{statusText}</a>
-                  ) : statusText}
+                  {Array.isArray(row.fileUrls) && row.fileUrls.length > 0
+                    ? row.fileUrls.map((url, idx) => {
+                      // get expiry date for this file
+                      const fileExpiry = row.fileExpiryDates?.[idx]
+                        ? new Date(row.fileExpiryDates[idx])
+                        : row.expiryDate
+                          ? new Date(row.expiryDate)
+                          : null;
+
+                      // compute status per file
+                      let fileStatus = "Available"; // default if no expiry
+                      let fileClass = "";
+
+                      if (fileExpiry) {
+                        const daysLeft = Math.ceil((fileExpiry - new Date()) / (1000 * 60 * 60 * 24));
+                        if (daysLeft <= 0) {
+                          fileStatus = "Overdue";
+                          fileClass = "overdue";
+                        } else if (daysLeft <= 30) {
+                          fileStatus = `${daysLeft} days left`;
+                          fileClass = "near-expiry";
+                        } else {
+                          fileStatus = `${daysLeft} days left`;
+                        }
+                      }
+
+                      return (
+                        <div key={idx} className={fileClass}>
+                          <a href={url} target="_blank" rel="noreferrer">
+                            View {idx + 1} ({fileStatus})
+                          </a>
+                        </div>
+                      );
+                    })
+                    : row.fileUrl
+                      ? <a href={row.fileUrl} target="_blank" rel="noreferrer">{statusText}</a>
+                      : statusText
+                  }
                 </td>
 
                 <td>
