@@ -353,39 +353,36 @@ export default function MyDutySchedule({ currentUser }) {
           </table>
         </div>
       ) : (
-        <div className="mds-summary-box">
+        <div className="mds-summary-box" style={{ background: "#08091b" }}>
           <h2>📊 Monthly Shift Count</h2>
 
           <table className="mds-summary-table">
             <thead>
-              <div>
-                <tr>
-                  <th>Name</th>
-                  <th>G</th>
-                  <th>M</th>
-                  <th>E</th>
-                  <th>N</th>
-                  <th>W/O</th>
-                </tr>
-              </div>
+
+              <tr>
+                <th>Name</th>
+                <th>G</th>
+                <th>M</th>
+                <th>E</th>
+                <th>N</th>
+                <th>W/O</th>
+              </tr>
             </thead>
             <tbody>
-              {Object.keys(monthlyUserShiftSummary).map(uid => (
-                <div>
-                  {currentUser?.name === userMap[uid]?.name && (
-                    <tr key={uid}>
-                      <td>
-                        <strong>{userMap[uid]?.name || uid.slice(0, 6)}</strong>
-                      </td>
-                      <td>{monthlyUserShiftSummary[uid].G}</td>
-                      <td>{monthlyUserShiftSummary[uid].M}</td>
-                      <td>{monthlyUserShiftSummary[uid].E}</td>
-                      <td>{monthlyUserShiftSummary[uid].N}</td>
-                      <td>{monthlyUserShiftSummary[uid].WO}</td>
-                    </tr>
-                  )}
-                </div>
-              ))}
+              {Object.keys(monthlyUserShiftSummary)
+                .filter(uid => uid === currentUser.uid)
+                .map(uid => (
+                  <tr key={uid}>
+                    <td>
+                      <strong>{userMap[uid]?.name || uid.slice(0, 6)}</strong>
+                    </td>
+                    <td>{monthlyUserShiftSummary[uid].G}</td>
+                    <td>{monthlyUserShiftSummary[uid].M}</td>
+                    <td>{monthlyUserShiftSummary[uid].E}</td>
+                    <td>{monthlyUserShiftSummary[uid].N}</td>
+                    <td>{monthlyUserShiftSummary[uid].WO}</td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
