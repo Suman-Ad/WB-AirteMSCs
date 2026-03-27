@@ -176,6 +176,16 @@ async function getAllUsersMap() {
 }
 // ---------- Main Page Component ----------
 export default function DutyTrackerPage({ currentUser }) {
+  /** permissions */
+  const isAdmin =
+    currentUser?.role === "Super Admin" ||
+    currentUser?.role === "Admin" ||
+    currentUser.isAdminAssigned ||
+    // isAdminAssignmentValid(userData) ||
+    // currentUser?.designation === "Vertiv Site Infra Engineer" ||
+    currentUser?.designation === "Vertiv CIH" ||
+    currentUser?.designation === "Vertiv ZM";
+
   const [selectedRegion, setSelectedRegion] = useState(currentUser?.region || "");
   const [selectedCircle, setSelectedCircle] = useState(currentUser?.circle || "");
   const [selectedSite, setSelectedSite] = useState(currentUser?.site || "");
@@ -427,50 +437,54 @@ export default function DutyTrackerPage({ currentUser }) {
 
       {/* Filters */}
       <div className="flex filter-bar">
-        <select
-          value={selectedRegion}
-          onChange={(e) => {
-            setSelectedRegion(e.target.value);
-            setSelectedCircle("");
-            setSelectedSite("");
-          }}
-          className="border rounded px-2 py-1"
-        >
-          <option value="">Select Region</option>
-          {regionList.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
+        {isAdmin && (
+          <div>
+            <select
+              value={selectedRegion}
+              onChange={(e) => {
+                setSelectedRegion(e.target.value);
+                setSelectedCircle("");
+                setSelectedSite("");
+              }}
+              className="border rounded px-2 py-1"
+            >
+              <option value="">Select Region</option>
+              {regionList.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
 
-        <select
-          value={selectedCircle}
-          onChange={(e) => {
-            setSelectedCircle(e.target.value);
-            setSelectedSite("");
-          }}
-          className="border rounded px-2 py-1"
-          disabled={!selectedRegion}
-        >
-          <option value="">Select Circle</option>
-          {circleList.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+            <select
+              value={selectedCircle}
+              onChange={(e) => {
+                setSelectedCircle(e.target.value);
+                setSelectedSite("");
+              }}
+              className="border rounded px-2 py-1"
+              disabled={!selectedRegion}
+            >
+              <option value="">Select Circle</option>
+              {circleList.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
 
 
-        <select
-          value={selectedSite}
-          onChange={(e) => setSelectedSite(e.target.value)}
-          className="border rounded px-2 py-1"
-          disabled={!selectedCircle}
-        >
-          <option value="">Select Site</option>
-          {siteList.map((siteName) => (
-            <option key={siteName} value={siteName}>
-              {siteName}
-            </option>
-          ))}
-        </select>
+            <select
+              value={selectedSite}
+              onChange={(e) => setSelectedSite(e.target.value)}
+              className="border rounded px-2 py-1"
+              disabled={!selectedCircle}
+            >
+              <option value="">Select Site</option>
+              {siteList.map((siteName) => (
+                <option key={siteName} value={siteName}>
+                  {siteName}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <input
           type="month"
@@ -680,7 +694,7 @@ export default function DutyTrackerPage({ currentUser }) {
             Site: {selectedSite || "—"}
           </div>
 
-          <div style={{ padding:"9px 5px"}}>
+          <div style={{ padding: "9px 5px" }}>
             {/* Shift editors */}
             {["M", "E", "N", "G", "WO"].map((shift) => (
               <ShiftEditor
