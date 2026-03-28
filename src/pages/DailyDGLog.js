@@ -3150,7 +3150,7 @@ const DailyDGLog = ({ userData }) => {
                     step="0.01"
                     value={EBBill.Unit || ""}
                     onChange={handleEBBill}
-                    style={{ width: "inherit", marginLeft: "4px", height: "20px" }}
+                    style={{ width: "25%", marginLeft: "4px", height: "20px" }}
                   />Units
                 </strong>
 
@@ -3161,7 +3161,7 @@ const DailyDGLog = ({ userData }) => {
                     step="0.01"
                     value={EBBill.Amount || ""}
                     onChange={handleEBBill}
-                    style={{ width: "inherit", marginLeft: "4px", height: "20px" }}
+                    style={{ width: "30%", marginLeft: "4px", height: "20px" }}
                   />
                 </strong>
 
