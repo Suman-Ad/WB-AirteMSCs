@@ -101,9 +101,20 @@ export default function MyDutySchedule({ currentUser }) {
     loadUsers();
   }, []);
 
+  useEffect(() => {
+    if (!currentUser?.site) return;
+
+    async function loadRoster() {
+      const rosterSnap = await getDocs(collection(db, "dutyRoster"));
+      setAllRosterDocs(rosterSnap.docs);
+    }
+
+    loadRoster();
+  }, [currentUser?.site]);
 
   useEffect(() => {
     if (!currentUser?.site || !currentUser?.uid) return;
+    if (!allRosterDocs.length) return;
 
     async function load() {
       const start = startOfMonth(selectedMonth);
@@ -113,8 +124,8 @@ export default function MyDutySchedule({ currentUser }) {
 
       const allUserNames = await getAllUsersMap(); // load once
 
-      const rosterSnap = await getDocs(collection(db, "dutyRoster"));
-      setAllRosterDocs(rosterSnap.docs);
+      // const rosterSnap = await getDocs(collection(db, "dutyRoster"));
+      // setAllRosterDocs(rosterSnap.docs);
 
       const list = [];
 
@@ -202,7 +213,7 @@ export default function MyDutySchedule({ currentUser }) {
 
 
     load();
-  }, [currentUser, selectedMonth]);
+  }, [currentUser, selectedMonth, allRosterDocs]);
 
 
   const monthlyUserShiftSummary = useMemo(() => {

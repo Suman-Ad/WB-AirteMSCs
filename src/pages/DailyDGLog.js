@@ -560,7 +560,7 @@ const DailyDGLog = ({ userData }) => {
             Month: selectedMonth,
             Unit: Number(bill.Unit).toFixed(2),
             Amount: Number(bill.Amount).toFixed(2),
-            TDSAmount: Number((bill.Amount * ( (siteConfig.ebTDS *0.1) || 0.001)).toFixed(2)), // Calculate and save TDS
+            TDSAmount: Number((bill.Amount * ((siteConfig.ebTDS * 0.1) || 0.001)).toFixed(2)), // Calculate and save TDS
             EBRate: Number(bill.Amount) > 0 ? (Number(bill.Amount) / Number(bill.Unit)).toFixed(2) : bill.EBRate,
             updatedAt: serverTimestamp()
           },
@@ -3115,7 +3115,7 @@ const DailyDGLog = ({ userData }) => {
                   <strong>
                     ⛽ Avg DG CPH – {fmt1(totalOnLoadCon / totalOnLoadHrs)} Ltrs/Hrs
                     <span style={{ fontSize: "9px", color: "#5c3c6ce8", marginLeft: "4px" }}>
-                      as per {fmt1((totalDGGeneration / totalDGOnLoadHrs) / (siteConfig.dgConfigs?.["DG-1"]?.capacityKva * 0.8) || 0) * 100 || 0}% Avg ON Load Running
+                      as per {(((totalDGGeneration / totalDGOnLoadHrs) / (siteConfig.dgConfigs?.["DG-1"]?.capacityKva * 0.8) || 0) * 100 || 0).toFixed(1)}% Avg ON Load Running
                     </span>
                   </strong>
                 </p>
@@ -3139,7 +3139,7 @@ const DailyDGLog = ({ userData }) => {
                 value={EBBill.EBRate}
                 onChange={handleEBBill}
                 style={{ width: "60px", marginLeft: "4px", height: "20px" }}
-                // disabled
+              // disabled
               /><strong style={{ fontSize: "10px", color: "#5c3c6ce8" }}>/Unit. = ₹{fmt(totalEBKwh * Number(EBBill.EBRate))}</strong>
 
               <div style={{ fontSize: "12px", display: "grid" }}>

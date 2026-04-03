@@ -678,41 +678,44 @@ export default function ManageCompliance({ userData }) {
                     </td>
 
                     <td>
-                      {Array.isArray(r.fileUrls) && r.fileUrls.length > 0 ? (
-                        r.fileUrls.map((url, idx) => {
-                          const fileName = decodeURIComponent(url.split("%2F").pop().split("?")[0]);
+                      <div style={{ overflowY: "auto", maxHeight: "80px" }}>
+                        {Array.isArray(r.fileUrls) && r.fileUrls.length > 0 ? (
+                          r.fileUrls.map((url, idx) => {
+                            const fileName = decodeURIComponent(url.split("%2F").pop().split("?")[0]);
 
-                          return (
-                            <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <a href={url} target="_blank" rel="noreferrer">
-                                📄 {fileName}
-                              </a>
+                            return (
+                              <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <span>{idx + 1}.</span>
+                                <a href={url} target="_blank" rel="noreferrer">
+                                  📄 {fileName}
+                                </a>
 
-                              {/* DELETE BUTTON */}
-                              <button
-                                style={{ color: "red", border: "none", background: "none", cursor: "pointer" }}
-                                onClick={() => handleDeleteSingleFile(r.id, url)}
-                              >
-                                ❌
-                              </button>
-                            </div>
-                          );
-                        })
-                      ) : "-"}
+                                {/* DELETE BUTTON */}
+                                <button
+                                  style={{ color: "red", border: "none", background: "none", cursor: "pointer" }}
+                                  onClick={() => handleDeleteSingleFile(r.id, url)}
+                                >
+                                  ❌
+                                </button>
+                              </div>
+                            );
+                          })
+                        ) : "-"}
 
-                      {r.fileUrl && (
+                        {r.fileUrl && (
 
-                        <a href={r.fileUrl} target="_blank" rel="noreferrer">
-                          📄 FileName
-                        </a>)
-                      }
-                      <button
-                        onClick={() => downloadAllFiles(r.fileUrls)}
-                        className="btn-secondary"
-                        style={{ fontSize: "12px", padding: "2px 2px" }}
-                      >
-                        📦 Download All
-                      </button>
+                          <a href={r.fileUrl} target="_blank" rel="noreferrer">
+                            📄 FileName
+                          </a>)
+                        }
+                        <button
+                          onClick={() => downloadAllFiles(r.fileUrls)}
+                          className="btn-secondary"
+                          style={{ fontSize: "12px", padding: "2px 2px" }}
+                        >
+                          📦 Download All
+                        </button>
+                      </div>
                     </td>
 
                     <td className="action-buttons">
