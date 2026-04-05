@@ -678,95 +678,101 @@ export default function DutyTrackerPage({ currentUser }) {
               );
             })}
           </div>
-          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-approve")}>1) Check <strong>"CL"</strong> Status</p>
-          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-calendar")}>2) CL Calendar</p>
-          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/my-leave")}>3) My Leave</p>
-          <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/monthly-cl-summary")}>4) Monthly CL Summary</p>
+          {(isAdmin || currentUser?.designation === "Vertiv Site Infra Engineer") && (
+            <div>
+              <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-approve")}>1) Check <strong>"CL"</strong> Status</p>
+              <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-calendar")}>2) CL Calendar</p>
+              <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/my-leave")}>3) My Leave</p>
+              <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/monthly-cl-summary")}>4) Monthly CL Summary</p>
+            </div>
+          )}
         </div>
 
         {/* Right side panel: date editor */}
-        <motion.div
-          initial={{ x: 50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          className="editor-panel">
-          <h3>{activeDateISO}</h3>
-          <div style={{ fontSize: "0.875rem", color: "#475569", marginBottom: "0.75rem" }}>
-            Site: {selectedSite || "—"}
-          </div>
-
-          <div style={{ padding: "9px 5px" }}>
-            {/* Shift editors */}
-            {["M", "E", "N", "G", "WO"].map((shift) => (
-              <ShiftEditor
-                key={shift}
-                shift={shift}
-                roster={activeRoster}
-                siteUsers={siteUsers}
-                onChange={(newShifts) =>
-                  setActiveRoster((prev) => ({ ...prev, shifts: { ...prev.shifts, [shift]: newShifts } }))
-                }
-              />
-            ))}
-
-            <div style={{ marginTop: "12px" }}>
-              <label style={{ display: "block", fontSize: "0.875rem" }}>Remarks</label>
-              <textarea
-                value={activeRoster?.remarks || ""}
-                onChange={(e) => setActiveRoster((prev) => ({ ...prev, remarks: e.target.value }))}
-                style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: "0.375rem", padding: "0.5rem" }}
-              />
+        {(isAdmin || currentUser?.designation === "Vertiv Site Infra Engineer") && (
+          <motion.div
+            initial={{ x: 50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            className="editor-panel">
+            <h3>{activeDateISO}</h3>
+            <div style={{ fontSize: "0.875rem", color: "#475569", marginBottom: "0.75rem" }}>
+              Site: {selectedSite || "—"}
             </div>
 
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
-              <Button onClick={() => handleSaveRoster(activeRoster)} className="bg-green-600">Save</Button>
-              <Button onClick={handleSaveAndNotify} className="bg-green-600">
-                Save & Notify
-              </Button>
-            </div>
-          </div>
+            <div style={{ padding: "9px 5px" }}>
+              {/* Shift editors */}
+              {["M", "E", "N", "G", "WO"].map((shift) => (
+                <ShiftEditor
+                  key={shift}
+                  shift={shift}
+                  roster={activeRoster}
+                  siteUsers={siteUsers}
+                  onChange={(newShifts) =>
+                    setActiveRoster((prev) => ({ ...prev, shifts: { ...prev.shifts, [shift]: newShifts } }))
+                  }
+                />
+              ))}
 
-          {/* Weekly Tamplate */}
-          <div style={{ borderTop: "2px solid #000", padding: "5px 5px" }}>
-            <h3 className="mt-4 mb-2">Weekday Template</h3>
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((wd) => (
-              <div key={wd} className="border p-2 mt-2 rounded" style={{ border: "1px solid #4694dd", borderRadius: "5px", padding: "5px 5px" }}>
-                <h4 className="font-semibold" style={{ background: "#74bcce", cursor: "pointer", padding: "5px 5px", borderRadius: "5px" }} onClick={() => toggleWDay(wd)}>{dayCollaps[wd] ? `${wd} ▶` : `${wd} ▼`}</h4>
-
-                {dayCollaps[wd] && ["M", "E", "N", "G", "WO"].map((shift) => (
-                  <ShiftEditor
-                    key={shift}
-                    shift={shift}
-                    roster={{ shifts: weekdayTemplate[wd] }}
-                    siteUsers={siteUsers}
-                    onChange={(newArr) =>
-                      setWeekdayTemplate((prev) => ({
-                        ...prev,
-                        [wd]: { ...prev[wd], [shift]: newArr },
-                      }))
-                    }
-                  />
-                ))}
+              <div style={{ marginTop: "12px" }}>
+                <label style={{ display: "block", fontSize: "0.875rem" }}>Remarks</label>
+                <textarea
+                  value={activeRoster?.remarks || ""}
+                  onChange={(e) => setActiveRoster((prev) => ({ ...prev, remarks: e.target.value }))}
+                  style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: "0.375rem", padding: "0.5rem" }}
+                />
               </div>
-            ))}
-            <div>
-              <button
-                className="btn-primary"
-                onClick={() => applyTemplateToMonth(currentUser, selectedMonth, weekdayTemplate)}
-                style={{ marginTop: "5px", fontSize: "12px" }}
-              >
-                {applingTemplate ? "Appling...." : "Apply Template to This Month"}
-              </button>
 
-              <button
-                className="px-3 py-1 bg-blue-600 text-white rounded"
-                onClick={() => saveWeekdayTemplate(selectedSite, weekdayTemplate)}
-                style={{ marginTop: "5px", fontSize: "12px" }}
-              >
-                Save Weekday Template
-              </button>
+              <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
+                <Button onClick={() => handleSaveRoster(activeRoster)} className="bg-green-600">Save</Button>
+                <Button onClick={handleSaveAndNotify} className="bg-green-600">
+                  Save & Notify
+                </Button>
+              </div>
             </div>
-          </div>
-        </motion.div>
+
+            {/* Weekly Tamplate */}
+            <div style={{ borderTop: "2px solid #000", padding: "5px 5px" }}>
+              <h3 className="mt-4 mb-2">Weekday Template</h3>
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((wd) => (
+                <div key={wd} className="border p-2 mt-2 rounded" style={{ border: "1px solid #4694dd", borderRadius: "5px", padding: "5px 5px" }}>
+                  <h4 className="font-semibold" style={{ background: "#74bcce", cursor: "pointer", padding: "5px 5px", borderRadius: "5px" }} onClick={() => toggleWDay(wd)}>{dayCollaps[wd] ? `${wd} ▶` : `${wd} ▼`}</h4>
+
+                  {dayCollaps[wd] && ["M", "E", "N", "G", "WO"].map((shift) => (
+                    <ShiftEditor
+                      key={shift}
+                      shift={shift}
+                      roster={{ shifts: weekdayTemplate[wd] }}
+                      siteUsers={siteUsers}
+                      onChange={(newArr) =>
+                        setWeekdayTemplate((prev) => ({
+                          ...prev,
+                          [wd]: { ...prev[wd], [shift]: newArr },
+                        }))
+                      }
+                    />
+                  ))}
+                </div>
+              ))}
+              <div>
+                <button
+                  className="btn-primary"
+                  onClick={() => applyTemplateToMonth(currentUser, selectedMonth, weekdayTemplate)}
+                  style={{ marginTop: "5px", fontSize: "12px" }}
+                >
+                  {applingTemplate ? "Appling...." : "Apply Template to This Month"}
+                </button>
+
+                <button
+                  className="px-3 py-1 bg-blue-600 text-white rounded"
+                  onClick={() => saveWeekdayTemplate(selectedSite, weekdayTemplate)}
+                  style={{ marginTop: "5px", fontSize: "12px" }}
+                >
+                  Save Weekday Template
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );

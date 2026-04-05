@@ -21,7 +21,7 @@ import { useNavigate } from "react-router-dom";
 import XLSX from "xlsx-js-style";
 import {
   BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, Tooltip, Legend, ResponsiveContainer
+  XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, ReferenceDot, Brush
 } from "recharts";
 import { calculateFields } from "../utils/calculatedDGLogs";
 // import { external } from "jszip";
@@ -291,6 +291,8 @@ const DailyDGLog = ({ userData }) => {
   const [yearlyData, setYearlyData] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [yearlyLoading, setYearlyLoading] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [highlightPeak, setHighlightPeak] = useState(true);
   const [activeKeys, setActiveKeys] = useState({
     PUE: true,
     EBKWH: true,
@@ -303,6 +305,23 @@ const DailyDGLog = ({ userData }) => {
     itLoad: true,
     officeLoad: true,
   });
+
+  const getPeak = (key) =>
+    yearlyData.reduce((max, m) =>
+      m[key] > (max?.[key] || 0) ? m : max, {});
+
+  const peakData = {
+    fuel: getPeak("fuel"),
+    siteLoad: getPeak("siteLoad"),
+    coolingLoad: getPeak("coolingLoad"),
+    itLoad: getPeak("itLoad"),
+    officeLoad: getPeak("officeLoad"),
+    EBKWH: getPeak("EBKWH"),
+    EBAvailable: getPeak("EBAvailable"),
+    DGKWH: getPeak("DGKWH"),
+    DGRun: getPeak("DGRun"),
+  };
+
   const handleLegendClick = (e) => {
     const key = e.dataKey;
 
@@ -1053,6 +1072,25 @@ const DailyDGLog = ({ userData }) => {
 
     return results;
   };
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        setIsFullScreen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
+
+  useEffect(() => {
+    const escHandler = (e) => {
+      if (e.key === "Escape") setIsFullScreen(false);
+    };
+    window.addEventListener("keydown", escHandler);
+    return () => window.removeEventListener("keydown", escHandler);
+  }, []);
 
   // const peakMonth = yearlyData.reduce((max, m) =>
   //   m.coolingLoad > max.coolingLoad ? m : max, yearlyData[0]);
@@ -3166,7 +3204,8 @@ const DailyDGLog = ({ userData }) => {
                 </strong>
 
                 {/* TDS is calculated automatically from the state */}
-                <b>💰 TDS Amount: <strong>₹{EBBill.TDSAmount || 0}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {siteConfig.ebTDS}% of Bill Amount</span></b>
+                <b>💰 TDS Declared Amount: <strong>₹{EBBill.TDSAmount || 0}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {siteConfig.ebTDS}% of Bill Amount</span></b>
+                <b>💰 After TDS Amount: <strong>₹{(EBBill.Amount - EBBill.TDSAmount) || 0}</strong> <span style={{ color: "#5c3c6ce8" }}> after {siteConfig.ebTDS}% deduction of Bill Amount</span></b>
               </div>
             </p>
 
@@ -3732,16 +3771,40 @@ const DailyDGLog = ({ userData }) => {
         </div>
       ) : null} */}
 
+      <div
+        onClick={() => isFullScreen && setIsFullScreen(false)}
+        style={{
+          position: isFullScreen ? "fixed" : "relative",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: isFullScreen ? "100vh" : "auto",
+          background: isFullScreen ? "rgba(0,0,0,0.85)" : "transparent",
+          zIndex: isFullScreen ? 9999 : "auto",
+          display: isFullScreen ? "normal" : "block",
+          justifyContent: "center",
+          alignItems: "center"
+        }}
+      >
+        <div style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 10, fontSize: "12px", fontWeight: "bold", color: "rgb(16, 16, 32)" }}>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              style={{ height: "30px" }}
+            >
+              <option value={2026}>2026</option>
+              <option value={2025}>2025</option>
+              <option value={2024}>2024</option>
+            </select>
 
-      <div style={{ position: "relative", height: 350 }}>
-        <select
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(Number(e.target.value))}
-        >
-          <option value={2026}>2026</option>
-          <option value={2025}>2025</option>
-          <option value={2024}>2024</option>
-        </select>
+            <button onClick={() => setHighlightPeak(!highlightPeak)}
+              style={{ height: "30px", fontSize: "12px", fontWeight: "bold", color: highlightPeak ? "red" : "gray", border: "1px solid", borderColor: highlightPeak ? "red" : "gray", borderRadius: "5px", padding: "0 10px" }}
+            >
+              {highlightPeak ? "🔥 Peak ON" : "Peak OFF"}
+            </button>
+          </div>
+        </div>
         {yearlyLoading ? (
           <div style={{ height: 350, display: "flex", alignItems: "flex-end", gap: 10, padding: "5px 5px", borderRadius: "10px", border: "1px solid #fff", background: "#5aa3d3a1" }}>
             {[...Array(12)].map((_, i) => (
@@ -3762,10 +3825,43 @@ const DailyDGLog = ({ userData }) => {
             </span>
           </div>
         ) : (
-          <div style={{ background: "#091629b9", padding: "15px", borderRadius: "10px" }}>
-            <h2>📊 Yearly Trand Analysis-{selectedYear}</h2>
-            <ResponsiveContainer width="100%" height={320}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: isFullScreen ? "100%" : "100%",
+              height: isFullScreen ? "100%" : "auto",
+              background: "#091629",
+              borderRadius: "12px",
+              padding: "20px",
+              boxShadow: "0 0 30px rgba(0,0,0,0.5)",
+              overflow: "hidden"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <h2>📊 Yearly Trand Analysis-{selectedYear}</h2>
+              <button
+                onClick={() => setIsFullScreen(!isFullScreen)}
+                title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                style={{
+                  padding: "2px 2px",
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  background: "transparent",
+                  color: "#fff",
+                  fontSize: "12px",
+                  right: 0,
+                  opacity: "0.7"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = "2.0"}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = "0.7"}
+              >
+                {isFullScreen ? "X" : "⛶"}
+              </button>
+            </div>
+            <ResponsiveContainer width="100%" height={isFullScreen ? 410 : 320}>
               <LineChart data={yearlyData}>
+                <CartesianGrid stroke="#333" />
                 <XAxis dataKey="monthName"
                   height={50}
                   tick={(props) => {
@@ -3784,41 +3880,79 @@ const DailyDGLog = ({ userData }) => {
                       </g>
                     );
                   }} />
-                <YAxis />
+                {/* Left Axis */}
+                <YAxis yAxisId="left" />
+
+                {/* Right Axis */}
+                <YAxis yAxisId="right" orientation="right" />
                 <Tooltip />
                 <Legend onClick={handleLegendClick} />
 
+                {/* 🔥 Peak Highlight */}
+                {highlightPeak && Object.keys(peakData).map((key) => {
+                  const item = peakData[key];
+
+                  if (!activeKeys[key] || !item) return null;
+                  
+                  const colors = {
+                    fuel: "#ff0015",
+                    siteLoad: "#15ff00",
+                    coolingLoad: "#00cbfe",
+                    itLoad: "#0ab451",
+                    officeLoad: "#26647c",
+                    EBKWH: "#002fff",
+                    EBAvailable: "#8a2be2",
+                    DGKWH: "#eeff00",
+                    DGRun: "#ffa600",
+                  };
+
+                  return (
+                    <ReferenceDot
+                      key={key}
+                      x={item.monthName}
+                      y={item[key]}
+                      r={6}
+                      fill={colors[key]}
+                      stroke="white"
+                      yAxisId={key === "fuel" ? "right" : "left"} // adjust axis
+                    />
+                  );
+                })}
+
                 {/* <Line dataKey="fuel" name="Fuel (L)" stroke="#fc2903" /> */}
                 {activeKeys.PUE && (
-                  <Line type="monotone" name="PUE" dataKey="PUE" stroke="#ff7300" strokeOpacity={activeKeys.PUE ? 1 : 0.2} />
+                  <Line yAxisId="left" type="monotone" name="PUE" dataKey="PUE" stroke="#ff7300" strokeOpacity={activeKeys.PUE ? 1 : 0.2} />
                 )}
                 {activeKeys.siteLoad && (
-                  <Line type="monotone" name="Site Load" dataKey="siteLoad" stroke="#15ff00" strokeOpacity={activeKeys.siteLoad ? 1 : 0.2} />
+                  <Line yAxisId="right" type="monotone" name="Site Load" dataKey="siteLoad" stroke="#15ff00" strokeOpacity={activeKeys.siteLoad ? 1 : 0.2} />
                 )}
                 {activeKeys.coolingLoad && (
-                  <Line type="monotone" name="Cooling Load" dataKey="coolingLoad" stroke="#00cbfe" strokeOpacity={activeKeys.coolingLoad ? 1 : 0.2} />
+                  <Line yAxisId="right" type="monotone" name="Cooling Load" dataKey="coolingLoad" stroke="#00cbfe" strokeOpacity={activeKeys.coolingLoad ? 1 : 0.2} />
                 )}
                 {activeKeys.itLoad && (
-                  <Line type="monotone" name="IT Load" dataKey="itLoad" stroke="#0ab451" strokeOpacity={activeKeys.itLoad ? 1 : 0.2} />
+                  <Line yAxisId="right" type="monotone" name="IT Load" dataKey="itLoad" stroke="#0ab451" strokeOpacity={activeKeys.itLoad ? 1 : 0.2} />
                 )}
                 {activeKeys.officeLoad && (
-                  <Line type="monotone" name="Office Load" dataKey="officeLoad" stroke="#26647c" strokeOpacity={activeKeys.officeLoad ? 1 : 0.2} />
+                  <Line yAxisId="right" type="monotone" name="Office Load" dataKey="officeLoad" stroke="#26647c" strokeOpacity={activeKeys.officeLoad ? 1 : 0.2} />
                 )}
                 {activeKeys.EBKWH && (
-                  <Line type="monotone" name="EB kWH" dataKey="EBKWH" stroke="#002fff" strokeOpacity={activeKeys.EBKWH ? 1 : 0.2} />
+                  <Line yAxisId="right" type="monotone" name="EB kWH" dataKey="EBKWH" stroke="#002fff" strokeOpacity={activeKeys.EBKWH ? 1 : 0.2} />
                 )}
                 {activeKeys.EBAvailable && (
-                  <Line type="monotone" name="EB Available Hrs" dataKey="EBAvailable" stroke="#002fff" strokeOpacity={activeKeys.EBAvailable ? 1 : 0.2} />
+                  <Line yAxisId="right" type="monotone" name="EB Available Hrs" dataKey="EBAvailable" stroke="#002fff" strokeOpacity={activeKeys.EBAvailable ? 1 : 0.2} />
                 )}
                 {activeKeys.DGKWH && (
-                  <Line type="monotone" name="DG kWH" dataKey="DGKWH" stroke="#eeff00" strokeOpacity={activeKeys.DGKWH ? 1 : 0.2} />
+                  <Line yAxisId="right" type="monotone" name="DG kWH" dataKey="DGKWH" stroke="#eeff00" strokeOpacity={activeKeys.DGKWH ? 1 : 0.2} />
                 )}
                 {activeKeys.DGRun && (
-                  <Line type="monotone" name="DG Run" dataKey="DGRun" stroke="#ffa600" strokeOpacity={activeKeys.DGRun ? 1 : 0.2} />
+                  <Line yAxisId="left" type="monotone" name="DG Run" dataKey="DGRun" stroke="#ffa600" strokeOpacity={activeKeys.DGRun ? 1 : 0.2} />
                 )}
                 {activeKeys.fuel && (
-                  <Line type="monotone" name="Fuel (L)" dataKey="fuel" stroke="#ff0015" strokeOpacity={activeKeys.fuel ? 1 : 0.2} />
+                  <Line yAxisId="right" type="monotone" name="Fuel (L)" dataKey="fuel" stroke="#ff0015" strokeOpacity={activeKeys.fuel ? 1 : 0.2} />
                 )}
+
+                {/* 🔍 Zoom Feature */}
+                <Brush dataKey="monthName" height={20} stroke="#8884d8" />
               </LineChart>
             </ResponsiveContainer>
             <div style={{ display: "flex", gap: 15, overflowX: "auto", whiteSpace: "nowrap" }}>
@@ -3858,7 +3992,7 @@ const DailyDGLog = ({ userData }) => {
         )}
       </div>
 
-      <div style={{ background: "#091629b9", borderRadius: "10px", marginTop: "135px" }}>
+      <div style={{ background: "#091629b9", borderRadius: "10px" }}>
         {currentSummary && previousSummary && (
           <div style={{ padding: "15px 2px" }}>
             <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>
