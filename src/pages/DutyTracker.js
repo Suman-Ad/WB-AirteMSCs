@@ -1,11 +1,3 @@
-// DutyTracker.jsx
-// React component (single-file) implementing the Combined View: Calendar + Date Editor
-// Prerequisites:
-// 1) Firebase v9 (modular) initialized in ../firebase.js exporting `auth`, `firestore` (db)
-// 2) Tailwind CSS configured in the project (optional)
-// 3) User object available from context/provider with fields: { uid, role, emailVerified, region, circle, site }
-// 4) Install framer-motion if you want animations: `npm i framer-motion`
-
 import React, { useEffect, useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, set } from "date-fns";
 import { motion } from "framer-motion";

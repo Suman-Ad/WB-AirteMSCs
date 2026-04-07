@@ -16,7 +16,7 @@ import "../assets/DHRStyle.css";
 export default function ComplianceDashboard({ userData }) {
   const [templates, setTemplates] = useState([]);
   const [records, setRecords] = useState([]);
-  const [instructionText, setInstructionText] = useState("");
+  const [instructionText, setInstructionText] = useState({ text: "", editedBy: null, editedAt: null });
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState("");
 
@@ -24,12 +24,19 @@ export default function ComplianceDashboard({ userData }) {
   const userSite = userData?.site;
   const userDesignation = userData?.designation;
 
+  const uploadedBy = {
+    uid: userData.uid | "",
+    name: userData.name || "",
+    role: userData.role || "",
+    empId: userData.empId || "",
+  };
+
   useEffect(() => {
     const fetchInstruction = async () => {
       const docRef = doc(db, "config", "compliance_dashboard_instruction");
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        setInstructionText(docSnap.data().text || "");
+        setInstructionText(docSnap.data() || { text: "", editedBy: null, editedAt: null });
         setEditText(docSnap.data().text || "");
       }
     };
@@ -64,6 +71,8 @@ export default function ComplianceDashboard({ userData }) {
           issueDate: null,
           expiryDate: null,
           fileUrl: null,
+          fileUrls: null,
+          fileExpiryDates: null,
           recordId: null,
         });
       } else {
@@ -79,6 +88,8 @@ export default function ComplianceDashboard({ userData }) {
             issueDate: r.issueDate || null,
             expiryDate: r.expiryDate || null,
             fileUrl: r.fileUrl || null,
+            fileUrls: r.fileUrls || (r.fileUrl ? [r.fileUrl] : []),
+            fileExpiryDates: r.fileExpiryDates || [],
             recordId: r.id,
             uploadedBy: r.uploadedBy || null,
           });
@@ -100,6 +111,8 @@ export default function ComplianceDashboard({ userData }) {
           issueDate: null,
           expiryDate: null,
           fileUrl: null,
+          fileUrls: null,
+          fileExpiryDates: null,
           recordId: null,
         });
       } else {
@@ -117,6 +130,8 @@ export default function ComplianceDashboard({ userData }) {
               issueDate: rec.issueDate || null,
               expiryDate: rec.expiryDate || null,
               fileUrl: rec.fileUrl || null,
+              fileUrls: rec.fileUrls || (rec.fileUrl ? [rec.fileUrl] : []),
+              fileExpiryDates: rec.fileExpiryDates || [],
               recordId: rec.id,
               uploadedBy: rec.uploadedBy || null,
             });
@@ -132,6 +147,8 @@ export default function ComplianceDashboard({ userData }) {
               issueDate: null,
               expiryDate: null,
               fileUrl: null,
+              fileUrls: null,
+              fileExpiryDates: null,
               recordId: null,
             });
           }
@@ -164,7 +181,7 @@ export default function ComplianceDashboard({ userData }) {
 
     summary[circle][site].total += 1;
 
-    if (item.fileUrl) {
+    if (item.fileUrls && item.fileUrls.length > 0 || item.fileUrl) {
       summary[circle][site].available += 1;
 
       if (item.expiryDate) {
@@ -217,8 +234,8 @@ export default function ComplianceDashboard({ userData }) {
                 className="bg-blue-600 text-white px-3 py-1 rounded"
                 onClick={async () => {
                   const docRef = doc(db, "config", "compliance_dashboard_instruction");
-                  await setDoc(docRef, { text: editText });
-                  setInstructionText(editText);
+                  await setDoc(docRef, { text: editText, editedBy: uploadedBy, editedAt: new Date() }, { merge: true });
+                  setInstructionText({ text: editText, editedBy: uploadedBy, editedAt: new Date() });
                   setIsEditing(false);
                 }}
               >
@@ -234,7 +251,7 @@ export default function ComplianceDashboard({ userData }) {
           </>
         ) : (
           <>
-            <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
+            <p className="dashboard-instruction-panel">{instructionText.text || "No instructions available."}</p>
             {["Admin", "Super Admin"].includes(userRole) && (
               <button
                 className="text-blue-600 underline"
@@ -245,7 +262,7 @@ export default function ComplianceDashboard({ userData }) {
             )}
           </>
         )}
-        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @Suman Adhikari</h6>
+        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @{instructionText?.editedBy?.name ? instructionText?.editedBy?.name : "Crash Algo"}</h6>
       </div>
 
       {(userRole === "Admin" || userRole === "Super Admin" || userRole === "Super User") && (
@@ -258,7 +275,7 @@ export default function ComplianceDashboard({ userData }) {
       {(userRole === "Admin" || userRole === "Super Admin" || userRole === "Super User") && (
         <div style={{ marginBottom: 16 }}>
           <h3>Summary (Circle → Site)</h3>
-          <table className="dhr-table" style={{ marginTop: 8 }}>
+          <table className="dhr-table" style={{ marginTop: 8, borderRadius: "8px", border: "1px solid #ccc" }}>
             <thead>
               <tr>
                 <th>Circle</th>
@@ -296,7 +313,7 @@ export default function ComplianceDashboard({ userData }) {
       )}
 
       {/* detailed table */}
-      <table className="dhr-table">
+      <table className="dhr-table" style={{ overflowY: "auto", maxHeight: window.innerHeight -150, borderRadius: "8px", border: "1px solid #ccc" }}>
         <thead>
           <tr>
             <th>Region</th>
@@ -349,60 +366,64 @@ export default function ComplianceDashboard({ userData }) {
                 <td>{row.issueDate || "-"}</td>
                 <td>{row.expiryDate || "-"}</td>
                 <td>
-                  {Array.isArray(row.fileUrls) && row.fileUrls.length > 0
-                    ? row.fileUrls.map((url, idx) => {
-                      // get expiry date for this file
-                      const fileExpiry = row.fileExpiryDates?.[idx]
-                        ? new Date(row.fileExpiryDates[idx])
-                        : row.expiryDate
-                          ? new Date(row.expiryDate)
-                          : null;
+                  <div style={{ overflowY: "auto", maxHeight: 80, maxWidth: "inherit" }}>
+                    {Array.isArray(row.fileUrls) && row.fileUrls.length > 0
+                      ? row.fileUrls.map((url, idx) => {
+                        // get expiry date for this file
+                        const fileExpiry = row.fileExpiryDates?.[idx]
+                          ? new Date(row.fileExpiryDates[idx])
+                          : row.expiryDate
+                            ? new Date(row.expiryDate)
+                            : null;
 
-                      // compute status per file
-                      let fileStatus = "Available"; // default if no expiry
-                      let fileClass = "";
+                        // compute status per file
+                        let fileStatus = "Available"; // default if no expiry
+                        let fileClass = "";
 
-                      if (fileExpiry) {
-                        const daysLeft = Math.ceil((fileExpiry - new Date()) / (1000 * 60 * 60 * 24));
-                        if (daysLeft <= 0) {
-                          fileStatus = "Overdue";
-                          fileClass = "overdue";
-                        } else if (daysLeft <= 30) {
-                          fileStatus = `${daysLeft} days left`;
-                          fileClass = "near-expiry";
-                        } else {
-                          fileStatus = `${daysLeft} days left`;
+                        if (fileExpiry) {
+                          const daysLeft = Math.ceil((fileExpiry - new Date()) / (1000 * 60 * 60 * 24));
+                          if (daysLeft <= 0) {
+                            fileStatus = "Overdue";
+                            fileClass = "overdue";
+                          } else if (daysLeft <= 30) {
+                            fileStatus = `${daysLeft} days left`;
+                            fileClass = "near-expiry";
+                          } else {
+                            fileStatus = `${daysLeft} days left`;
+                          }
                         }
-                      }
 
-                      return (
-                        <div key={idx} className={fileClass}>
-                          <a href={url} target="_blank" rel="noreferrer">
-                            View {idx + 1} ({fileStatus})
-                          </a>
-                        </div>
-                      );
-                    })
-                    : row.fileUrl
-                      ? <a href={row.fileUrl} target="_blank" rel="noreferrer">{statusText}</a>
-                      : statusText
-                  }
+                        const fileName = decodeURIComponent(url.split("/").pop().split("?")[0]);
+
+                        return (
+                          <div key={idx} className={fileClass}>
+                            <a href={url} target="_blank" rel="noreferrer">
+                              {idx +1}:- {fileName || `File ${idx + 1}`} ({fileStatus})
+                            </a>
+                          </div>
+                        );
+                      })
+                      : row.fileUrl
+                        ? <a href={row.fileUrl} target="_blank" rel="noreferrer">{statusText}</a>
+                        : statusText
+                    }
+                  </div>
                 </td>
 
                 <td>
                   {/* Edit goes to ManageCompliance with query param (page handles it) */}
                   {(userRole === "Admin" || userRole === "Super Admin") && (
-                    <>
-                      <Link to={`/manage-compliance?editTemplate=${row.templateId}`} className="btn-primary">✏️ Edit Template</Link>
+                    <p style={{ marginBottom: 6 }}>
+                      <Link to={`/manage-compliance?editTemplate=${row.templateId}`}>✏️ Name</Link>
                       &nbsp;
-                    </>
+                    </p>
                   )}
 
                   {canEditOrDeleteRecord && row.recordId && (
-                    <>
-                      <Link to={`/manage-compliance?editRecord=${row.recordId}`} className="btn-secondary">✏️ Edit Record</Link>
-                      <button className="btn-danger" style={{ marginLeft: 6 }} onClick={() => handleDeleteRecord(row.recordId)}>❌</button>
-                    </>
+                    <p style={{ marginBottom: 6, display: "flex", gap: 4 , border: "1px solid #ccc", padding: 4, borderRadius: 4, justifyContent: "center"}}>
+                      <Link to={`/manage-compliance?editRecord=${row.recordId}`}>✏️ Record</Link>
+                      <button style={{ marginBottom: 6, padding: "2px 2px"}} onClick={() => handleDeleteRecord(row.recordId)}>❌</button>
+                    </p>
                   )}
                 </td>
               </tr>

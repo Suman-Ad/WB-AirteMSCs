@@ -436,7 +436,7 @@ export default function ManageCompliance({ userData }) {
 
       {/* Admin / Super Admin: create or edit templates */}
       {canManageTemplates && (
-        <section style={{ marginBottom: "1.25rem" }}>
+        <section style={{ marginBottom: "1.25rem", borderRadius: "8px", border: "1px solid #ccc"  }}>
           <h3>Add / Edit Compliance Template</h3>
 
           {editingTemplateId ? (
@@ -540,7 +540,7 @@ export default function ManageCompliance({ userData }) {
 
       {/* USER: Upload record */}
       {canUploadRecords && (
-        <section style={{ marginBottom: "1.25rem" }}>
+        <section style={{ marginBottom: "1.25rem", borderRadius: "8px", border: "1px solid #ccc"  }}>
           <h3>Upload Compliance Document (Site: {userSite})</h3>
           <div className="form-group">
             <label>⚖️ Compliance Template</label>
@@ -587,9 +587,9 @@ export default function ManageCompliance({ userData }) {
 
       {/* Templates table */}
       {canManageTemplates && (
-        <section>
+        <section style={{ borderRadius: "8px", border: "1px solid #ccc" }}>
           <h3>Compliance Templates</h3>
-          <table className="dhr-table">
+          <table className="dhr-table" style={{ overflowY: "auto", maxHeight: "300px", borderRadius: "8px", border: "1px solid #ccc" }}>
             <thead>
               <tr>
                 <th>Title</th>
@@ -624,9 +624,9 @@ export default function ManageCompliance({ userData }) {
       )}
 
       {/* Uploaded records table with inline edit for records */}
-      <section style={{ marginTop: "1.25rem" }}>
+      <section style={{ marginTop: "1.25rem", borderRadius: "8px", border: "1px solid #ccc"  }}>
         <h3>Uploaded Records</h3>
-        <table className="dhr-table">
+        <table className="dhr-table" style={{ overflowY: "auto", maxHeight: "300px", borderRadius: "8px", border: "1px solid #ccc" }}>
           <thead>
             <tr>
               <th>Template</th>

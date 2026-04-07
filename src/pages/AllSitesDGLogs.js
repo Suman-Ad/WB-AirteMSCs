@@ -1194,7 +1194,9 @@ const AllSitesDGLogs = ({ userData }) => {
                                     </strong>
 
                                     {/* TDS is calculated automatically from the state */}
-                                    <b>💰 TDS Amount: <strong>₹{currentEBRate.TDSAmount || "0.00"}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {thisConfig.ebTDS}% of Bill Amount</span></b>
+                                    <b>💰 TDS Declared Amount: <strong>₹{currentEBRate.TDSAmount || "0.00"}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {thisConfig.ebTDS}% of Bill Amount</span></b>
+                                    <b>💰 After TDS Amount: <strong>₹{(currentEBRate.Amount  - currentEBRate.TDSAmount) || 0}</strong> <span style={{ color: "#5c3c6ce8" }}> after {thisConfig.ebTDS}% deduction of Bill Amount</span></b>
+
                                 </div>
 
                                 {/* If solar data exists, show solar generation summary */}

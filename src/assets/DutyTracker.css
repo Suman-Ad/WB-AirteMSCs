@@ -464,3 +464,76 @@ body {
     min-height: 55px !important;
   }
 }
+
+/* ===============================
+   MOBILE FIX (FINAL)
+   =============================== */
+
+@media (max-width: 768px) {
+
+  /* Main grid → stack layout */
+  .daily-log-container > .grid {
+    grid-template-columns: 1fr;   /* single column */
+  }
+
+  /* Calendar full width */
+  .calendar-panel {
+    grid-column: span 1;
+    width: 100%;
+  }
+
+  /* Editor full width (fix overflow) */
+  .editor-panel {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Prevent any child overflow */
+  .editor-panel * {
+    max-width: 100%;
+  }
+
+  /* Calendar scroll instead of squeeze */
+  .calendar-grid {
+    grid-template-columns: repeat(2, 1fr); /* 2 columns mobile */
+    gap: 6px;
+  }
+
+  /* Slightly reduce cell height */
+  .calendar-day-cell {
+    min-height: 70px;
+    padding: 6px;
+  }
+
+  /* Filter bar wrap */
+  .daily-log-container > .flex {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .daily-log-container select,
+  .daily-log-container input {
+    flex: 1 1 100%;
+  }
+
+  /* Fix long content overflow */
+  .shift-editor,
+  .user-select-list {
+    overflow-x: auto;
+  }
+
+}
+
+@media (max-width: 768px) {
+  .calendar-grid {
+    display: flex;
+    overflow-x: auto;
+    width: 430px;
+  }
+
+  .calendar-day-cell {
+    min-width: 140px;
+    flex-shrink: 0;
+  }
+}
