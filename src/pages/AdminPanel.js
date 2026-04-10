@@ -16,12 +16,48 @@ import { siteIdMap } from "../config/siteConfigs";
 import { updateLocalUserData } from "../utils/userStorage";
 
 
+const formatDateTime = (dt) =>
+  new Date(dt).toLocaleString();
+
+const getRemainingTime = (toTime) => {
+  const now = new Date().getTime();
+  const end = new Date(toTime).getTime();
+
+  const diff = end - now;
+
+  if (diff <= 0) return "Expired";
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+  return `${hours}h ${minutes}m ${seconds}s`;
+};
+
+const getCountdownColor = (toTime) => {
+  const diff = new Date(toTime) - new Date();
+
+  if (diff <= 0) return "red";
+  if (diff < 10 * 60 * 1000) return "orange"; // <10 min
+  return "green";
+};
+
+
 const AdminPanel = ({ userData }) => {
   const [users, setUsers] = useState([]);
   const [userSiteFilter, setUserSiteFilter] = useState("");
   const [editingUserId, setEditingUserId] = useState(null);
   const [cardFilter, setCardFilter] = useState("");
   const [onlineCount, setOnlineCount] = useState(0);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick((t) => t + 1);
+    }, 1000); // update every second
+
+    return () => clearInterval(interval);
+  }, []);
 
   const [roleCounts, setRoleCounts] = useState({
     "Super Admin": 0,
@@ -47,17 +83,15 @@ const AdminPanel = ({ userData }) => {
 
 
   const validateTempAdminPeriod = (from, to) => {
-    if (!from || !to) return "From and To dates are required";
+    if (!from || !to) return "From and To datetime are required";
 
     const fromDate = new Date(from);
     const toDate = new Date(to);
+    const now = new Date();
 
-    if (fromDate > toDate) return "From date cannot be after To date";
+    if (fromDate >= toDate) return "From must be before To";
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (toDate < today) return "To date cannot be in the past";
+    if (toDate <= now) return "End time must be in the future";
 
     return null;
   };
@@ -76,8 +110,8 @@ const AdminPanel = ({ userData }) => {
     try {
       await updateDoc(doc(db, "users", userId), {
         isAdminAssigned: true,
-        adminAssignFrom: tempAdminDraft.from,
-        adminAssignTo: tempAdminDraft.to,
+        adminAssignFrom: new Date(tempAdminDraft.from).toISOString(),
+        adminAssignTo: new Date(tempAdminDraft.to).toISOString(),
       });
 
       setTempAdminDraft({ from: "", to: "" });
@@ -127,13 +161,13 @@ const AdminPanel = ({ userData }) => {
     setOnlineCount(online);
     updateRoleCounts(data);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
 
     data.forEach(async (u) => {
       if (u.isAdminAssigned && u.adminAssignTo) {
         const end = new Date(u.adminAssignTo);
-        if (end < today) {
+
+        if (end < now) {
           await updateDoc(doc(db, "users", u.id), {
             isAdminAssigned: false
           });
@@ -230,14 +264,12 @@ const AdminPanel = ({ userData }) => {
     if (!user.isAdminAssigned) return false;
     if (!user.adminAssignFrom || !user.adminAssignTo) return false;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
 
     const from = new Date(user.adminAssignFrom);
     const to = new Date(user.adminAssignTo);
-    to.setHours(23, 59, 59, 999);
 
-    return today >= from && today <= to;
+    return now >= from && now <= to;
   };
 
   const tempAdminCount = users.filter(
@@ -534,15 +566,21 @@ const AdminPanel = ({ userData }) => {
                         {(userData.role === "Admin" || userData.role === "Super Admin") && (
                           <td data-label="UID">{user.uid}</td>
                         )}
-                        <td data-label="Actions" style={{ display:"flex"}}>
+                        <td data-label="Actions" style={{ display: "flex" }}>
                           <div className="action-buttons">
                             {["Admin", "Super Admin"].includes(userData.role) && user.id !== userData.uid && (
                               <div className="temp-admin-box">
                                 {user.isAdminAssigned ? (
                                   <>
                                     <span className="temp-admin-badge">
-                                      Temp Admin<br />
-                                      {user.adminAssignFrom} → {user.adminAssignTo}
+                                      ⏳ Temp Admin<br />
+                                      {formatDateTime(user.adminAssignFrom)} → {formatDateTime(user.adminAssignTo)}
+                                      <br />
+                                      <strong style={{ color: getCountdownColor(user.adminAssignTo) }}>
+                                        {isTempAdminValid(user)
+                                          ? getRemainingTime(user.adminAssignTo)
+                                          : "Expired"}
+                                      </strong>
                                     </span>
                                     <button
                                       className="btn-demote"
@@ -556,14 +594,15 @@ const AdminPanel = ({ userData }) => {
                                     {user?.role !== "Admin" && user?.role !== "Super Admin" && (
                                       <>
                                         <input
-                                          type="date"
+                                          type="datetime-local"
                                           value={tempAdminDraft.from}
                                           onChange={(e) =>
                                             setTempAdminDraft(d => ({ ...d, from: e.target.value }))
                                           }
                                         />
+
                                         <input
-                                          type="date"
+                                          type="datetime-local"
                                           value={tempAdminDraft.to}
                                           onChange={(e) =>
                                             setTempAdminDraft(d => ({ ...d, to: e.target.value }))

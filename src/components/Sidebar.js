@@ -1,5 +1,5 @@
 // src/components/Sidebar.js
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 
@@ -28,8 +28,44 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
     navigate("/profile");
   };
 
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick((t) => t + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const isTempAdminValid = () => {
+    if (!userData?.isAdminAssigned) return false;
+    if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+    const now = new Date();
+    const from = new Date(userData.adminAssignFrom);
+    const to = new Date(userData.adminAssignTo);
+
+    return now >= from && now <= to;
+  };
+
+  const getRemainingTime = () => {
+    const now = new Date().getTime();
+    const end = new Date(userData.adminAssignTo).getTime();
+
+    const diff = end - now;
+
+    if (diff <= 0) return "Expired";
+
+    const h = Math.floor(diff / (1000 * 60 * 60));
+    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+    return `${h}h ${m}m ${s}s`;
+  };
+
   return (
-    <div className={`sidebar ${collapsed ? "collapsed" : "expanded"}`} style={{background: powerSource === "EB" ? "" : "#db1e1ef3"}}>
+    <div className={`sidebar ${collapsed ? "collapsed" : "expanded"}`} style={{ background: powerSource === "EB" ? "" : "#db1e1ef3" }}>
       {/* Sidebar Header with Collapse Toggle */}
       <div className="sidebar-header">
         <button
@@ -40,11 +76,59 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
           {collapsed ? "☰" : "X"}
         </button>
         {collapsed ? "" :
-          <button onClick={() => {goProfile(); setCollapsed(true);}} className="profile-manage-btn" title="Profile" >
+          <button onClick={() => { goProfile(); setCollapsed(true); }} className="profile-manage-btn" title="Profile" >
             {userData?.role === "Super Admin" && <span>👑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super Admin*</div></span>}
             {userData?.role === "Admin" && <span>🔑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Admin*</div></span>}
-            {userData?.role === "Super User" && <span>🦸 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: `${userData?.isAdminAssigned ? "#e64219ff" : "#6b7280"}`, fontSize: 12 }}>{userData?.isAdminAssigned ? "🪪 Temp Admin" :"*Super User*"}</div></span>}
-            {userData?.role === "User" && <span>👤 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: `${userData?.isAdminAssigned ? "#e64219ff" : "#6b7280"}`, fontSize: 12}}>{userData?.isAdminAssigned ? "🪪 Temp Admin" : "*User*"}</div></span>}
+            {userData?.role === "Super User" && <span>🦸 <strong>{userData?.name || "Team Member"}</strong><div
+              style={{
+                color: `${userData?.isAdminAssigned ? "#e64219ff" : "#6b7280"}`,
+                fontSize: 12
+              }}
+            >
+              {userData?.isAdminAssigned ? (
+                <>
+                  🪪 Temp Admin
+                  <br />
+                  {isTempAdminValid() && (
+                    <span style={{ fontSize: 11, color: "#ff9800" }}>
+                      ⏳ {getRemainingTime()}
+                    </span>
+                  )}
+                  {!isTempAdminValid() && (
+                    <span style={{ fontSize: 11, color: "red" }}>
+                      Expired
+                    </span>
+                  )}
+                </>
+              ) : (
+                "*Super User*"
+              )}
+            </div></span>}
+            {userData?.role === "User" && <span>👤 <strong>{userData?.name || "Team Member"}</strong><div
+              style={{
+                color: `${userData?.isAdminAssigned ? "#e64219ff" : "#6b7280"}`,
+                fontSize: 12
+              }}
+            >
+              {userData?.isAdminAssigned ? (
+                <>
+                  🪪 Temp Admin
+                  <br />
+                  {isTempAdminValid() && (
+                    <span style={{ fontSize: 11, color: "#ff9800" }}>
+                      ⏳ {getRemainingTime()}
+                    </span>
+                  )}
+                  {!isTempAdminValid() && (
+                    <span style={{ fontSize: 11, color: "red" }}>
+                      Expired
+                    </span>
+                  )}
+                </>
+              ) : (
+                "*Super User*"
+              )}
+            </div></span>}
           </button>
         }
         <span>
@@ -59,14 +143,14 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
           }
         </span>
         {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor") && (
-        <button
-          title="Site Settings"
-          className="logout-manage-btn"
-          onClick={() => navigate('/site-config') & setCollapsed(true)}
-        >
-          ⚙️
-        </button>
-      )}
+          <button
+            title="Site Settings"
+            className="logout-manage-btn"
+            onClick={() => navigate('/site-config') & setCollapsed(true)}
+          >
+            ⚙️
+          </button>
+        )}
       </div>
 
       {/* Navigation Links */}
@@ -94,7 +178,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
         {/* {(role === "Admin" || role === "Super Admin") && (
         <Link to="/dhr-dashboard" className="sidepanel-manage-btn" title={collapsed ? "DHR Dashboard" : ""} onClick={() => setCollapsed(true)}>⚡<span className="label">DHR Dashboard</span></Link>
           )} */}
-        
+
         {(role === "Admin" || role === "Super Admin" || role === "Super User") && (
           <Link to="/duty-tracker" className="sidepanel-manage-btn" title={collapsed ? "Daily Activity Dashboard" : ""} onClick={() => setCollapsed(true)}>☀️ <span className="label">Duty Tracker</span></Link>
         )}
