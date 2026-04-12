@@ -9,6 +9,7 @@ import {
   doc,
   deleteDoc,
   updateDoc,
+  onSnapshot
 } from "firebase/firestore";
 import "../assets/AdminPanel.css";
 import { siteIdMap } from "../config/siteConfigs";
@@ -66,11 +67,47 @@ const AdminPanel = ({ userData }) => {
     "User": 0,
     "Total": 0
   });
+
+  const [showOnlineOnly, setShowOnlineOnly] = useState(false);
   const [searchName, setSearchName] = useState("");
+  const [editingTempAdminId, setEditingTempAdminId] = useState(null);
   const [tempAdminDraft, setTempAdminDraft] = useState({
     from: "",
     to: ""
   });
+
+  const handleEditTempAdmin = (user) => {
+    setEditingTempAdminId(user.id);
+    setTempAdminDraft({
+      from: user.adminAssignFrom?.slice(0, 16) || "",
+      to: user.adminAssignTo?.slice(0, 16) || ""
+    });
+  };
+
+  const updateTempAdminTime = async (userId) => {
+    const error = validateTempAdminPeriod(
+      tempAdminDraft.from,
+      tempAdminDraft.to
+    );
+
+    if (error) {
+      alert(error);
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, "users", userId), {
+        adminAssignFrom: new Date(tempAdminDraft.from).toISOString(),
+        adminAssignTo: new Date(tempAdminDraft.to).toISOString(),
+      });
+
+      setEditingTempAdminId(null);
+      setTempAdminDraft({ from: "", to: "" });
+      fetchAllUsers();
+    } catch (err) {
+      console.error("Update failed", err);
+    }
+  };
 
   const isUserOnline = (user) => {
     if (!user.lastActiveAt) return false;
@@ -198,7 +235,7 @@ const AdminPanel = ({ userData }) => {
   };
 
   useEffect(() => {
-    if (["Admin", "Super Admin"].includes(userData.role)) {
+    if (["Admin", "Super Admin"].includes(userData.role) || isTempAdminValid(userData)) {
       fetchAllUsers();
     }
   }, []);
@@ -299,14 +336,16 @@ const AdminPanel = ({ userData }) => {
         <p className="admin-subtitle">🔐 Full access granted. Click edit button to modify user info.</p>
       )}
 
-      {(["Admin", "Super Admin"].includes(userData.role)) && (
+      {(["Admin", "Super Admin"].includes(userData.role) || isTempAdminValid(userData)) && (
         <div className="admin-table-wrapper mt-10 child-container">
           <h3 className="admin-subtitle">👥 User Role Management</h3>
 
           {/* User Count Statistics */}
-          <div className="summary-card">
+          {/* <div className="summary-card">
             <h3>🟢 Online Users: {onlineCount}</h3>
-          </div>
+          </div> */}
+
+
 
           <div className="user-stats-container">
             <div
@@ -315,6 +354,14 @@ const AdminPanel = ({ userData }) => {
             >
               <span className="stat-number">{roleCounts.Total}</span>
               <span className="stat-label">Total Users</span>
+            </div>
+
+            <div
+              className={`user-stat-card ${cardFilter === "ONLINE" ? "active" : ""}`}
+              onClick={() => handleCardFilter("ONLINE")}
+            >
+              <span className="stat-number">{onlineCount}</span>
+              <span className="stat-label">🟢 Online</span>
             </div>
 
             <div
@@ -383,6 +430,17 @@ const AdminPanel = ({ userData }) => {
             />
           </div>
 
+          {/* <div className="mb-4">
+            <label>
+              <input
+                type="checkbox"
+                checked={showOnlineOnly}
+                onChange={(e) => setShowOnlineOnly(e.target.checked)}
+              />
+              Show Online Users Only 🟢
+            </label>
+          </div> */}
+
 
           {/* User Table */}
           <div className="daily-activity-table-container">
@@ -422,7 +480,15 @@ const AdminPanel = ({ userData }) => {
                       return isTempAdminValid(user);
                     }
 
+                    if (cardFilter === "ONLINE") {
+                      return isUserOnline(user);
+                    }
+
                     return user.role === cardFilter;
+                  })
+                  .filter((user) => {
+                    if (!showOnlineOnly) return true;
+                    return isUserOnline(user);
                   })
                   .map((user) => {
 
@@ -582,12 +648,47 @@ const AdminPanel = ({ userData }) => {
                                           : "Expired"}
                                       </strong>
                                     </span>
-                                    <button
-                                      className="btn-demote"
-                                      onClick={() => removeTempAdmin(user.id)}
-                                    >
-                                      Remove
-                                    </button>
+
+                                    {editingTempAdminId === user.id ? (
+                                      <>
+                                        <input
+                                          type="datetime-local"
+                                          value={tempAdminDraft.from}
+                                          onChange={(e) =>
+                                            setTempAdminDraft(d => ({ ...d, from: e.target.value }))
+                                          }
+                                        />
+                                        <input
+                                          type="datetime-local"
+                                          value={tempAdminDraft.to}
+                                          onChange={(e) =>
+                                            setTempAdminDraft(d => ({ ...d, to: e.target.value }))
+                                          }
+                                        />
+                                        <button onClick={() => updateTempAdminTime(user.id)}>
+                                          Save
+                                        </button>
+                                        <button onClick={() => setEditingTempAdminId(null)}>
+                                          Cancel
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <button
+                                          className="btn-promote"
+                                          onClick={() => handleEditTempAdmin(user)}
+                                        >
+                                          Edit Time
+                                        </button>
+
+                                        <button
+                                          className="btn-demote"
+                                          onClick={() => removeTempAdmin(user.id)}
+                                        >
+                                          Remove
+                                        </button>
+                                      </>
+                                    )}
                                   </>
                                 ) : (
                                   <>

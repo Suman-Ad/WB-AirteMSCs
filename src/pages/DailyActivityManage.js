@@ -74,6 +74,17 @@ function genId() { return `${Date.now()}_${Math.random().toString(36).slice(2, 8
 function monthOfISO(iso) { if (!iso) return null; const p = iso.split("-"); return parseInt(p[1], 10); }
 function dayOfISO(iso) { if (!iso) return null; const p = iso.split("-"); return parseInt(p[2], 10); }
 
+const isAdminAssignmentValid = (userData) => {
+  if (!userData?.isAdminAssigned) return false;
+  if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+  const today = new Date();
+  const from = new Date(userData.adminAssignFrom);
+  const to = new Date(userData.adminAssignTo);
+
+  return today >= from && today <= to;
+};
+
 export default function DailyActivityManage({ userData }) {
   // selection
   const [region, setRegion] = useState(userData?.region || "");
@@ -108,7 +119,7 @@ export default function DailyActivityManage({ userData }) {
   // permissions
   const isSuperAdmin = userData?.role === "Super Admin";
   const isAdmin = isSuperAdmin || userData?.role === "Admin";
-  const isAssignedUser = userData?.isAdminAssigned;
+  const isAssignedUser = userData?.isAdminAssigned && isAdminAssignmentValid(userData);
   const canEdit = isAdmin || isAssignedUser || isSuperAdmin || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM" || userData?.designation === "Vertiv Site Infra Engineer";
 
   // equipment list
@@ -1249,7 +1260,7 @@ export default function DailyActivityManage({ userData }) {
         <div className="daily-activity-subtitle">Admins / assigned users maintain PM registers. Site users add scheduled PM to daily sheet.</div>
       </div>
 
-      {(userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.isAdminAssigned || userData.designation === "Vertiv CIH" || userData.designation === "Vertiv ZM" || userData.designation === "Vertiv Site Infra Engineer") && (
+      {(userData?.role === "Admin" || userData?.role === "Super Admin" || isAssignedUser || userData.designation === "Vertiv CIH" || userData.designation === "Vertiv ZM" || userData.designation === "Vertiv Site Infra Engineer") && (
         <Link to="/pm-register"><span className="pm-manage-btn">📜Manage PM Register</span></Link>
       )}
 

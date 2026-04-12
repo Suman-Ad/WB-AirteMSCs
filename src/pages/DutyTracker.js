@@ -166,6 +166,18 @@ async function getAllUsersMap() {
   snap.forEach(d => map[d.id] = d.data().name);
   return map;
 }
+
+const isAdminAssignmentValid = (userData) => {
+  if (!userData?.isAdminAssigned) return false;
+  if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+  const today = new Date();
+  const from = new Date(userData.adminAssignFrom);
+  const to = new Date(userData.adminAssignTo);
+
+  return today >= from && today <= to;
+};
+
 // ---------- Main Page Component ----------
 export default function DutyTrackerPage({ currentUser }) {
   /** permissions */
@@ -173,7 +185,7 @@ export default function DutyTrackerPage({ currentUser }) {
     currentUser?.role === "Super Admin" ||
     currentUser?.role === "Admin" ||
     currentUser.isAdminAssigned ||
-    // isAdminAssignmentValid(userData) ||
+    isAdminAssignmentValid(currentUser) ||
     // currentUser?.designation === "Vertiv Site Infra Engineer" ||
     currentUser?.designation === "Vertiv CIH" ||
     currentUser?.designation === "Vertiv ZM";

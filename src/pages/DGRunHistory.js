@@ -23,6 +23,17 @@ const formatDuration = (sec) => {
 
 const getToday = () => format(new Date(), "yyyy-MM-dd");
 
+const isAdminAssignmentValid = (userData) => {
+  if (!userData?.isAdminAssigned) return false;
+  if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+  const today = new Date();
+  const from = new Date(userData.adminAssignFrom);
+  const to = new Date(userData.adminAssignTo);
+
+  return today >= from && today <= to;
+};
+
 const DGRunHistory = ({ userData }) => {
   const [logs, setLogs] = useState([]);
   const navigate = useNavigate();
@@ -33,12 +44,13 @@ const DGRunHistory = ({ userData }) => {
   const [editEnd, setEditEnd] = useState("");
 
 
+
   /** permissions */
   const isAdmin =
     userData?.role === "Super Admin" ||
     userData?.role === "Admin" ||
     userData.isAdminAssigned ||
-    // isAdminAssignmentValid(userData) ||
+    isAdminAssignmentValid(userData) ||
     userData?.designation === "Vertiv Site Infra Engineer" ||
     userData?.designation === "Vertiv CIH" ||
     userData?.designation === "Vertiv ZM";

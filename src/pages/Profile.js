@@ -19,12 +19,24 @@ import { useNavigate } from "react-router-dom";
 import "../assets/Profile.css";
 import { updateLocalUserData } from "../utils/userStorage";
 
+const isAdminAssignmentValid = (userData) => {
+  if (!userData?.isAdminAssigned) return false;
+  if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+  const today = new Date();
+  const from = new Date(userData.adminAssignFrom);
+  const to = new Date(userData.adminAssignTo);
+
+  return today >= from && today <= to;
+};
+
 const ProfilePage = ({ userData }) => {
   // permissions
   const isAdmin = userData?.role === "Admin" ||
     userData?.role === "Super Admin" ||
     userData?.designation === "Vertiv CIH" ||
     userData?.isAdminAssigned ||
+    isAdminAssignmentValid(userData) ||
     userData?.designation === "Vertiv ZM";
     
   const [editMode, setEditMode] = useState(false);

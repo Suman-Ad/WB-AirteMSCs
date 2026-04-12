@@ -64,6 +64,14 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
     return `${h}h ${m}m ${s}s`;
   };
 
+  const getCountdownColor = () => {
+    const diff = new Date(userData.adminAssignTo) - new Date();
+
+    if (diff <= 0) return "red";
+    if (diff < 10 * 60 * 1000) return "#ff5722";
+    return "#4caf50";
+  };
+
   return (
     <div className={`sidebar ${collapsed ? "collapsed" : "expanded"}`} style={{ background: powerSource === "EB" ? "" : "#db1e1ef3" }}>
       {/* Sidebar Header with Collapse Toggle */}
@@ -115,7 +123,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
                   🪪 Temp Admin
                   <br />
                   {isTempAdminValid() && (
-                    <span style={{ fontSize: 11, color: "#ff9800" }}>
+                    <span style={{ fontSize: 11, color: getCountdownColor() }}>
                       ⏳ {getRemainingTime()}
                     </span>
                   )}
@@ -223,7 +231,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
           </Link>
         )}
 
-        {(role === "Admin" || role === "Super Admin") && (
+        {(role === "Admin" || role === "Super Admin" || isTempAdminValid(userData)) && (
           <Link to="/admin" className="sidepanel-manage-btn" title={collapsed ? "Admin Panel" : ""}
             onClick={() => setCollapsed(true)}
           >🔑 <span className="label">Admin Panel</span>

@@ -100,6 +100,17 @@ function emptyPMDoc(region, circle, site, year) {
   };
 }
 
+const isAdminAssignmentValid = (userData) => {
+  if (!userData?.isAdminAssigned) return false;
+  if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+  const today = new Date();
+  const from = new Date(userData.adminAssignFrom);
+  const to = new Date(userData.adminAssignTo);
+
+  return today >= from && today <= to;
+};
+
 /* Component */
 export default function PMRegister({ userData }) {
   // site hierarchy (either from assets_register collection or fallback)
@@ -134,6 +145,7 @@ export default function PMRegister({ userData }) {
     userData?.role === "Super Admin" ||
     userData?.designation === "Vertiv CIH" ||
     userData?.isAdminAssigned ||
+    isAdminAssignmentValid(userData) ||
     userData?.designation === "Vertiv ZM";
   const canEdit = isAdmin || userData?.designation === "Vertiv Site Infra Engineer";
 
@@ -1188,8 +1200,8 @@ export default function PMRegister({ userData }) {
             {/* equipment selection quick add */}
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               <select className="daily-activity-select" value={selectedEquipment} onChange={(e) => setSelectedEquipment(e.target.value)}>
-                {Array.from(new Set([...equipmentList, ...Object.keys(pmDoc.equipmentSchedules || {})])).map(eq => 
-                <option key={eq} value={eq}>{eq}{equipmentQtyMap[eq] ? ` (${equipmentQtyMap[eq]} units)` : ""}</option>)}
+                {Array.from(new Set([...equipmentList, ...Object.keys(pmDoc.equipmentSchedules || {})])).map(eq =>
+                  <option key={eq} value={eq}>{eq}{equipmentQtyMap[eq] ? ` (${equipmentQtyMap[eq]} units)` : ""}</option>)}
               </select>
               <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => ensureEquipmentSlot(selectedEquipment)} disabled={!canEdit}>Ensure Slot</button>
               <button

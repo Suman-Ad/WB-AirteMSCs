@@ -31,6 +31,18 @@ import { useParams } from "react-router-dom";
 //   { key: "InstallationDate", label: "Equipment Installation date" },
 // ];
 
+const isAdminAssignmentValid = (userData) => {
+  if (!userData?.isAdminAssigned) return false;
+  if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+  const today = new Date();
+  const from = new Date(userData.adminAssignFrom);
+  const to = new Date(userData.adminAssignTo);
+
+  return today >= from && today <= to;
+};
+
+
 export default function DynamicRegister({ userData }) {
   // user & role
   const userRole = userData?.role;
@@ -38,7 +50,7 @@ export default function DynamicRegister({ userData }) {
     userData?.role === "Super Admin" ||
     userData?.role === "Admin" ||
     userData.isAdminAssigned ||
-    // isAdminAssignmentValid(userData) ||
+    isAdminAssignmentValid(userData) ||
     userData?.designation === "Vertiv Site Infra Engineer" ||
     userData?.designation === "Vertiv CIH" ||
     userData?.designation === "Vertiv ZM";

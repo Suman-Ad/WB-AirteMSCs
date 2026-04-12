@@ -104,11 +104,8 @@ const isAdminAssignmentValid = (userData) => {
   if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   const from = new Date(userData.adminAssignFrom);
   const to = new Date(userData.adminAssignTo);
-  to.setHours(23, 59, 59, 999);
 
   return today >= from && today <= to;
 };

@@ -158,6 +158,16 @@ const normalizeSite = (site) => {
   return site.charAt(0) + site.slice(1).toLowerCase();
 };
 
+const isAdminAssignmentValid = (userData) => {
+  if (!userData?.isAdminAssigned) return false;
+  if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+  const today = new Date();
+  const from = new Date(userData.adminAssignFrom);
+  const to = new Date(userData.adminAssignTo);
+
+  return today >= from && today <= to;
+};
 
 const DailyDGLog = ({ userData }) => {
   /** permissions */
@@ -165,8 +175,7 @@ const DailyDGLog = ({ userData }) => {
     userData?.role === "Super Admin" ||
     userData?.role === "Admin" ||
     userData.isAdminAssigned ||
-    // isAdminAssignmentValid(userData) ||
-    // userData?.designation === "Vertiv Site Infra Engineer" ||
+    isAdminAssignmentValid(userData) ||
     userData?.designation === "Vertiv CIH" ||
     userData?.designation === "Vertiv ZM";
 
@@ -1091,6 +1100,80 @@ const DailyDGLog = ({ userData }) => {
     window.addEventListener("keydown", escHandler);
     return () => window.removeEventListener("keydown", escHandler);
   }, []);
+
+
+  const getMonthlyDieselDetailed = (logs) => {
+    const grouped = {};
+
+    logs.forEach((row) => {
+      if (!row.Date) return;
+
+      const date = new Date(row.Date);
+      const monthKey = date.toISOString().slice(0, 7); // YYYY-MM
+
+      if (!grouped[monthKey]) grouped[monthKey] = [];
+      grouped[monthKey].push(row);
+    });
+
+    const result = [];
+
+    Object.keys(grouped).forEach((month) => {
+      const data = grouped[month].sort(
+        (a, b) => new Date(a.Date) - new Date(b.Date)
+      );
+
+      const first = data[0];
+      const last = data[data.length - 1];
+
+      const sum = (row, keys) =>
+        keys.reduce((acc, key) => acc + Number(row[key] || 0), 0);
+
+      const dayTankKeys = [
+        "Day Tank 1", "Day Tank 2", "Day Tank 3",
+        "Day Tank 4", "Day Tank 5", "Day Tank 6", "Day Tank 7"
+      ];
+
+      const externalKeys = [
+        "UG Tank 1", "UG Tank 2",
+        "Sump Tank and Pipeline", "Buffer Tank",
+        "Internal Tank-1", "Internal Tank-2",
+        "Diesel stock in Metal Drum",
+        "DG-1 External Fuel Filling", "DG-2 External Fuel Filling",
+        "DG-3 External Fuel Filling", "DG-4 External Fuel Filling"
+      ];
+
+      // 🔹 Row 1 → Opening (1st date)
+      result.push({
+        month,
+        type: "Opening",
+        date: first.Date,
+        stock: Number(first["DG-1 Fuel Opening"] || 0) + Number(first["DG-2 Fuel Opening"] || 0) + Number(first["DG-3 Fuel Opening"] || 0) + Number(first["DG-4 Fuel Opening"] || 0) + Number(first["DG-1 External Fuel Stock"] || 0) + Number(first["DG-2 External Fuel Stock"] || 0),
+        dayTank1: Number(first["DG-1 Fuel Opening"] || 0),
+        dayTank2: Number(first["DG-2 Fuel Opening"] || 0),
+        dayTank3: Number(first["DG-3 Fuel Opening"] || 0),
+        dayTank4: Number(first["DG-4 Fuel Opening"] || 0),
+        external: Number(first["DG-1 External Fuel Stock"] || 0) + Number(first["DG-2 External Fuel Stock"] || 0),
+      });
+
+      // 🔹 Row 2 → Closing (Last date)
+      result.push({
+        month,
+        type: "Closing",
+        date: last.Date,
+        stock: Number(last["DG-1 Fuel Closing"] || 0) + Number(last["DG-2 Fuel Closing"] || 0) + Number(last["DG-3 Fuel Closing"] || 0) + Number(last["DG-4 Fuel Closing"] || 0) + Number(last["DG-1 External Fuel Stock"] || 0) + Number(last["DG-2 External Fuel Stock"] || 0),
+        dayTank1: Number(last["DG-1 Fuel Closing"] || 0),
+        dayTank2: Number(last["DG-2 Fuel Closing"] || 0),
+        dayTank3: Number(last["DG-3 Fuel Closing"] || 0),
+        dayTank4: Number(last["DG-4 Fuel Closing"] || 0),
+        external: Number(last["DG-1 External Fuel Stock"] || 0) + Number(last["DG-2 External Fuel Stock"] || 0),
+      });
+    });
+
+    return result;
+  };
+
+  const monthlySummary = getMonthlyDieselDetailed(logs);
+
 
   // const peakMonth = yearlyData.reduce((max, m) =>
   //   m.coolingLoad > max.coolingLoad ? m : max, yearlyData[0]);
@@ -3893,7 +3976,7 @@ const DailyDGLog = ({ userData }) => {
                   const item = peakData[key];
 
                   if (!activeKeys[key] || !item) return null;
-                  
+
                   const colors = {
                     fuel: "#ff0015",
                     siteLoad: "#15ff00",
@@ -4086,6 +4169,50 @@ const DailyDGLog = ({ userData }) => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* 🔹 Monthly Diesel Stock Report */}
+      <div className="diesel-summary-card">
+        <h2>⛽ Monthly Diesel Stock Report</h2>
+
+        <table className="diesel-summary-table" border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%", fontSize: "12px", overflowX: "auto", display: "block", whiteSpace: "nowrap", borderRadius: "10px", scrollbarWidth: "thin" }}>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Type</th>
+              <th>Date</th>
+              <th>Total Stock</th>
+              <th>Day Tank-1</th>
+              <th>Day Tank-2</th>
+              <th>Day Tank-3</th>
+              <th>Day Tank-4</th>
+              <th>External Stock</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {monthlySummary.map((row, i) => (
+              <tr key={i}>
+                <td>{row.month}</td>
+                <td
+                  style={{
+                    fontWeight: "bold",
+                    color: row.type === "Opening" ? "blue" : "green",
+                  }}
+                >
+                  {row.type}
+                </td>
+                <td>{row.date}</td>
+                <td>{row.stock}</td>
+                <td>{row.dayTank1}</td>
+                <td>{row.dayTank2}</td>
+                <td>{row.dayTank3}</td>
+                <td>{row.dayTank4}</td>
+                <td>{row.external}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* 🔹 Monthly Diesel Reconciliation */}

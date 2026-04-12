@@ -17,6 +17,16 @@ import {
 import { styleEffect } from "framer-motion";
 import { filter } from "jszip";
 
+const isAdminAssignmentValid = (userData) => {
+    if (!userData?.isAdminAssigned) return false;
+    if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+    const today = new Date();
+    const from = new Date(userData.adminAssignFrom);
+    const to = new Date(userData.adminAssignTo);
+
+    return today >= from && today <= to;
+};
 
 const AcDcRackDashboard = ({ userData }) => {
     const [rackData, setRackData] = useState([]);
@@ -42,6 +52,7 @@ const AcDcRackDashboard = ({ userData }) => {
         userData?.role === "Super Admin" ||
         userData?.designation === "Vertiv CIH" ||
         userData?.isAdminAssigned ||
+        isAdminAssignmentValid(userData) ||
         userData?.designation === "Vertiv ZM";
 
     const [status, setStatus] = useState("");
@@ -106,6 +117,8 @@ const AcDcRackDashboard = ({ userData }) => {
 
     //     fetchData();
     // }, [userData, filters]);
+
+
 
     useEffect(() => {
         if (!userData) return;
@@ -827,7 +840,7 @@ const AcDcRackDashboard = ({ userData }) => {
                         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                             {(userData?.role === "Admin" ||
                                 userData?.role === "Super Admin" ||
-                                userData?.isAdminAssigned ||
+                                isAdminAssignmentValid(userData) ||
                                 userData?.designation === "Vertiv CIH" ||
                                 userData?.designation === "Vertiv ZM") && (
                                     <select
@@ -1486,7 +1499,7 @@ const AcDcRackDashboard = ({ userData }) => {
                         </table>
 
                         <div style={{ marginTop: "15px", textAlign: "center" }}>
-                            {(userData?.site?.toLowerCase() === previewData.siteName?.toLowerCase() || userData.role === "Super Admin" || userData.role === "Admin" || userData.isAdminAssigned) && (
+                            {(userData?.site?.toLowerCase() === previewData.siteName?.toLowerCase() || userData.role === "Super Admin" || userData.role === "Admin" || isAdminAssignmentValid(userData)) && (
                                 <div style={{ display: "inline-flex", gap: "10px" }}>
                                     <button
                                         onClick={() => {
