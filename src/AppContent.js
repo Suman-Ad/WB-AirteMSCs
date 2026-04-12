@@ -61,6 +61,8 @@ import DGRunHistory from "./pages/DGRunHistory";
 import DynamicRegister from "./pages/DynamicRegister";
 import AllRegisterBook from "./pages/AllRegisterBook";
 import VendorEscalation from "./components/VendorEscalation";
+import LoadEntryForm from "./components/LoadEntryForm";
+import LoadDashboard from "./pages/LoadDashboard";
 
 export default function AppContent() {
     const [userData, setUserData] = useState(null);
@@ -528,6 +530,20 @@ export default function AppContent() {
                     <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
                         <Layout userData={userData}>
                             <VendorEscalation userData={userData} />
+                        </Layout>
+                    </RoleProtectedRoute>} />
+
+                <Route path="/load-entry" element={
+                    <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+                        <Layout userData={userData}>
+                            <LoadEntryForm userData={userData} />
+                        </Layout>
+                    </RoleProtectedRoute>} />
+
+                <Route path="/load-dashboard" element={
+                    <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+                        <Layout userData={userData}>
+                            <LoadDashboard userData={userData} />
                         </Layout>
                     </RoleProtectedRoute>} />
 

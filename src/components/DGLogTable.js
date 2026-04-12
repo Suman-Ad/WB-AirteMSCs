@@ -1002,7 +1002,7 @@ const DGLogTable = ({ userData }) => {
                   <td>{log.fuelConsumption || 0}</td>
                   <td>{log.remarks}</td>
                   <td style={{ fontSize: "12px" }}>
-                    {log.fuelFill ? (
+                    {(log.fuelFill || log.exFuelFill) ? (
                       <div>
                         Day🛢️: {log.fuelFill ? log.fuelFill : 0}L
                         <p style={{ fontSize: "12px" }}>

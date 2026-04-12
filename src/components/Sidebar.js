@@ -164,7 +164,11 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
       {/* Navigation Links */}
       <nav>
         {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
-          <Link to="/daily-dg-log-editor" className="sidepanel-manage-btn" title={collapsed ? "Insident Dashboard" : ""} onClick={() => setCollapsed(true)}>☣️ <span className="label">Daily DG Log Book</span></Link>
+          <Link to="/daily-dg-log-editor" className="sidepanel-manage-btn" title={collapsed ? "DG Log Book" : ""} onClick={() => setCollapsed(true)}>☣️ <span className="label">Daily DG Log Book</span></Link>
+        )}
+
+        {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
+          <Link to="/load-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Load Dashboard" : ""} onClick={() => setCollapsed(true)}>📒 <span className="label">Load Book</span></Link>
         )}
 
         {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
