@@ -1,10 +1,29 @@
 import React, { useState, useEffect, use } from "react";
 import { db } from "../firebase";
-import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc} from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
 import { useLocation } from "react-router-dom";
 
+const isAdminAssignmentValid = (userData) => {
+  if (!userData?.isAdminAssigned) return false;
+  if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+
+  const today = new Date();
+  const from = new Date(userData.adminAssignFrom);
+  const to = new Date(userData.adminAssignTo);
+
+  return today >= from && today <= to;
+};
 
 const LoadEntryForm = ({ userData }) => {
+  const isAdmin =
+    userData?.role === "Super Admin" ||
+    userData?.role === "Admin" ||
+    userData.isAdminAssigned ||
+    isAdminAssignmentValid(userData) ||
+    userData?.designation === "Vertiv Site Infra Engineer" ||
+    userData?.designation === "Vertiv Site Supervisor" ||
+    userData?.designation === "Vertiv CIH" ||
+    userData?.designation === "Vertiv ZM";
 
   const uploadedBy = {
     uid: userData?.uid | "",
@@ -19,6 +38,23 @@ const LoadEntryForm = ({ userData }) => {
     const now = new Date();
     return now.toTimeString().slice(0, 5); // HH:MM
   };
+
+  const TIME_SLOTS = [
+    { label: "02:00 AM", value: "02:00" },
+    { label: "08:00 AM", value: "08:00" },
+    { label: "02:00 PM", value: "14:00" },
+    { label: "08:00 PM", value: "20:00" },
+  ];
+
+  const getDefaultSlot = () => {
+    const hour = new Date().getHours();
+
+    if (hour < 5) return "02:00";
+    if (hour < 11) return "08:00";
+    if (hour < 17) return "14:00";
+    return "20:00";
+  };
+
   const location = useLocation();
   const editData = location.state?.editData;
   const docId = location.state?.docId;
@@ -31,7 +67,13 @@ const LoadEntryForm = ({ userData }) => {
 
     // Common
     date: getCurrentDate(),   // ✅ default today
-    time: getCurrentTime(),   // ✅ current time,
+    time: getDefaultSlot(),   // ✅ current time,
+
+    voltagePP: "",
+    voltagePN: "",
+    currentR: "",
+    currentY: "",
+    currentB: "",
 
     // SMPS Input Voltage
     voltageRN: "",
@@ -39,9 +81,7 @@ const LoadEntryForm = ({ userData }) => {
     voltageBN: "",
 
     // SMPS Input Current
-    currentR: "",
-    currentY: "",
-    currentB: "",
+    
 
     // Temperature
     tempR: "",
@@ -70,10 +110,62 @@ const LoadEntryForm = ({ userData }) => {
     outputCurrent: "",
     runningKW: "",
 
+    // LT
+    
+    powerFactor: "",
+    kwh: "",
+
     // DG
     dgRunHours: "",
     fuelConsumption: "",
   });
+
+  const resetFormFields = () => {
+    setFormData((prev) => ({
+      ...prev,
+
+      // SMPS
+      voltageRN: "",
+      voltageYN: "",
+      voltageBN: "",
+
+      currentR: "",
+      currentY: "",
+      currentB: "",
+
+      tempR: "",
+      tempY: "",
+      tempB: "",
+
+      spdStatus: "",
+
+      dcVoltage: "",
+      dcCurrent: "",
+
+      faultyModules: "",
+      systemStatus: "",
+      technicianName: "",
+
+      // UPS
+      outputVoltagePP: "",
+      outputVoltagePN: "",
+      outputCurrent: "",
+      runningKW: "",
+
+      // LT
+      voltagePP: "",
+      voltagePN: "",
+      currentR: "",
+      currentY: "",
+      currentB: "",
+      powerFactor: "",
+      kwh: "",
+
+      // DG
+      dgRunHours: "",
+      fuelConsumption: "",
+    }));
+  };
 
   // Fetch Site Configs from Firestore
   const fetchConfig = async () => {
@@ -114,8 +206,9 @@ const LoadEntryForm = ({ userData }) => {
         }));
 
         console.log("Existing data loaded");
-      } else {
+      } else if (!snapshot.empty === false && !docId) {
         console.log("No existing data found");
+        resetFormFields();
       }
     } catch (err) {
       console.error("Fetch error:", err);
@@ -212,6 +305,7 @@ const LoadEntryForm = ({ userData }) => {
         );
 
         alert("Data Saved");
+        resetFormFields();
       }
     } catch (err) {
       console.error("Save error:", err);
@@ -252,32 +346,31 @@ const LoadEntryForm = ({ userData }) => {
         name="date"
         value={formData.date}
         onChange={handleChange}
-        disabled={!!editData}
+        disabled={!!editData && !isAdmin}
       />
 
-      <input
-        type="time"
+      <select
         name="time"
         value={formData.time}
         onChange={handleChange}
-        disabled={!!editData}
-      />
+        disabled={!!editData && !isAdmin}
+      >
+        <option value="">Select Time Slot</option>
+        {TIME_SLOTS.map((slot) => (
+          <option key={slot.value} value={slot.value}>
+            {slot.label}
+          </option>
+        ))}
+      </select>
 
       <select name="equipmentType" value={formData.equipmentType} onChange={handleChange}>
         <option value="">Select Equipment</option>
         <option value="SMPS">SMPS</option>
         <option value="LT">LT Panel</option>
         <option value="UPS">UPS</option>
-        <option value="DG">DG</option>
+        {/* <option value="DG">DG</option> */}
       </select>
 
-      {/* <input name="equipmentId" placeholder="Equipment ID" onChange={handleChange} />
-      <input name="voltagePP" placeholder="P-P Voltage" onChange={handleChange} />
-      <input name="voltagePN" placeholder="P-N Voltage" onChange={handleChange} />
-
-      <input name="currentR" placeholder="R Phase Current" onChange={handleChange} />
-      <input name="currentY" placeholder="Y Phase Current" onChange={handleChange} />
-      <input name="currentB" placeholder="B Phase Current" onChange={handleChange} /> */}
 
       {formData.equipmentType === "SMPS" && (
         <>
@@ -331,6 +424,21 @@ const LoadEntryForm = ({ userData }) => {
 
       {formData.equipmentType === "LT" && (
         <>
+          <h4>LT Panel Details</h4>
+
+          <select name="equipmentId" value={formData.equipmentId} onChange={handleChange}>
+            <option value="">Select LT Panel</option>
+            {Array.from({ length: siteConfig.ebCount }, (_, i) => (
+              <option key={i + 1} value={`LT Panel-${i + 1}`}>
+                {`LT Panel-${i + 1}`}
+              </option>
+            ))}
+          </select>
+          <input name="voltagePP" value={formData.voltagePP} placeholder="P-P Voltage" onChange={handleChange} />
+          <input name="voltagePN" value={formData.voltagePN} placeholder="P-N Voltage" onChange={handleChange} />
+          <input name="currentR" value={formData.currentR} placeholder="R Phase Current" onChange={handleChange} />
+          <input name="currentY" value={formData.currentY} placeholder="Y Phase Current" onChange={handleChange} />
+          <input name="currentB" value={formData.currentB} placeholder="B Phase Current" onChange={handleChange} />
           <input name="powerFactor" value={formData.powerFactor} placeholder="Power Factor" onChange={handleChange} />
           <input name="kwh" value={formData.kwh} placeholder="kWh Meter Reading" onChange={handleChange} />
         </>
@@ -338,6 +446,14 @@ const LoadEntryForm = ({ userData }) => {
 
       {formData.equipmentType === "UPS" && (
         <>
+          <select name="equipmentId" value={formData.equipmentId} onChange={handleChange}>
+            <option value="">Select UPS</option>
+            {Array.from({ length: siteConfig.upsCount }, (_, i) => (
+              <option key={i + 1} value={`UPS-${i + 1}`}>
+                {`UPS-${i + 1}`}
+              </option>
+            ))}
+          </select>
           <input name="outputVoltagePP" placeholder="Output P-P Voltage" onChange={handleChange} />
           <input name="outputVoltagePN" placeholder="Output P-N Voltage" onChange={handleChange} />
           <input name="outputCurrent" placeholder="Output Current" onChange={handleChange} />
@@ -345,12 +461,12 @@ const LoadEntryForm = ({ userData }) => {
         </>
       )}
 
-      {formData.equipmentType === "DG" && (
+      {/* {formData.equipmentType === "DG" && (
         <>
           <input name="dgRunHours" placeholder="DG Run Hours" onChange={handleChange} />
           <input name="fuelConsumption" placeholder="Fuel Consumption (Ltr)" onChange={handleChange} />
         </>
-      )}
+      )} */}
 
       <button onClick={handleSubmit}>
         {docId ? "Update" : "Save"}
