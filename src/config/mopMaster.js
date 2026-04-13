@@ -4392,7 +4392,7 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     }
   },
 
-  "PAC Preventive maintenance (In-House)": {
+  "PAC Preventive maintenance (In House)": {
     header: {
       title: "PAC Preventive maintenance (In-House) MOP",
       docNo: "Nxtra/MOP/PAC Maintenance/DOC No. 7.12/Rev.00",
