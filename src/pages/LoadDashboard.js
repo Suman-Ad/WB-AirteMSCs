@@ -67,9 +67,9 @@ const LoadDashboard = ({ userData }) => {
               const dcI = Number(d.dcCurrent || 0);
               loadKW = (dcV * dcI) / 1000;
             } else if (d.equipmentType === "UPS") {
-              loadKW = Number(d.runningKW || 0);
+              loadKW = Number(d.runningKWR || 0) + Number(d.runningKWY || 0) + Number(d.runningKWB  || 0);
             } else {
-              const voltage = Number(d.voltagePP || 0);
+              const voltage = (Number(d.voltageRY || 0) + Number(d.voltageYB || 0) + Number(d.voltageBR || 0)) /3;
               const avgCurrent =
                 (Number(d.currentR || 0) +
                   Number(d.currentY || 0) +
@@ -161,7 +161,7 @@ const LoadDashboard = ({ userData }) => {
         "SPD Status",
         "DC Voltage", "DC Current",
         "Faulty Modules", "System Status",
-        "Technician", "Load (kW)", "Uploaded By"
+         "Load (kW)", "Technician", "Uploaded By"
       ],
 
       renderRow: (row) => (
@@ -183,8 +183,8 @@ const LoadDashboard = ({ userData }) => {
           <td>{row.dcCurrent || "-"}</td>
           <td>{row.faultyModules || "-"}</td>
           <td>{row.systemStatus || "-"}</td>
-          <td>{row.technicianName || "-"}</td>
           <td>{(row.loadKW || 0).toFixed(2)}</td>
+          <td>{row.technicianName || "-"}</td>
           <td>
             <p>{row.uploadedBy?.name || "-"}</p>
             <p>{row.uploadedBy?.empId || "-"}</p>
@@ -196,43 +196,97 @@ const LoadDashboard = ({ userData }) => {
     UPS: {
       headers: [
         "Date", "Time", "Equipment",
-        "Running Load (kW)",
-        "System Status", "Technician", "Load (kW)"
+        "Input R-Y (V)", "Input  Y-B (V)", "Input  B-R (V)",
+        "Input R-N (V)", "Input Y-N (V)", "Input B-N (V)",
+        "Input  R (A)", "Input  Y (A)", "Input B (A)", "Input N (A)",
+        "R Temp", "Y Temp", "B Temp",
+        "Output R-Y (V)", "Output  Y-B (V)", "Output  B-R (V)",
+        "Output R-N (V)", "Output Y-N (V)", "Output B-N (V)",
+        "Output  R (A)", "Output  Y (A)", "Output B (A)", "Output N (A)",
+        "Power Factor R", "Power Factor Y", "Power Factor B",
+        "Running Load (kW) R", "Running Load (kW) Y", "Running Load (kW) B",
+        "Load (kW)", "Technician", "Uploaded By"
       ],
       renderRow: (row) => (
         <>
           <td>{row.date || "-"}</td>
           <td>{row.time || "-"}</td>
           <td>{row.equipmentId || "-"}</td>
-          <td>{row.runningKW || "-"}</td>
-          <td>{row.systemStatus || "-"}</td>
-          <td>{row.technicianName || "-"}</td>
-          <td>{(row.loadKW || 0).toFixed(2)}</td>
-        </>
-      ),
-    },
-
-    DEFAULT: {
-      headers: [
-        "Date", "Time", "Equipment",
-        "R-N", "Y-N", "B-N",
-        "R", "Y", "B",
-        "PF", "Technician", "Load (kW)"
-      ],
-      renderRow: (row) => (
-        <>
-          <td>{row.date || "-"}</td>
-          <td>{row.time || "-"}</td>
-          <td>{row.equipmentId || "-"}</td>
+          <td>{row.voltageRY || "-"}</td>
+          <td>{row.voltageYB || "-"}</td>
+          <td>{row.voltageBR || "-"}</td>
           <td>{row.voltageRN || "-"}</td>
           <td>{row.voltageYN || "-"}</td>
           <td>{row.voltageBN || "-"}</td>
           <td>{row.currentR || "-"}</td>
           <td>{row.currentY || "-"}</td>
           <td>{row.currentB || "-"}</td>
-          <td>{row.powerFactor || "-"}</td>
-          <td>{row.technicianName || "-"}</td>
+          <td>{row.currentN || "-"}</td>
+          <td>{row.tempR || "-"}</td>
+          <td>{row.tempY || "-"}</td>
+          <td>{row.tempB || "-"}</td>
+          <td>{row.outVoltageRY || "-"}</td>
+          <td>{row.outVoltageYB || "-"}</td>
+          <td>{row.outVoltageBR || "-"}</td>
+          <td>{row.outVoltageRN || "-"}</td>
+          <td>{row.outVoltageYN || "-"}</td>
+          <td>{row.outVoltageBN || "-"}</td>
+          <td>{row.outCurrentR || "-"}</td>
+          <td>{row.outCurrentY || "-"}</td>
+          <td>{row.outCurrentB || "-"}</td>
+          <td>{row.outCurrentN || "-"}</td>
+          <td>{row.powerFactorR || "-"}</td>
+          <td>{row.powerFactorY || "-"}</td>
+          <td>{row.powerFactorB || "-"}</td>
+          <td>{row.runningKWR || "-"}</td>
+          <td>{row.runningKWY || "-"}</td>
+          <td>{row.runningKWB || "-"}</td>
           <td>{(row.loadKW || 0).toFixed(2)}</td>
+          <td>{row.technicianName || "-"}</td>
+          <td>
+            <p>{row.uploadedBy?.name || "-"}</p>
+            <p>{row.uploadedBy?.empId || "-"}</p>
+          </td>
+        </>
+      ),
+    },
+
+    LT : {
+      headers: [
+        "Date", "Time", "Equipment",
+        "Input R-Y (V)", "Input  Y-B (V)", "Input  B-R (V)",
+        "Input R-N (V)", "Input Y-N (V)", "Input B-N (V)",
+        "Input  R (A)", "Input  Y (A)", "Input B (A)",
+        "R Temp", "Y Temp", "B Temp",
+        "Power Factor",
+        "Running Load (kWH) Reading",
+        "Load (kW)", "Technician", "Uploaded By"
+      ],
+      renderRow: (row) => (
+        <>
+          <td>{row.date || "-"}</td>
+          <td>{row.time || "-"}</td>
+          <td>{row.equipmentId || "-"}</td>
+          <td>{row.voltageRY || "-"}</td>
+          <td>{row.voltageYB || "-"}</td>
+          <td>{row.voltageBR || "-"}</td>
+          <td>{row.voltageRN || "-"}</td>
+          <td>{row.voltageYN || "-"}</td>
+          <td>{row.voltageBN || "-"}</td>
+          <td>{row.currentR || "-"}</td>
+          <td>{row.currentY || "-"}</td>
+          <td>{row.currentB || "-"}</td>
+          <td>{row.tempR || "-"}</td>
+          <td>{row.tempY || "-"}</td>
+          <td>{row.tempB || "-"}</td>
+          <td>{row.powerFactor || "-"}</td>
+          <td>{row.kwh || "-"}</td>
+          <td>{(row.loadKW || 0).toFixed(2)}</td>
+          <td>{row.technicianName || "-"}</td>
+          <td>
+            <p>{row.uploadedBy?.name || "-"}</p>
+            <p>{row.uploadedBy?.empId || "-"}</p>
+          </td>
         </>
       ),
     },
