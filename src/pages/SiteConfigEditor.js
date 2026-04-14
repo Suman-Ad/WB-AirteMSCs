@@ -492,20 +492,6 @@ const SiteConfigEdit = ({ userData }) => {
           {activeSection === "equipment" && (
             <div className="chart-container">
               <h1>Site Equipment Details</h1>
-              {/* DG COUNT */}
-              {/* <label>DG Count</label>
-              <input
-                type="number"
-                name="dgCount"
-                value={config.dgCount || 0}
-                onChange={(e) =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    dgCount: Number(e.target.value),
-                    dgConfigs: prev.dgConfigs || {},
-                  }))
-                }
-              /> */}
 
               <label>DG Count</label>
 

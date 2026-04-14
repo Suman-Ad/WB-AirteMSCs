@@ -5,6 +5,7 @@ import XLSX from "xlsx-js-style";
 import { oemDieselCphData } from "../config/oemDieselCphData";
 import { db } from "../firebase"; // your firebase config
 import { collection, getDocs } from "firebase/firestore";
+import { calculateFields } from "../utils/calculatedDGLogs"; // move your calculation logic to a separate file for reuse
 
 const fmt = (val) => (val !== undefined && val !== null ? Number(val).toFixed(2) : "0.0");
 const fmt1 = (val) => (val !== undefined && val !== null ? Number(val).toFixed(1) : "0.0");
@@ -32,11 +33,15 @@ const METRICS = [
 
 export default function MonthlyData({ userData }) {
     // siteConfig can be passed via props or read from global state/context
-    const { state } = useLocation();
-    const { logs, siteConfig, selectedMonth } = state || {};
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const state = location.state;
+    const logs = state?.logs;
+    const siteConfig = state?.siteConfig;
+    const selectedMonth = state?.selectedMonth;
     const [monthDate, setMonthDate] = useState(() => {
-        // default to selectedMonth used in DailyDGLog or today
-        return new Date(); // override with your selectedMonth if available
+        return selectedMonth ? new Date(selectedMonth + "-01") : new Date();
     });
     // const [logs, setLogs] = useState([]); // raw daily docs for the site/month
     const [loading, setLoading] = useState(false);
@@ -50,10 +55,11 @@ export default function MonthlyData({ userData }) {
         DG2_NoLoad: 0,
     });
 
-    const navigate = useNavigate();
 
     // derive days of month
     const days = useMemo(() => getDaysInMonthArray(monthDate), [monthDate]);
+
+
 
     const formatMonthName = (ym) => {
         const [year, month] = ym.split("-");
@@ -113,14 +119,20 @@ export default function MonthlyData({ userData }) {
         }
     };
 
-    useEffect(() => {
-        const cached = localStorage.getItem("summary");
-        if (cached) {
-            setSummary(JSON.parse(cached));
-        }
-        fetchMonthlySummary();
+    // useEffect(() => {
+    //     const cached = localStorage.getItem("summary");
+    //     if (cached) {
+    //         setSummary(JSON.parse(cached));
+    //     }
+    //     fetchMonthlySummary();
 
-    }, [userData, selectedMonth]);
+    // }, [userData, selectedMonth]);
+
+    useEffect(() => {
+        if (!userData?.site || !selectedMonth) return;
+
+        fetchMonthlySummary();
+    }, [userData?.site, selectedMonth]);
 
     // 🔹 Auto calculations (like Excel)
     const calculateFields = (data) => {
@@ -135,6 +147,7 @@ export default function MonthlyData({ userData }) {
             const hrOpen = parseFloat(result[`DG-${i} Hour Opening`]) || 0;
             const hrClose = parseFloat(result[`DG-${i} Hour Closing`]) || 0;
             const fuelFill = parseFloat(result[`DG-${i} Fuel Filling`]) || 0;
+            const externalFuelFill = parseFloat(result[`DG-${i} External Fuel Filling`]) || 0;
             const offLoadFuelCon = parseFloat(result[`DG-${i} Off Load Fuel Consumption`]) || 0;
             const offLoadHrs = parseFloat(result[`DG-${i} Off Load Hour`]) || 0;
             const totalFuelCon = fuelOpen - fuelClose + fuelFill;
@@ -151,6 +164,7 @@ export default function MonthlyData({ userData }) {
             result[`DG-${i} ON Load Hour`] = (hrClose - hrOpen - offLoadHrs);
             result[`DG-${i} OFF Load Hour`] = (offLoadHrs);
             result[`DG-${i} Fuel Filling`] = (fuelFill);
+            result[`DG-${i} External Fuel Filling`] = (externalFuelFill);
 
 
             result[`DG-${i} Avg Fuel/Hr`] =
@@ -247,6 +261,12 @@ export default function MonthlyData({ userData }) {
             (result["DG-3 Fuel Filling"] || 0) +
             (result["DG-4 Fuel Filling"] || 0);
 
+        result["Total External Fuel Filling"] =
+            (result["DG-1 External Fuel Filling"] || 0) +
+            (result["DG-2 External Fuel Filling"] || 0) +
+            (result["DG-3 External Fuel Filling"] || 0) +
+            (result["DG-4 External Fuel Filling"] || 0);
+
         //PUE Calculation
         result["PUE"] = result["Office kW Consumption"] > 0 ? (((result["Total Unit Consumption"] - result["Office kW Consumption"]) / 24) / result["Total IT Load KWH"]).toFixed(2) : "0.00";
 
@@ -293,11 +313,9 @@ export default function MonthlyData({ userData }) {
                 const onLoadFuel = Number(calc[`${dgKey} ON Load Consumption`] || 0);
                 const offLoadFuel = Number(calc[`${dgKey} OFF Load Consumption`] || 0);
                 const totalFuel = onLoadFuel + offLoadFuel;
-                const totalFuelFilling = Number(calc[`${dgKey} Fuel Filling`] || 0);
+                const totalFuelFilling = Number(calc[`${dgKey} Fuel Filling`] || 0) + Number(calc[`${dgKey} External Fuel Filling`] || 0);
 
                 const kwh = Number(calc[`${dgKey} KWH Generation`] || 0);
-
-                if (!totalRunHrs || !totalFuel) continue;
 
                 const mapKey = `${siteMeta.month}_${dgKey}`;
 
@@ -333,6 +351,11 @@ export default function MonthlyData({ userData }) {
                     };
                 }
 
+                dgMap[mapKey].dieselPurchased += totalFuelFilling;
+                dgMap[mapKey].dieselAdded += totalFuelFilling;
+
+                if (!totalRunHrs || !totalFuel) continue;
+
                 dgMap[mapKey].dgUnitsConsumed += kwh;
 
                 dgMap[mapKey].dgRunHrsOnLoad += onLoadHrs;
@@ -342,8 +365,6 @@ export default function MonthlyData({ userData }) {
                 dgMap[mapKey].dieselConsumedOnLoad += onLoadFuel;
                 dgMap[mapKey].dieselConsumedNoLoad += offLoadFuel;
                 dgMap[mapKey].totalDieselConsumed += totalFuel;
-                dgMap[mapKey].dieselPurchased += totalFuelFilling;
-                dgMap[mapKey].dieselAdded += totalFuelFilling;
             }
         });
 

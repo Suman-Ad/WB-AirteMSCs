@@ -104,8 +104,8 @@ const FuelRequisition = () => {
                     const filled = (arr || [])
                         .map((e) => ({
                             Date: e.Date,
-                            DG1: Number(e["DG-1 Fuel Filling"] || 0),
-                            DG2: Number(e["DG-2 Fuel Filling"] || 0),
+                            DG1: Number(e["DG-1 Fuel Filling"] || 0) + Number(e["DG-1 External Fuel Filling"] || 0),
+                            DG2: Number(e["DG-2 Fuel Filling"] || 0) + Number(e["DG-2 External Fuel Filling"] || 0),
                             DG1Hrs: Number(e["DG-1 Hour Closing"] || 0),
                             DG2Hrs: Number(e["DG-2 Hour Closing"] || 0),
                         }))
@@ -138,7 +138,7 @@ const FuelRequisition = () => {
 
                                 runsSnap.docs.forEach((rd) => {
                                     const run = rd.data();
-                                    const fill = Number(run.fuelFill || 0);
+                                    const fill = Number(run.fuelFill || 0) + Number(run.exFuelFill || 0);
                                     if (fill > 0) {
                                         const hrMeter = Number(run.hrMeterEnd || run.hrMeterStart || 0);
                                         if (run.dgNumber === "DG-1") {
@@ -185,6 +185,20 @@ const FuelRequisition = () => {
                 // 2) if none, try previous month's dailyDGLogs
                 if (!lastFilling) {
                     try {
+                        const prev = new Date(today.getFullYear(), today.getMonth() - 0, 1);
+                        const prevMonthKey = prev.toISOString().slice(0, 7); // 'YYYY-MM'
+                        const prevSnap = await getDocs(
+                            collection(db, "dailyDGLogs", userData.site, prevMonthKey)
+                        );
+                        if (!prevSnap.empty) {
+                            const prevLogs = prevSnap.docs.map((d) => d.data());
+                            lastFilling = findLastFillingInDailyLogs(prevLogs);
+                        }
+                    } catch (err) {
+                        console.error("Error fetching previous month dailyDGLogs:", err);
+                    }
+                } else if (!lastFilling) {
+                    try {
                         const prev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                         const prevMonthKey = prev.toISOString().slice(0, 7); // 'YYYY-MM'
                         const prevSnap = await getDocs(
@@ -198,7 +212,6 @@ const FuelRequisition = () => {
                         console.error("Error fetching previous month dailyDGLogs:", err);
                     }
                 }
-
                 // 3) if still none, scan dgLogs runs (fuelFill only)
                 if (!lastFilling) {
                     lastFilling = await findLastFillingInDGLogs(userData.site, 3);

@@ -418,7 +418,7 @@ const LoadEntryForm = ({ userData }) => {
           <input name="systemStatus" value={formData.systemStatus} placeholder="System Status" onChange={handleChange} />
 
           <h5>Technician</h5>
-          <input name="technicianName" value={formData.technicianName} placeholder={userData.name || ""} onChange={handleChange} />
+          <input name="technicianName" value={formData.technicianName} placeholder={userData.name || ""} onFocus={(e) => {if (!formData.technicianName) { e.target.value = userData.name || ""; }}} onChange={handleChange} />
         </>
       )}
 
@@ -441,6 +441,8 @@ const LoadEntryForm = ({ userData }) => {
           <input name="currentB" value={formData.currentB} placeholder="B Phase Current" onChange={handleChange} />
           <input name="powerFactor" value={formData.powerFactor} placeholder="Power Factor" onChange={handleChange} />
           <input name="kwh" value={formData.kwh} placeholder="kWh Meter Reading" onChange={handleChange} />
+          <h5>Technician</h5>
+          <input name="technicianName" value={formData.technicianName} placeholder={userData.name || ""} onFocus={(e) => {if (!formData.technicianName) { e.target.value = userData.name || ""; }}} onChange={handleChange} />
         </>
       )}
 
@@ -458,6 +460,8 @@ const LoadEntryForm = ({ userData }) => {
           <input name="outputVoltagePN" placeholder="Output P-N Voltage" onChange={handleChange} />
           <input name="outputCurrent" placeholder="Output Current" onChange={handleChange} />
           <input name="runningKW" placeholder="Running kW per Phase" onChange={handleChange} />
+          <h5>Technician</h5>
+          <input name="technicianName" value={formData.technicianName} placeholder={userData.name || ""} onFocus={(e) => {if (!formData.technicianName) { e.target.value = userData.name || ""; }}} onChange={handleChange} />
         </>
       )}
 

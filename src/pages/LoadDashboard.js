@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { collection, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer
+} from "recharts";
 
 
 const isAdminAssignmentValid = (userData) => {
@@ -28,6 +31,10 @@ const LoadDashboard = ({ userData }) => {
   const today = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState(today);
   const navigate = useNavigate();
+  const [trendData, setTrendData] = useState([]);
+  const [rangeType, setRangeType] = useState("daily"); // daily | monthly | yearly
+  const [selectedEquipment, setSelectedEquipment] = useState("ALL");
+  const [selectedType, setSelectedType] = useState("ALL");
 
   const siteKey = userData?.siteId;
 
@@ -238,21 +245,125 @@ const LoadDashboard = ({ userData }) => {
     return acc;
   }, {});
 
+  const equipmentTypes = ["ALL", ...new Set(data.map(d => d.equipmentType))];
+  const equipmentIds = ["ALL", ...new Set(data.map(d => d.equipmentId))];
+
+  useEffect(() => {
+    if (!data.length) return;
+
+    let filtered = data;
+
+    if (selectedType !== "ALL") {
+      filtered = filtered.filter(d => d.equipmentType === selectedType);
+    }
+
+    if (selectedEquipment !== "ALL") {
+      filtered = filtered.filter(d => d.equipmentId === selectedEquipment);
+    }
+
+    let grouped = {};
+
+    filtered.forEach((d) => {
+      let key;
+
+      if (rangeType === "daily") {
+        key = d.time; // time-wise
+      } else if (rangeType === "monthly") {
+        key = d.date; // day-wise
+      } else {
+        key = d.date?.slice(0, 7); // month-wise
+      }
+
+      const value = Number(d.loadKW || 0);
+
+      if (!grouped[key]) {
+        grouped[key] = {
+          sum: 0,
+          count: 0,
+        };
+      }
+
+      grouped[key].sum += value;
+      grouped[key].count += 1;
+    });
+
+    const result = Object.keys(grouped).map((k) => {
+      const { sum, count } = grouped[k];
+
+      let finalValue;
+
+      if (rangeType === "daily") {
+        // keep actual (or you can also average if needed)
+        finalValue = sum;
+      } else {
+        // average for monthly & yearly
+        finalValue = sum / count;
+      }
+
+      return {
+        label: k,
+        load: Number(finalValue.toFixed(2)),
+      };
+    });
+
+    // optional: sort properly (important for charts)
+    result.sort((a, b) => a.label.localeCompare(b.label));
+
+    setTrendData(result);
+
+  }, [data, rangeType, selectedEquipment, selectedType]);
+
+
   return (
     <div className="daily-log-container">
       <h2>⚡ Live Load Dashboard 🟢</h2>
 
-      <div style={{ padding: "5px 5px", borderRadius: "8px", borderBottom: "2px solid #fff", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px"}}>
+      <div style={{ padding: "5px 5px", borderRadius: "8px", borderBottom: "2px solid #fff", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
         <Link to="/load-entry" style={{ textDecoration: "none", color: "#00e6e6", fontWeight: "bold", border: "1px solid #00e6e625", padding: "4px 8px", borderRadius: "4px", backgroundColor: "#1e647952", transition: "background-color 0.3s" }}
-        onMouseMove={(e) => e.currentTarget.style.backgroundColor= "#1e6479bb"}
-        onMouseLeave={(e) => e.currentTarget.style.backgroundColor= "#1e647952"}
+          onMouseMove={(e) => e.currentTarget.style.backgroundColor = "#1e6479bb"}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1e647952"}
         >
           <p>➕ Add Load Entry</p>
         </Link>
         <input type="date" value={selectedDate || ""} onChange={(e) => setSelectedDate(e.target.value)} />
       </div>
 
-      
+
+      <div style={{ display: "flex", gap: "10px", margin: "10px 0" }}>
+
+        <select value={rangeType} onChange={(e) => setRangeType(e.target.value)}>
+          <option value="daily">Daily</option>
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+
+        <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
+          {equipmentTypes.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+
+        <select value={selectedEquipment} onChange={(e) => setSelectedEquipment(e.target.value)}>
+          {equipmentIds.map((id) => (
+            <option key={id} value={id}>{id}</option>
+          ))}
+        </select>
+
+      </div>
+
+      <div style={{ width: "100%", height: 400, marginBottom: "20px", padding: "10px", borderRadius: "8px", backgroundColor: "#1e647952", border: "1px solid #00e6e625", overflowY: "auto" }}>
+        <h3 style={{ color: "#00e6e6" }}>📈 Load Trend Analysis</h3>
+
+        <ResponsiveContainer>
+          <LineChart data={trendData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="label" />
+            <YAxis />
+            <Tooltip />
+            <Line type="monotone" dataKey="load" stroke="#00e6e6" />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
 
       {data.length === 0 ? (
         <p style={{ color: "white" }}>No data available for selected date</p>
@@ -294,12 +405,18 @@ const LoadDashboard = ({ userData }) => {
                       <tr key={row.id}>
                         {config.renderRow(row)}
 
-                        {isAdmin && (
-                          <td>
-                            <button onClick={() => handleEdit(row)}>✏️</button>
-                            <button onClick={() => handleDelete(row.id)}>🗑️</button>
-                          </td>
-                        )}
+                        <td style={{ justifyContent: "space-around", flexWrap: "wrap", display: "flex", gap: "5px" }}>
+                          <button style={{ padding: "2px 2px", background: "#24556b6e" }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#24556b"}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#24556b6e"}
+                            onClick={() => handleEdit(row)}>✏️</button>
+                          {isAdmin && (
+                            <button style={{ padding: "2px 2px", background: "#6b26246e" }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#6b2624"}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#6b26246e"}
+                              onClick={() => handleDelete(row.id)}>🗑️</button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
