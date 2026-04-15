@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collectionGroup, getDocs, getDoc, doc, collection } from "firebase/firestore";
+import { collectionGroup, getDocs, getDoc, doc, collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import "../assets/DailyDGLog.css"; // reuse your log CSS
 import { useNavigate, useLocation } from "react-router-dom";
@@ -66,66 +66,125 @@ const AllSitesDGLogs = ({ userData }) => {
     };
 
 
-    const fetchDgLogs = async () => {
-        try {
-            const logs = [];
+    // const fetchDgLogs = async () => {
+    //     try {
+    //         const logs = [];
 
-            const siteSnap = await getDocs(collection(db, "siteConfigs"));
+    //         const siteSnap = await getDocs(collection(db, "siteConfigs"));
 
-            for (const siteDoc of siteSnap.docs) {
-                const site = normalizeSiteId(siteDoc.id);
-                const normalizedMonthKey = normalizeMonthKey(monthKey);
+    //         for (const siteDoc of siteSnap.docs) {
+    //             const site = normalizeSiteId(siteDoc.id);
+    //             const normalizedMonthKey = normalizeMonthKey(monthKey);
 
-                // 👇 Get DATE documents correctly
-                const monthRef = collection(db, "dgLogs", site, normalizedMonthKey);
-                const dateDocs = await getDocs(monthRef);
+    //             // 👇 Get DATE documents correctly
+    //             const monthRef = collection(db, "dgLogs", site, normalizedMonthKey);
+    //             const dateDocs = await getDocs(monthRef);
 
-                for (const dateDoc of dateDocs.docs) {
-                    const date = dateDoc.id;
+    //             for (const dateDoc of dateDocs.docs) {
+    //                 const date = dateDoc.id;
 
-                    // 👇 runs subcollection
-                    const runsRef = collection(
-                        db,
-                        "dgLogs",
-                        site,
-                        normalizedMonthKey,
-                        date,
-                        "runs"
-                    );
+    //                 // 👇 runs subcollection
+    //                 const runsRef = collection(
+    //                     db,
+    //                     "dgLogs",
+    //                     site,
+    //                     normalizedMonthKey,
+    //                     date,
+    //                     "runs"
+    //                 );
 
-                    const runsSnap = await getDocs(runsRef);
+    //                 const runsSnap = await getDocs(runsRef);
 
-                    runsSnap.forEach((runDoc) => {
-                        const data = runDoc.data();
+    //                 runsSnap.forEach((runDoc) => {
+    //                     const data = runDoc.data();
 
-                        logs.push({
-                            id: runDoc.id,
-                            site: site.toUpperCase(),   // 🔥 normalize here
-                            date,
-                            ...data,
-                        });
-                    });
-                }
-            }
+    //                     logs.push({
+    //                         id: runDoc.id,
+    //                         site: site.toUpperCase(),   // 🔥 normalize here
+    //                         date,
+    //                         ...data,
+    //                     });
+    //                 });
+    //             }
+    //         }
 
-            setDgLogs(logs);
-            console.log("✅ dgLogs fetched:", logs);
+    //         setDgLogs(logs);
+    //         console.log("✅ dgLogs fetched:", logs);
 
-        } catch (err) {
-            console.error("dgLogs fetch error:", err);
-        }
-    };
+    //     } catch (err) {
+    //         console.error("dgLogs fetch error:", err);
+    //     }
+    // };
+
+    // useEffect(() => {
+    //     if (!monthKey) return;
+
+    //     fetchDgLogs();   // 👈 additional only
+    // }, [monthKey]);
 
     useEffect(() => {
         if (!monthKey) return;
 
-        fetchDgLogs();   // 👈 additional only
+        const normalizedMonthKey = normalizeMonthKey(monthKey);
+
+        const unsubscribe = onSnapshot(
+            collectionGroup(db, "runs"),
+            (snapshot) => {
+                const logs = [];
+
+                snapshot.forEach((docSnap) => {
+                    const path = docSnap.ref.path.split("/");
+
+                    // dgLogs / site / month / date / runs / runId
+                    const site = path[1];
+                    const month = path[2];
+                    const date = path[3];
+
+                    if (month !== normalizedMonthKey) return;
+
+                    logs.push({
+                        id: docSnap.id,
+                        site: site.toUpperCase(),
+                        date,
+                        ...docSnap.data(),
+                    });
+                });
+
+                setDgLogs(logs);
+            },
+            (err) => {
+                console.error("dgLogs realtime error:", err);
+            }
+        );
+
+        return () => unsubscribe();
     }, [monthKey]);
 
+    // useEffect(() => {
+    //     const fetchSitePowerStatus = async () => {
+    //         try {
+    //             const snap = await getDocs(collection(db, "sitePowerStatus"));
+    //             const statusMap = {};
+
+    //             snap.forEach((doc) => {
+    //                 statusMap[doc.id.toUpperCase()] = doc.data();
+    //             });
+
+    //             setSitePowerStatus(statusMap);
+    //         } catch (err) {
+    //             console.error("Failed to fetch sitePowerStatus", err);
+    //         } finally {
+    //             setLoadingPower(false);
+    //         }
+    //     };
+
+    //     fetchSitePowerStatus();
+    // }, []);
+
     useEffect(() => {
-        const fetchSitePowerStatus = async () => {
-            try {
-                const snap = await getDocs(collection(db, "sitePowerStatus"));
+        const unsubscribe = onSnapshot(
+            collection(db, "sitePowerStatus"),
+            (snap) => {
                 const statusMap = {};
 
                 snap.forEach((doc) => {
@@ -133,14 +192,15 @@ const AllSitesDGLogs = ({ userData }) => {
                 });
 
                 setSitePowerStatus(statusMap);
-            } catch (err) {
+                setLoadingPower(false);
+            },
+            (err) => {
                 console.error("Failed to fetch sitePowerStatus", err);
-            } finally {
                 setLoadingPower(false);
             }
-        };
+        );
 
-        fetchSitePowerStatus();
+        return () => unsubscribe();
     }, []);
 
     const fuelConsumptionBySiteDG = todayDGLogs.reduce((acc, log) => {
@@ -474,109 +534,205 @@ const AllSitesDGLogs = ({ userData }) => {
         XLSX.writeFile(workbook, `${siteKey}_MonthlyLogs.xlsx`);
     }
 
+    // useEffect(() => {
+    //     const fetchAllLogs = async () => {
+    //         setLoading(true);
+    //         setError("");
+    //         try {
+    //             const snapshot = await getDocs(collectionGroup(db, monthKey)); // get all site logs
+    //             console.log("Fetched logs snapshot:", snapshot);
+    //             const logsArr = [];
+    //             snapshot.forEach(docSnap => {
+    //                 const data = docSnap.data();
+    //                 // Try to get the parent (site) ID from the document path
+    //                 const pathParts = docSnap.ref.path.split('/');
+    //                 const siteId = pathParts.length > 1 ? pathParts[1] : "Unknown Site";
+    //                 logsArr.push({
+    //                     id: docSnap.id,
+    //                     site: data.site || siteId, // fallback logic for site name/id
+    //                     ...data,
+    //                 });
+    //             });
+    //             setLogs(logsArr);
+    //             console.log("Fetched all site logs:", logsArr);
+    //         } catch (err) {
+    //             setError("Error fetching logs: " + err.message);
+    //         }
+    //         setLoading(false);
+    //     };
+
+    //     fetchAllLogs();
+    // }, [userData, navigate]);
+
     useEffect(() => {
-        // Only let Admin/Super Admin access this page!
+        setLoading(true);
+        setError("");
 
-        // if (!userData || (userData.role !== "Admin" && userData.role !== "Super Admin")) {
-        //     navigate("/"); // redirect unauthorized users
-        //     return;
-        // }
-
-        const fetchAllLogs = async () => {
-            setLoading(true);
-            setError("");
-            try {
-                const snapshot = await getDocs(collectionGroup(db, monthKey)); // get all site logs
-                console.log("Fetched logs snapshot:", snapshot);
+        const unsubscribe = onSnapshot(
+            collectionGroup(db, monthKey),
+            (snapshot) => {
                 const logsArr = [];
-                snapshot.forEach(docSnap => {
+
+                snapshot.forEach((docSnap) => {
                     const data = docSnap.data();
-                    // Try to get the parent (site) ID from the document path
                     const pathParts = docSnap.ref.path.split('/');
                     const siteId = pathParts.length > 1 ? pathParts[1] : "Unknown Site";
+
                     logsArr.push({
                         id: docSnap.id,
-                        site: data.site || siteId, // fallback logic for site name/id
+                        site: data.site || siteId,
                         ...data,
                     });
                 });
-                setLogs(logsArr);
-                console.log("Fetched all site logs:", logsArr);
-            } catch (err) {
-                setError("Error fetching logs: " + err.message);
-            }
-            setLoading(false);
-        };
 
-        fetchAllLogs();
-    }, [userData, navigate]);
+                setLogs(logsArr);
+                setLoading(false);
+            },
+            (err) => {
+                setError("Error fetching logs: " + err.message);
+                setLoading(false);
+            }
+        );
+
+        return () => unsubscribe(); // 🔥 IMPORTANT cleanup
+    }, [monthKey]);
+
+    // useEffect(() => {
+    //     // Get all unique site keys from logs (case-sensitive; match your Firestore docs)
+    //     const allSiteKeys = [
+    //         ...new Set(logs.map(log => (log.site || "Unknown Site").toUpperCase()))
+    //     ];
+
+    //     // Fetch missing configs
+    //     allSiteKeys.forEach(async (siteKey) => {
+    //         if (!siteConfigs[siteKey]) {
+    //             const snap = await getDoc(doc(db, "siteConfigs", siteKey));
+    //             if (snap.exists()) {
+    //                 setSiteConfigs(prev => ({ ...prev, [siteKey]: snap.data() }));
+    //             }
+    //         }
+    //     });
+
+    //     const fetchFuelRate = async () => {
+    //         const siteKeys = [...new Set(logs.map(log => (log.site || "Unknown Site")))];
+    //         if (!siteKeys.length) return;
+
+    //         siteKeys.forEach(async (siteKey) => {
+    //             try {
+    //                 const docRef = doc(db, "fuelRates", siteKey);
+    //                 const docSnap = await getDoc(docRef);
+    //                 const key = siteKey.toUpperCase();
+    //                 if (docSnap.exists()) {
+    //                     setFuelRates(prev => ({ ...prev, [key]: docSnap.data().rate || 90 }));
+    //                 } else {
+    //                     setFuelRates(prev => ({ ...prev, [key]: 90 })); // default if no rate stored
+    //                 }
+    //             } catch (err) {
+    //                 console.error("Error fetching fuel rate", err);
+    //             }
+    //         });
+    //     };
+
+    //     // Inside useEffect for fetching rates
+    //     const fetchEBRate = async () => {
+    //         const siteKeys = [...new Set(logs.map(log => (log.site || "Unknown Site")))];
+    //         if (!siteKeys.length) return;
+
+    //         siteKeys.forEach(async (siteKey) => {
+    //             try {
+    //                 const docRef = doc(db, "ebBillDetails", siteKey, "MonthlyBills", monthKey);
+    //                 const docSnap = await getDoc(docRef);
+    //                 const key = siteKey.toUpperCase();
+
+    //                 if (docSnap.exists()) {
+    //                     // Store the entire data object instead of just one field
+    //                     setEbRate(prev => ({ ...prev, [key]: docSnap.data() }));
+    //                 } else {
+    //                     // Provide a default object structure if no record exists
+    //                     setEbRate(prev => ({
+    //                         ...prev,
+    //                         [key]: { Unit: 0, Amount: 0, EBRate: 10, TDSAmount: 0 }
+    //                     }));
+    //                 }
+    //             } catch (err) {
+    //                 console.error("Error fetching EB rate", err);
+    //             }
+    //         });
+    //     };
+
+    //     fetchEBRate();
+    //     fetchFuelRate();
+    // }, [logs]);
 
     useEffect(() => {
-        // Get all unique site keys from logs (case-sensitive; match your Firestore docs)
-        const allSiteKeys = [
-            ...new Set(logs.map(log => (log.site || "Unknown Site").toUpperCase()))
-        ];
+        const unsubscribe = onSnapshot(
+            collection(db, "siteConfigs"),
+            (snapshot) => {
+                const configs = {};
 
-        // Fetch missing configs
-        allSiteKeys.forEach(async (siteKey) => {
-            if (!siteConfigs[siteKey]) {
-                const snap = await getDoc(doc(db, "siteConfigs", siteKey));
-                if (snap.exists()) {
-                    setSiteConfigs(prev => ({ ...prev, [siteKey]: snap.data() }));
-                }
+                snapshot.forEach((doc) => {
+                    configs[doc.id.toUpperCase()] = doc.data();
+                });
+
+                setSiteConfigs(configs);
+            },
+            (err) => {
+                console.error("Error fetching siteConfigs:", err);
             }
-        });
+        );
 
-        const fetchFuelRate = async () => {
-            const siteKeys = [...new Set(logs.map(log => (log.site || "Unknown Site")))];
-            if (!siteKeys.length) return;
+        return () => unsubscribe();
+    }, []);
 
-            siteKeys.forEach(async (siteKey) => {
-                try {
-                    const docRef = doc(db, "fuelRates", siteKey);
-                    const docSnap = await getDoc(docRef);
-                    const key = siteKey.toUpperCase();
-                    if (docSnap.exists()) {
-                        setFuelRates(prev => ({ ...prev, [key]: docSnap.data().rate || 90 }));
-                    } else {
-                        setFuelRates(prev => ({ ...prev, [key]: 90 })); // default if no rate stored
-                    }
-                } catch (err) {
-                    console.error("Error fetching fuel rate", err);
-                }
-            });
-        };
+    useEffect(() => {
+        const unsubscribe = onSnapshot(
+            collection(db, "fuelRates"),
+            (snapshot) => {
+                const rates = {};
 
-        // Inside useEffect for fetching rates
-        const fetchEBRate = async () => {
-            const siteKeys = [...new Set(logs.map(log => (log.site || "Unknown Site")))];
-            if (!siteKeys.length) return;
+                snapshot.forEach((doc) => {
+                    rates[doc.id.toUpperCase()] = doc.data().rate || 90;
+                });
 
-            siteKeys.forEach(async (siteKey) => {
-                try {
-                    const docRef = doc(db, "ebBillDetails", siteKey, "MonthlyBills", monthKey);
-                    const docSnap = await getDoc(docRef);
-                    const key = siteKey.toUpperCase();
+                setFuelRates(rates);
+            },
+            (err) => {
+                console.error("Error fetching fuelRates:", err);
+            }
+        );
 
-                    if (docSnap.exists()) {
-                        // Store the entire data object instead of just one field
-                        setEbRate(prev => ({ ...prev, [key]: docSnap.data() }));
-                    } else {
-                        // Provide a default object structure if no record exists
-                        setEbRate(prev => ({
-                            ...prev,
-                            [key]: { Unit: 0, Amount: 0, EBRate: 10, TDSAmount: 0 }
-                        }));
-                    }
-                } catch (err) {
-                    console.error("Error fetching EB rate", err);
-                }
-            });
-        };
+        return () => unsubscribe();
+    }, []);
 
-        fetchEBRate();
-        fetchFuelRate();
-    }, [logs]);
+    useEffect(() => {
+        if (!monthKey) return;
+
+        const unsubscribe = onSnapshot(
+            collectionGroup(db, "MonthlyBills"),
+            (snapshot) => {
+                const rates = {};
+
+                snapshot.forEach((docSnap) => {
+                    const path = docSnap.ref.path.split("/");
+
+                    // ebBillDetails / siteKey / MonthlyBills / monthKey
+                    const siteKey = path[1];
+                    const month = path[3];
+
+                    if (month !== monthKey) return;
+
+                    rates[siteKey.toUpperCase()] = docSnap.data();
+                });
+
+                setEbRate(rates);
+            },
+            (err) => {
+                console.error("Error fetching EB rates:", err);
+            }
+        );
+
+        return () => unsubscribe();
+    }, [monthKey]);
 
 
     if (loading) return <div>⏳Loading all site logs…</div>;
@@ -1195,7 +1351,7 @@ const AllSitesDGLogs = ({ userData }) => {
 
                                     {/* TDS is calculated automatically from the state */}
                                     <b>💰 TDS Declared Amount: <strong>₹{currentEBRate.TDSAmount || "0.00"}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {thisConfig.ebTDS}% of Bill Amount</span></b>
-                                    <b>💰 After TDS Amount: <strong>₹{(currentEBRate.Amount  - currentEBRate.TDSAmount) || 0}</strong> <span style={{ color: "#5c3c6ce8" }}> after {thisConfig.ebTDS}% deduction of Bill Amount</span></b>
+                                    <b>💰 After TDS Amount: <strong>₹{(currentEBRate.Amount - currentEBRate.TDSAmount) || 0}</strong> <span style={{ color: "#5c3c6ce8" }}> after {thisConfig.ebTDS}% deduction of Bill Amount</span></b>
 
                                 </div>
 

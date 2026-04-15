@@ -170,8 +170,8 @@ const Layout = ({ userData, children }) => {
       prevPowerSourceRef.current &&
       prevPowerSourceRef.current !== powerSource
     ) {
-      setShowSimulator(true);
-      setSimMinimized(false); // open full on change
+      setShowSimulator(powerSource === "DG" ? true : false);
+      setSimMinimized(powerSource === "EB" ? true : false); // open full on change
     }
 
     prevPowerSourceRef.current = powerSource;
@@ -863,8 +863,8 @@ const Layout = ({ userData, children }) => {
                               disabled={powerSource === "DG"}
                             >
                               <div>
-                              <p style={{ fontSize: selectedDG === dg ? "15px" : "10px" }}>{dg}</p>
-                              <p style={{ fontSize: "7px" }}>{dgCapacity}kVA</p>
+                                <p style={{ fontSize: selectedDG === dg ? "15px" : "10px" }}>{dg}</p>
+                                <p style={{ fontSize: "7px" }}>{dgCapacity}kVA</p>
                               </div>
 
                               {/* 🔥 DG Run Count Badge */}

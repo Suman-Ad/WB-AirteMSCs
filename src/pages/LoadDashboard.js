@@ -67,9 +67,9 @@ const LoadDashboard = ({ userData }) => {
               const dcI = Number(d.dcCurrent || 0);
               loadKW = (dcV * dcI) / 1000;
             } else if (d.equipmentType === "UPS") {
-              loadKW = Number(d.runningKWR || 0) + Number(d.runningKWY || 0) + Number(d.runningKWB  || 0);
+              loadKW = Number(d.runningKWR || 0) + Number(d.runningKWY || 0) + Number(d.runningKWB || 0);
             } else {
-              const voltage = (Number(d.voltageRY || 0) + Number(d.voltageYB || 0) + Number(d.voltageBR || 0)) /3;
+              const voltage = (Number(d.voltageRY || 0) + Number(d.voltageYB || 0) + Number(d.voltageBR || 0)) / 3;
               const avgCurrent =
                 (Number(d.currentR || 0) +
                   Number(d.currentY || 0) +
@@ -161,7 +161,7 @@ const LoadDashboard = ({ userData }) => {
         "SPD Status",
         "DC Voltage", "DC Current",
         "Faulty Modules", "System Status",
-         "Load (kW)", "Technician", "Uploaded By"
+        "Load (kW)", "Technician", "Uploaded By"
       ],
 
       renderRow: (row) => (
@@ -251,7 +251,7 @@ const LoadDashboard = ({ userData }) => {
       ),
     },
 
-    LT : {
+    LT: {
       headers: [
         "Date", "Time", "Equipment",
         "Input R-Y (V)", "Input  Y-B (V)", "Input  B-R (V)",
@@ -405,19 +405,22 @@ const LoadDashboard = ({ userData }) => {
 
       </div>
 
-      <div style={{ width: "100%", height: 400, marginBottom: "20px", padding: "10px", borderRadius: "8px", backgroundColor: "#1e647952", border: "1px solid #00e6e625", overflowY: "auto" }}>
-        <h3 style={{ color: "#00e6e6" }}>📈 Load Trend Analysis</h3>
-
-        <ResponsiveContainer>
-          <LineChart data={trendData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="label" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="load" stroke="#00e6e6" />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      {data.length > 0 && (
+        <div style={{ width: "100%", marginBottom: "20px", padding: "10px", borderRadius: "8px", backgroundColor: "#1e647952", border: "1px solid #00e6e625" }}>
+          <h3 style={{ color: "#00e6e6" }}>📈 Load Trend Analysis</h3>
+          <div style={{ width: "100%", height: "300px" }}>
+            <ResponsiveContainer>
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="load" stroke="#00e6e6" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {data.length === 0 ? (
         <p style={{ color: "white" }}>No data available for selected date</p>
@@ -429,9 +432,11 @@ const LoadDashboard = ({ userData }) => {
             const config = tableConfig[type] || tableConfig.DEFAULT;
 
             return (
-              <div key={type} style={{ marginBottom: "30px" }}>
-                <h3 style={{ color: "#00e6e6" }}>🔹 {type} Load</h3>
-
+              <div key={type} style={{ marginBottom: "10px", padding: "5px 10px", borderRadius: "8px", backgroundColor: "#1e647952", border: "1px solid #00e6e625" }}>
+                <div style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
+                  <h4 style={{ color: "#00e6e6" }}>🔹 {type} Load</h4>
+                  <h4 style={{ color: "#00e6e6" }}>🔹 {groupedData[type].reduce((sum, row) => sum + row.loadKW, 0).toFixed(2)} kWh</h4>
+                </div>
                 <table border="1" cellPadding="6" style={{
                   borderCollapse: "collapse",
                   width: "100%",
