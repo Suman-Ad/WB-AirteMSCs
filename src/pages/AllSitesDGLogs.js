@@ -36,6 +36,18 @@ const AllSitesDGLogs = ({ userData }) => {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
+    const [isUltraWide, setIsUltraWide] = useState(window.innerWidth > 2000);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsLargeScreen(window.innerWidth > 512);
+            setIsUltraWide(window.innerWidth > 2000); // ✅ new
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
     const toggleSite = (siteName) => {
         setCollaps((prev) => ({
             ...prev,
@@ -1020,17 +1032,17 @@ const AllSitesDGLogs = ({ userData }) => {
                                 {/* Fuel, load, backups */}
                                 <div style={{ display: "flex" }}>
                                     <div>
-                                        <h1 style={{ fontSize: "20px", color: "green", textAlign: "left" }}>
+                                        <h1 style={{ fontSize: isUltraWide ? "50px" : "20px", color: "green", textAlign: "left" }}>
                                             <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>
                                         </h1>
-                                        <h1 style={((totalFuelAvailable) / summary.monthlyAvgCPH) < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong></h1>
+                                        <h1 style={((totalFuelAvailable) / summary.monthlyAvgCPH) < 18 ? { fontSize: isUltraWide ? "50px" : "20px", color: "red", textAlign: "left" } : { fontSize: isUltraWide ? "50px" : "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong></h1>
                                     </div>
                                     <div style={{ background: "#e450509f", color: "#fff", padding: "5px 5px", marginLeft: "10px", borderRadius: "7px" }}>
-                                        <p style={{ fontSize: "10px", fontWeight: "bold" }}>Today DG Run:</p>
+                                        <p style={{ fontSize: isUltraWide ? "30px" : "10px", fontWeight: "bold" }}>Today DG Run:</p>
                                         {fuelConsumptionBySiteDG[site] &&
                                             Object.entries(fuelConsumptionBySiteDG[site]).map(
                                                 ([dg, data]) => (
-                                                    <div key={dg} style={{ display: "flex", fontSize: "10px" }}>
+                                                    <div key={dg} style={{ display: "flex", fontSize: isUltraWide ? "30px" : "10px", width: "100%", justifyContent: "space-between" }}>
                                                         {/* <strong>{dg}</strong> — {data.fuel.toFixed(2)} L */}
                                                         <strong>{dg}</strong> — {(data.totalDGRunHours).toFixed(1)} Hrs
                                                         {/* {data.runs.map((r, i) => (
@@ -1045,37 +1057,43 @@ const AllSitesDGLogs = ({ userData }) => {
                                 </div>
 
                                 {/* ✅ Split Fuel Level Bar */}
-                                <div style={{ display: "flex", alignItems: "center", marginTop: "6px", fontSize: "18px" }}>
+                                <div style={{ display: "flex", alignItems: "center", marginTop: "6px", fontSize: isUltraWide ? "50px" : "18px" }}>
                                     🛢️
                                     <div
                                         className="fuel-bar-container"
                                         style={{
                                             display: "flex",
-                                            width: `${(tankCapacity) * 100}%`,
-                                            height: "22px",
+                                            width: isUltraWide ? "100%" : `${(tankCapacity) * 100}%`,
+                                            height: isUltraWide ? "220px" : "22px",
                                             background: "#eee",
                                             borderRadius: "4px",
                                             overflow: "hidden",
                                             marginLeft: "4px",
+                                            transition: "all 0.3s ease",
                                         }}
                                     >
                                         {/* 🔴 Day Tank */}
                                         <div
                                             style={{
                                                 width: `${(dayTankCapacity / tankCapacity) * 100}%`,
+                                                // height: isUltraWide ? `${(dayTankCapacity / tankCapacity) * 100}%` : "100%",
                                                 background: "#f5c6c6",
                                                 position: "relative",
-                                                whiteSpace: "nowrap"
+                                                whiteSpace: "nowrap",
+                                                bottom: 0,
                                             }}
                                         >
                                             <p
                                                 // className="fuel-bar"
                                                 style={{
                                                     width: `${((availableFuel - todayFuelUsed) / dayTankCapacity) * 100 || 0}%`,
-                                                    height: "100%",
+                                                    height: isUltraWide ? `100%` : "100%",
                                                     background: "linear-gradient(to right, red, orange, green)",
-                                                    fontSize: "10px",
-                                                    alignContent: "center"
+                                                    fontSize: isUltraWide ? "50px" : "10px",
+                                                    fontWeight: "bold",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
                                                 }}
                                             >
                                                 ⛽{(availableFuel - todayFuelUsed) || 0}/{dayTankCapacity || 0}L
@@ -1097,10 +1115,13 @@ const AllSitesDGLogs = ({ userData }) => {
                                             <p
                                                 style={{
                                                     width: `${(((((thisConfig?.dgCount > 0 ? dgExternalFuel?.["DG-1"] : 0) + (thisConfig?.dgCount > 1 ? dgExternalFuel?.["DG-2"] : 0) + (thisConfig?.dgCount > 2 ? dgExternalFuel?.["DG-3"] : 0) + (thisConfig?.dgCount > 3 ? dgExternalFuel?.["DG-4"] : 0)) || 0)) / externalTankCapacity) * 100 || 0}%`,
-                                                    height: "100%",
+                                                    height:  isUltraWide ? "100%" : "100%",
                                                     background: "linear-gradient(to right, blue, green)",
-                                                    fontSize: "8px",
-                                                    alignContent: "center"
+                                                    fontSize: isUltraWide ? "30px" : "8px",   // ✅ readable
+                                                    fontWeight: "bold",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
                                                 }}
                                             >
                                                 ⛽{((((thisConfig?.dgCount > 0 ? dgExternalFuel?.["DG-1"] : 0) + (thisConfig?.dgCount > 1 ? dgExternalFuel?.["DG-2"] : 0) + (thisConfig?.dgCount > 2 ? dgExternalFuel?.["DG-3"] : 0) + (thisConfig?.dgCount > 3 ? dgExternalFuel?.["DG-4"] : 0)) || 0)) || 0}/{externalTankCapacity || 0}L

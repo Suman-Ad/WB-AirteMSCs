@@ -400,7 +400,7 @@ const LoadEntryForm = ({ userData }) => {
         </button>
       </div>
       {formData.equipmentType && (
-        <div className="equipment-details" style={{ borderRadius: "10px", width: "100%", height: window.innerHeight - 300, overflowY: "auto", padding: "20px", backgroundColor: "#f9f9f9" }}>
+        <div className="equipment-details" style={{ borderRadius: "10px", width: "100%", height: window.innerHeight - 350, overflowY: "auto", padding: "20px", backgroundColor: "#f9f9f9" }}>
           {formData.equipmentType === "SMPS" && (
             <>
               <h4>SMPS Details</h4>
