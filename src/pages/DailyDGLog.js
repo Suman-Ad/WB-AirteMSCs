@@ -297,11 +297,20 @@ const DailyDGLog = ({ userData }) => {
   const [previousSummary, setPreviousSummary] = useState(null);
   const [multiYearData, setMultiYearData] = useState([]);
   const [loadingTrend, setLoadingTrend] = useState(false);
+  const [trendView, setTrendView] = useState("MONTHLY");
+  // YEARLY | MONTHLY | DAILY
   const [yearlyData, setYearlyData] = useState([]);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [monthlyTrendData, setMonthlyTrendData] = useState([]);
+  const [dailyTrendData, setDailyTrendData] = useState([]);
+  // const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [yearlyLoading, setYearlyLoading] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [highlightPeak, setHighlightPeak] = useState(true);
+  const getTrendData = () => {
+    if (trendView === "YEARLY") return yearlyData;
+    if (trendView === "MONTHLY") return monthlyTrendData;
+    if (trendView === "DAILY") return dailyTrendData;
+  };
   const [activeKeys, setActiveKeys] = useState({
     PUE: true,
     EBKWH: true,
@@ -620,7 +629,6 @@ const DailyDGLog = ({ userData }) => {
     });
   };
 
-
   // 🔹 Fetch logs
   const fetchLogs = async () => {
     if (!siteName) return;
@@ -641,6 +649,29 @@ const DailyDGLog = ({ userData }) => {
   useEffect(() => {
     fetchLogs();
   }, [selectedMonth, siteName]);
+
+  // useEffect(() => {
+  //   if (!siteName) return;
+
+  //   const monthKey = selectedMonth;
+  //   const logsCol = collection(db, "dailyDGLogs", siteName, monthKey);
+
+  //   const unsubscribe = onSnapshot(logsCol, (snapshot) => {
+  //     const data = snapshot.docs.map((docSnap) => ({
+  //       id: docSnap.id,
+  //       ...docSnap.data(),
+  //     }));
+
+  //     setLogs(data);
+  //     localStorage.setItem("dailyLogs", JSON.stringify(data));
+  //   }, (error) => {
+  //     console.error("Realtime logs error:", error);
+  //   });
+
+  //   // ✅ cleanup listener
+  //   return () => unsubscribe();
+
+  // }, [siteName, selectedMonth]);
 
   useEffect(() => {
     const cached = localStorage.getItem("dailyLogs");
@@ -989,7 +1020,7 @@ const DailyDGLog = ({ userData }) => {
       setYearlyLoading(true);   // 🔥 start loading
 
       try {
-        const data = await fetchYearlyMonthlyData(selectedYear);
+        const data = await fetchYearlyMonthlyData(formatYear(selectedMonth));
         setYearlyData(data);
       } catch (err) {
         console.error("Yearly load error:", err);
@@ -1001,7 +1032,7 @@ const DailyDGLog = ({ userData }) => {
     if (siteName && siteConfig) {
       loadYearly();
     }
-  }, [siteName, siteConfig, selectedYear]);
+  }, [siteName, siteConfig, selectedMonth]);
 
   const fetchYearlyMonthlyData = async (year) => {
     if (!siteName) return [];
@@ -1081,6 +1112,119 @@ const DailyDGLog = ({ userData }) => {
 
     return results;
   };
+
+  const fetchMonthlyDailyData = async () => {
+    if (!siteName || !selectedMonth) return;
+
+    try {
+      const snap = await getDocs(
+        collection(db, "dailyDGLogs", siteName, selectedMonth)
+      );
+
+      const logs = snap.docs.map(d => d.data());
+
+      const data = logs.map((e) => {
+        const cl = calculateFields(e, siteConfig);
+
+        const dgRun = Number(cl["Total DG Onload Hours"] || 0);
+        const ebAvailable = 24 - dgRun;
+
+        const coolingLoad =
+          Number(cl["Cooling kW Consumption"] || 0);
+
+        const officeLoad =
+          Number(cl["Office kW Consumption"] || 0) / 24;
+
+        return {
+          date: e.Date,
+
+          PUE: Number(cl["PUE"] || 0).toFixed(2),
+          EBAvailable: ebAvailable.toFixed(1),
+          EBKWH: Number(cl["Total EB KWH"] || 0).toFixed(2),
+          DGRun: dgRun.toFixed(2),
+          DGKWH: Number(cl["Total DG KWH"] || 0).toFixed(2),
+          fuel: Number(cl["Total DG Fuel"] || 0).toFixed(2),
+          siteLoad: Number(cl["Site Running kW"] || 0).toFixed(2),
+          itLoad: Number(cl["Total IT Load KWH"] || 0).toFixed(2),
+          coolingLoad: coolingLoad.toFixed(2),
+          officeLoad: officeLoad.toFixed(2),
+
+          MonthHrs: 24, // per day
+        };
+      });
+
+      setMonthlyTrendData(
+        data.sort((a, b) => new Date(a.date) - new Date(b.date))
+      );
+
+    } catch (err) {
+      console.error("Monthly trend fetch error:", err);
+    }
+  };
+
+  const fetchDailyRunData = async () => {
+    if (!siteName || !form.Date) return;
+
+    try {
+      const dateObj = new Date(form.Date);
+      const monthKey =
+        dateObj.toLocaleString("en-US", { month: "short" }) +
+        "-" +
+        dateObj.getFullYear();
+
+      const snap = await getDocs(
+        collection(db, "dgLogs", siteName, monthKey, form.Date, "runs")
+      );
+
+      const runs = snap.docs.map(d => d.data());
+
+      const data = runs.map((r, i) => {
+        const fuel = Number(r.fuelConsumption || 0);
+        const hrs = Number(r.totalRunHours || 0);
+        const kwh = Number(r.kWHReading || 0);
+
+        // ⚡ Derived KPIs
+        const siteLoad = hrs > 0 ? (kwh / hrs) : 0;
+        const pue = siteConfig?.pue || 0; // fallback (no direct calc per run)
+
+        return {
+          name: `Run ${i + 1}`,
+
+          PUE: Number(pue).toFixed(2),
+
+          EBAvailable: (0).toFixed(1), // no EB in DG run
+          EBKWH: (0).toFixed(2),
+
+          DGRun: hrs.toFixed(2),
+          DGKWH: kwh.toFixed(2),
+          fuel: fuel.toFixed(2),
+
+          siteLoad: siteLoad.toFixed(2),
+          itLoad: (0).toFixed(2),       // not available per run
+          coolingLoad: (0).toFixed(2),  // not available per run
+          officeLoad: (0).toFixed(2),   // not available per run
+
+          MonthHrs: hrs.toFixed(2),
+        };
+      });
+
+      setDailyTrendData(data);
+
+    } catch (err) {
+      console.error("Daily trend error:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (trendView === "MONTHLY") {
+      fetchMonthlyDailyData();
+    }
+
+    if (trendView === "DAILY") {
+      fetchDailyRunData();
+    }
+
+  }, [trendView, siteName, selectedMonth, form.Date]);
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -3869,16 +4013,16 @@ const DailyDGLog = ({ userData }) => {
           alignItems: "center"
         }}
       >
-        <div style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        {/* <div style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <div style={{ display: "flex", gap: 10, fontSize: "12px", fontWeight: "bold", color: "rgb(16, 16, 32)" }}>
             <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              value={trendView}
+              onChange={(e) => setTrendView(e.target.value)}
               style={{ height: "30px" }}
             >
-              <option value={2026}>2026</option>
-              <option value={2025}>2025</option>
-              <option value={2024}>2024</option>
+              <option value="YEARLY">Yearly</option>
+              <option value="MONTHLY">Monthly</option>
+              <option value="DAILY">Daily</option>
             </select>
 
             <button onClick={() => setHighlightPeak(!highlightPeak)}
@@ -3887,7 +4031,7 @@ const DailyDGLog = ({ userData }) => {
               {highlightPeak ? "🔥 Peak ON" : "Peak OFF"}
             </button>
           </div>
-        </div>
+        </div> */}
         {yearlyLoading ? (
           <div style={{ height: 350, display: "flex", alignItems: "flex-end", gap: 10, padding: "5px 5px", borderRadius: "10px", border: "1px solid #fff", background: "#5aa3d3a1" }}>
             {[...Array(12)].map((_, i) => (
@@ -3921,7 +4065,23 @@ const DailyDGLog = ({ userData }) => {
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <h2>📊 Yearly Trand Analysis-{selectedYear}</h2>
+              <h2>📊 {trendView} TRAND ANALYSIS-{formatYear(selectedMonth)}</h2>
+              {/* 🔹 Trend View Selector & Peak Highlight Toggle */}
+              <select
+                value={trendView}
+                onChange={(e) => setTrendView(e.target.value)}
+                style={{ height: "30px", background: "transparent", borderRadius: "5px", padding: "0 10px", width: "120px", color: "#fff", border: "1px solid #fff" }}
+              >
+                <option value="YEARLY" style={{ backgroundColor: "transparent", color: "black" }}>Yearly</option>
+                <option value="MONTHLY" style={{ backgroundColor: "transparent", color: "black" }}>Monthly</option>
+                <option value="DAILY" style={{ backgroundColor: "transparent", color: "black" }}>Daily</option>
+              </select>
+
+              <button onClick={() => setHighlightPeak(!highlightPeak)}
+                style={{ height: "30px", fontSize: "12px", fontWeight: "bold", color: highlightPeak ? "red" : "gray", border: "1px solid", borderColor: highlightPeak ? "red" : "gray", borderRadius: "5px", padding: "0 10px" }}
+              >
+                {highlightPeak ? "🔥 Peak ON" : "Peak OFF"}
+              </button>
               <button
                 onClick={() => setIsFullScreen(!isFullScreen)}
                 title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
@@ -3932,7 +4092,7 @@ const DailyDGLog = ({ userData }) => {
                   cursor: "pointer",
                   background: "transparent",
                   color: "#fff",
-                  fontSize: "12px",
+                  // fontSize: "12px",
                   right: 0,
                   opacity: "0.7"
                 }}
@@ -3943,13 +4103,19 @@ const DailyDGLog = ({ userData }) => {
               </button>
             </div>
             <ResponsiveContainer width="100%" height={isFullScreen ? 410 : 320}>
-              <LineChart data={yearlyData}>
+              <LineChart data={getTrendData()}>
                 <CartesianGrid stroke="#333" />
-                <XAxis dataKey="monthName"
+                <XAxis dataKey={
+                  trendView === "YEARLY"
+                    ? "monthName"
+                    : trendView === "MONTHLY"
+                      ? "date"
+                      : "name"
+                }
                   height={50}
                   tick={(props) => {
                     const { x, y, payload, index } = props;
-                    const item = yearlyData[index];
+                    const item = getTrendData().find((d) => d.name === payload.value || d.date === payload.value || d.monthName === payload.value);
                     return (
                       <g transform={`translate(${x},${y})`}>
                         <text x={0} y={0} dy={16} textAnchor="middle" fill="#666" fontSize={11}>
