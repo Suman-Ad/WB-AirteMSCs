@@ -324,9 +324,14 @@ const DailyDGLog = ({ userData }) => {
     officeLoad: true,
   });
 
-  const getPeak = (key) =>
-    yearlyData.reduce((max, m) =>
-      m[key] > (max?.[key] || 0) ? m : max, {});
+  const getPeak = (key) => {
+    const data = getTrendData(); // 👈 dynamic data
+    if (!data || !data.length) return {};
+
+    return data.reduce((max, m) =>
+      Number(m[key]) > Number(max?.[key] || 0) ? m : max, {}
+    );
+  };
 
   const peakData = {
     fuel: getPeak("fuel"),
@@ -4065,7 +4070,7 @@ const DailyDGLog = ({ userData }) => {
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <h2>📊 {trendView} TRAND ANALYSIS-{formatYear(selectedMonth)}</h2>
+              <h2 style={{ fontSize: window.innerWidth < 700 ? "8px" : "" }}>📊 {trendView} TRAND ANALYSIS-{formatYear(selectedMonth)}</h2>
               {/* 🔹 Trend View Selector & Peak Highlight Toggle */}
               <select
                 value={trendView}
@@ -4078,9 +4083,9 @@ const DailyDGLog = ({ userData }) => {
               </select>
 
               <button onClick={() => setHighlightPeak(!highlightPeak)}
-                style={{ height: "30px", fontSize: "12px", fontWeight: "bold", color: highlightPeak ? "red" : "gray", border: "1px solid", borderColor: highlightPeak ? "red" : "gray", borderRadius: "5px", padding: "0 10px" }}
+                style={{ height: "30px", fontSize: "8px", fontWeight: "bold", color: highlightPeak ? "red" : "gray", border: "1px solid", borderColor: highlightPeak ? "red" : "gray", borderRadius: "5px", padding: "0 10px", opacity: highlightPeak ? "1" : "0.7" }}
               >
-                {highlightPeak ? "🔥 Peak ON" : "Peak OFF"}
+                {highlightPeak ? "🔥" : "🔥"}
               </button>
               <button
                 onClick={() => setIsFullScreen(!isFullScreen)}
@@ -4102,7 +4107,7 @@ const DailyDGLog = ({ userData }) => {
                 {isFullScreen ? "X" : "⛶"}
               </button>
             </div>
-            <ResponsiveContainer width="100%" height={isFullScreen ? 410 : 320}>
+            <ResponsiveContainer width="100%" height={isFullScreen ? window.innerHeight - 100 : 320}>
               <LineChart data={getTrendData()}>
                 <CartesianGrid stroke="#333" />
                 <XAxis dataKey={

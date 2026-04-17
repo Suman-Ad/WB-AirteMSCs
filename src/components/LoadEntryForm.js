@@ -461,7 +461,21 @@ const LoadEntryForm = ({ userData }) => {
               <input type="text" name="systemStatus" value={formData.systemStatus} placeholder="System Status" onChange={handleChange} />
 
               <h5>Technician</h5>
-              <input type="text" name="technicianName" value={formData.technicianName} placeholder={userData.name || ""} onFocus={(e) => { if (!formData.technicianName) { e.target.value = userData.name || ""; } }} onChange={handleChange} />
+              <input
+                type="text"
+                name="technicianName"
+                value={formData.technicianName}
+                placeholder={userData.name || ""}
+                onFocus={() => {
+                  if (!formData.technicianName) {
+                    setFormData(prev => ({
+                      ...prev,
+                      technicianName: userData.name || ""
+                    }));
+                  }
+                }}
+                onChange={handleChange}
+              />
             </>
           )}
 
@@ -517,7 +531,21 @@ const LoadEntryForm = ({ userData }) => {
               <input type="number" name="kwh" value={formData.kwh} placeholder="kWh Meter Reading" onChange={handleChange} />
 
               <h5>Technician</h5>
-              <input type="text" name="technicianName" value={formData.technicianName} placeholder={userData.name || ""} onFocus={(e) => { if (!formData.technicianName) { e.target.value = userData.name || ""; } }} onChange={handleChange} />
+              <input
+                type="text"
+                name="technicianName"
+                value={formData.technicianName}
+                placeholder={userData.name || ""}
+                onFocus={() => {
+                  if (!formData.technicianName) {
+                    setFormData(prev => ({
+                      ...prev,
+                      technicianName: userData.name || ""
+                    }));
+                  }
+                }}
+                onChange={handleChange}
+              />
             </>
           )}
 
@@ -592,7 +620,21 @@ const LoadEntryForm = ({ userData }) => {
               <input type="number" name="runningKWB" value={formData.runningKWB} placeholder="Running kW of 'B' Phase" onChange={handleChange} />
 
               <h5>Technician</h5>
-              <input type="text" name="technicianName" value={formData.technicianName} placeholder={userData.name || ""} onFocus={(e) => { if (!formData.technicianName) { e.target.value = userData.name || ""; } }} onChange={handleChange} />
+              <input
+                type="text"
+                name="technicianName"
+                value={formData.technicianName}
+                placeholder={userData.name || ""}
+                onFocus={() => {
+                  if (!formData.technicianName) {
+                    setFormData(prev => ({
+                      ...prev,
+                      technicianName: userData.name || ""
+                    }));
+                  }
+                }}
+                onChange={handleChange}
+              />
             </>
           )}
 

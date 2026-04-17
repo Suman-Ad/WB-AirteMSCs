@@ -35,6 +35,48 @@ const LoadDashboard = ({ userData }) => {
   const [rangeType, setRangeType] = useState("daily"); // daily | monthly | yearly
   const [selectedEquipment, setSelectedEquipment] = useState("ALL");
   const [selectedType, setSelectedType] = useState("ALL");
+  const REQUIRED_SLOTS = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00"];
+  const SMPS_REQUIRED_SLOTS = ["02:00", "08:00", "14:00", "20:00"];
+  const getMissingSlots = (data) => {
+    let equipmentSlots = {};
+
+    data.forEach((row) => {
+      const eqId = row.equipmentId || "UNKNOWN";
+
+      if (!equipmentSlots[eqId]) {
+        equipmentSlots[eqId] = new Set();
+      }
+
+      if (row.time) {
+        equipmentSlots[eqId].add(row.time);
+      }
+    });
+
+    let missingReport = {};
+
+    Object.entries(equipmentSlots).forEach(([eqId, slots]) => {
+      const missing = eqId.includes("SMPS") ? SMPS_REQUIRED_SLOTS.filter(s => !slots.has(s)) : REQUIRED_SLOTS.filter(s => !slots.has(s));
+
+      if (missing.length > 0) {
+        missingReport[eqId] = missing;
+      }
+    });
+
+    return missingReport;
+  };
+
+  const missingSlots = getMissingSlots(data);
+
+  // useEffect(() => {
+  //   if (!data.length) return;
+
+  //   const missing = getMissingSlots(data);
+
+  //   if (Object.keys(missing).length > 0) {
+  //     console.warn("Missing Time Slots:", missing);
+  //   }
+
+  // }, [data]);
 
   const siteKey = userData?.siteId;
 
@@ -54,7 +96,7 @@ const LoadDashboard = ({ userData }) => {
       const unsubscribe = onSnapshot(
         colRef,
         (snapshot) => {
-          let total = 0;
+          let equipmentMap = {};
           let list = [];
 
           snapshot.forEach((doc) => {
@@ -67,7 +109,10 @@ const LoadDashboard = ({ userData }) => {
               const dcI = Number(d.dcCurrent || 0);
               loadKW = (dcV * dcI) / 1000;
             } else if (d.equipmentType === "UPS") {
-              loadKW = Number(d.runningKWR || 0) + Number(d.runningKWY || 0) + Number(d.runningKWB || 0);
+              loadKW =
+                Number(d.runningKWR || 0) +
+                Number(d.runningKWY || 0) +
+                Number(d.runningKWB || 0);
             } else {
               const voltage = (Number(d.voltageRY || 0) + Number(d.voltageYB || 0) + Number(d.voltageBR || 0)) / 3;
               const avgCurrent =
@@ -80,7 +125,14 @@ const LoadDashboard = ({ userData }) => {
               loadKW = (1.732 * voltage * avgCurrent * pf) / 1000;
             }
 
-            total += loadKW;
+            const eqId = d.equipmentId || "UNKNOWN";
+            // 👉 group by equipment
+            if (!equipmentMap[eqId]) {
+              equipmentMap[eqId] = { sum: 0, count: 0, type: d.equipmentType };
+            }
+
+            equipmentMap[eqId].sum += loadKW;
+            equipmentMap[eqId].count += 1;
 
             list.push({
               id: doc.id,
@@ -109,6 +161,25 @@ const LoadDashboard = ({ userData }) => {
 
             // Secondary sort → Equipment ID
             return (a.equipmentId || "").localeCompare(b.equipmentId || "");
+          });
+
+          // ✅ Calculate total as sum of equipment-wise averages
+          let total = 0;
+
+          // Object.entries(equipmentMap).forEach(([eqId, eq]) => {
+          //   const rows = list.filter(r => r.equipmentId === eqId);
+
+          //   // 👉 check if this equipment is LT
+          //   if (rows[0]?.equipmentType === "LT") {
+          //     const avg = eq.sum / eq.count;
+          //     total += avg;
+          //   }
+          // });
+
+          Object.values(equipmentMap).forEach((eq) => {
+            if (eq.type === "LT") {
+              total += eq.sum / eq.count;
+            }
           });
 
           setData(list);
@@ -302,14 +373,71 @@ const LoadDashboard = ({ userData }) => {
   const equipmentTypes = ["ALL", ...new Set(data.map(d => d.equipmentType))];
   const equipmentIds = ["ALL", ...new Set(data.map(d => d.equipmentId))];
 
+
+  // useEffect(() => {
+  //   if (!data.length) return;
+
+  //   let filtered = data;
+
+  //   if (selectedType !== "ALL") {
+  //     filtered = filtered.filter(d => d.equipmentType === selectedType);
+  //   }
+
+  //   if (selectedEquipment !== "ALL") {
+  //     filtered = filtered.filter(d => d.equipmentId === selectedEquipment);
+  //   }
+
+  //   let grouped = {};
+
+  //   filtered.forEach((d) => {
+  //     let key;
+
+  //     if (rangeType === "daily") {
+  //       key = d.time;
+  //     } else if (rangeType === "monthly") {
+  //       key = d.date;
+  //     } else {
+  //       key = d.date?.slice(0, 7);
+  //     }
+
+  //     if (!grouped[key]) {
+  //       grouped[key] = {};
+  //     }
+
+  //     const eqId = d.equipmentId || "UNKNOWN";
+
+  //     if (!grouped[key][eqId]) {
+  //       grouped[key][eqId] = { sum: 0, count: 0 };
+  //     }
+
+  //     grouped[key][eqId].sum += Number(d.loadKW || 0);
+  //     grouped[key][eqId].count += 1;
+  //   });
+
+  //   // 👉 Convert to chart format
+  //   const result = Object.keys(grouped).map((k) => {
+  //     let total = 0;
+
+  //     Object.values(grouped[k]).forEach((eq) => {
+  //       total += eq.sum / eq.count; // ✅ equipment avg
+  //     });
+
+  //     return {
+  //       label: k,
+  //       load: Number(total.toFixed(2)),
+  //     };
+  //   });
+
+  //   result.sort((a, b) => a.label.localeCompare(b.label));
+
+  //   setTrendData(result);
+
+  // }, [data, rangeType, selectedEquipment, selectedType]);
+
   useEffect(() => {
     if (!data.length) return;
 
     let filtered = data;
-
-    if (selectedType !== "ALL") {
-      filtered = filtered.filter(d => d.equipmentType === selectedType);
-    }
 
     if (selectedEquipment !== "ALL") {
       filtered = filtered.filter(d => d.equipmentId === selectedEquipment);
@@ -321,52 +449,97 @@ const LoadDashboard = ({ userData }) => {
       let key;
 
       if (rangeType === "daily") {
-        key = d.time; // time-wise
+        key = d.time;
       } else if (rangeType === "monthly") {
-        key = d.date; // day-wise
+        key = d.date;
       } else {
-        key = d.date?.slice(0, 7); // month-wise
+        key = d.date?.slice(0, 7);
       }
 
-      const value = Number(d.loadKW || 0);
+      const type = d.equipmentType || "Others";
+      const eqId = d.equipmentId || "UNKNOWN";
 
-      if (!grouped[key]) {
-        grouped[key] = {
-          sum: 0,
-          count: 0,
-        };
+      if (!grouped[key]) grouped[key] = {};
+      if (!grouped[key][type]) grouped[key][type] = {};
+      if (!grouped[key][type][eqId]) {
+        grouped[key][type][eqId] = { sum: 0, count: 0 };
       }
 
-      grouped[key].sum += value;
-      grouped[key].count += 1;
+      grouped[key][type][eqId].sum += Number(d.loadKW || 0);
+      grouped[key][type][eqId].count += 1;
     });
 
     const result = Object.keys(grouped).map((k) => {
-      const { sum, count } = grouped[k];
+      let obj = { label: k };
 
-      let finalValue;
+      ["LT", "UPS", "SMPS"].forEach((type) => {
+        let total = 0;
 
-      if (rangeType === "daily") {
-        // keep actual (or you can also average if needed)
-        finalValue = sum;
-      } else {
-        // average for monthly & yearly
-        finalValue = sum / count;
+        if (grouped[k][type]) {
+          Object.values(grouped[k][type]).forEach((eq) => {
+            total += eq.sum / eq.count;
+          });
+        }
+
+        obj[type] = Number(total.toFixed(2));
+      });
+      // ✅ ADD HERE (after all types calculated)
+      if (selectedType !== "ALL") {
+        Object.keys(obj).forEach(key => {
+          // if (key !== "label" && key !== selectedType) {
+          //   obj[key] = 0;
+          // }
+          filtered = filtered.filter(d => d.equipmentType === selectedType);
+        });
       }
-
-      return {
-        label: k,
-        load: Number(finalValue.toFixed(2)),
-      };
+      return obj;
     });
 
-    // optional: sort properly (important for charts)
     result.sort((a, b) => a.label.localeCompare(b.label));
 
     setTrendData(result);
 
   }, [data, rangeType, selectedEquipment, selectedType]);
 
+  // Check if any important field is missing or zero (customize fields as needed)
+  const hasMissingData = (row) => {
+    // define important fields (customize if needed)
+    const fields = [
+      row.voltageRY,
+      row.voltageYB,
+      row.voltageBR,
+      row.currentR,
+      row.currentY,
+      row.currentB,
+      row.outVoltageRY,
+      row.outVoltageYB,
+      row.outVoltageBR,
+      row.outCurrentR,
+      row.outCurrentY,
+      row.outCurrentB,
+      row.tempR,
+      row.tempY,
+      row.tempB,
+      row.powerFactor,
+      row.powerFactorR,
+      row.powerFactorR,
+      row.powerFactorY,
+      row.powerFactorB,
+      row.loadKW,
+      row.kwh,
+      row.dcVoltage,
+      row.dcCurrent,
+      row.runningKWR,
+      row.runningKWY,
+      row.runningKWB,
+      row.faultyModules,
+      row.systemStatus,
+      row.spdStatus,
+      row.technicianName,
+    ];
+
+    return fields.some(v => v === undefined || v === null || v === "" || v === 0);
+  };
 
   return (
     <div className="daily-log-container">
@@ -409,13 +582,37 @@ const LoadDashboard = ({ userData }) => {
         <div style={{ width: "100%", marginBottom: "20px", padding: "10px", borderRadius: "8px", backgroundColor: "#1e647952", border: "1px solid #00e6e625" }}>
           <h3 style={{ color: "#00e6e6" }}>📈 Load Trend Analysis</h3>
           <div style={{ width: "100%", height: "300px" }}>
-            <ResponsiveContainer>
+            {/* <ResponsiveContainer>
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="label" />
                 <YAxis />
                 <Tooltip />
                 <Line type="monotone" dataKey="load" stroke="#00e6e6" />
+              </LineChart>
+            </ResponsiveContainer> */}
+            <ResponsiveContainer>
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis />
+                <Tooltip />
+
+                {/* <Line type="monotone" dataKey="LT" stroke="#00e6e6" name="LT Load" />
+                <Line type="monotone" dataKey="UPS" stroke="#ffa500" name="UPS Load" />
+                <Line type="monotone" dataKey="SMPS" stroke="#00ff88" name="SMPS Load" /> */}
+
+                {(selectedType === "ALL" || selectedType === "LT") && (
+                  <Line type="monotone" dataKey="LT" stroke="#00e6e6" name="LT Load" />
+                )}
+
+                {(selectedType === "ALL" || selectedType === "UPS") && (
+                  <Line type="monotone" dataKey="UPS" stroke="#ffa500" name="UPS Load" />
+                )}
+
+                {(selectedType === "ALL" || selectedType === "SMPS") && (
+                  <Line type="monotone" dataKey="SMPS" stroke="#00ff88" name="SMPS Load" />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -428,15 +625,56 @@ const LoadDashboard = ({ userData }) => {
         <div>
           <h3>Total Load: {totalLoad.toFixed(2)} kW</h3>
 
+          {Object.keys(missingSlots).length > 0 && (
+            <div style={{
+              background: "#ff4d4d22",
+              border: "1px solid red",
+              padding: "10px",
+              borderRadius: "6px",
+              marginBottom: "10px"
+            }}>
+              <h4 style={{ color: "red" }}>⚠️ Missing Time Slot Entries</h4>
+
+              {Object.entries(missingSlots).map(([eqId, slots]) => (
+                <p key={eqId}>
+                  <strong>{eqId}</strong> → Missing: {slots.join(", ")}
+                </p>
+              ))}
+            </div>
+          )}
+
           {Object.keys(groupedData).map((type) => {
             const config = tableConfig[type] || tableConfig.DEFAULT;
 
             return (
               <div key={type} style={{ marginBottom: "10px", padding: "5px 10px", borderRadius: "8px", backgroundColor: "#1e647952", border: "1px solid #00e6e625" }}>
                 <div style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
-                  <h4 style={{ color: "#00e6e6" }}>🔹 {type} Load</h4>
-                  <h4 style={{ color: "#00e6e6" }}>🔹 {groupedData[type].reduce((sum, row) => sum + row.loadKW, 0).toFixed(2)} kWh</h4>
+                  {/* <h4 style={{ color: "#00e6e6" }}>🔹 {type} Load</h4> */}
+                  <h4 style={{
+                    color: Object.keys(missingSlots).some(id =>
+                      groupedData[type].some(r => r.equipmentId === id)
+                    ) ? "red" : "#00e6e6"
+                  }}>
+                    🔹 {type} Load
+                  </h4>
+                  <h4 style={{ color: "#00e6e6" }}>
+                    🔹 {Object.values(
+                      groupedData[type].reduce((acc, row) => {
+                        const id = row.equipmentId || "UNKNOWN";
+
+                        if (!acc[id]) acc[id] = { sum: 0, count: 0 };
+
+                        acc[id].sum += row.loadKW;
+                        acc[id].count += 1;
+
+                        return acc;
+                      }, {})
+                    )
+                      .reduce((total, eq) => total + (eq.sum / eq.count), 0)
+                      .toFixed(2)} kWh
+                  </h4>
                 </div>
+
                 <table border="1" cellPadding="6" style={{
                   borderCollapse: "collapse",
                   width: "100%",
@@ -461,7 +699,12 @@ const LoadDashboard = ({ userData }) => {
 
                   <tbody>
                     {groupedData[type].map((row) => (
-                      <tr key={row.id}>
+                      <tr
+                        key={row.id}
+                        style={{
+                          backgroundColor: hasMissingData(row) ? "#f82121ab" : "transparent",
+                        }}
+                      >
                         {config.renderRow(row)}
 
                         <td style={{ justifyContent: "space-around", flexWrap: "wrap", display: "flex", gap: "5px" }}>
