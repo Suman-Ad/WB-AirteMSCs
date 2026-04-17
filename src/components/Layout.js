@@ -96,6 +96,29 @@ const formatYear = (ym) => {
 };
 
 const Layout = ({ userData, children }) => {
+  const [editVersionMode, setEditVersionMode] = useState(false);
+
+  const handleEditVersion = () => {
+    const ref = doc(db, "app_meta", "version");
+
+    getDoc(ref).then((snap) => {
+      if (snap.exists()) {
+        const currentVersion = snap.data().version;
+        const newVersion = prompt("Enter new version:", currentVersion);
+        if (newVersion && newVersion !== currentVersion) {
+          setDoc(ref, { version: newVersion }, { merge: true }).then(() => {
+            alert("Version updated successfully!");
+          }).catch((err) => {
+            console.error("Failed to update version", err);
+            alert("Failed to update version. Check console for details.");
+          });
+        }
+      }
+    });
+  };
+
+  // ✅ get last handled version from localStorage
+  const lastHandledVersion = localStorage.getItem("app_version");
   const [collapsed, setCollapsed] = useState(true);
   const navigate = useNavigate();
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 512);
@@ -1495,7 +1518,7 @@ const Layout = ({ userData, children }) => {
               </div>
             </>
           )}
-          <h4>© 2025 Crash Algo. All rights reserved.</h4>
+          <h4>© 2025 Crash Algo. All rights reserved. Version: <span onClick={() => userData && userData.email === ( "crash.algo@gmail.com" || "admin@crashalgo.com") && handleEditVersion()} style={{ textDecoration: "underline", cursor: "pointer" }}>{lastHandledVersion}</span></h4>
           <h4 onClick={() => navigate("/vendor-dashboard")} style={{ textDecoration: "underline", cursor: "pointer" }}>
             Vendor Escalation Matrix
           </h4>

@@ -6,6 +6,28 @@
       "**/.*",
       "**/node_modules/**"
     ],
+
+    "headers": [
+      {
+        "source": "/version.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(js|css)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=31536000"
+          }
+        ]
+      }
+    ],
+
     "rewrites": [
       {
         "source": "**",
@@ -13,6 +35,7 @@
       }
     ]
   },
+
   "storage": {
     "rules": "storage.rules"
   }

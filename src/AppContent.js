@@ -151,7 +151,9 @@ export default function AppContent() {
 
     return (
         <>
-            <AutoLogout timeoutMs={8 * 60 * 60 * 1000} />
+            {userData?.name !== `${userData?.site} MSC` && (
+                <AutoLogout timeoutMs={8 * 60 * 60 * 1000} />
+            )}
             <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login setUserData={setUserData} />} />
@@ -525,7 +527,7 @@ export default function AppContent() {
                             <DynamicRegister userData={userData} />
                         </Layout>
                     </RoleProtectedRoute>} />
-                
+
                 <Route path="/vendor-dashboard" element={
                     <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
                         <Layout userData={userData}>

@@ -502,43 +502,51 @@ const LoadDashboard = ({ userData }) => {
   }, [data, rangeType, selectedEquipment, selectedType]);
 
   // Check if any important field is missing or zero (customize fields as needed)
-  const hasMissingData = (row) => {
+  const hasMissingData = (row, type) => {
     // define important fields (customize if needed)
-    const fields = [
-      row.voltageRY,
-      row.voltageYB,
-      row.voltageBR,
-      row.currentR,
-      row.currentY,
-      row.currentB,
-      row.outVoltageRY,
-      row.outVoltageYB,
-      row.outVoltageBR,
-      row.outCurrentR,
-      row.outCurrentY,
-      row.outCurrentB,
-      row.tempR,
-      row.tempY,
-      row.tempB,
-      row.powerFactor,
-      row.powerFactorR,
-      row.powerFactorR,
-      row.powerFactorY,
-      row.powerFactorB,
-      row.loadKW,
-      row.kwh,
-      row.dcVoltage,
-      row.dcCurrent,
-      row.runningKWR,
-      row.runningKWY,
-      row.runningKWB,
-      row.faultyModules,
-      row.systemStatus,
-      row.spdStatus,
-      row.technicianName,
-    ];
+    let fields = [];
 
-    return fields.some(v => v === undefined || v === null || v === "" || v === 0);
+    if (type === "SMPS") {
+      fields = [
+        row.voltageRN, row.voltageYN, row.voltageBN,
+        row.currentR, row.currentY, row.currentB,
+        row.tempR, row.tempY, row.tempB,
+        row.dcVoltage, row.dcCurrent,
+        row.systemStatus, row.spdStatus, row.faultyModules, row.loadKW, row.technicianName
+      ];
+    }
+
+    else if (type === "UPS") {
+      fields = [
+        row.voltageRY, row.voltageYB, row.voltageBR,
+        row.voltageRN, row.voltageYN, row.voltageBN,
+        row.currentR, row.currentY, row.currentB, row.currentN,
+        row.tempR, row.tempY, row.tempB,
+        row.outVoltageRY, row.outVoltageYB, row.outVoltageBR,
+        row.outVoltageRN, row.outVoltageYN, row.outVoltageBN,
+        row.outCurrentR, row.outCurrentY, row.outCurrentB, row.outCurrentN,
+        row.powerFactorR, row.powerFactorY, row.powerFactorB,
+        row.runningKWR, row.runningKWY, row.runningKWB, row.loadKW, row.technicianName
+      ];
+    }
+
+    else if (type === "LT") {
+      fields = [
+        row.voltageRY, row.voltageYB, row.voltageBR,
+        row.voltageRN, row.voltageYN, row.voltageBN,
+        row.currentR, row.currentY, row.currentB,
+        row.tempR, row.tempY, row.tempB,
+        row.powerFactor, row.kwh, row.loadKW, row.technicianName
+      ];
+    }
+
+    // ✅ clean validation
+    return fields.some(v =>
+      v === undefined ||
+      v === null ||
+      v === "" ||
+      (typeof v === "number" && isNaN(v))
+    );
   };
 
   return (
@@ -624,7 +632,7 @@ const LoadDashboard = ({ userData }) => {
       ) : (
         <div>
           <h3>Total Load: {totalLoad.toFixed(2)} kW</h3>
-
+          <h4 >⚠️ Note:- If show <b style={{ background: "red", color: "white" }}>"Red Row"</b>, Check & filled the unfield values</h4>
           {Object.keys(missingSlots).length > 0 && (
             <div style={{
               background: "#ff4d4d22",
@@ -702,7 +710,7 @@ const LoadDashboard = ({ userData }) => {
                       <tr
                         key={row.id}
                         style={{
-                          backgroundColor: hasMissingData(row) ? "#f82121ab" : "transparent",
+                          backgroundColor: hasMissingData(row, type) ? "#f82121ab" : "transparent",
                         }}
                       >
                         {config.renderRow(row)}
