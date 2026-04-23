@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import { collectionGroup, getDocs, getDoc, doc, collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import "../assets/DailyDGLog.css"; // reuse your log CSS
@@ -7,17 +7,41 @@ import { calculateFields } from '../utils/calculatedDGLogs';
 import * as XLSX from "xlsx";
 
 
+const getISTMonthKey = () => {
+    const now = new Date();
+    const ist = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+
+    const year = ist.getFullYear();
+    const month = String(ist.getMonth() + 1).padStart(2, "0");
+
+    return `${year}-${month}`; // ✅ "2026-04"
+};
+
+
+const getISTDate = () => {
+    const now = new Date();
+    const ist = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+
+    const year = ist.getFullYear();
+    const month = String(ist.getMonth() + 1).padStart(2, "0");
+    const day = String(ist.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`; // YYYY-MM-DD
+};
+
+
 // Optional: Assume userData comes as prop/context for security
 const AllSitesDGLogs = ({ userData }) => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const navigate = useNavigate();
-    const location = useLocation();
+    // const location = useLocation();
     const [siteConfigs, setSiteConfigs] = useState({});
     const [fuelRates, setFuelRates] = useState({});
     const [ebRate, setEbRate] = useState({});
-    const { monthKey } = location.state; // default month
+
+    const [monthKey, setMonthKey] = useState(getISTMonthKey());
     // You need to provide correct siteConfig for each site (dgCount, ebCount, solarCount)
     const calculatedLogs = logs.map(log => calculateFields(log, siteConfigs[log.site.toUpperCase()] || {}));
     const [popupSite, setPopupSite] = useState(null);
@@ -25,8 +49,8 @@ const AllSitesDGLogs = ({ userData }) => {
     const [loadingPower, setLoadingPower] = useState(true);
     const [showOnlyDG, setShowOnlyDG] = useState(false);
     const [dgLogs, setDgLogs] = useState([]);
-    const todayKey = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-    const [collaps, setCollaps] = useState({})
+    const [selectedDate, setSelectedDate] = useState(getISTDate()); // YYYY-MM-DD
+    const [collaps, setCollaps] = useState({ [userData?.site?.toUpperCase() || ""]: true });
 
     const [isLargeScreen, setIsLargeScreen] = useState(window.innerHeight > 512)
     // Screen Resize Listener
@@ -36,19 +60,19 @@ const AllSitesDGLogs = ({ userData }) => {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    const [isUltraWide, setIsUltraWide] = useState(window.innerWidth > 2000);
+    const [isUltraWide, setIsUltraWide] = useState(window.innerWidth > 1200);
 
     useEffect(() => {
         const handleResize = () => {
             setIsLargeScreen(window.innerWidth > 512);
-            setIsUltraWide(window.innerWidth > 2000); // ✅ new
+            setIsUltraWide(window.innerWidth > 1200); // ✅ new
         };
 
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    const toggleSite = (siteName) => {
+    const toggleSite = (siteName = userData?.site?.toUpperCase()) => {
         setCollaps((prev) => ({
             ...prev,
             [siteName]: !prev[siteName],
@@ -56,7 +80,7 @@ const AllSitesDGLogs = ({ userData }) => {
     };
 
     const todayDGLogs = dgLogs.filter(
-        log => log.date === todayKey
+        log => log.date === selectedDate
     );
 
     const normalizeSiteId = (raw) => {
@@ -220,18 +244,21 @@ const AllSitesDGLogs = ({ userData }) => {
         const dg = log.dgNumber || log.dg || "DG-1"; // fallback
         const fuel = Number(log.fuelConsumption) || 0;
         const runHrs = log.remarks === "On Load" ? (log.totalRunHours || 0) : 0;
+        const offRunHrs = log.remarks === "No Load" ? (log.totalRunHours || 0) : 0;
 
         if (!acc[site]) acc[site] = {};
         if (!acc[site][dg]) {
             acc[site][dg] = {
                 fuel: 0,
                 totalDGRunHours: 0,
+                totalDGOffRunHours: 0,
                 runs: [],
             };
         }
 
         acc[site][dg].fuel += fuel;
         acc[site][dg].totalDGRunHours += runHrs;
+        acc[site][dg].totalDGOffRunHours += offRunHrs;
         acc[site][dg].runs.push({
             startTime: log.startTime,
             stopTime: log.stopTime,
@@ -768,6 +795,7 @@ const AllSitesDGLogs = ({ userData }) => {
     return (
         <div className="daily-log-container">
             <h2>All Sites DG Logs Monthly Summary - <strong>{monthKey}</strong> </h2>
+
             <div
                 style={{
                     display: "flex",
@@ -778,8 +806,33 @@ const AllSitesDGLogs = ({ userData }) => {
                     background: "#0f172a",
                     borderRadius: "10px",
                     color: "#fff",
+                    overflowX: "auto",
                 }}
             >
+                <div style={{
+                    marginBottom: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    flexWrap: "wrap"
+                }}>
+                    <label><strong>Select Month:</strong></label>
+                    <input
+                        type="month"
+                        value={monthKey}
+                        onChange={(e) => setMonthKey(e.target.value)}
+                        style={{ background: "#161a5893", width: "fit-content" }}
+                    />
+
+                    <label><strong>Select Date:</strong></label>
+                    <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        style={{ background: "#161a5893", width: "fit-content" }}
+                    />
+                </div>
+
                 <strong>⚡ Power Filter:</strong>
 
                 <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -803,6 +856,7 @@ const AllSitesDGLogs = ({ userData }) => {
                         DG MODE
                     </span>
                 )}
+
                 <div
                     style={{
                         marginLeft: "auto",
@@ -940,13 +994,15 @@ const AllSitesDGLogs = ({ userData }) => {
                                 powerSource === "DG"
                                     ? "#fee2e2"
                                     : "",
-                            display: "grid"
+                            // display: "grid",
+                            // overflowX: "auto",
                         }}
                     >
 
                         <button
                             style={{
-                                background: collaps[site] ? "#a75555" : powerSource === "DG" ? "#dc2626" : "",
+                                background: collaps[site] ? "#6fb5ca7c" : powerSource === "DG" ? "#dc2626" : "",
+                                width: collaps[site] ? "100%" : "100%",
 
                             }}
                             onClick={() => toggleSite(site)}
@@ -957,11 +1013,36 @@ const AllSitesDGLogs = ({ userData }) => {
                                     padding: collaps[site] ? "" : "10px 10px",
                                     borderRadius: "5px",
                                     // height: "100%",
-                                    // justifyContent: "center"                             
+                                    // justifyContent: "center"                           
                                 }}
                             >
-                                {collaps[site] ? "▶ Collaps" : `${site} MSC ▼`}
-                            </strong> :
+                                {collaps[site] ?
+                                    <h2 style={{ color: powerSource == "DG" ? "RED" : "", fontWeight: "bold", fontSize: isUltraWide ? "" : "18px" }}>
+                                        {site} MSC ▶
+                                        <span
+                                            style={{
+                                                // marginLeft: "8px",
+                                                padding: "2px 10px",
+                                                borderRadius: "6px",
+                                                fontSize: "12px",
+                                                fontWeight: "600",
+                                                color: "#fff",
+                                                background:
+                                                    powerSource === "DG"
+                                                        ? "#dc2626"
+                                                        : powerSource === "EB"
+                                                            ? "#16a34a"
+                                                            : "#6b7280",
+                                            }}
+                                        >
+                                            Site Live On:- <strong>{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
+                                        </span>
+                                        <span style={{ marginLeft: "12px", fontSize: "12px", color: "#334155" }}>
+                                            ({monthKey})
+                                        </span>
+                                    </h2> : `${site} MSC ▼`}
+                            </strong>
+
                             {collaps[site] ? (
                                 ""
                             ) : (
@@ -1006,54 +1087,40 @@ const AllSitesDGLogs = ({ userData }) => {
                             )}
                         </button>
 
-                        {collaps[site] && (
-
+                        {(collaps[site]) && (
                             <div>
-                                <span
-                                    style={{
-                                        marginLeft: "8px",
-                                        padding: "2px 10px",
-                                        borderRadius: "6px",
-                                        fontSize: "12px",
-                                        fontWeight: "600",
-                                        color: "#fff",
-                                        background:
-                                            powerSource === "DG"
-                                                ? "#dc2626"
-                                                : powerSource === "EB"
-                                                    ? "#16a34a"
-                                                    : "#6b7280",
-                                    }}
-                                >
-                                    Site Live On:- <strong>{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
-                                </span>
-
-                                <h2 style={{ color: powerSource == "DG" ? "RED" : "", fontWeight: "bold" }}>{site} MSC</h2>
                                 {/* Fuel, load, backups */}
-                                <div style={{ display: "flex" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                                     <div>
                                         <h1 style={{ fontSize: isUltraWide ? "50px" : "20px", color: "green", textAlign: "left" }}>
                                             <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>
                                         </h1>
                                         <h1 style={((totalFuelAvailable) / summary.monthlyAvgCPH) < 18 ? { fontSize: isUltraWide ? "50px" : "20px", color: "red", textAlign: "left" } : { fontSize: isUltraWide ? "50px" : "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong></h1>
                                     </div>
-                                    <div style={{ background: "#e450509f", color: "#fff", padding: "5px 5px", marginLeft: "10px", borderRadius: "7px" }}>
-                                        <p style={{ fontSize: isUltraWide ? "30px" : "10px", fontWeight: "bold" }}>Today DG Run:</p>
-                                        {fuelConsumptionBySiteDG[site] &&
-                                            Object.entries(fuelConsumptionBySiteDG[site]).map(
-                                                ([dg, data]) => (
-                                                    <div key={dg} style={{ display: "flex", fontSize: isUltraWide ? "30px" : "10px", width: "100%", justifyContent: "space-between" }}>
-                                                        {/* <strong>{dg}</strong> — {data.fuel.toFixed(2)} L */}
-                                                        <strong>{dg}</strong> — {(data.totalDGRunHours).toFixed(1)} Hrs
-                                                        {/* {data.runs.map((r, i) => (
-                                                            <div key={i} style={{ fontSize: "12px", color: "#6b7280" }}>
-                                                                {r.startTime}–{r.stopTime} • {r.runHours.toFixed(2)}Hrs • {r.remarks}
-                                                            </div>
-                                                        ))} */}
-                                                    </div>
-                                                )
-                                            )}
-                                    </div>
+
+                                    {isUltraWide && (
+                                        <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
+                                            {/* Average PUE */}
+                                            <p className={summary.monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
+                                                <strong>Average PUE – {summary.monthlyAvgPUE}</strong>
+                                            </p>
+                                            {/* Average SEGR */}
+                                            <p className={(summary.totalKwh / summary.totalOnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"}>
+                                                <strong>Average SEGR – {(summary.totalKwh / summary.totalOnLoadCon).toFixed(2)}</strong>
+                                            </p>
+
+                                            {/* Per DG SEGR */}
+                                            {dgSummary.map(dg => (
+                                                <p
+                                                    key={dg.dg}
+                                                    className={dg.segr < 3 ? "avg-segr low" : "avg-segr high"}
+                                                    style={{ fontSize: "10px" }}
+                                                >
+                                                    {dg.dg} Average SEGR – {dg.segr}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* ✅ Split Fuel Level Bar */}
@@ -1064,9 +1131,9 @@ const AllSitesDGLogs = ({ userData }) => {
                                         style={{
                                             display: "flex",
                                             width: isUltraWide ? "100%" : `${(tankCapacity) * 100}%`,
-                                            height: isUltraWide ? "220px" : "22px",
+                                            height: isUltraWide ? "100px" : "22px",
                                             background: "#eee",
-                                            borderRadius: "4px",
+                                            borderRadius: isUltraWide ? "30px" : "4px",
                                             overflow: "hidden",
                                             marginLeft: "4px",
                                             transition: "all 0.3s ease",
@@ -1096,7 +1163,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                     justifyContent: "center",
                                                 }}
                                             >
-                                                ⛽{(availableFuel - todayFuelUsed) || 0}/{dayTankCapacity || 0}L
+                                                Day: ⛽{(availableFuel - todayFuelUsed) || 0}/{dayTankCapacity || 0}L
                                             </p>
 
                                         </div>
@@ -1107,7 +1174,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                 width: `${(externalTankCapacity / tankCapacity) * 100}%`,
                                                 background: "#cce5ff",
                                                 position: "relative",
-                                                borderLeft: "2px solid black",
+                                                borderLeft: isUltraWide ? "4px solid #f30909" : "2px solid black",
                                                 whiteSpace: "nowrap",
                                                 color: (dgExternalFuel?.["DG-1"] + dgExternalFuel?.["DG-2"] + dgExternalFuel?.["DG-3"]) > 0 ? "white" : "black",
                                             }}
@@ -1115,7 +1182,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                             <p
                                                 style={{
                                                     width: `${(((((thisConfig?.dgCount > 0 ? dgExternalFuel?.["DG-1"] : 0) + (thisConfig?.dgCount > 1 ? dgExternalFuel?.["DG-2"] : 0) + (thisConfig?.dgCount > 2 ? dgExternalFuel?.["DG-3"] : 0) + (thisConfig?.dgCount > 3 ? dgExternalFuel?.["DG-4"] : 0)) || 0)) / externalTankCapacity) * 100 || 0}%`,
-                                                    height:  isUltraWide ? "100%" : "100%",
+                                                    height: isUltraWide ? "100%" : "100%",
                                                     background: "linear-gradient(to right, blue, green)",
                                                     fontSize: isUltraWide ? "30px" : "8px",   // ✅ readable
                                                     fontWeight: "bold",
@@ -1124,7 +1191,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                     justifyContent: "center",
                                                 }}
                                             >
-                                                ⛽{((((thisConfig?.dgCount > 0 ? dgExternalFuel?.["DG-1"] : 0) + (thisConfig?.dgCount > 1 ? dgExternalFuel?.["DG-2"] : 0) + (thisConfig?.dgCount > 2 ? dgExternalFuel?.["DG-3"] : 0) + (thisConfig?.dgCount > 3 ? dgExternalFuel?.["DG-4"] : 0)) || 0)) || 0}/{externalTankCapacity || 0}L
+                                                Ex:⛽{((((thisConfig?.dgCount > 0 ? dgExternalFuel?.["DG-1"] : 0) + (thisConfig?.dgCount > 1 ? dgExternalFuel?.["DG-2"] : 0) + (thisConfig?.dgCount > 2 ? dgExternalFuel?.["DG-3"] : 0) + (thisConfig?.dgCount > 3 ? dgExternalFuel?.["DG-4"] : 0)) || 0)) || 0}/{externalTankCapacity || 0}L
                                             </p>
                                         </div>
                                     </div>
@@ -1134,7 +1201,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                     Total Stock Capacity: <strong>{tankCapacity} Ltrs</strong>
                                 </p>
 
-                                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "10px", justifyContent: "space-between" }}>
+                                <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginTop: "10px", justifyContent: "space-between" }}>
                                     <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
                                         <h4 style={{ textDecoration: "underline" }}>⛽ DG Wise Fuel Stock</h4>
                                         {Array.from({ length: thisConfig?.dgCount || 0 }).map((_, idx) => {
@@ -1172,16 +1239,19 @@ const AllSitesDGLogs = ({ userData }) => {
                                             // const externalUsed = dgExternalUsed?.[dgCNo] || 0;  // CURRENT
 
                                             return (
-                                                <div key={dgNo} style={{ marginBottom: "4px", display: "flex" }}>
-                                                    <div>
+                                                <div key={dgNo} style={{ marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                                    <div style={{
+                                                        border: "1px solid #cbd5e1",
+                                                        padding: "4px 6px",
+                                                    }}>
                                                         {/* 🔹 Fuel Bar */}
                                                         <div
                                                             style={{
                                                                 display: "flex",
                                                                 alignItems: "center",
-                                                                fontSize: "10px",
-                                                                maxWidth: "240px",
-                                                                height: "14px",
+                                                                fontSize: isUltraWide ? "35px" : "12px",
+                                                                maxWidth: "100%",
+                                                                height: "100%",
                                                             }}
                                                         >
                                                             🛢️
@@ -1192,18 +1262,20 @@ const AllSitesDGLogs = ({ userData }) => {
                                                             <div
                                                                 style={{
                                                                     display: "flex",
-                                                                    width: "120px",
+                                                                    width: "100%",
                                                                     background: "#eee",
-                                                                    borderRadius: "3px",
+                                                                    borderRadius: "5px",
+                                                                    border: "1px solid #093770",
                                                                     overflow: "hidden",
+                                                                    height: "auto",
                                                                 }}
                                                             >
                                                                 <p
                                                                     style={{
                                                                         width: `${percent}%`,
-                                                                        background: "linear-gradient(to right, blue)",
+                                                                        background: percent < 50 ? "red" : "blue",
                                                                         color: "white",
-                                                                        fontSize: "7px",
+                                                                        fontSize: isUltraWide ? "16px" : "7px",
                                                                         margin: 0,
                                                                         textAlign: "center",
                                                                         whiteSpace: "nowrap",
@@ -1211,7 +1283,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                                 >
                                                                     ⛽{fuelClosing}/{perDgCapacity.toFixed(1)}L
                                                                     <small style={{ color: "red" }}>
-                                                                        🔻 Used Today: {dgTodayUsed.toFixed(2)}L
+                                                                        🔻 Used Today: <b style={{ fontSize: isUltraWide ? "16px" : "9px", color: "#700d0d" }}>{dgTodayUsed.toFixed(2)}L</b>
                                                                     </small>
                                                                 </p>
                                                             </div>
@@ -1231,9 +1303,9 @@ const AllSitesDGLogs = ({ userData }) => {
                                                                 style={{
                                                                     display: "flex",
                                                                     alignItems: "center",
-                                                                    fontSize: "10px",
-                                                                    maxWidth: "240px",
-                                                                    height: "14px",
+                                                                    fontSize: isUltraWide ? "16px" : "14px",
+                                                                    maxWidth: "100%",
+                                                                    height: "100%",
                                                                 }}
                                                             >
                                                                 🛢️
@@ -1244,18 +1316,19 @@ const AllSitesDGLogs = ({ userData }) => {
                                                                 <div
                                                                     style={{
                                                                         display: "flex",
-                                                                        width: "120px",
+                                                                        width: "100%",
                                                                         background: "#eee",
-                                                                        borderRadius: "3px",
+                                                                        borderRadius: "4px",
+                                                                        border: "1px solid #093770",
                                                                         overflow: "hidden",
                                                                     }}
                                                                 >
                                                                     <p
                                                                         style={{
                                                                             width: `${exPercent}%`,
-                                                                            background: "linear-gradient(to right, blue)",
+                                                                            background: exPercent < 50 ? "red" : "blue",
                                                                             color: "white",
-                                                                            fontSize: "7px",
+                                                                            fontSize: isUltraWide ? "16px" : "14px",
                                                                             margin: 0,
                                                                             textAlign: "center",
                                                                             whiteSpace: "nowrap",
@@ -1282,27 +1355,86 @@ const AllSitesDGLogs = ({ userData }) => {
 
                                         })}
                                     </div>
-                                    <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
-                                        {/* Average PUE */}
-                                        <p className={summary.monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
-                                            <strong>Average PUE – {summary.monthlyAvgPUE}</strong>
-                                        </p>
-                                        {/* Average SEGR */}
-                                        <p className={(summary.totalKwh / summary.totalOnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"}>
-                                            <strong>Average SEGR – {(summary.totalKwh / summary.totalOnLoadCon).toFixed(2)}</strong>
-                                        </p>
 
-                                        {/* Per DG SEGR */}
-                                        {dgSummary.map(dg => (
-                                            <p
-                                                key={dg.dg}
-                                                className={dg.segr < 3 ? "avg-segr low" : "avg-segr high"}
-                                                style={{ fontSize: "10px" }}
-                                            >
-                                                {dg.dg} Average SEGR – {dg.segr}
+                                    {isUltraWide && (
+                                        <div className="noticeboard-header">
+                                            <p style={{ fontSize: isUltraWide ? "30px" : "10px", fontWeight: "bold" }}>Today DG Run Logs:</p>
+                                            <div className="dashboard-header">
+                                                {fuelConsumptionBySiteDG[site] &&
+                                                    Object.entries(fuelConsumptionBySiteDG[site]).map(
+                                                        ([dg, data]) => (
+                                                            <div key={dg} style={{ display: "flex", width: "100%", justifyContent: "space-between", padding: "4px 0" }}>
+                                                                <div>
+                                                                    {/* <strong>{dg}</strong> — {data.fuel.toFixed(2)} L */}
+                                                                    <div style={{ border: "1px solid #fff", padding: "6px 2px", borderRadius: "4px", background: "#e0e7ff", color: "#000", fontSize: "15px" }}>
+                                                                        <strong>{dg} :—</strong> <b>{(data.totalDGRunHours).toFixed(1)}</b> Hrs <small>(OnLoad)</small> / <b>{(data.totalDGOffRunHours).toFixed(1)}</b> Hrs <small>(OffLoad)</small>
+                                                                        <div style={{ width: "auto", height: "50px", overflowY: "auto", border: "1px solid #500d0d", borderRadius: "5px", padding: "2px", marginLeft: "10px", background: "#fff", color: "#000", fontSize: "8px", scrollbarWidth: "thin" }}>
+                                                                            {data.runs.map((r, i) => (
+                                                                                <div key={i} style={{ fontSize: "12px", color: "#062053", whiteSpace: "nowrap" }}>
+                                                                                    <p>{i + 1}: {r.startTime}–{r.stopTime} • {r.runHours.toFixed(2)}Hrs • {r.remarks}</p>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {!isUltraWide && (
+                                        <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
+                                            {/* Average PUE */}
+                                            <p className={summary.monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
+                                                <strong>Average PUE – {summary.monthlyAvgPUE}</strong>
                                             </p>
-                                        ))}
-                                    </div>
+                                            {/* Average SEGR */}
+                                            <p className={(summary.totalKwh / summary.totalOnLoadCon) < 3 ? "avg-segr low" : "avg-segr high"}>
+                                                <strong>Average SEGR – {(summary.totalKwh / summary.totalOnLoadCon).toFixed(2)}</strong>
+                                            </p>
+
+                                            {/* Per DG SEGR */}
+                                            {dgSummary.map(dg => (
+                                                <p
+                                                    key={dg.dg}
+                                                    className={dg.segr < 3 ? "avg-segr low" : "avg-segr high"}
+                                                    style={{ fontSize: "10px" }}
+                                                >
+                                                    {dg.dg} Average SEGR – {dg.segr}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {!isUltraWide && (
+                                        <div className="noticeboard-header" style={{ maxWidth: "100%" }}>
+                                            <p style={{ fontSize: isUltraWide ? "30px" : "10px", fontWeight: "bold" }}>Today DG Run Logs:</p>
+                                            <div className="dashboard-header" style={{ overflowX: "auto", scrollbarWidth: "thin", scrollbarColor: "#5d1270c9 #418badbe" }}>
+                                                {fuelConsumptionBySiteDG[site] &&
+                                                    Object.entries(fuelConsumptionBySiteDG[site]).map(
+                                                        ([dg, data]) => (
+                                                            <div key={dg} style={{ display: "flex", fontSize: "14px", width: "100%", justifyContent: "space-between", padding: "4px 0" }}>
+                                                                <div>
+                                                                    {/* <strong>{dg}</strong> — {data.fuel.toFixed(2)} L */}
+                                                                    <div style={{ border: "1px solid #fff", padding: "6px 2px", borderRadius: "4px", background: "#e0e7ff", color: "#000", fontSize: "10px" }}>
+                                                                        <strong>{dg} :—</strong> {(data.totalDGRunHours).toFixed(1)} Hrs <small>(OnLoad)</small> / {(data.totalDGOffRunHours).toFixed(1)} Hrs (OffLoad)
+                                                                        <div style={{ width: "auto", height: "50px", overflowY: "auto", border: "1px solid #500d0d", borderRadius: "5px", padding: "2px", marginLeft: "10px", background: "#fff", color: "#000", fontSize: "8px", scrollbarWidth: "thin" }}>
+                                                                            {data.runs.map((r, i) => (
+                                                                                <div key={i} style={{ fontSize: "12px", color: "#062053", whiteSpace: "nowrap" }}>
+                                                                                    <p>{i + 1}: {r.startTime}–{r.stopTime} • {r.runHours.toFixed(2)}Hrs • {r.remarks}</p>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <h4 style={{ borderTop: "3px solid #eee", textAlign: "center" }}>

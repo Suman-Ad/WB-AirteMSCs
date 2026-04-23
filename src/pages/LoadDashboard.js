@@ -11,7 +11,13 @@ const isAdminAssignmentValid = (userData) => {
   if (!userData?.isAdminAssigned) return false;
   if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
 
-  const today = new Date();
+  const getISTNow = () => {
+    return new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
+  };
+
+  const today = getISTNow();
   const from = new Date(userData.adminAssignFrom);
   const to = new Date(userData.adminAssignTo);
 
@@ -28,10 +34,22 @@ const LoadDashboard = ({ userData }) => {
     userData?.designation === "Vertiv ZM";
   const [data, setData] = useState([]);
   const [totalLoad, setTotalLoad] = useState(0);
-  const today = new Date().toISOString().split("T")[0];
+  const getISTDate = () => {
+    return new Date().toLocaleDateString("en-CA", {
+      timeZone: "Asia/Kolkata",
+    });
+  };
+  const today = getISTDate();
+  const formatIST = (date) => {
+    return new Date(date).toLocaleDateString("en-CA", {
+      timeZone: "Asia/Kolkata",
+    });
+  };
+
   const [selectedDate, setSelectedDate] = useState(today);
   const navigate = useNavigate();
   const [trendData, setTrendData] = useState([]);
+  const [trendRawData, setTrendRawData] = useState([]);
   const [rangeType, setRangeType] = useState("daily"); // daily | monthly | yearly
   const [selectedEquipment, setSelectedEquipment] = useState("ALL");
   const [selectedType, setSelectedType] = useState("ALL");
@@ -66,17 +84,6 @@ const LoadDashboard = ({ userData }) => {
   };
 
   const missingSlots = getMissingSlots(data);
-
-  // useEffect(() => {
-  //   if (!data.length) return;
-
-  //   const missing = getMissingSlots(data);
-
-  //   if (Object.keys(missing).length > 0) {
-  //     console.warn("Missing Time Slots:", missing);
-  //   }
-
-  // }, [data]);
 
   const siteKey = userData?.siteId;
 
@@ -146,6 +153,14 @@ const LoadDashboard = ({ userData }) => {
             // Convert time like "02:00 PM" → comparable value
             const parseTime = (t) => {
               if (!t) return 0;
+
+              // Handle 24-hour format (e.g., "14:00")
+              if (!t.includes("AM") && !t.includes("PM")) {
+                const [h, m] = t.split(":").map(Number);
+                return h * 60 + m;
+              }
+
+              // Handle 12-hour format
               const [time, modifier] = t.split(" ");
               let [hours, minutes] = time.split(":").map(Number);
 
@@ -165,16 +180,6 @@ const LoadDashboard = ({ userData }) => {
 
           // ✅ Calculate total as sum of equipment-wise averages
           let total = 0;
-
-          // Object.entries(equipmentMap).forEach(([eqId, eq]) => {
-          //   const rows = list.filter(r => r.equipmentId === eqId);
-
-          //   // 👉 check if this equipment is LT
-          //   if (rows[0]?.equipmentType === "LT") {
-          //     const avg = eq.sum / eq.count;
-          //     total += avg;
-          //   }
-          // });
 
           Object.values(equipmentMap).forEach((eq) => {
             if (eq.type === "LT") {
@@ -370,74 +375,145 @@ const LoadDashboard = ({ userData }) => {
     return acc;
   }, {});
 
-  const equipmentTypes = ["ALL", ...new Set(data.map(d => d.equipmentType))];
-  const equipmentIds = ["ALL", ...new Set(data.map(d => d.equipmentId))];
+  const equipmentTypes = [
+    "ALL",
+    ...new Set(trendRawData.map(d => d.equipmentType))
+  ];
 
-
-  // useEffect(() => {
-  //   if (!data.length) return;
-
-  //   let filtered = data;
-
-  //   if (selectedType !== "ALL") {
-  //     filtered = filtered.filter(d => d.equipmentType === selectedType);
-  //   }
-
-  //   if (selectedEquipment !== "ALL") {
-  //     filtered = filtered.filter(d => d.equipmentId === selectedEquipment);
-  //   }
-
-  //   let grouped = {};
-
-  //   filtered.forEach((d) => {
-  //     let key;
-
-  //     if (rangeType === "daily") {
-  //       key = d.time;
-  //     } else if (rangeType === "monthly") {
-  //       key = d.date;
-  //     } else {
-  //       key = d.date?.slice(0, 7);
-  //     }
-
-  //     if (!grouped[key]) {
-  //       grouped[key] = {};
-  //     }
-
-  //     const eqId = d.equipmentId || "UNKNOWN";
-
-  //     if (!grouped[key][eqId]) {
-  //       grouped[key][eqId] = { sum: 0, count: 0 };
-  //     }
-
-  //     grouped[key][eqId].sum += Number(d.loadKW || 0);
-  //     grouped[key][eqId].count += 1;
-  //   });
-
-  //   // 👉 Convert to chart format
-  //   const result = Object.keys(grouped).map((k) => {
-  //     let total = 0;
-
-  //     Object.values(grouped[k]).forEach((eq) => {
-  //       total += eq.sum / eq.count; // ✅ equipment avg
-  //     });
-
-  //     return {
-  //       label: k,
-  //       load: Number(total.toFixed(2)),
-  //     };
-  //   });
-
-  //   result.sort((a, b) => a.label.localeCompare(b.label));
-
-  //   setTrendData(result);
-
-  // }, [data, rangeType, selectedEquipment, selectedType]);
+  const equipmentIds = [
+    "ALL",
+    ...new Set(
+      trendRawData
+        .filter(d => selectedType === "ALL" || d.equipmentType === selectedType)
+        .map(d => d.equipmentId)
+    )
+  ];
 
   useEffect(() => {
-    if (!data.length) return;
+    setSelectedEquipment("ALL");
+  }, [selectedType]);
 
-    let filtered = data;
+  useEffect(() => {
+    setSelectedType("ALL");
+    setSelectedEquipment("ALL");
+  }, [rangeType]);
+
+  useEffect(() => {
+    if (!siteKey) return;
+
+    let unsubscribeList = [];
+    let dataMap = {}; // ✅ store per date
+
+    const fetchTrendData = async () => {
+      let datesToFetch = [];
+
+      if (rangeType === "daily") {
+        datesToFetch = [selectedDate];
+      }
+
+      else if (rangeType === "monthly") {
+        const selected = new Date(selectedDate);
+        const year = selected.getFullYear();
+        const month = selected.getMonth();
+
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateStr = formatIST(new Date(year, month, d));
+          datesToFetch.push(dateStr);
+        }
+      }
+
+      else if (rangeType === "yearly") {
+        const year = new Date(selectedDate).getFullYear();
+
+        for (let m = 0; m < 12; m++) {
+          const daysInMonth = new Date(year, m + 1, 0).getDate();
+
+          for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = formatIST(new Date(year, m, d));
+            datesToFetch.push(dateStr);
+          }
+        }
+      }
+
+      datesToFetch.forEach((date) => {
+        const colRef = collection(
+          db,
+          "loadData",
+          siteKey,
+          "dailyData",
+          date,
+          "entries"
+        );
+
+        const unsub = onSnapshot(colRef, (snapshot) => {
+
+          let dayData = [];
+
+          snapshot.forEach((doc) => {
+            const d = doc.data();
+
+            let loadKW = 0;
+
+            if (d.equipmentType === "SMPS") {
+              loadKW = (Number(d.dcVoltage || 0) * Number(d.dcCurrent || 0)) / 1000;
+            } else if (d.equipmentType === "UPS") {
+              loadKW =
+                Number(d.runningKWR || 0) +
+                Number(d.runningKWY || 0) +
+                Number(d.runningKWB || 0);
+            } else {
+              const voltage =
+                (Number(d.voltageRY || 0) +
+                  Number(d.voltageYB || 0) +
+                  Number(d.voltageBR || 0)) / 3;
+
+              const current =
+                (Number(d.currentR || 0) +
+                  Number(d.currentY || 0) +
+                  Number(d.currentB || 0)) / 3;
+
+              const pf = Number(d.powerFactor || 0.9);
+
+              loadKW = (1.732 * voltage * current * pf) / 1000;
+            }
+
+            dayData.push({
+              id: doc.id,
+              date,
+              ...d,
+              loadKW,
+            });
+          });
+
+          // ✅ store per date (replace only that date)
+          dataMap[date] = dayData;
+
+          // ✅ merge all dates safely
+          const merged = Object.values(dataMap).flat();
+
+          setTrendRawData(merged);
+        });
+
+        unsubscribeList.push(unsub);
+      });
+    };
+
+    fetchTrendData();
+
+    return () => unsubscribeList.forEach((u) => u && u());
+  }, [siteKey, selectedDate, rangeType]);
+
+  // Whenever raw data or filters change, regroup and prepare for chart
+  useEffect(() => {
+    if (!trendRawData.length) return;
+
+    let filtered = trendRawData;
+
+    if (selectedType !== "ALL") {
+      filtered = filtered.filter(d => d.equipmentType === selectedType);
+    }
 
     if (selectedEquipment !== "ALL") {
       filtered = filtered.filter(d => d.equipmentId === selectedEquipment);
@@ -448,58 +524,73 @@ const LoadDashboard = ({ userData }) => {
     filtered.forEach((d) => {
       let key;
 
-      if (rangeType === "daily") {
-        key = d.time;
-      } else if (rangeType === "monthly") {
-        key = d.date;
-      } else {
-        key = d.date?.slice(0, 7);
-      }
-
-      const type = d.equipmentType || "Others";
-      const eqId = d.equipmentId || "UNKNOWN";
+      if (rangeType === "daily") key = d.time;
+      else if (rangeType === "monthly") key = d.date;
+      else key = d.date?.slice(0, 7);
 
       if (!grouped[key]) grouped[key] = {};
-      if (!grouped[key][type]) grouped[key][type] = {};
-      if (!grouped[key][type][eqId]) {
-        grouped[key][type][eqId] = { sum: 0, count: 0 };
+
+      const type = d.equipmentType;
+      const eqId = d.equipmentId;
+
+      const dataKey =
+        selectedType === "ALL"
+          ? type
+          : eqId;
+
+      if (!grouped[key][dataKey]) {
+        grouped[key][dataKey] = {};
       }
 
-      grouped[key][type][eqId].sum += Number(d.loadKW || 0);
-      grouped[key][type][eqId].count += 1;
+      // 🔥 IMPORTANT: group per equipment first
+      if (!grouped[key][dataKey][eqId]) {
+        grouped[key][dataKey][eqId] = { sum: 0, count: 0 };
+      }
+
+      grouped[key][dataKey][eqId].sum += Number(d.loadKW || 0);
+      grouped[key][dataKey][eqId].count += 1;
     });
 
     const result = Object.keys(grouped).map((k) => {
       let obj = { label: k };
 
-      ["LT", "UPS", "SMPS"].forEach((type) => {
+      Object.keys(grouped[k]).forEach((key) => {
         let total = 0;
 
-        if (grouped[k][type]) {
-          Object.values(grouped[k][type]).forEach((eq) => {
-            total += eq.sum / eq.count;
-          });
-        }
-
-        obj[type] = Number(total.toFixed(2));
-      });
-      // ✅ ADD HERE (after all types calculated)
-      if (selectedType !== "ALL") {
-        Object.keys(obj).forEach(key => {
-          // if (key !== "label" && key !== selectedType) {
-          //   obj[key] = 0;
-          // }
-          filtered = filtered.filter(d => d.equipmentType === selectedType);
+        Object.values(grouped[k][key]).forEach((eq) => {
+          total += eq.sum / eq.count;
         });
-      }
+
+        obj[key] = Number(total.toFixed(2));
+      });
+
       return obj;
     });
 
-    result.sort((a, b) => a.label.localeCompare(b.label));
+    // ✅ IMPORTANT: normalize all keys
+    let allKeys = new Set();
 
-    setTrendData(result);
+    result.forEach(d => {
+      Object.keys(d).forEach(k => {
+        if (k !== "label") allKeys.add(k);
+      });
+    });
 
-  }, [data, rangeType, selectedEquipment, selectedType]);
+    const normalized = result.map(d => {
+      let newObj = { label: d.label };
+
+      allKeys.forEach(k => {
+        newObj[k] = d[k] ?? 0; // 🔥 fill missing with 0
+      });
+
+      return newObj;
+    });
+
+    normalized.sort((a, b) => a.label.localeCompare(b.label));
+
+    setTrendData(normalized);
+
+  }, [trendRawData, rangeType, selectedType, selectedEquipment]);
 
   // Check if any important field is missing or zero (customize fields as needed)
   const hasMissingData = (row, type) => {
@@ -549,6 +640,48 @@ const LoadDashboard = ({ userData }) => {
     );
   };
 
+  const getVisibleKeys = () => {
+    if (!trendData.length) return [];
+
+    return Object.keys(trendData[0]).filter(key => key !== "label");
+  };
+
+  const visibleKeys = getVisibleKeys();
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+
+    const total = payload.reduce((sum, p) => sum + (p.value || 0), 0);
+
+    return (
+      <div style={{
+        background: "#111",
+        border: "1px solid #333",
+        padding: "10px 12px",
+        borderRadius: "8px",
+        color: "#fff",
+        fontSize: "12px"
+      }}>
+        <p style={{ marginBottom: "5px", color: "#00e6e6" }}>
+          <b>{label}</b>
+        </p>
+
+        {payload.map((entry, i) => (
+          <p key={i} style={{ margin: 0 }}>
+            <span style={{ color: entry.color }}>●</span>{" "}
+            {entry.name}: {entry.value?.toFixed(2)} kW
+          </p>
+        ))}
+
+        <hr style={{ borderColor: "#333" }} />
+
+        <p style={{ margin: 0 }}>
+          <b>Total: {total.toFixed(2)} kW</b>
+        </p>
+      </div>
+    );
+  };
+
   return (
     <div className="daily-log-container">
       <h2>⚡ Live Load Dashboard 🟢</h2>
@@ -580,7 +713,17 @@ const LoadDashboard = ({ userData }) => {
 
         <select value={selectedEquipment} onChange={(e) => setSelectedEquipment(e.target.value)}>
           {equipmentIds.map((id) => (
-            <option key={id} value={id}>{id}</option>
+            <option
+              key={id}
+              value={id}
+              disabled={
+                selectedType !== "ALL" &&
+                id !== "ALL" &&
+                !data.some(d => d.equipmentId === id && d.equipmentType === selectedType)
+              }
+            >
+              {id}
+            </option>
           ))}
         </select>
 
@@ -589,38 +732,61 @@ const LoadDashboard = ({ userData }) => {
       {data.length > 0 && (
         <div style={{ width: "100%", marginBottom: "20px", padding: "10px", borderRadius: "8px", backgroundColor: "#1e647952", border: "1px solid #00e6e625" }}>
           <h3 style={{ color: "#00e6e6" }}>📈 Load Trend Analysis</h3>
-          <div style={{ width: "100%", height: "300px" }}>
-            {/* <ResponsiveContainer>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="label" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="load" stroke="#00e6e6" />
-              </LineChart>
-            </ResponsiveContainer> */}
+          <div style={{
+            width: "100%",
+            height: "320px",
+            background: "#0f172a",
+            padding: "10px",
+            borderRadius: "10px",
+            border: "1px solid #1e293b"
+          }}>
             <ResponsiveContainer>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="label" />
-                <YAxis />
-                <Tooltip />
+              <LineChart
+                data={trendData}
+                margin={{ top: 20, right: 30, left: 10, bottom: 10 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
 
-                {/* <Line type="monotone" dataKey="LT" stroke="#00e6e6" name="LT Load" />
-                <Line type="monotone" dataKey="UPS" stroke="#ffa500" name="UPS Load" />
-                <Line type="monotone" dataKey="SMPS" stroke="#00ff88" name="SMPS Load" /> */}
+                <XAxis
+                  dataKey="label"
+                  stroke="#ccc"
+                  tick={{ fontSize: 12 }}
+                />
 
-                {(selectedType === "ALL" || selectedType === "LT") && (
-                  <Line type="monotone" dataKey="LT" stroke="#00e6e6" name="LT Load" />
-                )}
+                <YAxis
+                  stroke="#ccc"
+                  tick={{ fontSize: 12 }}
+                  domain={['auto', 'auto']}
+                />
 
-                {(selectedType === "ALL" || selectedType === "UPS") && (
-                  <Line type="monotone" dataKey="UPS" stroke="#ffa500" name="UPS Load" />
-                )}
+                <Tooltip content={<CustomTooltip />} />
 
-                {(selectedType === "ALL" || selectedType === "SMPS") && (
-                  <Line type="monotone" dataKey="SMPS" stroke="#00ff88" name="SMPS Load" />
-                )}
+                {/* Optional legend */}
+                {/* <Legend /> */}
+
+                {visibleKeys.map((key, index) => {
+                  const colors = {
+                    LT: "#00e6e6",
+                    UPS: "#ffcc00",
+                    SMPS: "#ff4d4d",
+                    TOTAL: "#ffffff"
+                  };
+
+                  return (
+                    <Line
+                      key={key}
+                      type="monotone"
+                      dataKey={key}
+                      name={key}
+                      stroke={colors[key] || "#8884d8"}
+                      strokeWidth={key === selectedEquipment ? 4 : 2.5}
+                      dot={false}                 // cleaner look
+                      activeDot={{ r: 6 }}        // highlight hover
+                      isAnimationActive={true}
+                      animationDuration={800}
+                    />
+                  );
+                })}
               </LineChart>
             </ResponsiveContainer>
           </div>

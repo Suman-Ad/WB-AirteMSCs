@@ -1,17 +1,37 @@
 import React, { useState, useEffect, use } from "react";
 import { db } from "../firebase";
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const isAdminAssignmentValid = (userData) => {
   if (!userData?.isAdminAssigned) return false;
   if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
 
-  const today = new Date();
+  const today = getISTNow();
   const from = new Date(userData.adminAssignFrom);
   const to = new Date(userData.adminAssignTo);
 
   return today >= from && today <= to;
+};
+
+const getISTDate = () => {
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Kolkata",
+  });
+};
+
+const getISTNow = () => {
+  return new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+  );
+};
+
+const getISTHour = () => {
+  const now = new Date().toLocaleString("en-US", {
+    timeZone: "Asia/Kolkata",
+  });
+
+  return new Date(now).getHours();
 };
 
 const LoadEntryForm = ({ userData }) => {
@@ -26,16 +46,18 @@ const LoadEntryForm = ({ userData }) => {
     userData?.designation === "Vertiv ZM";
 
   const uploadedBy = {
-    uid: userData?.uid | "",
+    uid: userData?.uid || "",
     name: userData?.name || "",
     designation: userData?.designation || "",
     empId: userData?.empId || "",
   };
 
-  const getCurrentDate = () => new Date().toISOString().split("T")[0];
+  const navigate = useNavigate();
+
+  const getCurrentDate = () => getISTDate();
 
   const getCurrentTime = () => {
-    const now = new Date();
+    const now = getISTNow();
     return now.toTimeString().slice(0, 5); // HH:MM
   };
 
@@ -55,13 +77,44 @@ const LoadEntryForm = ({ userData }) => {
     { label: "08:00 PM", value: "20:00" },
   ];
 
-  const getDefaultSlot = () => {
-    const hour = new Date().getHours();
+  const [usedSlots, setUsedSlots] = useState([]);
 
-    if (hour < 5) return "02:00";
-    if (hour < 11) return "08:00";
-    if (hour < 17) return "14:00";
-    return "20:00";
+  const fetchUsedSlots = async (date, equipmentId, type) => {
+    try {
+      if (!date || !equipmentId || !type) return;
+
+      const q = query(
+        collection(db, "loadData", siteId, "dailyData", date, "entries"),
+        where("equipmentType", "==", type),
+        where("equipmentId", "==", equipmentId)
+      );
+
+      const snapshot = await getDocs(q);
+
+      const slots = snapshot.docs.map(doc => doc.data().time);
+
+      setUsedSlots(slots);
+    } catch (err) {
+      console.error("Slot fetch error:", err);
+    }
+  };
+
+  const getDefaultSlot = (type) => {
+    const hour = getISTHour();
+
+    if (type === "SMPS") {
+      if (hour < 5) return "02:00";
+      if (hour < 11) return "08:00";
+      if (hour < 17) return "14:00";
+      return "20:00";
+    } else {
+      if (hour < 2) return "00:00";
+      if (hour < 6) return "04:00";
+      if (hour < 10) return "08:00";
+      if (hour < 14) return "12:00";
+      if (hour < 18) return "16:00";
+      return "20:00";
+    }
   };
 
   const location = useLocation();
@@ -78,6 +131,7 @@ const LoadEntryForm = ({ userData }) => {
     date: getCurrentDate(),   // ✅ default today
     time: getDefaultSlot(),   // ✅ current time,
 
+    // Common Fields
     voltageRY: "",
     voltageYB: "",
     voltageBR: "",
@@ -85,9 +139,7 @@ const LoadEntryForm = ({ userData }) => {
     currentR: "",
     currentY: "",
     currentB: "",
-    currentN: "",
 
-    // SMPS Input Voltage
     voltageRN: "",
     voltageYN: "",
     voltageBN: "",
@@ -97,20 +149,19 @@ const LoadEntryForm = ({ userData }) => {
     tempY: "",
     tempB: "",
 
-    // Protection
-    spdStatus: "",
-
+    // SMPS Input Voltage
     // Output
     dcVoltage: "",
     dcCurrent: "",
-
     // Fault
     faultyModules: "",
-
+    // Protection
+    spdStatus: "",
     // Status
     systemStatus: "",
 
     // UPS
+    currentN: "",
     outCurrentN: "",
     outVoltageRN: "",
     outVoltageYN: "",
@@ -265,6 +316,138 @@ const LoadEntryForm = ({ userData }) => {
     }));
   };
 
+  const validateForm = () => {
+    const errors = [];
+
+    // ✅ Common Required
+    if (!formData.date) errors.push("Date");
+    if (!formData.time) errors.push("Time Slot");
+    if (!formData.equipmentType) errors.push("Equipment Type");
+    if (!formData.equipmentId) errors.push("Equipment ID");
+
+    // =========================
+    // 🔴 SMPS Validation
+    // =========================
+    if (formData.equipmentType === "SMPS") {
+      // Input Voltage
+      if (!formData.voltageRN) errors.push("R-N Voltage");
+      if (!formData.voltageYN) errors.push("Y-N Voltage");
+      if (!formData.voltageBN) errors.push("B-N Voltage");
+
+      // Input Current
+      if (!formData.currentR) errors.push("R Current");
+      if (!formData.currentY) errors.push("Y Current");
+      if (!formData.currentB) errors.push("B Current");
+
+      // Temperature
+      if (!formData.tempR) errors.push("R Temperature");
+      if (!formData.tempY) errors.push("Y Temperature");
+      if (!formData.tempB) errors.push("B Temperature");
+
+      // Output
+      if (!formData.dcVoltage) errors.push("DC Voltage");
+      if (!formData.dcCurrent) errors.push("DC Current");
+
+      // Protection & Status
+      if (!formData.spdStatus) errors.push("SPD Status");
+      if (!formData.systemStatus) errors.push("System Status");
+      if (!formData.faultyModules) errors.push("No of Faulty Modules");
+    }
+
+    // =========================
+    // 🟡 LT Panel Validation
+    // =========================
+    if (formData.equipmentType === "LT") {
+      // Line Voltage
+      if (!formData.voltageRY) errors.push("R-Y Voltage");
+      if (!formData.voltageYB) errors.push("Y-B Voltage");
+      if (!formData.voltageBR) errors.push("B-R Voltage");
+      if (!formData.voltageRY) errors.push("R-Y Voltage");
+      if (!formData.voltageYB) errors.push("Y-B Voltage");
+      if (!formData.voltageBR) errors.push("B-R Voltage");
+
+      // Phase Current
+      if (!formData.currentR) errors.push("R Current");
+      if (!formData.currentY) errors.push("Y Current");
+      if (!formData.currentB) errors.push("B Current");
+
+      // Temperature
+      if (!formData.tempR) errors.push("R Temperature");
+      if (!formData.tempY) errors.push("Y Temperature");
+      if (!formData.tempB) errors.push("B Temperature");
+
+      if (!formData.powerFactor) errors.push("Power Factor");
+      if (formData.powerFactor > 1 || formData.powerFactor < 0) errors.push("Power Factor" + " (must be between 0 and 1)");
+      if (!formData.kwh) errors.push("kWh Reading");
+    }
+
+    // =========================
+    // 🔵 UPS Validation
+    // =========================
+    if (formData.equipmentType === "UPS") {
+      // Input Voltage
+      if (!formData.voltageRY) errors.push("Input R-Y Voltage");
+      if (!formData.voltageYB) errors.push("Input Y-B Voltage");
+      if (!formData.voltageBR) errors.push("Input B-R Voltage");
+      if (!formData.voltageRN) errors.push("Input R-N Voltage");
+      if (!formData.voltageYN) errors.push("Input Y-N Voltage");
+      if (!formData.voltageBN) errors.push("Input B-N Voltage");
+
+      // Input Current
+      if (!formData.currentR) errors.push("Input R Current");
+      if (!formData.currentY) errors.push("Input Y Current");
+      if (!formData.currentB) errors.push("Input B Current");
+      if (!formData.currentN) errors.push("Input Neutral Current");
+
+      // Temperature
+      if (!formData.tempR) errors.push("R Temperature");
+      if (!formData.tempY) errors.push("Y Temperature");
+      if (!formData.tempB) errors.push("B Temperature");
+
+      // Output Voltage
+      if (!formData.outVoltageRY) errors.push("Output R-Y Voltage");
+      if (!formData.outVoltageYB) errors.push("Output Y-B Voltage");
+      if (!formData.outVoltageBR) errors.push("Output B-R Voltage");
+      if (!formData.outVoltageRN) errors.push("Output R-N Voltage");
+      if (!formData.outVoltageYN) errors.push("Output Y-N Voltage");
+      if (!formData.outVoltageBN) errors.push("Output B-N Voltage");
+
+      // Output Current
+      if (!formData.outCurrentR) errors.push("Output R Current");
+      if (!formData.outCurrentY) errors.push("Output Y Current");
+      if (!formData.outCurrentB) errors.push("Output B Current");
+      if (!formData.outCurrentN) errors.push("Output Neutral Current");
+
+      // Power Factor
+      if (!formData.powerFactorR) errors.push("Power Factor `R` Phase");
+      if (!formData.powerFactorY) errors.push("Power Factor `Y` Phase");
+      if (!formData.powerFactorB) errors.push("Power Factor `B` Phase");
+      if (formData.powerFactorR > 1 || formData.powerFactorR < 0) errors.push("Power Factor `R` Phase" + " (must be between 0 and 1)");
+      if (formData.powerFactorY > 1 || formData.powerFactorY < 0) errors.push("Power Factor `Y` Phase" + " (must be between 0 and 1)");
+      if (formData.powerFactorB > 1 || formData.powerFactorB < 0) errors.push("Power Factor `B` Phase" + " (must be between 0 and 1)");
+
+      // Running Load
+      if (!formData.runningKWR) errors.push("Running kW (R)");
+      if (!formData.runningKWY) errors.push("Running kW (Y)");
+      if (!formData.runningKWB) errors.push("Running kW (B)");
+    }
+
+    // =========================
+    // ⚫ DG Validation
+    // =========================
+    if (formData.equipmentType === "DG") {
+      if (!formData.dgRunHours) errors.push("DG Run Hours");
+      if (!formData.fuelConsumption) errors.push("Fuel Consumption");
+    }
+
+    // =========================
+    // 👤 Technician
+    // =========================
+    if (!formData.technicianName) errors.push("Technician Name");
+
+    return errors;
+  };
+
   const handleSubmit = async () => {
     if (!siteId) {
       alert("Site not found");
@@ -276,33 +459,24 @@ const LoadEntryForm = ({ userData }) => {
       return;
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const errors = validateForm();
 
-    // const cleanData = Object.fromEntries(
-    //   Object.entries({
-    //     ...formData,
-    //     siteId,
-    //     siteName: siteName || "Unknown",
-    //     loadKW,
-    //     date: formData.date || today,
-    //     timestamp: new Date(),
-    //     uploadedBy,
-    //   }).filter(([_, v]) => v !== "" && v !== undefined)
-    // );
+    if (errors.length > 0) {
+      alert("❌ Please fill required fields:\n\n" + errors.join("\n"));
+      return;
+    }
 
     const cleanData = {
       ...formData,
       siteId,
       siteName: siteName || "Unknown",
       loadKW,
-      timestamp: new Date(),
+      timestamp: new Date(), // UTC (correct)
+      timestampIST: new Date().toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+      }),
       uploadedBy,
     };
-
-    // await addDoc(
-    //   collection(db, "loadData", siteId, "dailyData", today, "entries"),
-    //   cleanData
-    // );
 
     try {
       if (docId) {
@@ -338,6 +512,10 @@ const LoadEntryForm = ({ userData }) => {
         alert("Data Saved");
         resetFormFields();
       }
+      // ✅ Always navigate after success
+      setTimeout(() => {
+        navigate("/load-dashboard");
+      }, 100);
     } catch (err) {
       console.error("Save error:", err);
     }
@@ -360,6 +538,20 @@ const LoadEntryForm = ({ userData }) => {
   ]);
 
   useEffect(() => {
+    if (!editData) {
+      fetchUsedSlots(
+        formData.date,
+        formData.equipmentId,
+        formData.equipmentType
+      );
+    }
+  }, [
+    formData.date,
+    formData.equipmentId,
+    formData.equipmentType
+  ]);
+
+  useEffect(() => {
     if (editData) {
       setFormData((prev) => ({
         ...prev,
@@ -367,6 +559,15 @@ const LoadEntryForm = ({ userData }) => {
       }));
     }
   }, [editData]);
+
+  useEffect(() => {
+    if (!docId && formData.equipmentType) {
+      setFormData(prev => ({
+        ...prev,
+        time: getDefaultSlot(formData.equipmentType)
+      }));
+    }
+  }, [formData.equipmentType, docId]);
 
   return (
     <div className="daily-log-container">
@@ -377,7 +578,18 @@ const LoadEntryForm = ({ userData }) => {
         type="date"
         name="date"
         value={formData.date}
-        onChange={handleChange}
+        onChange={(e) => {
+          const selected = new Date(e.target.value);
+
+          const istDate = selected.toLocaleDateString("en-CA", {
+            timeZone: "Asia/Kolkata",
+          });
+
+          setFormData(prev => ({
+            ...prev,
+            date: istDate
+          }));
+        }}
         disabled={!!editData && !isAdmin}
       />
 
@@ -405,25 +617,29 @@ const LoadEntryForm = ({ userData }) => {
             <>
               <h4>SMPS Details</h4>
 
-              <select
-                name="time"
-                value={formData.time}
-                onChange={handleChange}
-                disabled={!!editData && !isAdmin}
-              >
-                <option value="">Select Time Slot</option>
-                {SMPS_TIME_SLOTS.map((slot) => (
-                  <option key={slot.value} value={slot.value}>
-                    {slot.label}
-                  </option>
-                ))}
-              </select>
-
               <select name="equipmentId" value={formData.equipmentId} onChange={handleChange}>
                 <option value="">Select SMPS</option>
                 {Array.from({ length: siteConfig.smpsCount }, (_, i) => (
                   <option key={i + 1} value={`SMPS-${i + 1}`}>
                     {`SMPS-${i + 1}`}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                name="time"
+                value={formData.time}
+                onChange={handleChange}
+                disabled={(!!editData && !isAdmin) || !formData.equipmentId}
+              >
+                <option value="">Select Time Slot</option>
+                {SMPS_TIME_SLOTS.map((slot) => (
+                  <option
+                    key={slot.value}
+                    value={slot.value}
+                    disabled={usedSlots.includes(slot.value) && !docId} // allow in edit mode
+                  >
+                    {slot.label} {usedSlots.includes(slot.value) ? " (Already Filled)" : ""}
                   </option>
                 ))}
               </select>
@@ -475,6 +691,7 @@ const LoadEntryForm = ({ userData }) => {
                   }
                 }}
                 onChange={handleChange}
+                disabled={docId && !isAdmin && !formData.technicianName}
               />
             </>
           )}
@@ -483,25 +700,29 @@ const LoadEntryForm = ({ userData }) => {
             <>
               <h4>LT Panel Details</h4>
 
-              <select
-                name="time"
-                value={formData.time}
-                onChange={handleChange}
-                disabled={!!editData && !isAdmin}
-              >
-                <option value="">Select Time Slot</option>
-                {TIME_SLOTS.map((slot) => (
-                  <option key={slot.value} value={slot.value}>
-                    {slot.label}
-                  </option>
-                ))}
-              </select>
-
               <select name="equipmentId" value={formData.equipmentId} onChange={handleChange}>
                 <option value="">Select LT Panel</option>
                 {Array.from({ length: siteConfig.ebCount }, (_, i) => (
                   <option key={i + 1} value={`LT Panel-${i + 1}`}>
                     {`LT Panel-${i + 1}`}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                name="time"
+                value={formData.time}
+                onChange={handleChange}
+                disabled={(!!editData && !isAdmin) || !formData.equipmentId}
+              >
+                <option value="">Select Time Slot</option>
+                {TIME_SLOTS.map((slot) => (
+                  <option
+                    key={slot.value}
+                    value={slot.value}
+                    disabled={usedSlots.includes(slot.value) && !docId}
+                  >
+                    {slot.label} {usedSlots.includes(slot.value) ? " (Already Filled)" : ""}
                   </option>
                 ))}
               </select>
@@ -544,6 +765,7 @@ const LoadEntryForm = ({ userData }) => {
                     }));
                   }
                 }}
+                disabled={docId && !isAdmin && !formData.technicianName}
                 onChange={handleChange}
               />
             </>
@@ -553,25 +775,29 @@ const LoadEntryForm = ({ userData }) => {
             <>
               <h4>UPS Details</h4>
 
-              <select
-                name="time"
-                value={formData.time}
-                onChange={handleChange}
-                disabled={!!editData && !isAdmin}
-              >
-                <option value="">Select Time Slot</option>
-                {TIME_SLOTS.map((slot) => (
-                  <option key={slot.value} value={slot.value}>
-                    {slot.label}
-                  </option>
-                ))}
-              </select>
-
               <select name="equipmentId" value={formData.equipmentId} onChange={handleChange}>
                 <option value="">Select UPS</option>
                 {Array.from({ length: siteConfig.upsCount }, (_, i) => (
                   <option key={i + 1} value={`UPS-${i + 1}`}>
                     {`UPS-${i + 1}`}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                name="time"
+                value={formData.time}
+                onChange={handleChange}
+                disabled={(!!editData && !isAdmin) || !formData.equipmentId}
+              >
+                <option value="">Select Time Slot</option>
+                {TIME_SLOTS.map((slot) => (
+                  <option
+                    key={slot.value}
+                    value={slot.value}
+                    disabled={usedSlots.includes(slot.value) && !docId}
+                  >
+                    {slot.label} {usedSlots.includes(slot.value) ? " (Already Filled)" : ""}
                   </option>
                 ))}
               </select>
@@ -634,6 +860,7 @@ const LoadEntryForm = ({ userData }) => {
                   }
                 }}
                 onChange={handleChange}
+                disabled={docId && !isAdmin && !formData.technicianName}
               />
             </>
           )}

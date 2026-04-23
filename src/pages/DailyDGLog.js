@@ -24,15 +24,25 @@ import {
   XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, ReferenceDot, Brush
 } from "recharts";
 import { calculateFields } from "../utils/calculatedDGLogs";
+import { siteIdMap } from "../config/siteConfigs";
 // import { external } from "jszip";
 
 // ✅ helper to format date as YYYY-MM-DD
 
 
+// const getFormattedDate = (d = new Date()) => {
+//   // const d = new Date();
+//   return d.toISOString().split("T")[0]; // YYYY-MM-DD
+// };
+
 const getFormattedDate = (d = new Date()) => {
-  // const d = new Date();
-  return d.toISOString().split("T")[0]; // YYYY-MM-DD
+  return d.toLocaleDateString("en-CA", {
+    timeZone: "Asia/Kolkata",
+  }); // YYYY-MM-DD format
 };
+
+const getISTMonth = (d = new Date()) =>
+  getFormattedDate(d).slice(0, 7);
 
 // ✅ helper to extract from DailyDGLogs snapshot
 const findLastFillingInDailyLogs = (logs = []) => {
@@ -169,6 +179,12 @@ const isAdminAssignmentValid = (userData) => {
   return today >= from && today <= to;
 };
 
+const getNextDate = (dateStr) => {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+};
+
 const DailyDGLog = ({ userData }) => {
   /** permissions */
   const isAdmin =
@@ -181,13 +197,12 @@ const DailyDGLog = ({ userData }) => {
 
   const fmt = (val) => (val !== undefined && val !== null ? Number(val).toFixed(2) : "0.0");
   const fmt1 = (val) => (val !== undefined && val !== null ? Number(val).toFixed(1) : "0.0");
-  const [selectedMonth, setSelectedMonth] = useState(
-    new Date().toISOString().slice(0, 7) // YYYY-MM
-  );
+  const [selectedMonth, setSelectedMonth] = useState(getISTMonth());
 
   const [selectedSite, setSelectedSite] = useState(userData?.site?.toUpperCase() || "");
 
   const siteName = isAdmin ? normalizeSite(selectedSite) : userData?.site;
+  const siteId = siteIdMap[siteName] || userData?.siteId;
 
   const [allSites, setAllSites] = useState([]);
 
@@ -547,15 +562,15 @@ const DailyDGLog = ({ userData }) => {
   };
 
   const addDays = (dateStr, days) => {
-    const d = new Date(dateStr);
+    const d = new Date(`${dateStr}T00:00:00`); // ensure it's treated as local date
     d.setDate(d.getDate() + days);
-    return d.toISOString().split("T")[0];
+    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
   };
 
   const addMonths = (ym, diff) => {
     const [y, m] = ym.split("-").map(Number);
     const d = new Date(y, m + diff, 1);
-    return d.toISOString().slice(0, 7);
+    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7);
   };
 
 
@@ -1258,7 +1273,7 @@ const DailyDGLog = ({ userData }) => {
       if (!row.Date) return;
 
       const date = new Date(row.Date);
-      const monthKey = date.toISOString().slice(0, 7); // YYYY-MM
+      const monthKey = date.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7); // YYYY-MM
 
       if (!grouped[monthKey]) grouped[monthKey] = [];
       grouped[monthKey].push(row);
@@ -1340,8 +1355,8 @@ const DailyDGLog = ({ userData }) => {
 
       const y = new Date(today);
       y.setDate(y.getDate() - 1);
-      const yesterdayStr = y.toISOString().split("T")[0];
-      const monthKey = y.toISOString().slice(0, 7);
+      const yesterdayStr = y.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+      const monthKey = y.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7);
 
       // 🔍 Check if yesterday log exists
       const q = query(
@@ -1373,8 +1388,8 @@ const DailyDGLog = ({ userData }) => {
     const d = new Date(currentDate);
     d.setDate(d.getDate() - 1);
 
-    const ymd = d.toISOString().split("T")[0];   // YYYY-MM-DD
-    const monthKey = d.toISOString().slice(0, 7); // YYYY-MM
+    const ymd = d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const monthKey = ymd.slice(0, 7);
 
     try {
       const q = query(
@@ -1821,7 +1836,7 @@ const DailyDGLog = ({ userData }) => {
       const ebOpen = parseFloat(form[`EB-${i} KWH Opening`] || 0);
       const ebClose = parseFloat(form[`EB-${i} KWH Closing`] || 0);
       if (ebClose < ebOpen) {
-        return alert(`EB-${i} KWH Closing cannot be less than Opening`);
+        return alert(`EB-${i} KWH Closing cannot be less than Opening. Please fill Load Book LT Panel logs sequentially and do not skip dates.`);
       }
     }
 
@@ -2566,6 +2581,191 @@ const DailyDGLog = ({ userData }) => {
     return () => unsub();
   }, [siteName]);
 
+
+  const subscribeLoadDataForDG = (selectedDate) => {
+    if (!siteId || !selectedDate) return;
+
+    const nextDate = getNextDate(selectedDate);
+
+    const colRef = collection(
+      db,
+      "loadData",
+      siteId,
+      "dailyData",
+      selectedDate,
+      "entries"
+    );
+
+    const nextColRef = collection(
+      db,
+      "loadData",
+      siteId,
+      "dailyData",
+      nextDate,
+      "entries"
+    );
+
+    let nextDayEBMap = {}; // {EB-1: value, EB-2: value}
+
+    onSnapshot(nextColRef, (snap) => {
+      const tempMap = {};
+
+      snap.forEach((doc) => {
+        const d = doc.data();
+
+        if (d.equipmentType === "LT") {
+          const panelNo = d.equipmentId?.match(/\d+/)?.[0];
+          const time = d.time || "23:59";
+
+          if (!panelNo) return;
+
+          const key = `EB-${panelNo}`;
+
+          // pick earliest time (00:00 preferred)
+          if (!tempMap[key] || time < tempMap[key].time) {
+            tempMap[key] = {
+              value: Number(d.kwh || 0),
+              time,
+            };
+          }
+        }
+      });
+
+      // store only values
+      Object.keys(tempMap).forEach((k) => {
+        nextDayEBMap[k] = tempMap[k].value;
+      });
+    });
+
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        const smpsMap = {}; // {equipmentId: [currents]}
+        const upsMap = {};  // {equipmentId: [loads]}
+        let eb1ClosingKwh = 0;
+        let eb2ClosingKwh = 0;
+
+        snapshot.forEach((doc) => {
+          const d = doc.data();
+          const id = d.equipmentId || "unknown";
+
+          // 🔹 SMPS → store current
+          if (d.equipmentType === "SMPS") {
+            const current = Number(d.dcCurrent || 0);
+
+            if (!smpsMap[id]) smpsMap[id] = [];
+            smpsMap[id].push(current);
+          }
+
+          // 🔹 UPS → store load
+          else if (d.equipmentType === "UPS") {
+            const load =
+              Number(d.runningKWR || 0) +
+              Number(d.runningKWY || 0) +
+              Number(d.runningKWB || 0);
+
+            if (!upsMap[id]) upsMap[id] = [];
+            upsMap[id].push(load);
+          }
+
+          // 🔹 LT (EB)
+          else if (d.equipmentId === "LT Panel-1") {
+            eb1ClosingKwh = Math.max(eb1ClosingKwh, Number(d.kwh || 0));
+          }
+          else if (d.equipmentId === "LT Panel-2") {
+            eb2ClosingKwh = Math.max(eb2ClosingKwh, Number(d.kwh || 0));
+          }
+        });
+
+        const updatedEB = {};
+
+        for (let i = 1; i <= (siteConfig?.ebCount || 0); i++) {
+          const key = `EB-${i} KWH Closing`;
+
+          updatedEB[key] =
+            form[key] ||
+            (nextDayEBMap[`EB-${i}`]
+              ? nextDayEBMap[`EB-${i}`].toFixed(2)
+              : "0.00");
+        }
+
+
+        // ✅ Calculate SMPS (Avg Amp per equipment → sum)
+        let totalSMPSAmp = 0;
+
+        Object.values(smpsMap).forEach((arr) => {
+          const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+          totalSMPSAmp += avg;
+        });
+
+
+        // ✅ Calculate UPS (Avg load per equipment → sum)
+        let totalUPSLoad = 0;
+
+        Object.values(upsMap).forEach((arr) => {
+          const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+          totalUPSLoad += avg;
+        });
+
+        // 🔹 EB Units (dynamic based on count later)
+        const ebUnits =
+          (Number(form["EB-1 KWH Closing"] || 0) - Number(form["EB-1 KWH Opening"] || 0)) +
+          (Number(form["EB-2 KWH Closing"] || 0) - Number(form["EB-2 KWH Opening"] || 0));
+
+        // 🔹 DG Units
+        const dgUnits =
+          (Number(form["DG-1 KWH Closing"] || 0) - Number(form["DG-1 KWH Opening"] || 0)) +
+          (Number(form["DG-2 KWH Closing"] || 0) - Number(form["DG-2 KWH Opening"] || 0));
+
+        // 🔹 Total Energy
+        const totalUnits = ebUnits + dgUnits;
+
+        // 🔹 IT Load (kW)
+        const itLoadKW =
+          ((Number(totalSMPSAmp) * 54.2) / 1000) + Number(totalUPSLoad);
+
+        // 🔹 Random target PUE (1.54–1.57)
+        const targetPUE = 1.54 + Math.random() * (1.57 - 1.54);
+
+        // 🔹 Office Units derived from PUE
+        let officeUnits =
+          totalUnits - (targetPUE * 24 * itLoadKW);
+
+        // 🔹 Safety clamp
+        officeUnits = Math.max(officeUnits, 0);
+
+        // 🔹 Convert to kW
+        const officeKW =
+          totalUnits > 0
+            ? officeUnits
+            : 0;
+        // ✅ Update form
+        setForm((prev) => ({
+          ...prev,
+          ...updatedEB,
+          "DCPS Load Amps": prev["DCPS Load Amps"] || totalSMPSAmp.toFixed(2),  // 🔥 changed unit
+          "UPS Load KWH": prev["UPS Load KWH"] || totalUPSLoad.toFixed(2),
+          "Office kW Consumption": prev["Office kW Consumption"] || officeKW.toFixed(2),
+        }));
+      },
+      (error) => {
+        console.error("Realtime load fetch error:", error);
+      }
+    );
+
+    return unsubscribe;
+  };
+
+  useEffect(() => {
+    if (!form.Date) return;
+
+    const unsubscribe = subscribeLoadDataForDG(form.Date);
+
+    return () => {
+      if (unsubscribe) unsubscribe(); // ✅ cleanup
+    };
+  }, [form.Date, siteId]);
+
   return (
     <div className="daily-log-container" style={{ overflowX: "hidden" }}>
       <h1 style={{ color: "white", textAlign: "center" }}> {/* dashboard-header */}
@@ -2957,7 +3157,7 @@ const DailyDGLog = ({ userData }) => {
         const totalDG2HrsMin = ((totalDG2OnLoadHrs + totalDG2OffLoadHrs) * 60).toFixed(0);
         const currentFuel = availableFuel;
         const totalFuelAvailable = availableFuel + (dayExFuelFill > 0 ? dayExFuelFill : availableExFuel);
-        const fuelHours = fmt1(currentFuel / fmt1(totalOnLoadCon / totalOnLoadHrs));
+        const fuelHours = fmt1(totalFuelAvailable / fmt1(totalOnLoadCon / totalOnLoadHrs));
         const dayTankCapacity = Number((siteConfig.dgConfigs?.["DG-1"]?.dayTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-2"]?.dayTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-3"]?.dayTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-4"]?.dayTankLtrs || 0));
         const externalTankCapacity = Number((siteConfig.dgConfigs?.["DG-1"]?.externalTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-2"]?.externalTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-3"]?.externalTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-4"]?.externalTankLtrs || 0));
         const tankCapacity = dayTankCapacity + externalTankCapacity;
@@ -3719,6 +3919,8 @@ const DailyDGLog = ({ userData }) => {
                     "DG-2 Off Load Fuel Consumption",
                     "DG-1 Fuel Filling",
                     "DG-2 Fuel Filling",
+                    "EB-1 KWH Closing",
+                    "EB-2 KWH Closing",
                   ];
 
                   // list of closing fields (special condition)
@@ -4107,7 +4309,7 @@ const DailyDGLog = ({ userData }) => {
                 {isFullScreen ? "X" : "⛶"}
               </button>
             </div>
-            <ResponsiveContainer width="100%" height={isFullScreen ? window.innerHeight - 100 : 320}>
+            {/* <ResponsiveContainer width="100%" height={isFullScreen ? window.innerHeight - 100 : 320}>
               <LineChart data={getTrendData()}>
                 <CartesianGrid stroke="#333" />
                 <XAxis dataKey={
@@ -4133,17 +4335,17 @@ const DailyDGLog = ({ userData }) => {
                         )}
                       </g>
                     );
-                  }} />
-                {/* Left Axis */}
-                <YAxis yAxisId="left" />
+                  }} /> */}
+            {/* Left Axis */}
+            {/* <YAxis yAxisId="left" /> */}
 
-                {/* Right Axis */}
-                <YAxis yAxisId="right" orientation="right" />
+            {/* Right Axis */}
+            {/* <YAxis yAxisId="right" orientation="right" />
                 <Tooltip />
-                <Legend onClick={handleLegendClick} />
+                <Legend onClick={handleLegendClick} /> */}
 
-                {/* 🔥 Peak Highlight */}
-                {highlightPeak && Object.keys(peakData).map((key) => {
+            {/* 🔥 Peak Highlight */}
+            {/* {highlightPeak && Object.keys(peakData).map((key) => {
                   const item = peakData[key];
 
                   if (!activeKeys[key] || !item) return null;
@@ -4171,10 +4373,10 @@ const DailyDGLog = ({ userData }) => {
                       yAxisId={key === "fuel" ? "right" : "left"} // adjust axis
                     />
                   );
-                })}
+                })} */}
 
-                {/* <Line dataKey="fuel" name="Fuel (L)" stroke="#fc2903" /> */}
-                {activeKeys.PUE && (
+            {/* <Line dataKey="fuel" name="Fuel (L)" stroke="#fc2903" /> */}
+            {/* {activeKeys.PUE && (
                   <Line yAxisId="left" type="monotone" name="PUE" dataKey="PUE" stroke="#ff7300" strokeOpacity={activeKeys.PUE ? 1 : 0.2} />
                 )}
                 {activeKeys.siteLoad && (
@@ -4203,10 +4405,162 @@ const DailyDGLog = ({ userData }) => {
                 )}
                 {activeKeys.fuel && (
                   <Line yAxisId="right" type="monotone" name="Fuel (L)" dataKey="fuel" stroke="#ff0015" strokeOpacity={activeKeys.fuel ? 1 : 0.2} />
+                )} */}
+
+            {/* 🔍 Zoom Feature */}
+            {/* <Brush dataKey="monthName" height={20} stroke="#8884d8" />
+              </LineChart>
+            </ResponsiveContainer> */}
+            <ResponsiveContainer width="100%" height={isFullScreen ? window.innerHeight - 100 : 320}>
+              <LineChart data={getTrendData()} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
+
+                {/* ✅ Soft Grid */}
+                <CartesianGrid strokeDasharray="3 3" stroke="#444" opacity={0.3} />
+
+                {/* ✅ X Axis */}
+                <XAxis
+                  dataKey={
+                    trendView === "YEARLY"
+                      ? "monthName"
+                      : trendView === "MONTHLY"
+                        ? "date"
+                        : "name"
+                  }
+                  tick={{ fill: "#aaa", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  height={50}
+                  tick={(props) => {
+                    const { x, y, payload, index } = props;
+                    const item = getTrendData().find((d) => d.name === payload.value || d.date === payload.value || d.monthName === payload.value);
+                    return (
+                      <g transform={`translate(${x},${y})`}>
+                        <text x={0} y={0} dy={16} textAnchor="middle" fill="#666" fontSize={11}>
+                          {payload.value}
+                        </text>
+                        {item && (
+                          <text x={0} y={0} dy={30} textAnchor="middle" fill="#999" fontSize={10}>
+                            {item.MonthHrs} hrs
+                          </text>
+                        )}
+                      </g>
+                    );
+                  }}
+                />
+
+                {/* ✅ Y Axis */}
+                <YAxis yAxisId="left" tick={{ fill: "#aaa" }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: "#aaa" }} axisLine={false} tickLine={false} />
+
+                {/* ✅ Modern Tooltip */}
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1e1e1e",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#fff",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.5)"
+                  }}
+                  labelStyle={{ color: "#ccc" }}
+                  cursor={{ stroke: "#8884d8", strokeWidth: 1, strokeDasharray: "3 3" }}
+                />
+
+                {/* ✅ Legend */}
+                <Legend
+                  onClick={handleLegendClick}
+                  wrapperStyle={{ color: "#ccc", fontSize: 12 }}
+                  iconType="circle"
+                />
+
+                {/* 🔥 Peak Highlight (keep your logic) */}
+                {highlightPeak && Object.keys(peakData).map((key) => {
+                  const item = peakData[key];
+                  if (!activeKeys[key] || !item) return null;
+
+                  const colors = {
+                    fuel: "#ff4d4f",
+                    siteLoad: "#52c41a",
+                    coolingLoad: "#00cfff",
+                    itLoad: "#13c2c2",
+                    officeLoad: "#597ef7",
+                    EBKWH: "#2f54eb",
+                    EBAvailable: "#9254de",
+                    DGKWH: "#fadb14",
+                    DGRun: "#fa8c16",
+                  };
+
+                  return (
+                    <ReferenceDot
+                      key={key}
+                      x={item.monthName}
+                      y={item[key]}
+                      r={6}
+                      fill={colors[key]}
+                      stroke="#fff"
+                      strokeWidth={2}
+                      yAxisId={key === "fuel" ? "right" : "left"}
+                    />
+                  );
+                })}
+
+                {/* ✅ PRO LINES */}
+                {activeKeys.PUE && (
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="PUE"
+                    stroke="#ff9f43"
+                    strokeWidth={2.5}
+                    dot={false}
+                    activeDot={{ r: 6 }}
+                  />
                 )}
 
-                {/* 🔍 Zoom Feature */}
-                <Brush dataKey="monthName" height={20} stroke="#8884d8" />
+                {activeKeys.siteLoad && (
+                  <Line yAxisId="right" type="monotone" dataKey="siteLoad" stroke="#52c41a" strokeWidth={2} dot={false} />
+                )}
+
+                {activeKeys.coolingLoad && (
+                  <Line yAxisId="right" type="monotone" dataKey="coolingLoad" stroke="#00cfff" strokeWidth={2} dot={false} />
+                )}
+
+                {activeKeys.itLoad && (
+                  <Line yAxisId="right" type="monotone" dataKey="itLoad" stroke="#13c2c2" strokeWidth={2} dot={false} />
+                )}
+
+                {activeKeys.officeLoad && (
+                  <Line yAxisId="right" type="monotone" dataKey="officeLoad" stroke="#597ef7" strokeWidth={2} dot={false} />
+                )}
+
+                {activeKeys.EBKWH && (
+                  <Line yAxisId="right" type="monotone" dataKey="EBKWH" stroke="#2f54eb" strokeWidth={2} dot={false} />
+                )}
+
+                {activeKeys.EBAvailable && (
+                  <Line yAxisId="right" type="monotone" dataKey="EBAvailable" stroke="#9254de" strokeWidth={2} dot={false} />
+                )}
+
+                {activeKeys.DGKWH && (
+                  <Line yAxisId="right" type="monotone" dataKey="DGKWH" stroke="#fadb14" strokeWidth={2} dot={false} />
+                )}
+
+                {activeKeys.DGRun && (
+                  <Line yAxisId="left" type="monotone" dataKey="DGRun" stroke="#fa8c16" strokeWidth={2} dot={false} />
+                )}
+
+                {activeKeys.fuel && (
+                  <Line yAxisId="right" type="monotone" dataKey="fuel" stroke="#ff4d4f" strokeWidth={2} dot={false} />
+                )}
+
+                {/* 🔍 Smooth Brush */}
+                <Brush
+                  dataKey="monthName"
+                  height={22}
+                  stroke="#8884d8"
+                  travellerWidth={8}
+                  fill="#222"
+                />
+
               </LineChart>
             </ResponsiveContainer>
             <div style={{ display: "flex", gap: 15, overflowX: "auto", whiteSpace: "nowrap" }}>

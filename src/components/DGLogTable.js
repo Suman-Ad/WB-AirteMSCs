@@ -1,6 +1,6 @@
 // src/components/DGLogTable.js
 import React, { useState, useEffect, useRef } from "react";
-import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc, query, limit, orderBy, addDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc, query, limit, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { useLocation, useNavigate } from "react-router-dom";
 import { format, set, subDays } from "date-fns";
@@ -27,9 +27,25 @@ const DGLogTable = ({ userData }) => {
     DG2_NoLoad: 0,
   });
   const Navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().slice(0, 10) // default today
-  );
+
+  const getISTDate = () => {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+
+    const parts = formatter.formatToParts(now);
+    const year = parts.find(p => p.type === "year").value;
+    const month = parts.find(p => p.type === "month").value;
+    const day = parts.find(p => p.type === "day").value;
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState(getISTDate());
 
   // const siteName = userData?.site;
 
@@ -132,7 +148,7 @@ const DGLogTable = ({ userData }) => {
 
   const fetchLogs = async () => {
     try {
-      const dateObj = new Date(selectedDate);
+      const dateObj = new Date(selectedDate + "T00:00:00");
       const monthKey =
         dateObj.toLocaleString("en-US", { month: "short" }) +
         "-" +
@@ -159,7 +175,7 @@ const DGLogTable = ({ userData }) => {
 
   const fetchMonthlySummary = async () => {
     try {
-      const dateObj = new Date(selectedDate);
+      const dateObj = new Date(selectedDate + "T00:00:00");
       const monthKey =
         dateObj.toLocaleString("en-US", { month: "short" }) +
         "-" +
@@ -220,7 +236,7 @@ const DGLogTable = ({ userData }) => {
     if (!window.confirm("Are you sure you want to delete this log?")) return;
 
     try {
-      const dateObj = new Date(selectedDate);
+      const dateObj = new Date(selectedDate + "T00:00:00");
       const monthKey =
         dateObj.toLocaleString("en-US", { month: "short" }) +
         "-" +
@@ -280,7 +296,7 @@ const DGLogTable = ({ userData }) => {
   // Fetches logs for the main table view (for the selected date)
   const fetchLogsForSelectedDate = async () => {
     try {
-      const dateObj = new Date(selectedDate);
+      const dateObj = new Date(selectedDate + "T00:00:00");
       const monthKey = format(dateObj, "MMM-yyyy");
       const runsCollectionRef = collection(db, "dgLogs", siteName, monthKey, selectedDate, "runs");
       const snapshot = await getDocs(runsCollectionRef);
@@ -303,7 +319,7 @@ const DGLogTable = ({ userData }) => {
 
     try {
       // 1. Determine yesterday's date based on the selected date in the UI
-      const yesterday = subDays(new Date(selectedDate), 1);
+      const yesterday = subDays(new Date(selectedDate + "T00:00:00"), 1);
       const monthKey = format(yesterday, "MMM-yyyy");
       const yesterdayStr = format(yesterday, "yyyy-MM-dd");
 
@@ -325,7 +341,7 @@ const DGLogTable = ({ userData }) => {
 
       // 4. Construct the preview data object
       const previewData = {
-        "📊 DHR Date": format(new Date(selectedDate), "dd.MM.yyyy"),
+        "📊 DHR Date": format(new Date(selectedDate + "T00:00:00"), "dd.MM.yyyy"),
         "🏙️ Region": userData?.region,
         "🔄 Circle": userData?.circle,
         "📍 Site Name": siteName,
@@ -371,7 +387,7 @@ const DGLogTable = ({ userData }) => {
         return;
       }
       setDownloading(true);
-      const dateObj = new Date(selectedDate);
+      const dateObj = new Date(selectedDate + "T00:00:00");
       const monthKey = format(dateObj, "MMM-yyyy");
 
       const monthRef = collection(db, "dgLogs", siteName, monthKey);
@@ -738,7 +754,7 @@ const DGLogTable = ({ userData }) => {
         kwhMeterStart: Number(row["Opening kWH Reading"]) || 0, // Assuming kWH Reading is the end reading. Adjust if needed.
         kwhMeterEnd: Number(row["Closing kWH Reading"]) || 0, // Assuming kWH Reading is the end reading. Adjust if needed.
         kWHReading: (Number(row["Closing kWH Reading"]) - Number(row["Opening kWH Reading"])) || 0,
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
         createdBy: uploadedBy,
         uploadSource: "EXCEL",
       });

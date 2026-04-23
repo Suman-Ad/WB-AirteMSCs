@@ -14,14 +14,26 @@ import HSDPrintTemplate from "../components/HSDPrintTemplate";
 
 // Helper to format today as YYYY-MM-DD
 const getTodayDate = () => {
-    const d = new Date();
-    return d.toISOString().split("T")[0];
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    });
+
+    const parts = formatter.formatToParts(now);
+    const year = parts.find(p => p.type === "year").value;
+    const month = parts.find(p => p.type === "month").value;
+    const day = parts.find(p => p.type === "day").value;
+
+    return `${year}-${month}-${day}`;
 };
 
 // Normalize site name to match Firestore keys (e.g., "SiteA" → "Sitea")
 const normalizeSite = (site) => {
-  if (!site) return "";
-  return site.charAt(0) + site.slice(1).toLowerCase();
+    if (!site) return "";
+    return site.charAt(0) + site.slice(1).toLowerCase();
 };
 
 const DGLogForm = ({ userData }) => {
@@ -1116,7 +1128,7 @@ const DGLogForm = ({ userData }) => {
                             required
                         />
                     </label>)}
-                
+
                 {form.remarks === "Fuel Filling Only" && (
                     <label className="form-label">External Tank Fuel Filling (Liters):
                         <span style={{ fontSize: "10px", color: "yellow" }}>(e.g.:- Skip it('0') if Fuel not fill)</span>

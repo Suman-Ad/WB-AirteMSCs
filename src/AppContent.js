@@ -550,7 +550,7 @@ export default function AppContent() {
                     </RoleProtectedRoute>} />
 
                 {/* Fallback */}
-                <Route path="/" element={<Navigate to="/daily-dg-log-editor" />} />
+                <Route path="/" element={<Navigate to="/all-sites-dg-logs" />} />
                 <Route path="*" element={<Navigate to="/daily-dg-log-editor" />} />
 
                 {/* {DashboardWrapper()} */}
