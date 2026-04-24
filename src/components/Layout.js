@@ -12,7 +12,7 @@ import { db } from "../firebase";
 import { useRef } from "react";
 import Modal from "./Modal";
 import AsansolOperationSimulator from "./SOP/AsansolOperationSimulator";
-
+import LiveClockWeather from "./LiveClockWeather";
 
 // Fetch today's shift
 export async function getTodayDuty(siteId, uid) {
@@ -999,6 +999,7 @@ const Layout = ({ userData, children }) => {
 
               </div>
 
+
               <p className="dashboard-subinfo">
                 <strong>🏢{userData?.site || "All"}</strong>
                 |&nbsp;<strong>🆔{userData.siteId || "All"}</strong>
@@ -1042,6 +1043,11 @@ const Layout = ({ userData, children }) => {
                     )}
                   </strong>
                 )}
+                {/* |&nbsp;{isMobile && (
+                  <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+                    <LiveClockWeather />
+                  </p>
+                )} */}
                 <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
                   {siteConfig?.dgCount > 0 && !isMobile && (
                     <div style={{ display: "flex", gap: "4px", marginTop: "2px", justifyContent: "center", alignItems: "center" }}>
@@ -1348,10 +1354,20 @@ const Layout = ({ userData, children }) => {
                   </button>
                 </p>
               </p>
-              <small style={{ fontSize: "9px", color: "#94a3b8" }}>
-                <b>{loadingPower ? "Loading..." : `Updated By: ${updatedByName} on ${updatedAt ? updatedAt.toLocaleString() : "N/A"} Site on "${powerSource}" Source (Live) `}</b>
-              </small>
+              {!isMobile && (
+                <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+
+                  <LiveClockWeather />
+
+                  {/* existing content */}
+                  <small style={{ fontSize: "9px", color: "#94a3b8" }}>
+
+                    <b>{loadingPower ? "Loading..." : `Updated By: ${updatedByName} on ${updatedAt ? updatedAt.toLocaleString() : "N/A"} Site on "${powerSource}" Source (Live) `}</b>
+                  </small>
+                </p>
+              )}
             </header>
+
 
           </div>
         </div>
@@ -1518,7 +1534,7 @@ const Layout = ({ userData, children }) => {
               </div>
             </>
           )}
-          <h4>© 2025 Crash Algo. All rights reserved. Version: <span onClick={() => userData && userData.email === ( "crash.algo@gmail.com" || "admin@crashalgo.com") && handleEditVersion()} style={{ textDecoration: "underline", cursor: "pointer" }}>{lastHandledVersion}</span></h4>
+          <h4>© 2025 Crash Algo. All rights reserved. Version: <span onClick={() => userData && userData.email === ("crash.algo@gmail.com" || "admin@crashalgo.com") && handleEditVersion()} style={{ textDecoration: "underline", cursor: "pointer" }}>{lastHandledVersion}</span></h4>
           <h4 onClick={() => navigate("/vendor-dashboard")} style={{ textDecoration: "underline", cursor: "pointer" }}>
             Vendor Escalation Matrix
           </h4>

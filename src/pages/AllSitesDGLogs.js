@@ -60,12 +60,12 @@ const AllSitesDGLogs = ({ userData }) => {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    const [isUltraWide, setIsUltraWide] = useState(window.innerWidth > 1200);
+    const [isUltraWide, setIsUltraWide] = useState(window.innerWidth > 1400);
 
     useEffect(() => {
         const handleResize = () => {
             setIsLargeScreen(window.innerWidth > 512);
-            setIsUltraWide(window.innerWidth > 1200); // ✅ new
+            setIsUltraWide(window.innerWidth > 1400); // ✅ new
         };
 
         window.addEventListener("resize", handleResize);
@@ -1001,7 +1001,7 @@ const AllSitesDGLogs = ({ userData }) => {
 
                         <button
                             style={{
-                                background: collaps[site] ? "#6fb5ca7c" : powerSource === "DG" ? "#dc2626" : "",
+                                background: powerSource === "DG" && collaps[site] ? "#df5858cc" : collaps[site] ? "#6fb5ca7c" : "",
                                 width: collaps[site] ? "100%" : "100%",
 
                             }}
@@ -1009,7 +1009,7 @@ const AllSitesDGLogs = ({ userData }) => {
                         >
                             <strong
                                 style={{
-                                    background: collaps[site] ? "" : "#7ca9e49d",
+                                    background: collaps[site] ? "" : "#e48c7c9d",
                                     padding: collaps[site] ? "" : "10px 10px",
                                     borderRadius: "5px",
                                     // height: "100%",
@@ -1017,7 +1017,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                 }}
                             >
                                 {collaps[site] ?
-                                    <h2 style={{ color: powerSource == "DG" ? "RED" : "", fontWeight: "bold", fontSize: isUltraWide ? "" : "18px" }}>
+                                    <h2 style={{ color: powerSource == "DG" ? "red" : "", fontWeight: "bold", fontSize: isUltraWide ? "" : "18px" }}>
                                         {site} MSC ▶
                                         <span
                                             style={{

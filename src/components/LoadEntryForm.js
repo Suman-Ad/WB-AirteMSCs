@@ -448,21 +448,41 @@ const LoadEntryForm = ({ userData }) => {
     return errors;
   };
 
+  const checkDuplicate = async () => {
+    const q = query(
+      collection(db, "loadData", siteId, "dailyData", formData.date, "entries"),
+      where("equipmentType", "==", formData.equipmentType),
+      where("equipmentId", "==", formData.equipmentId),
+      where("time", "==", formData.time)
+    );
+
+    const snapshot = await getDocs(q);
+
+    // If editing, ignore current doc
+    if (docId) {
+      return snapshot.docs.some(doc => doc.id !== docId);
+    }
+
+    return !snapshot.empty;
+  };
+
   const handleSubmit = async () => {
     if (!siteId) {
       alert("Site not found");
       return;
     }
 
-    if (!formData.equipmentType) {
-      alert("Select Equipment Type");
+    const errors = validateForm();
+    if (errors.length > 0) {
+      alert("❌ Please fill required fields:\n\n" + errors.join("\n"));
       return;
     }
 
-    const errors = validateForm();
+    // ✅ CHECK DUPLICATE
+    const isDuplicate = await checkDuplicate();
 
-    if (errors.length > 0) {
-      alert("❌ Please fill required fields:\n\n" + errors.join("\n"));
+    if (isDuplicate) {
+      alert("❌ Duplicate Entry! Already exists for same Date + Time + Equipment.");
       return;
     }
 
@@ -471,7 +491,7 @@ const LoadEntryForm = ({ userData }) => {
       siteId,
       siteName: siteName || "Unknown",
       loadKW,
-      timestamp: new Date(), // UTC (correct)
+      timestamp: new Date(),
       timestampIST: new Date().toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
       }),
@@ -480,7 +500,6 @@ const LoadEntryForm = ({ userData }) => {
 
     try {
       if (docId) {
-        // ✏️ UPDATE
         await updateDoc(
           doc(
             db,
@@ -493,10 +512,8 @@ const LoadEntryForm = ({ userData }) => {
           ),
           cleanData
         );
-
         alert("Data Updated");
       } else {
-        // ➕ ADD
         await addDoc(
           collection(
             db,
@@ -508,14 +525,11 @@ const LoadEntryForm = ({ userData }) => {
           ),
           cleanData
         );
-
         alert("Data Saved");
         resetFormFields();
       }
-      // ✅ Always navigate after success
-      setTimeout(() => {
-        navigate("/load-dashboard");
-      }, 100);
+
+      navigate("/load-dashboard");
     } catch (err) {
       console.error("Save error:", err);
     }
