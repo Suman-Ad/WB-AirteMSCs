@@ -156,7 +156,7 @@ const Layout = ({ userData, children }) => {
 
   // For Show Simulator
   const [showSimulator, setShowSimulator] = useState(false);
-  const [simMinimized, setSimMinimized] = useState(false);
+  const [simMinimized, setSimMinimized] = useState(true);
   const prevPowerSourceRef = useRef(null);
 
   const [unaddCount, setUnaddCount] = useState(0);
@@ -194,7 +194,7 @@ const Layout = ({ userData, children }) => {
       prevPowerSourceRef.current !== powerSource
     ) {
       setShowSimulator(powerSource === "DG" ? true : false);
-      setSimMinimized(powerSource === "EB" ? true : false); // open full on change
+      setSimMinimized(powerSource === "DG" ? true : false); // open full on change
     }
 
     prevPowerSourceRef.current = powerSource;

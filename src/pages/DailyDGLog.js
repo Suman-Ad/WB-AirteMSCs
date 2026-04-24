@@ -2773,7 +2773,7 @@ const DailyDGLog = ({ userData }) => {
           ☣️ Daily Energy Log Book
         </strong>
       </h1>
-      <h2
+      {/* <h2
         className={`month ${formatMonthName(selectedMonth)}`}
         style={{ cursor: "pointer", textAlign: "center" }}
         onClick={() => navigate("/all-sites-dg-logs",
@@ -2782,7 +2782,7 @@ const DailyDGLog = ({ userData }) => {
         <b style={{ textDecoration: 'underline dotted blue' }}>
           🖥️ All Sites Status Logs ⭆
         </b>
-      </h2>
+      </h2> */}
       <p>
         {isAdmin && (
           <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", paddingBottom: "20px" }}>
