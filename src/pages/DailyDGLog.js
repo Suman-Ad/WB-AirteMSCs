@@ -1695,18 +1695,18 @@ const DailyDGLog = ({ userData }) => {
   //   setForm((prev) => ({ ...prev, [name]: value }));
   // };
   const handleChange = (e) => {
-  const { name, value } = e.target;
+    const { name, value } = e.target;
 
-  setForm(prev => {
-    const updatedForm = {
-      ...prev,
-      [name]: value
-    };
+    setForm(prev => {
+      const updatedForm = {
+        ...prev,
+        [name]: value
+      };
 
-    // 👇 THIS LINE is the key
-    return calculateFields(updatedForm, siteConfig);
-  });
-};
+      // 👇 THIS LINE is the key
+      return calculateFields(updatedForm, siteConfig);
+    });
+  };
 
   const getMonthFromDate = (dateStr) => dateStr?.slice(0, 7);
 
@@ -2703,9 +2703,8 @@ const DailyDGLog = ({ userData }) => {
               : "0.00");
         }
 
-
         // ✅ Calculate SMPS (Avg Amp per equipment → sum)
-        let totalSMPSAmp = 0;
+        let totalSMPSAmp = 130; // default load if no data (for safety, to avoid zero IT load)
 
         Object.values(smpsMap).forEach((arr) => {
           const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -2721,17 +2720,21 @@ const DailyDGLog = ({ userData }) => {
           totalUPSLoad += avg;
         });
 
+        setForm((prev) => ({
+          ...prev,
+          ...updatedEB,
+        }));
+
         // 🔹 EB Units (dynamic based on count later)
         const ebUnits =
-          (Number(form["EB-1 KWH Closing"] || 0) - Number(form["EB-1 KWH Opening"] || 0)) +
-          (Number(form["EB-2 KWH Closing"] || 0) - Number(form["EB-2 KWH Opening"] || 0));
+          (eb1ClosingKwh - parseFloat(form["EB-1 KWH Opening"] || 0)) +
+          (eb2ClosingKwh - parseFloat(form["EB-2 KWH Opening"] || 0));
 
-        // 🔹 DG Units
+        // ✅ DG Units (use form OR ensure already updated before)
         const dgUnits =
-          (Number(form["DG-1 KWH Closing"] || 0) - Number(form["DG-1 KWH Opening"] || 0)) +
-          (Number(form["DG-2 KWH Closing"] || 0) - Number(form["DG-2 KWH Opening"] || 0));
+          (parseFloat(form["DG-1 KWH Closing"] || 0) - parseFloat(form["DG-1 KWH Opening"] || 0)) +
+          (parseFloat(form["DG-2 KWH Closing"] || 0) - parseFloat(form["DG-2 KWH Opening"] || 0));
 
-        // 🔹 Total Energy
         const totalUnits = ebUnits + dgUnits;
 
         // 🔹 IT Load (kW)
@@ -2756,10 +2759,10 @@ const DailyDGLog = ({ userData }) => {
         // ✅ Update form
         setForm((prev) => ({
           ...prev,
-          ...updatedEB,
           "DCPS Load Amps": prev["DCPS Load Amps"] || totalSMPSAmp.toFixed(2),  // 🔥 changed unit
           "UPS Load KWH": prev["UPS Load KWH"] || totalUPSLoad.toFixed(2),
-          "Office kW Consumption": prev["Office kW Consumption"] || officeKW.toFixed(2),
+          "Office kW Consumption": prev["Office kW Consumption"] || (((Number(prev["EB-1 KWH Closing"] || 0) - Number(prev["EB-1 KWH Opening"] || 0)) + (Number(prev["EB-2 KWH Closing"] || 0) - Number(prev["EB-2 KWH Opening"] || 0))) + ((Number(prev["DG-1 KWH Closing"] || 0) - Number(prev["DG-1 KWH Opening"] || 0)) + (Number(prev["DG-2 KWH Closing"] || 0) - Number(prev["DG-2 KWH Opening"] || 0)))) - (targetPUE * 24 * itLoadKW) , // only show if EB opening exists
+          // "Office kW Consumption": prev["Office kW Consumption"] || officeKW.toFixed(2), // only show if EB opening exists
         }));
       },
       (error) => {
@@ -3975,10 +3978,10 @@ const DailyDGLog = ({ userData }) => {
                 })}
 
                 <button className="submit-btn" type="submit" disabled={form["PUE"] > 1.57}>
-                  {( form["PUE"] < 1.57 && form["PUE"] <= 1.51) ? "PUE too high/Low to save" : entryUpdate ? "Update Entry" : "Save Entry"}
+                  {(form["PUE"] < 1.57 && form["PUE"] <= 1.51) ? "PUE too high/Low to save" : entryUpdate ? "Update Entry" : "Save Entry"}
                 </button>
               </form>
-                <small>Calculated PUE:- <strong style={{ color: form["PUE"] > 1.57 ? "red" : "#093608" }}>{form["PUE"] || 0}</strong> (Based on office load and total energy consumption)</small>
+              <small>Calculated PUE:- <strong style={{ color: form["PUE"] > 1.57 ? "red" : "#093608" }}>{form["PUE"] || 0}</strong> (Based on office load and total energy consumption)</small>
               <div style={{ marginTop: "10px", color: "#888", fontSize: "12px" }}>
                 * Note: Opening values are auto-calculated based on the previous day's closing values. Once you fill today's closing values, the next day's opening values will be automatically set when you navigate to the next day.
               </div>

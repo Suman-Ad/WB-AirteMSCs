@@ -682,6 +682,106 @@ const LoadDashboard = ({ userData }) => {
     );
   };
 
+  // ✅ % Unbalance calculator
+  const getUnbalancePercent = (a, b, c) => {
+    const values = [Number(a || 0), Number(b || 0), Number(c || 0)];
+    const avg = values.reduce((s, v) => s + v, 0) / 3;
+    if (avg === 0) return 0;
+
+    const maxDev = Math.max(...values.map(v => Math.abs(v - avg)));
+    return (maxDev / avg) * 100;
+  };
+
+  // ✅ Voltage validation
+  const isVoltageAbnormal = (v, type = "PN") => {
+    if (!v) return false;
+
+    if (type === "PN") return v < 180 || v > 260;   // Phase-Neutral
+    if (type === "PP") return v < 380 || v > 480;   // Phase-Phase
+
+    return false;
+  };
+
+  // ✅ Power factor validation
+  const isPFInvalid = (pf) => {
+    if (pf === undefined || pf === null) return false;
+    return pf < 0.7 || pf > 1; // unrealistic
+  };
+
+  // ✅ Temperature validation
+  const isTempHigh = (t) => {
+    if (!t) return false;
+    return t > 80; // adjustable
+  };
+
+  const getRowIssues = (row, type) => {
+    let issues = [];
+
+    // 🔥 Current Unbalance
+    const currentUnbalance = getUnbalancePercent(
+      row.currentR,
+      row.currentY,
+      row.currentB
+    );
+    if (currentUnbalance > 20) {
+      issues.push("High Current Unbalance");
+    }
+
+    // 🔥 Voltage Unbalance (P-N)
+    const voltageUnbalance = getUnbalancePercent(
+      row.voltageRN,
+      row.voltageYN,
+      row.voltageBN
+    );
+    if (voltageUnbalance > 10) {
+      issues.push("Voltage Unbalance");
+    }
+
+    // 🔥 Voltage Range Check
+    if (
+      isVoltageAbnormal(row.voltageRN, "PN") ||
+      isVoltageAbnormal(row.voltageYN, "PN") ||
+      isVoltageAbnormal(row.voltageBN, "PN")
+    ) {
+      issues.push("Abnormal P-N Voltage");
+    }
+
+    if (
+      isVoltageAbnormal(row.voltageRY, "PP") ||
+      isVoltageAbnormal(row.voltageYB, "PP") ||
+      isVoltageAbnormal(row.voltageBR, "PP")
+    ) {
+      issues.push("Abnormal P-P Voltage");
+    }
+
+    // 🔥 Power Factor
+    if (type === "LT" && isPFInvalid(row.powerFactor)) {
+      issues.push("Bad PF");
+    }
+
+    if (type === "UPS") {
+      if (
+        isPFInvalid(row.powerFactorR) ||
+        isPFInvalid(row.powerFactorY) ||
+        isPFInvalid(row.powerFactorB)
+      ) {
+        issues.push("Bad PF");
+      }
+    }
+
+    // 🔥 Temperature
+    if (
+      isTempHigh(row.tempR) ||
+      isTempHigh(row.tempY) ||
+      isTempHigh(row.tempB)
+    ) {
+      issues.push("High Temp");
+    }
+
+    return issues;
+  };
+
+
   return (
     <div className="daily-log-container">
       <h2>⚡ Live Load Dashboard 🟢</h2>
@@ -872,29 +972,37 @@ const LoadDashboard = ({ userData }) => {
                   </thead>
 
                   <tbody>
-                    {groupedData[type].map((row) => (
-                      <tr
-                        key={row.id}
-                        style={{
-                          backgroundColor: hasMissingData(row, type) ? "#f82121ab" : "transparent",
-                        }}
-                      >
-                        {config.renderRow(row)}
+                    {groupedData[type].map((row) => {
+                      const issues = getRowIssues(row, type);
+                      return (
+                        <tr
+                          key={row.id}
+                          title={getRowIssues(row, type).join(", ")}
+                          style={{
+                            backgroundColor:
+                              hasMissingData(row, type)
+                                ? "#f82121ab" // missing = red
+                                : issues.length > 0
+                                  ? "#ff9800a8" // abnormal = orange
+                                  : "transparent",
+                          }}
+                        >
+                          {config.renderRow(row)}
 
-                        <td style={{ justifyContent: "space-around", flexWrap: "wrap", display: "flex", gap: "5px" }}>
-                          <button style={{ padding: "2px 2px", background: "#24556b6e" }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#24556b"}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#24556b6e"}
-                            onClick={() => handleEdit(row)}>✏️</button>
-                          {isAdmin && (
-                            <button style={{ padding: "2px 2px", background: "#6b26246e" }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#6b2624"}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#6b26246e"}
-                              onClick={() => handleDelete(row.id)}>🗑️</button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                          <td style={{ justifyContent: "space-around", flexWrap: "wrap", display: "flex", gap: "5px" }}>
+                            <button style={{ padding: "2px 2px", background: "#24556b6e" }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#24556b"}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#24556b6e"}
+                              onClick={() => handleEdit(row)}>✏️</button>
+                            {isAdmin && (
+                              <button style={{ padding: "2px 2px", background: "#6b26246e" }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#6b2624"}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#6b26246e"}
+                                onClick={() => handleDelete(row.id)}>🗑️</button>
+                            )}
+                          </td>
+                        </tr>)
+                    })}
                   </tbody>
                 </table>
               </div>

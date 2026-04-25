@@ -1043,11 +1043,6 @@ const Layout = ({ userData, children }) => {
                     )}
                   </strong>
                 )}
-                {/* |&nbsp;{isMobile && (
-                  <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
-                    <LiveClockWeather />
-                  </p>
-                )} */}
                 <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
                   {siteConfig?.dgCount > 0 && !isMobile && (
                     <div style={{ display: "flex", gap: "4px", marginTop: "2px", justifyContent: "center", alignItems: "center" }}>
@@ -1218,6 +1213,11 @@ const Layout = ({ userData, children }) => {
                   </Modal>
 
                   <div>
+                    {isMobile && (
+                      <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+                        <LiveClockWeather />
+                      </p>
+                    )}
                     {/* Today's Duty Info */}
                     {todayDuty ? (
                       <div
@@ -1295,6 +1295,7 @@ const Layout = ({ userData, children }) => {
                               {s}: {todayManpower[s]}
                             </span>
                           ))}
+
                         </div>
 
                         {/* 🔽 Shift User List */}
