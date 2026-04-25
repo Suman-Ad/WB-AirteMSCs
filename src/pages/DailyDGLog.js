@@ -1856,18 +1856,18 @@ const DailyDGLog = ({ userData }) => {
 
     // IT Load validation
     const smpsLoad = parseFloat(form["DCPS Load Amps"] || 0);
-    if (smpsLoad < 0) {
-      return alert("DCPS Load Amps cannot be negative");
+    if (smpsLoad <= 0) {
+      return alert("DCPS Load Amps cannot be '0' or negative");
     }
     const upsLoad = parseFloat(form["UPS Load KWH"] || 0);
-    if (upsLoad < 0) {
-      return alert("UPS Load KWH cannot be negative");
+    if (upsLoad <= 0) {
+      return alert("UPS Load KWH cannot be '0' or negative");
     }
 
     //Office kW Consumption
     const officeLoad = parseFloat(form["Office kW Consumption"] || 0);
-    if (officeLoad < 0) {
-      return alert("Office kW Consumption cannot be negative");
+    if (officeLoad <= 0) {
+      return alert("Office kW Consumption cannot be '0' or negative");
     }
 
     const monthKey = selectedMonth;
@@ -3978,7 +3978,7 @@ const DailyDGLog = ({ userData }) => {
                   {( form["PUE"] < 1.57 && form["PUE"] <= 1.51) ? "PUE too high/Low to save" : entryUpdate ? "Update Entry" : "Save Entry"}
                 </button>
               </form>
-                <p>Calculated PUE:- <strong style={{ color: form["PUE"] > 1.57 ? "red" : "green" }}>{form["PUE"] || 0}</strong> (Based on office load and total energy consumption)</p>
+                <small>Calculated PUE:- <strong style={{ color: form["PUE"] > 1.57 ? "red" : "#093608" }}>{form["PUE"] || 0}</strong> (Based on office load and total energy consumption)</small>
               <div style={{ marginTop: "10px", color: "#888", fontSize: "12px" }}>
                 * Note: Opening values are auto-calculated based on the previous day's closing values. Once you fill today's closing values, the next day's opening values will be automatically set when you navigate to the next day.
               </div>
