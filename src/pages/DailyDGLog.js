@@ -25,6 +25,7 @@ import {
 } from "recharts";
 import { calculateFields } from "../utils/calculatedDGLogs";
 import { siteIdMap } from "../config/siteConfigs";
+
 // import { external } from "jszip";
 
 // ✅ helper to format date as YYYY-MM-DD
@@ -1689,10 +1690,23 @@ const DailyDGLog = ({ userData }) => {
   }, [logs, allValues])
 
   // 🔹 Handle input
+  // const handleChange = (e) => {
+  //   const { name, value } = e.target;
+  //   setForm((prev) => ({ ...prev, [name]: value }));
+  // };
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+  const { name, value } = e.target;
+
+  setForm(prev => {
+    const updatedForm = {
+      ...prev,
+      [name]: value
+    };
+
+    // 👇 THIS LINE is the key
+    return calculateFields(updatedForm, siteConfig);
+  });
+};
 
   const getMonthFromDate = (dateStr) => dateStr?.slice(0, 7);
 
@@ -3960,8 +3974,14 @@ const DailyDGLog = ({ userData }) => {
                   );
                 })}
 
-                <button className="submit-btn" type="submit">{entryUpdate ? "Update Entry" : "Save Entry"}</button>
+                <button className="submit-btn" type="submit" disabled={form["PUE"] > 1.57}>
+                  {( form["PUE"] < 1.57 && form["PUE"] <= 1.51) ? "PUE too high/Low to save" : entryUpdate ? "Update Entry" : "Save Entry"}
+                </button>
               </form>
+                <p>Calculated PUE:- <strong style={{ color: form["PUE"] > 1.57 ? "red" : "green" }}>{form["PUE"] || 0}</strong> (Based on office load and total energy consumption)</p>
+              <div style={{ marginTop: "10px", color: "#888", fontSize: "12px" }}>
+                * Note: Opening values are auto-calculated based on the previous day's closing values. Once you fill today's closing values, the next day's opening values will be automatically set when you navigate to the next day.
+              </div>
             </div>
           </div>
         )}
