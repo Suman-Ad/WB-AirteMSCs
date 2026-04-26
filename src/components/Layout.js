@@ -1213,47 +1213,12 @@ const Layout = ({ userData, children }) => {
                   </Modal>
 
                   <div>
-                    {isMobile && (
+                    {/* {isMobile && (
                       <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
                         <LiveClockWeather />
                       </p>
-                    )}
+                    )} */}
                     {/* Today's Duty Info */}
-                    {todayDuty ? (
-                      <div
-                        style={{
-                          // padding: "4px 10px",
-                          backgroundColor: shiftColor(todayDuty.shift),
-                          color: "white",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          display: "flex",
-                          gap: "6px",
-                        }}
-                        onClick={() => navigate("/my-duty")}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0285c7ff"}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = shiftColor(todayDuty.shift)}
-                      >
-                        ⏱ Today: <strong>{todayDuty.shift === "M" ? "Morning" : todayDuty.shift === "E" ? "Evening" : todayDuty.shift === "N" ? "Night" : todayDuty.shift === "G" ? "General" : "W/O"}</strong>
-                        || {nextDuty && (
-                          <div style={{ fontSize: "10px", marginTop: "5px", textAlign: "center" }}>
-                            Next: <strong>"{nextDuty.shift}"</strong> → <b style={{ color: "#354383ff", fontSize: "6px" }}>{`${formatDay(nextDuty.date)}-${formatMonthName(nextDuty.date)}-${formatYear(nextDuty.date)}`}</b> {/* nextDuty.date {nextDuty.date} → */}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div
-                        style={{
-                          padding: "4px 10px",
-                          backgroundColor: "#e2e8f0",
-                          borderRadius: "6px",
-                          cursor: "pointer"
-                        }}
-                        onClick={() => navigate("/my-duty")}
-                      >
-                        No Duty Today
-                      </div>
-                    )}
                     {/* Today's Manpower Info */}
                     {userData?.designation === "Vertiv Site Infra Engineer" && todayManpower && (
                       <div style={{ position: "relative" }}>
@@ -1262,7 +1227,7 @@ const Layout = ({ userData, children }) => {
                             display: "flex",
                             gap: "4px",
                             padding: "2px 10px",
-                            background: "#0f172a",
+                            background: "transparent",
                             color: "#fff",
                             borderRadius: "8px",
                             fontSize: "13px",
@@ -1344,6 +1309,42 @@ const Layout = ({ userData, children }) => {
                         )}
                       </div>
                     )}
+                    {todayDuty ? (
+                      <div
+                        style={{
+                          // padding: "4px 10px",
+                          backgroundColor: shiftColor(todayDuty.shift),
+                          color: "white",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          display: "flex",
+                          gap: "6px",
+                        }}
+                        onClick={() => navigate("/my-duty")}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#0285c7ff"}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = shiftColor(todayDuty.shift)}
+                      >
+                        ⏱ Today: <strong>{todayDuty.shift === "M" ? "Morning" : todayDuty.shift === "E" ? "Evening" : todayDuty.shift === "N" ? "Night" : todayDuty.shift === "G" ? "General" : "W/O"}</strong>
+                        || {nextDuty && (
+                          <div style={{ fontSize: "10px", marginTop: "5px", textAlign: "center" }}>
+                            Next: <strong>"{nextDuty.shift}"</strong> → <b style={{ color: "#354383ff", fontSize: "6px" }}>{`${formatDay(nextDuty.date)}-${formatMonthName(nextDuty.date)}-${formatYear(nextDuty.date)}`}</b> {/* nextDuty.date {nextDuty.date} → */}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          padding: "4px 10px",
+                          backgroundColor: "#e2e8f0",
+                          borderRadius: "6px",
+                          cursor: "pointer"
+                        }}
+                        onClick={() => navigate("/my-duty")}
+                      >
+                        No Duty Today
+                      </div>
+                    )}
+                    
 
                   </div>
                   <NotificationBell user={userData} />
@@ -1369,7 +1370,12 @@ const Layout = ({ userData, children }) => {
               )}
             </header>
 
+            {isMobile && (
+              <small style={{ fontSize: "9px", color: "#94a3b8" }}>
 
+                <b>{loadingPower ? "Loading..." : `Updated By: ${updatedByName} on ${updatedAt ? updatedAt.toLocaleString() : "N/A"} Site on "${powerSource}" Source (Live) `}</b>
+              </small>
+            )}
           </div>
         </div>
 

@@ -11,7 +11,6 @@ import HSDPrintTemplate from "../components/HSDPrintTemplate";
 // import { toast } from "react-toastify";
 // import "react-toastify/dist/ReactToastify.css";
 
-
 // Helper to format today as YYYY-MM-DD
 const getTodayDate = () => {
     const now = new Date();
@@ -1006,7 +1005,7 @@ const DGLogForm = ({ userData }) => {
                                 type="number"
                                 step="0.1"
                                 name="kwhMeterStart"
-                                value={form.remarks === "Fuel Filling Only" ? 0 : form.kwhMeterStart}
+                                value={form.remarks === "Fuel Filling Only" ? form.kwhMeterStart : form.remarks === "No Load" ? form.kwhMeterStart : form.kwhMeterStart}
                                 onChange={handleChange}
                                 placeholder="Start kwh reading"
                                 className="w-full p-2 border rounded"
@@ -1022,7 +1021,7 @@ const DGLogForm = ({ userData }) => {
                                 type="number"
                                 step="0.1"
                                 name="kwhMeterEnd"
-                                value={form.remarks === "Fuel Filling Only" ? 0 : form.kwhMeterEnd}
+                                value={form.remarks === "Fuel Filling Only" ? form.kwhMeterStart : form.remarks === "No Load" ? form.kwhMeterStart : form.kwhMeterEnd}
                                 onChange={handleChange}
                                 placeholder="End kwh reading"
                                 className="w-full p-2 border rounded"
@@ -1038,7 +1037,7 @@ const DGLogForm = ({ userData }) => {
                                 type="number"
                                 step="0.1"
                                 name="kWHReading"
-                                value={form.remarks === "Fuel Filling Only" ? 0 : form.kWHReading = Number(form.kwhMeterEnd - form.kwhMeterStart)}
+                                value={form.remarks === "Fuel Filling Only" ? 0 : form.remarks === "No Load" ? 0 : form.kWHReading = Number(form.kwhMeterEnd - form.kwhMeterStart)}
                                 onChange={handleChange}
                                 placeholder="Generated kWH"
                                 className="w-full p-2 border rounded"
@@ -1067,7 +1066,7 @@ const DGLogForm = ({ userData }) => {
                                 type="number"
                                 step="0.1"
                                 name="hrMeterEnd"
-                                value={form.hrMeterEnd}
+                                value={form.remarks === "Fuel Filling Only" ? form.hrMeterStart : form.hrMeterEnd}
                                 onChange={handleChange}
                                 placeholder="Hr meter end"
                                 className="p-2 border rounded"
@@ -1084,14 +1083,13 @@ const DGLogForm = ({ userData }) => {
                                 type="number"
                                 step="0.1"
                                 name="totalHRMeter"
-                                value={(form.hrMeterEnd - form.hrMeterStart).toFixed(1)}
+                                value={( form.remarks === "Fuel Filling Only" ? 0 : form.hrMeterEnd - form.hrMeterStart).toFixed(1)}
                                 onChange={handleChange}
                                 placeholder="Hr meter end"
                                 className="p-2 border rounded"
                                 required
                                 disabled
                             />
-
                         </label>
                     )}
 

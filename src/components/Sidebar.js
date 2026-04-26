@@ -2,11 +2,13 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
+import LiveClockWeather from "./LiveClockWeather";
 
 const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
   const role = userData?.role;
   const site = userData?.site;
   const navigate = useNavigate();
+  const isMobile = window.innerWidth <= 568;
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -76,13 +78,21 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
     <div className={`sidebar ${collapsed ? "collapsed" : "expanded"}`} style={{ background: powerSource === "EB" ? "" : "#db1e1ef3" }}>
       {/* Sidebar Header with Collapse Toggle */}
       <div className="sidebar-header">
-        <button
-          className="toggle-btn"
-          onClick={() => setCollapsed(!collapsed)}
-          title={collapsed ? "Expand Menu" : "Collapse Menu"}
-        >
-          {collapsed ? "☰" : "X"}
-        </button>
+        <div>
+          <button
+            className="toggle-btn"
+            onClick={() => setCollapsed(!collapsed)}
+            title={collapsed ? "Expand Menu" : "Collapse Menu"}
+          >
+            {collapsed ? "☰" : "X"}
+          </button>
+          {isMobile && (
+            <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+              <LiveClockWeather isMobile={isMobile} />
+            </p>
+          )}
+        </div>
+
         {collapsed ? "" :
           <button onClick={() => { goProfile(); setCollapsed(true); }} className="profile-manage-btn" title="Profile" >
             {userData?.role === "Super Admin" && <span>👑 <strong>{userData?.name || "Team Member"}</strong><div style={{ color: "#6b7280", fontSize: 12 }}>*Super Admin*</div></span>}

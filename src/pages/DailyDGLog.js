@@ -259,6 +259,11 @@ const DailyDGLog = ({ userData }) => {
   const [dayDG3FuelCon, setDayDG3FuelCon] = useState(0);
   const [dayDG4FuelCon, setDayDG4FuelCon] = useState(0);
   const [dayFuelCon, setDayFuelCon] = useState(0);
+  const [dayDG1KWGen, setDayDG1KWGen] = useState(0);
+  const [dayDG2KWGen, setDayDG2KWGen] = useState(0);
+  const [dayDG3KWGen, setDayDG3KWGen] = useState(0);
+  const [dayDG4KWGen, setDayDG4KWGen] = useState(0);
+  const [dayKWGen, setDayKWGen] = useState(0);
   const [dayDG1FuelFill, setDayDG1FuelFill] = useState(0);
   const [dayDG2FuelFill, setDayDG2FuelFill] = useState(0);
   const [dayDG3FuelFill, setDayDG3FuelFill] = useState(0);
@@ -928,6 +933,11 @@ const DailyDGLog = ({ userData }) => {
       setDayDG3FuelCon(() => dg3TotalConsumption);
       setDayDG4FuelCon(() => dg4TotalConsumption);
       setDayFuelCon(() => (dg1TotalConsumption + dg2TotalConsumption + dg3TotalConsumption + dg4TotalConsumption));
+      setDayDG1KWGen(() => dg1MaxEndkWH);
+      setDayDG2KWGen(() => dg2MaxEndkWH);
+      setDayDG3KWGen(() => dg3MaxEndkWH);
+      setDayDG4KWGen(() => dg4MaxEndkWH);
+      setDayKWGen(() => (dg1MaxEndkWH + dg2MaxEndkWH + dg3MaxEndkWH + dg4MaxEndkWH));
       setDayDG1FuelFill(() => dg1FuelFill);
       setDayDG2FuelFill(() => dg2FuelFill);
       setDayDG3FuelFill(() => dg3FuelFill);
@@ -1956,6 +1966,13 @@ const DailyDGLog = ({ userData }) => {
     dayDG4FuelCon,
   ].slice(0, dg);
 
+  const dayDGKWGen = [
+    dayDG1KWGen,
+    dayDG2KWGen,
+    dayDG3KWGen,
+    dayDG4KWGen,
+  ].slice(0, dg);
+
   const dayDGRunHrs = [
     dayDG1RunningHrs,
     dayDG2RunningHrs,
@@ -2761,8 +2778,8 @@ const DailyDGLog = ({ userData }) => {
           ...prev,
           "DCPS Load Amps": prev["DCPS Load Amps"] || totalSMPSAmp.toFixed(2),  // 🔥 changed unit
           "UPS Load KWH": prev["UPS Load KWH"] || totalUPSLoad.toFixed(2),
-          "Office kW Consumption": prev["Office kW Consumption"] || (((Number(prev["EB-1 KWH Closing"] || 0) - Number(prev["EB-1 KWH Opening"] || 0)) + (Number(prev["EB-2 KWH Closing"] || 0) - Number(prev["EB-2 KWH Opening"] || 0))) + ((Number(prev["DG-1 KWH Closing"] || 0) - Number(prev["DG-1 KWH Opening"] || 0)) + (Number(prev["DG-2 KWH Closing"] || 0) - Number(prev["DG-2 KWH Opening"] || 0)))) - (targetPUE * 24 * itLoadKW) , // only show if EB opening exists
-          // "Office kW Consumption": prev["Office kW Consumption"] || officeKW.toFixed(2), // only show if EB opening exists
+          // "Office kW Consumption": prev["Office kW Consumption"] || (((Number(prev["EB-1 KWH Closing"] || 0) - Number(prev["EB-1 KWH Opening"] || 0)) + (Number(prev["EB-2 KWH Closing"] || 0) - Number(prev["EB-2 KWH Opening"] || 0))) + ((Number(prev["DG-1 KWH Closing"] || 0) - Number(prev["DG-1 KWH Opening"] || 0)) + (Number(prev["DG-2 KWH Closing"] || 0) - Number(prev["DG-2 KWH Opening"] || 0)))) - (targetPUE * 24 * itLoadKW) , // only show if EB opening exists
+          "Office kW Consumption": prev["Office kW Consumption"] || officeKW.toFixed(2), // only show if EB opening exists
         }));
       },
       (error) => {
@@ -2783,13 +2800,45 @@ const DailyDGLog = ({ userData }) => {
     };
   }, [form.Date, siteId]);
 
+  // Professional Input Wrapper Style
+  const inputContainerStyle = {
+    display: "flex",
+    justifyContent: "center",
+    // alignItems: "center",
+    backgroundColor: "transparent", // Light grayish-blue background
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    padding: "4px 4px",
+    transition: "all 0.2s ease-in-out",
+    cursor: "pointer",
+    width: "120px",
+    height: "28px",
+  };
+
+  const inputInnerStyle = {
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "#334155",
+    fontFamily: "Inter, system-ui, monospace", // Monospace helps date alignment
+    cursor: "pointer",
+    height: "100%",
+    width: "100%",
+    padding: "0 4px",
+  };
+
   return (
     <div className="daily-log-container" style={{ overflowX: "hidden" }}>
-      <h1 style={{ color: "white", textAlign: "center" }}> {/* dashboard-header */}
-        <strong>
-          ☣️ Daily Energy Log Book
-        </strong>
-      </h1>
+      {window.innerWidth <= 686 && (
+        <h1 style={{ color: "white", textAlign: "center", marginBottom: "15px" }}> {/* dashboard-header */}
+          <strong>
+            ☣️ Daily Energy Log Book
+          </strong>
+        </h1>
+      )}
+
       {/* <h2
         className={`month ${formatMonthName(selectedMonth)}`}
         style={{ cursor: "pointer", textAlign: "center" }}
@@ -2800,34 +2849,9 @@ const DailyDGLog = ({ userData }) => {
           🖥️ All Sites Status Logs ⭆
         </b>
       </h2> */}
-      <p>
-        {isAdmin && (
-          <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", paddingBottom: "20px" }}>
 
-            <label style={{ marginRight: "8px", whiteSpace: "nowrap" }}>
-              Select Site
-            </label>
-
-            <select
-              value={selectedSite}
-              onChange={(e) => setSelectedSite(e.target.value)}
-            >
-              {/* <option value="">Select Site</option> */}
-
-              {allSites.map((site) => (
-                <option key={site} value={site}>
-                  {normalizeSite(site)}
-                </option>
-              ))}
-
-            </select>
-
-          </div>
-        )}
-      </p>
-
-      <h1 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "20px" }}>
-        <label style={{ fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "20px" }}>
+        <label style={{ fontSize: "12px", display: "flex", alignItems: "center"}}>
           Select Month:
           <div style={{ display: "flex" }}>
             <span
@@ -2846,20 +2870,26 @@ const DailyDGLog = ({ userData }) => {
               ◀
             </span>
 
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => {
-                const newMonth = e.target.value;
-                setSelectedMonth(newMonth);
-                setForm(prev => ({
-                  ...prev,
-                  Date: clampDateToMonth(newMonth, prev.Date),
-                }));
-              }}
-              style={{ fontSize: "12px", borderRadius: "10px" }}
-              required
-            />
+            <div
+              style={inputContainerStyle}
+              onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
+              onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
+            >
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => {
+                  const newMonth = e.target.value;
+                  setSelectedMonth(newMonth);
+                  setForm(prev => ({
+                    ...prev,
+                    Date: clampDateToMonth(newMonth, prev.Date),
+                  }));
+                }}
+                style={inputInnerStyle}
+                required
+              />
+            </div>
 
             <span
               type="button"
@@ -2881,14 +2911,52 @@ const DailyDGLog = ({ userData }) => {
             </span>
           </div>
         </label>
+        {window.innerWidth > 686 && (
+          <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "4px" }}>
+            <b className={`month ${formatMonthName(selectedMonth)}`}>
+              <strong style={{ fontSize: "12px" }}>
+                {formatMonthName(selectedMonth)}-{formatYear(selectedMonth)}
+              </strong>
+            </b>
+            <h1 style={{ color: "white", textAlign: "center" }}> {/* dashboard-header */}
+              <strong>
+                ☣️ Daily Energy Log Book
+              </strong>
+            </h1>
+          </div>
+        )}
+        {isAdmin && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
 
-        <b className={`month ${formatMonthName(selectedMonth)}`}>
-          <strong style={{ fontSize: "12px" }}>
-            {formatMonthName(selectedMonth)}-{formatYear(selectedMonth)}
-          </strong>
-        </b>
+            <label style={{ whiteSpace: "nowrap", textDecoration: "underline dotted blue", cursor: "pointer", fontSize: "12px" }}>
+              Select Site:
+            </label>
 
-        <label style={{ fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}>
+            <div
+              style={inputContainerStyle}
+              onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
+              onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
+            >
+              <select
+                value={selectedSite}
+                onChange={(e) => setSelectedSite(e.target.value)}
+                style={inputInnerStyle}
+              >
+                {/* <option value="">Select Site</option> */}
+
+                {allSites.map((site) => (
+                  <option key={site} value={site}>
+                    {normalizeSite(site)}
+                  </option>
+                ))}
+
+              </select>
+            </div>
+
+          </div>
+        )}
+
+        <label style={{ fontSize: "12px", display: "flex", alignItems: "center" }}>
           Date:
           <div style={{ display: "flex" }}>
             <span
@@ -2900,15 +2968,20 @@ const DailyDGLog = ({ userData }) => {
             >
               ◀
             </span>
-
-            <input
-              type="date"
-              name="Date"
-              value={form.Date || ""}
-              onChange={(e) => handleDateChange(e.target.value)}
-              style={{ fontSize: "12px", borderRadius: "10px" }}
-              required
-            />
+            <div
+              style={inputContainerStyle}
+              onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
+              onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
+            >
+              <input
+                type="date"
+                name="Date"
+                value={form.Date || ""}
+                onChange={(e) => handleDateChange(e.target.value)}
+                style={inputInnerStyle}
+                required
+              />
+            </div>
 
             <span
               type="button"
@@ -2926,7 +2999,7 @@ const DailyDGLog = ({ userData }) => {
             </span>
           </div>
         </label>
-      </h1>
+      </div>
 
       {/* 🔹 New Monthly Stats */}
       {(() => {
@@ -3476,10 +3549,14 @@ const DailyDGLog = ({ userData }) => {
 
                 {/* 🔹 Today Consumption */}
                 <p style={cardStyle}>
-                  <p>Today Consumption</p>
+                  <p>Today Unit/Consumption</p>
                   <strong>{dayFuelCon} ltrs.</strong>
                   <p style={{ fontSize: "9px" }}>
                     {renderDGWise(dayDGFuelCon)}
+                  </p>
+                  <strong>{dayKWGen} kWh.</strong>
+                  <p style={{ fontSize: "9px" }}>
+                    {renderDGWise(dayDGKWGen)}
                   </p>
                 </p>
 
@@ -3497,7 +3574,7 @@ const DailyDGLog = ({ userData }) => {
 
                 {/* 🔹 Total Power */}
                 <p style={cardStyle}>
-                  <p>Total Power</p>
+                  <p>Today Power Fail</p>
                   <strong>{dayonLoadRunHrs.toFixed(1)} Hrs.</strong>
                   <p style={{ fontSize: "8px" }}>
                     ({(dayonLoadRunHrs * 60).toFixed(2)} Min.)

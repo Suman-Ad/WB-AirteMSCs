@@ -899,6 +899,7 @@ const LoadDashboard = ({ userData }) => {
         <div>
           <h3>Total Load: {totalLoad.toFixed(2)} kW</h3>
           <h4 >⚠️ Note:- If show <b style={{ background: "red", color: "white" }}>"Red Row"</b>, Check & filled the unfield values</h4>
+          <h4 >⚠️ Note:- If show <b style={{ background: "yellow", color: "white" }}>"Yellow Row"</b>, Check Unbalance values</h4>
           {Object.keys(missingSlots).length > 0 && (
             <div style={{
               background: "#ff4d4d22",

@@ -362,9 +362,9 @@ const LoadEntryForm = ({ userData }) => {
       if (!formData.voltageRY) errors.push("R-Y Voltage");
       if (!formData.voltageYB) errors.push("Y-B Voltage");
       if (!formData.voltageBR) errors.push("B-R Voltage");
-      if (!formData.voltageRY) errors.push("R-Y Voltage");
-      if (!formData.voltageYB) errors.push("Y-B Voltage");
-      if (!formData.voltageBR) errors.push("B-R Voltage");
+      if (!formData.voltageRN) errors.push("R-N Voltage");
+      if (!formData.voltageYN) errors.push("Y-N Voltage");
+      if (!formData.voltageBN) errors.push("B-N Voltage");
 
       // Phase Current
       if (!formData.currentR) errors.push("R Current");
