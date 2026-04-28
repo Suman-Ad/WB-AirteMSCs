@@ -345,7 +345,7 @@ const DGLogTable = ({ userData }) => {
         "🏙️ Region": userData?.region,
         "🔄 Circle": userData?.circle,
         "📍 Site Name": siteName,
-        "⛽ Diesel Available": `${(fuelAvalable - (dayFuelCon || 0)).toFixed(2)} Ltrs.` || "N/A",
+        "⛽ Diesel Available": `${(fuelAvalable).toFixed(2)} Ltrs.` || "N/A",
         "🕑 DG Run Hrs (Yesterday)": `${dgRunHrsYesterday}` || "N/A",
         "⚡ EB Run Hrs (Yesterday)": `${ebRunHrsYesterday}` || "N/A",
         "🔌 EB Status": defaultConfig.ebStatus || "N/A",
@@ -970,7 +970,7 @@ const DGLogTable = ({ userData }) => {
           <table border="1" cellPadding="8" style={{ width: "100%" }}>
             <thead>
               <tr>
-                <th>DG No</th>
+                <th style={{ left: 0, top: 0, zIndex: 2 }}>DG No</th>
                 <th style={{ whiteSpace: "nowrap" }}>Start Time</th>
                 <th style={{ whiteSpace: "nowrap" }}>Stop Time</th>
                 <th>Hr Meter Start</th>
@@ -995,8 +995,8 @@ const DGLogTable = ({ userData }) => {
             <tbody>
               {logs.map((log) => (
                 <tr key={log.id}>
-                  <td style={{ whiteSpace: "nowrap" }}>{log.dgNumber}</td>
-                  <td style={{}}>{log.startTime} Hrs</td>
+                  <td style={{ whiteSpace: "nowrap", left: 0, zIndex: 1, position: "sticky", background:"white" }}>{log.dgNumber}</td>
+                  <td>{log.startTime} Hrs</td>
                   <td>{log.stopTime} Hrs</td>
                   <td>{log.hrMeterStart}</td>
                   <td>{log.hrMeterEnd}</td>

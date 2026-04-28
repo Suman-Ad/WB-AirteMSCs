@@ -727,6 +727,26 @@ const LoadDashboard = ({ userData }) => {
       issues.push("High Current Unbalance");
     }
 
+    // 🔥 UPS Output Current Unbalance
+    const outputCurrentUnbalance = getUnbalancePercent(
+      row.outputCurrentR,
+      row.outputCurrentY,
+      row.outputCurrentB
+    );
+    if (outputCurrentUnbalance > 20) {
+      issues.push("High UPS Output Current Unbalance");
+    }
+
+    // 🔥 UPS Output kW Unbalance
+    const kwUnbalance = getUnbalancePercent(
+      row.runningKWR,
+      row.runningKWY,
+      row.runningKWB
+    );
+    if (kwUnbalance > 20) {
+      issues.push(`High UPS Output ${kwUnbalance.toFixed(2)}% KW Unbalance`);
+    }
+
     // 🔥 Voltage Unbalance (P-N)
     const voltageUnbalance = getUnbalancePercent(
       row.voltageRN,
@@ -737,13 +757,31 @@ const LoadDashboard = ({ userData }) => {
       issues.push("Voltage Unbalance");
     }
 
+    // 🔥 UPS Output Voltage Unbalance (P-N)
+    const upsOutVoltageUnbalance = getUnbalancePercent(
+      row.outputVoltageRN,
+      row.outputVoltageYN,
+      row.outputVoltageBN
+    );
+    if (upsOutVoltageUnbalance > 10) {
+      issues.push("UPS Output Voltage Unbalance");
+    }
+
     // 🔥 Voltage Range Check
     if (
       isVoltageAbnormal(row.voltageRN, "PN") ||
       isVoltageAbnormal(row.voltageYN, "PN") ||
       isVoltageAbnormal(row.voltageBN, "PN")
     ) {
-      issues.push("Abnormal P-N Voltage");
+      issues.push("Abnormal Input P-N Voltage");
+    }
+
+    if (
+      isVoltageAbnormal(row.outputVoltageRN, "PN") ||
+      isVoltageAbnormal(row.outputVoltageYN, "PN") ||
+      isVoltageAbnormal(row.outputVoltageBN, "PN")
+    ) {
+      issues.push("Abnormal Output P-N Voltage");
     }
 
     if (
@@ -751,7 +789,15 @@ const LoadDashboard = ({ userData }) => {
       isVoltageAbnormal(row.voltageYB, "PP") ||
       isVoltageAbnormal(row.voltageBR, "PP")
     ) {
-      issues.push("Abnormal P-P Voltage");
+      issues.push("Abnormal Input P-P Voltage");
+    }
+
+    if (
+      isVoltageAbnormal(row.outputVoltageRY, "PP") ||
+      isVoltageAbnormal(row.outputVoltageYB, "PP") ||
+      isVoltageAbnormal(row.outputVoltageBR, "PP")
+    ) {
+      issues.push("Abnormal Output P-P Voltage");
     }
 
     // 🔥 Power Factor
@@ -898,8 +944,12 @@ const LoadDashboard = ({ userData }) => {
       ) : (
         <div>
           <h3>Total Load: {totalLoad.toFixed(2)} kW</h3>
-          <h4 >⚠️ Note:- If show <b style={{ background: "red", color: "white" }}>"Red Row"</b>, Check & filled the unfield values</h4>
-          <h4 >⚠️ Note:- If show <b style={{ background: "yellow", color: "white" }}>"Yellow Row"</b>, Check Unbalance values</h4>
+          <h4 >Hilighted Row Notes:- <br />
+            <small>
+              ⚠️If show <b style={{ background: "red", color: "white" }}>"Red Row"</b>, Check & filled the unfield values. <br />
+              ⚠️If show <b style={{ background: "yellow", color: "purple" }}>"Yellow Row"</b>, Check Unbalance values.
+            </small>
+          </h4>
           {Object.keys(missingSlots).length > 0 && (
             <div style={{
               background: "#ff4d4d22",
@@ -986,6 +1036,14 @@ const LoadDashboard = ({ userData }) => {
                                 : issues.length > 0
                                   ? "#ff9800a8" // abnormal = orange
                                   : "transparent",
+
+                            border: hasMissingData(row, type)
+                              ? "1px solid red"
+                              : issues.length > 0
+                                ? "1px solid #ff9800"
+                                : "1px solid transparent",
+                            color: hasMissingData(row, type) || issues.length > 0 ? "#7b099e" : "inherit",
+                            fontWeight: hasMissingData(row, type) || issues.length > 0 ? "bold" : "normal",
                           }}
                         >
                           {config.renderRow(row)}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import '../assets/IncidentEditor.css';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-const IncidentEditorPage = ({ formData, onFormChange, onSubmit, userData, incidentId }) => {
+const IncidentEditorPage = ({ formData, onFormChange, isSubmitting, onSubmit, userData, incidentId }) => {
   const [calculatedMttr, setCalculatedMttr] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [rcaFileUrl, setRcaFileUrl] = useState(formData.rcaFileUrl || "");
@@ -151,6 +151,48 @@ const IncidentEditorPage = ({ formData, onFormChange, onSubmit, userData, incide
 
   return (
     <div className="incident-editor">
+      {isSubmitting && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.6)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                    }}
+                >
+                    <div
+                        style={{
+                            background: "#0f172a",
+                            padding: "30px 40px",
+                            borderRadius: "12px",
+                            textAlign: "center",
+                            color: "white",
+                            boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: "40px",
+                                height: "40px",
+                                border: "4px solid #334155",
+                                borderTop: "4px solid #38bdf8",
+                                borderRadius: "50%",
+                                margin: "0 auto 15px",
+                                animation: "spin 1s linear infinite",
+                            }}
+                        />
+                        <div style={{ fontSize: "15px", fontWeight: "bold" }}>
+                            {incidentId ? "Update Incident..." : "Submit New Incident...."}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "4px" }}>
+                            Please wait
+                        </div>
+                    </div>
+                </div>
+            )}
       <h2 className='noticeboard-header'>
         <strong>
           {incidentId 
@@ -195,8 +237,8 @@ const IncidentEditorPage = ({ formData, onFormChange, onSubmit, userData, incide
         )}
       </div>
 
-      <button onClick={onSubmit} className="submit-btn pm-manage-btn secondary">
-        {incidentId ? "Update Incident" : "Submit Incident"}
+      <button onClick={onSubmit} className="submit-btn pm-manage-btn secondary" disabled={isSubmitting}>
+        {incidentId ? (isSubmitting ? "Updating..." : "Update Incident") : (isSubmitting ? "Submitting..." : "Submit Incident")}
       </button>
     </div>
   );

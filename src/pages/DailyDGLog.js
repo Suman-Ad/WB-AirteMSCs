@@ -26,15 +26,6 @@ import {
 import { calculateFields } from "../utils/calculatedDGLogs";
 import { siteIdMap } from "../config/siteConfigs";
 
-// import { external } from "jszip";
-
-// ✅ helper to format date as YYYY-MM-DD
-
-
-// const getFormattedDate = (d = new Date()) => {
-//   // const d = new Date();
-//   return d.toISOString().split("T")[0]; // YYYY-MM-DD
-// };
 
 const getFormattedDate = (d = new Date()) => {
   return d.toLocaleDateString("en-CA", {
@@ -2649,6 +2640,7 @@ const DailyDGLog = ({ userData }) => {
           const time = d.time || "23:59";
 
           if (!panelNo) return;
+          if (selectedDate !== getFormattedDate() && !panelNo) return alert(`Please Fill LT Panel Load Book of ${getFormattedDate()}`); // skip 00:00 of next day if we're loading past date
 
           const key = `EB-${panelNo}`;
 
@@ -2851,7 +2843,7 @@ const DailyDGLog = ({ userData }) => {
       </h2> */}
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "20px" }}>
-        <label style={{ fontSize: "12px", display: "flex", alignItems: "center"}}>
+        <label style={{ fontSize: "12px", display: "flex", alignItems: "center" }}>
           Select Month:
           <div style={{ display: "flex" }}>
             <span
@@ -3067,11 +3059,11 @@ const DailyDGLog = ({ userData }) => {
         const availableExFuel = (() => {
           if (!form) return 0;
           return (
-            (parseFloat(form["DG-1 External Fuel Stock"]) || 0) +
-            (parseFloat(form["DG-2 External Fuel Stock"]) || 0) +
-            (siteConfig?.dgCount > 2 ? parseFloat(form["DG-3 External Fuel Stock"]) : 0) +
-            (siteConfig?.dgCount > 3 ? parseFloat(form["DG-4 External Fuel Stock"]) : 0)
-
+            // (parseFloat(form["DG-1 External Fuel Stock"]) || 0) +
+            // (parseFloat(form["DG-2 External Fuel Stock"]) || 0) +
+            // (siteConfig?.dgCount > 2 ? parseFloat(form["DG-3 External Fuel Stock"]) : 0) +
+            // (siteConfig?.dgCount > 3 ? parseFloat(form["DG-4 External Fuel Stock"]) : 0)
+            ((((siteConfig?.dgCount > 0 ? dgExternalFuel?.["DG-1"] : 0) + (siteConfig?.dgCount > 1 ? dgExternalFuel?.["DG-2"] : 0) + (siteConfig?.dgCount > 2 ? dgExternalFuel?.["DG-3"] : 0) + (siteConfig?.dgCount > 3 ? dgExternalFuel?.["DG-4"] : 0)) || 0) + Number(dayExDG1FuelFill + dayExDG2FuelFill + dayExDG3FuelFill + dayExDG4FuelFill)) || 0
           );
         })();
 
@@ -3246,7 +3238,7 @@ const DailyDGLog = ({ userData }) => {
         const totalDG1HrsMin = ((totalDG1OnLoadHrs + totalDG1OffLoadHrs) * 60).toFixed(0);
         const totalDG2HrsMin = ((totalDG2OnLoadHrs + totalDG2OffLoadHrs) * 60).toFixed(0);
         const currentFuel = availableFuel;
-        const totalFuelAvailable = availableFuel + (dayExFuelFill > 0 ? dayExFuelFill : availableExFuel);
+        const totalFuelAvailable = availableFuel + availableExFuel;
         const fuelHours = fmt1(totalFuelAvailable / fmt1(totalOnLoadCon / totalOnLoadHrs));
         const dayTankCapacity = Number((siteConfig.dgConfigs?.["DG-1"]?.dayTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-2"]?.dayTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-3"]?.dayTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-4"]?.dayTankLtrs || 0));
         const externalTankCapacity = Number((siteConfig.dgConfigs?.["DG-1"]?.externalTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-2"]?.externalTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-3"]?.externalTankLtrs || 0) + (siteConfig.dgConfigs?.["DG-4"]?.externalTankLtrs || 0));
@@ -3695,45 +3687,66 @@ const DailyDGLog = ({ userData }) => {
               </div>
             </div>
 
-            <p style={{ borderTop: "1px solid #eee", borderRadius: "10px" }}><strong>⚡ Total EB KW Consumption – {fmt(totalEBKwh)} units x </strong>
-              ₹<input
-                type="number"
-                name="EBRate"
-                step="0.01"
-                value={EBBill.EBRate}
-                onChange={handleEBBill}
-                style={{ width: "60px", marginLeft: "4px", height: "20px" }}
-              // disabled
-              /><strong style={{ fontSize: "10px", color: "#5c3c6ce8" }}>/Unit. = ₹{fmt(totalEBKwh * Number(EBBill.EBRate))}</strong>
+            <div style={{ borderTop: "1px solid #eee", borderRadius: "10px", fontSize: "12px", display: "grid" }}>
+              <strong style={{ whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}>⚡ Total EB KW Consumption – {fmt(totalEBKwh)} units x
+                <div
+                  style={inputContainerStyle}
+                  onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
+                  onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
+                >
+                  ₹<input
+                    type="number"
+                    name="EBRate"
+                    step="0.01"
+                    value={EBBill.EBRate}
+                    onChange={handleEBBill}
+                    style={inputInnerStyle}
+                  // disabled
+                  />/Unit.
+                </div>
+                <b style={{ fontSize: "10px", color: "#5c3c6ce8", justifyContent: "center", }}>= ₹{fmt(totalEBKwh * Number(EBBill.EBRate))}</b>
+              </strong>
+            </div>
 
-              <div style={{ fontSize: "12px", display: "grid" }}>
-                <strong style={{ whiteSpace: "nowrap" }}>
-                  💡 EDCOM: <input
+            <div style={{ fontSize: "12px", display: "grid" }}>
+              <strong style={{ whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}>
+                💡 EDCOM:
+                <div
+                  style={inputContainerStyle}
+                  onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
+                  onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
+                >
+                  <input
                     type="number"
                     name="Unit" // Matches the key in setEBBill
                     step="0.01"
                     value={EBBill.Unit || ""}
                     onChange={handleEBBill}
-                    style={{ width: "25%", marginLeft: "4px", height: "20px" }}
-                  />Units
-                </strong>
+                    style={inputInnerStyle}
+                  />
+                  Units</div>
+              </strong>
 
-                <strong style={{ whiteSpace: "nowrap" }}>
-                  🏦 Through NEFT/RTGS(RS): ₹<input
+              <strong style={{ whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}>
+                🏦 Through NEFT/RTGS(RS):
+                <div
+                  style={inputContainerStyle}
+                  onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
+                  onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
+                >₹<input
                     type="number"
                     name="Amount" // Matches the key in setEBBill
                     step="0.01"
                     value={EBBill.Amount || ""}
                     onChange={handleEBBill}
-                    style={{ width: "30%", marginLeft: "4px", height: "20px" }}
-                  />
-                </strong>
+                    style={inputInnerStyle}
+                  /></div>
+              </strong>
 
-                {/* TDS is calculated automatically from the state */}
-                <b>💰 TDS Declared Amount: <strong>₹{EBBill.TDSAmount || 0}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {siteConfig.ebTDS}% of Bill Amount</span></b>
-                <b>💰 After TDS Amount: <strong>₹{(EBBill.Amount - EBBill.TDSAmount) || 0}</strong> <span style={{ color: "#5c3c6ce8" }}> after {siteConfig.ebTDS}% deduction of Bill Amount</span></b>
-              </div>
-            </p>
+              {/* TDS is calculated automatically from the state */}
+              <b>💰 TDS Declared Amount: <strong>₹{EBBill.TDSAmount || 0}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {siteConfig.ebTDS}% of Bill Amount</span></b>
+              <b>💰 After TDS Amount: <strong>₹{(EBBill.Amount - EBBill.TDSAmount) || 0}</strong> <span style={{ color: "#5c3c6ce8" }}> after {siteConfig.ebTDS}% deduction of Bill Amount</span></b>
+            </div>
 
             {siteConfig.solarCount > 0 && (
               <p style={{ borderTop: "1px solid #eee" }}><strong>☀️ Total Solar KW Generation – {fmt(totalSolarKwh)} kW</strong></p>
@@ -3965,12 +3978,15 @@ const DailyDGLog = ({ userData }) => {
 
         {/* <div className="controls"> */}
 
-        <button
-          className="segr-manage-btn info"
-          onClick={() => setShowEditModal(!showEditModal)}
-        >
-          {showEditModal ? "✖ Close" : "✎ Add / Edit Daily DG Log Entry"}
-        </button>
+        {(isAdmin || userData?.designation === "Vertiv Site Infra Engineer") && (
+          <button
+            className="segr-manage-btn info"
+            onClick={() => setShowEditModal(!showEditModal)}
+          >
+            {showEditModal ? "✖ Close" : "✎ Add / Edit Daily DG Log Entry"}
+          </button>
+
+        )}
         {/* </div> */}
 
         {showEditModal && (
@@ -4167,144 +4183,6 @@ const DailyDGLog = ({ userData }) => {
       </div>
 
       {/* Summery Charts */}
-      {/* {isAdmin || userData?.designation === "Vertiv Site Infra Engineer" ? (
-        <div style={{
-          background: "#1e293b",
-          padding: "15px",
-          borderRadius: "10px",
-          marginBottom: "25px",
-          color: "white",
-        }}
-        >
-          {!loadingTrend && multiYearData.length === 0 && (
-            <p style={{ color: "#888" }}>
-              No historical data available for previous years
-            </p>
-          )}
-          {loadingTrend && <p>Loading multi-year trend...</p>}
-
-          {multiYearData.length > 0 && (
-            <div className="chart-box">
-
-              <h3>📈 Multi-Year Trend (Same Month)</h3>
-
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={multiYearData}>
-                  <XAxis dataKey="year" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line dataKey="DG_KWH" />
-                  <Line dataKey="Fuel" />
-                  <Line dataKey="PUE" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {currentSummary && previousSummary && (
-            <div className="chart-box">
-              <h3>📊 YoY Energy Comparison</h3>
-
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={buildYoYChartData(currentSummary, previousSummary)}>
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="Current" />
-                  <Bar dataKey="Previous" />
-                </BarChart>
-              </ResponsiveContainer>
-
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart
-                  data={[
-                    {
-                      name: "Fuel",
-                      Current: currentSummary.totalFuel,
-                      Previous: previousSummary.totalFuel,
-                    },
-                    {
-                      name: "PUE",
-                      Current: currentSummary.avgPUE,
-                      Previous: previousSummary.avgPUE,
-                    },
-                  ]}
-                >
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line dataKey="Current" />
-                  <Line dataKey="Previous" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {currentSummary && previousSummary && (
-            <div className="table-container" style={{ scrollbarWidth: "thin" }}>
-              <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>
-
-              <table >
-                <thead>
-                  <tr>
-                    <th>Metric</th>
-                    <th>Current Year</th>
-                    <th>Previous Year</th>
-                    <th>YoY Change</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Total DG KWH</td>
-                    <td>{fmt(currentSummary.totalDGKWH)}</td>
-                    <td>{fmt(previousSummary.totalDGKWH)}</td>
-                    <td>{yoy(currentSummary.totalDGKWH, previousSummary.totalDGKWH)}</td>
-                  </tr>
-
-                  <tr>
-                    <td>Total EB KWH</td>
-                    <td>{fmt(currentSummary.totalEBKWH)}</td>
-                    <td>{fmt(previousSummary.totalEBKWH)}</td>
-                    <td>{yoy(currentSummary.totalEBKWH, previousSummary.totalEBKWH)}</td>
-                  </tr>
-
-                  <tr>
-                    <td>Total Solar KWH</td>
-                    <td>{fmt(currentSummary.totalSolarKWH)}</td>
-                    <td>{fmt(previousSummary.totalSolarKWH)}</td>
-                    <td>{yoy(currentSummary.totalSolarKWH, previousSummary.totalSolarKWH)}</td>
-                  </tr>
-
-                  <tr>
-                    <td>Total Fuel Consumption</td>
-                    <td>{fmt(currentSummary.totalFuel)}</td>
-                    <td>{fmt(previousSummary.totalFuel)}</td>
-                    <td>{yoy(currentSummary.totalFuel, previousSummary.totalFuel)}</td>
-                  </tr>
-
-                  <tr>
-                    <td>Avg Site Running kW</td>
-                    <td>{fmt(currentSummary.avgSiteKW)}</td>
-                    <td>{fmt(previousSummary.avgSiteKW)}</td>
-                    <td>{yoy(currentSummary.avgSiteKW, previousSummary.avgSiteKW)}</td>
-                  </tr>
-
-                  <tr>
-                    <td>Avg PUE</td>
-                    <td>{fmt(currentSummary.avgPUE)}</td>
-                    <td>{fmt(previousSummary.avgPUE)}</td>
-                    <td>{yoy(currentSummary.avgPUE, previousSummary.avgPUE)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      ) : null} */}
-
       <div
         onClick={() => isFullScreen && setIsFullScreen(false)}
         style={{
@@ -4320,25 +4198,6 @@ const DailyDGLog = ({ userData }) => {
           alignItems: "center"
         }}
       >
-        {/* <div style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <div style={{ display: "flex", gap: 10, fontSize: "12px", fontWeight: "bold", color: "rgb(16, 16, 32)" }}>
-            <select
-              value={trendView}
-              onChange={(e) => setTrendView(e.target.value)}
-              style={{ height: "30px" }}
-            >
-              <option value="YEARLY">Yearly</option>
-              <option value="MONTHLY">Monthly</option>
-              <option value="DAILY">Daily</option>
-            </select>
-
-            <button onClick={() => setHighlightPeak(!highlightPeak)}
-              style={{ height: "30px", fontSize: "12px", fontWeight: "bold", color: highlightPeak ? "red" : "gray", border: "1px solid", borderColor: highlightPeak ? "red" : "gray", borderRadius: "5px", padding: "0 10px" }}
-            >
-              {highlightPeak ? "🔥 Peak ON" : "Peak OFF"}
-            </button>
-          </div>
-        </div> */}
         {yearlyLoading ? (
           <div style={{ height: 350, display: "flex", alignItems: "flex-end", gap: 10, padding: "5px 5px", borderRadius: "10px", border: "1px solid #fff", background: "#5aa3d3a1" }}>
             {[...Array(12)].map((_, i) => (
@@ -4409,108 +4268,7 @@ const DailyDGLog = ({ userData }) => {
                 {isFullScreen ? "X" : "⛶"}
               </button>
             </div>
-            {/* <ResponsiveContainer width="100%" height={isFullScreen ? window.innerHeight - 100 : 320}>
-              <LineChart data={getTrendData()}>
-                <CartesianGrid stroke="#333" />
-                <XAxis dataKey={
-                  trendView === "YEARLY"
-                    ? "monthName"
-                    : trendView === "MONTHLY"
-                      ? "date"
-                      : "name"
-                }
-                  height={50}
-                  tick={(props) => {
-                    const { x, y, payload, index } = props;
-                    const item = getTrendData().find((d) => d.name === payload.value || d.date === payload.value || d.monthName === payload.value);
-                    return (
-                      <g transform={`translate(${x},${y})`}>
-                        <text x={0} y={0} dy={16} textAnchor="middle" fill="#666" fontSize={11}>
-                          {payload.value}
-                        </text>
-                        {item && (
-                          <text x={0} y={0} dy={30} textAnchor="middle" fill="#999" fontSize={10}>
-                            {item.MonthHrs} hrs
-                          </text>
-                        )}
-                      </g>
-                    );
-                  }} /> */}
-            {/* Left Axis */}
-            {/* <YAxis yAxisId="left" /> */}
 
-            {/* Right Axis */}
-            {/* <YAxis yAxisId="right" orientation="right" />
-                <Tooltip />
-                <Legend onClick={handleLegendClick} /> */}
-
-            {/* 🔥 Peak Highlight */}
-            {/* {highlightPeak && Object.keys(peakData).map((key) => {
-                  const item = peakData[key];
-
-                  if (!activeKeys[key] || !item) return null;
-
-                  const colors = {
-                    fuel: "#ff0015",
-                    siteLoad: "#15ff00",
-                    coolingLoad: "#00cbfe",
-                    itLoad: "#0ab451",
-                    officeLoad: "#26647c",
-                    EBKWH: "#002fff",
-                    EBAvailable: "#8a2be2",
-                    DGKWH: "#eeff00",
-                    DGRun: "#ffa600",
-                  };
-
-                  return (
-                    <ReferenceDot
-                      key={key}
-                      x={item.monthName}
-                      y={item[key]}
-                      r={6}
-                      fill={colors[key]}
-                      stroke="white"
-                      yAxisId={key === "fuel" ? "right" : "left"} // adjust axis
-                    />
-                  );
-                })} */}
-
-            {/* <Line dataKey="fuel" name="Fuel (L)" stroke="#fc2903" /> */}
-            {/* {activeKeys.PUE && (
-                  <Line yAxisId="left" type="monotone" name="PUE" dataKey="PUE" stroke="#ff7300" strokeOpacity={activeKeys.PUE ? 1 : 0.2} />
-                )}
-                {activeKeys.siteLoad && (
-                  <Line yAxisId="right" type="monotone" name="Site Load" dataKey="siteLoad" stroke="#15ff00" strokeOpacity={activeKeys.siteLoad ? 1 : 0.2} />
-                )}
-                {activeKeys.coolingLoad && (
-                  <Line yAxisId="right" type="monotone" name="Cooling Load" dataKey="coolingLoad" stroke="#00cbfe" strokeOpacity={activeKeys.coolingLoad ? 1 : 0.2} />
-                )}
-                {activeKeys.itLoad && (
-                  <Line yAxisId="right" type="monotone" name="IT Load" dataKey="itLoad" stroke="#0ab451" strokeOpacity={activeKeys.itLoad ? 1 : 0.2} />
-                )}
-                {activeKeys.officeLoad && (
-                  <Line yAxisId="right" type="monotone" name="Office Load" dataKey="officeLoad" stroke="#26647c" strokeOpacity={activeKeys.officeLoad ? 1 : 0.2} />
-                )}
-                {activeKeys.EBKWH && (
-                  <Line yAxisId="right" type="monotone" name="EB kWH" dataKey="EBKWH" stroke="#002fff" strokeOpacity={activeKeys.EBKWH ? 1 : 0.2} />
-                )}
-                {activeKeys.EBAvailable && (
-                  <Line yAxisId="right" type="monotone" name="EB Available Hrs" dataKey="EBAvailable" stroke="#002fff" strokeOpacity={activeKeys.EBAvailable ? 1 : 0.2} />
-                )}
-                {activeKeys.DGKWH && (
-                  <Line yAxisId="right" type="monotone" name="DG kWH" dataKey="DGKWH" stroke="#eeff00" strokeOpacity={activeKeys.DGKWH ? 1 : 0.2} />
-                )}
-                {activeKeys.DGRun && (
-                  <Line yAxisId="left" type="monotone" name="DG Run" dataKey="DGRun" stroke="#ffa600" strokeOpacity={activeKeys.DGRun ? 1 : 0.2} />
-                )}
-                {activeKeys.fuel && (
-                  <Line yAxisId="right" type="monotone" name="Fuel (L)" dataKey="fuel" stroke="#ff0015" strokeOpacity={activeKeys.fuel ? 1 : 0.2} />
-                )} */}
-
-            {/* 🔍 Zoom Feature */}
-            {/* <Brush dataKey="monthName" height={20} stroke="#8884d8" />
-              </LineChart>
-            </ResponsiveContainer> */}
             <ResponsiveContainer width="100%" height={isFullScreen ? window.innerHeight - 100 : 320}>
               <LineChart data={getTrendData()} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
 

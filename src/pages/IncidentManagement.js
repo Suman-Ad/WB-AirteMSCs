@@ -16,6 +16,7 @@ const IncidentManagement = ({ userData }) => {
   const [instructionText, setInstructionText] = useState("");
   const [isEditingNotice, setIsEditingNotice] = useState(false);
   const [editText, setEditText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [previewData, setPreviewData] = useState([]);
   const [validationErrors, setValidationErrors] = useState([]);
@@ -134,12 +135,14 @@ const IncidentManagement = ({ userData }) => {
     //   return;
     // }
 
+
     try {
       const incidentDate = new Date(formData.dateOfIncident);
       const year = incidentDate.getFullYear();
       const month = String(incidentDate.getMonth() + 1).padStart(2, '0');
       const day = String(incidentDate.getDate()).padStart(2, '0');
 
+      setIsSubmitting(true);
 
       if (incidentId) {
         // 🔸 Update existing incident
@@ -166,6 +169,7 @@ const IncidentManagement = ({ userData }) => {
           siteDateKey: `${userData.site}_${year}-${month}-${day}`,
           rcaFileUrl: formData.rcaFileUrl || ""   // ✅ Save RCA file link
         });
+        setIsSubmitting(false);
         alert("Incident reported successfully!");
       }
 
@@ -330,6 +334,7 @@ const IncidentManagement = ({ userData }) => {
 
   return (
     <div className="dhr-dashboard-container">
+      
       <h1 className="dashboard-header">
         <strong>🚨 {incidentId ? "Edit Incident" : "Incident Management"}</strong>
       </h1>
@@ -384,7 +389,7 @@ const IncidentManagement = ({ userData }) => {
       </div>
 
       <div style={{ marginBottom: "20px" }}>
-        
+
       </div>
 
       <div className="import-section">
@@ -471,6 +476,7 @@ const IncidentManagement = ({ userData }) => {
       <IncidentEditorPage
         formData={formData}
         onFormChange={handleFormChange}
+        isSubmitting={isSubmitting}
         onSubmit={handleSubmit}
         userData={userData}
         incidentId={incidentId}
