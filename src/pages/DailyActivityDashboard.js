@@ -29,6 +29,7 @@ const LABELS = [
   "Approvers",
   "CRQ/PE/REQ Tpye",
   "CRQ No/PE",
+  "Done Date",
   "Activity Start Time",
   "Activity End Time",
   "PM Status",
@@ -57,6 +58,7 @@ const KEYS = [
   "approvers",
   "crqType",
   "crqNo",
+  "doneDate",
   "activityStartTime",
   "activityEndTime",
   "pmStatus",
@@ -68,6 +70,7 @@ const EDITABLE_KEYS = [
   "activityStartTime",
   "activityEndTime",
   "pmStatus",
+  "doneDate",
 ];
 
 
@@ -258,6 +261,7 @@ export default function DailyActivityDashboard({ userData }) {
               crRequired: r.crRequired || "",               // ✅ added
               crqType: r.crqType || "",                     // ✅ added
               crqNo: r.crqNo || "",
+              doneDate: r.doneDate || "",
               activityStartTime: r.activityStartTime || "",
               activityEndTime: r.activityEndTime || "",
               vendor: r.vendor || "",
@@ -814,6 +818,7 @@ export default function DailyActivityDashboard({ userData }) {
         "CRQ Required": r.crRequired ? "Yes" : "No",
         "CRQ/PE/REQ Type": r.crqType || "",
         "CRQ No/PE": r.crqNo || "",
+        "Done Date": r.doneDate || "",
         "Activity Start Time": r.activityStartTime || "",
         "Activity End Time": r.activityEndTime || "",
         "PM Status": r.pmStatus || "Pending",
@@ -1550,7 +1555,7 @@ export default function DailyActivityDashboard({ userData }) {
                         ) : isEditingThisRow && isEditable ? (
                           /* 🔹 ALLOWED INPUT FIELDS ONLY */
                           <input
-                            type={k.includes("Time") ? "time" : "text"}
+                            type={k.includes("Time") ? "time" : k.includes("Date") ? "date" : "text"}
                             className="daily-activity-input"
                             value={draftRow[k] || ""}
                             onChange={(e) =>

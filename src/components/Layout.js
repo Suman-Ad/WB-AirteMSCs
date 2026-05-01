@@ -920,7 +920,6 @@ const Layout = ({ userData, children }) => {
                     <div
                       title="Click to toggle power source state"
                       style={{
-                        display: "flex",
                         alignItems: "center",
                         background: "#0f172aff",
                         borderRadius: "10px",
@@ -928,59 +927,71 @@ const Layout = ({ userData, children }) => {
                         padding: "3px 3px"
                       }}
                     >
-                      <span style={{ opacity: powerSource === "EB" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "EB" ? "#ffffffff" : "#ffffffaa" }}>
-                        <strong>⚡EB</strong>
-                      </span>
 
-                      <div
-                        onClick={powerLockRef.current || !canTogglePower ? undefined : updatePowerSource}
-                        style={{
-                          width: "42px",
-                          height: "22px",
-                          background: powerSource === "DG" ? "#dc2626" : "#16a34a",
-                          borderRadius: "12px",
-                          position: "relative",
-                          cursor:
-                            !canTogglePower
-                              ? "not-allowed"
-                              : "pointer",
-                          pointerEvents: powerLockRef.current ? "none" : "auto",
-                          opacity: powerLockRef.current ? 0.5 : 1,
-                        }}
-                      >
+                      <div style={{ marginRight: "6px", fontSize: "12px", color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "4px" }}>
+                        <span style={{ opacity: powerSource === "EB" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "EB" ? "#ffffffff" : "#ffffffaa" }}>
+                          <strong>⚡EB</strong>
+                        </span>
+
                         <div
+                          onClick={powerLockRef.current || !canTogglePower ? undefined : updatePowerSource}
                           style={{
-                            width: "18px",
-                            height: "18px",
-                            background: "#fff",
-                            borderRadius: "50%",
-                            position: "absolute",
-                            top: "2px",
-                            left: powerSource === "DG" ? "22px" : "2px",
-                            transition: "left 0.2s",
+                            width: "42px",
+                            height: "22px",
+                            background: powerSource === "DG" ? "#dc2626" : "#16a34a",
+                            borderRadius: "12px",
+                            position: "relative",
+                            cursor:
+                              !canTogglePower
+                                ? "not-allowed"
+                                : "pointer",
+                            pointerEvents: powerLockRef.current ? "none" : "auto",
+                            opacity: powerLockRef.current ? 0.5 : 1,
                           }}
-                        />
-                      </div>
+                        >
+                          <div
+                            style={{
+                              width: "18px",
+                              height: "18px",
+                              background: "#fff",
+                              borderRadius: "50%",
+                              position: "absolute",
+                              top: "2px",
+                              left: powerSource === "DG" ? "22px" : "2px",
+                              transition: "left 0.2s",
+                            }}
+                          />
+                        </div>
 
-                      <span style={{ opacity: powerSource === "DG" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "DG" ? "#ffffffff" : "#ffffffaa" }}>
-                        <strong>⛽DG</strong>
-                      </span>
-                    </div>
-                    {powerSource === "DG" && (
-                      <div style={{
-                        background: "#7f1d1d",
-                        color: "#fff",
-                        padding: "2px 10px",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                        fontWeight: "600",
-                        cursor: 'pointer'
-                      }}
-                        onClick={() => navigate("/dg-run-history")}
-                      >
-                        ⛽ DG Running: {formatDuration(dgSeconds)}
+                        <span style={{ opacity: powerSource === "DG" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "DG" ? "#ffffffff" : "#ffffffaa" }}>
+                          <strong>⛽DG</strong>
+                        </span>
                       </div>
-                    )}
+                      <div style={{ marginTop: "4px", fontSize: "10px", color: "#fff" }}>
+                        {powerSource === "DG" && (
+                          <div style={{
+                            background: "#7f1d1d",
+                            color: "#fff",
+                            padding: "2px 10px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: "600",
+                            cursor: 'pointer'
+                          }}
+                            onClick={() => navigate("/dg-run-history")}
+                          >
+                            ⛽ DG Running: {formatDuration(dgSeconds)}
+                            {siteConfig.designCph?.[selectedDG] && (
+                              <div>| Est. Fuel Consumption:
+                                <strong style={{ background: "red", color: "wheat", borderRadius: "5px" }}>
+                                  {((dgSeconds / 3600) * siteConfig.designCph?.[selectedDG]).toFixed(2)}Ltrs
+                                </strong>
+                              </div>)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                   </div>
                 )}
 
@@ -1195,6 +1206,12 @@ const Layout = ({ userData, children }) => {
                             onClick={() => navigate("/dg-run-history")}
                           >
                             ⛽ DG Running: {formatDuration(dgSeconds)}
+                            {siteConfig.designCph?.[selectedDG] && (
+                              <div>| Est. Fuel Consumption:
+                                <strong style={{ background: "red", color: "wheat", borderRadius: "5px" }}>
+                                  {((dgSeconds / 3600) * siteConfig.designCph?.[selectedDG]).toFixed(2)}Ltrs
+                                </strong>
+                              </div>)}
                           </div>
                         )}
                       </div>
@@ -1344,7 +1361,7 @@ const Layout = ({ userData, children }) => {
                         No Duty Today
                       </div>
                     )}
-                    
+
 
                   </div>
                   <NotificationBell user={userData} />

@@ -102,9 +102,20 @@ export default function DailyActivityManage({ userData }) {
   const [pmDoc, setPmDoc] = useState(null);
   const [loadingPm, setLoadingPm] = useState(false);
 
+  const getFirstDayOfMonth = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-01`;
+  };
+
+  const getLastDayOfMonth = () => {
+    const d = new Date();
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(lastDay)}`;
+  };
+
   // daily sheet
-  const [dateFrom, setDateFrom] = useState(todayISO());
-  const [dateTo, setDateTo] = useState(todayISO());
+  const [dateFrom, setDateFrom] = useState(getFirstDayOfMonth());
+  const [dateTo, setDateTo] = useState(getLastDayOfMonth());
   const [selectDate, setSelectDate] = useState(todayISO());
   const [editingRowDate, setEditingRowDate] = useState(null);
 
@@ -1428,7 +1439,7 @@ export default function DailyActivityManage({ userData }) {
                                     </select>
 
                                   </div>
-                                  <div style={{ fontSize: window.innerWidth > 612 ? "40px" : "12px"}}>
+                                  <div style={{ fontSize: window.innerWidth > 612 ? "40px" : "12px" }}>
                                     <div style={{ fontSize: 12, color: "#444" }}>Activity Owner: {entry.performBy || ""}</div>
                                     <div style={{ fontSize: 12, color: "#444" }}>Activity Type: {entry.activityType || ""}</div>
                                     <div style={{

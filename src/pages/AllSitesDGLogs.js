@@ -46,11 +46,13 @@ const AllSitesDGLogs = ({ userData }) => {
     const calculatedLogs = logs.map(log => calculateFields(log, siteConfigs[log.site.toUpperCase()] || {}));
     const [popupSite, setPopupSite] = useState(null);
     const [sitePowerStatus, setSitePowerStatus] = useState({});
+    const [dgSecondsMap, setDgSecondsMap] = useState({});
     const [loadingPower, setLoadingPower] = useState(true);
     const [showOnlyDG, setShowOnlyDG] = useState(false);
     const [dgLogs, setDgLogs] = useState([]);
     const [selectedDate, setSelectedDate] = useState(getISTDate()); // YYYY-MM-DD
     const [collaps, setCollaps] = useState({ [userData?.site?.toUpperCase() || ""]: true });
+
 
     const [isLargeScreen, setIsLargeScreen] = useState(window.innerHeight > 512)
     // Screen Resize Listener
@@ -195,6 +197,35 @@ const AllSitesDGLogs = ({ userData }) => {
 
         return () => unsubscribe();
     }, [monthKey]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const updated = {};
+
+            Object.entries(sitePowerStatus).forEach(([site, data]) => {
+                if (data?.powerSource === "DG" && data?.dgStartTime) {
+                    const start = data.dgStartTime.toDate();
+                    const now = new Date();
+                    const seconds = Math.floor((now - start) / 1000);
+
+                    updated[site] = seconds;
+                } else {
+                    updated[site] = data?.dgTotalSeconds || 0;
+                }
+            });
+
+            setDgSecondsMap(updated);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [sitePowerStatus]);
+
+    const formatDuration = (sec) => {
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+        return `${h}h ${m}m ${s}s`;
+    };
 
     // useEffect(() => {
     //     const fetchSitePowerStatus = async () => {
@@ -1040,7 +1071,73 @@ const AllSitesDGLogs = ({ userData }) => {
                                         <span style={{ marginLeft: "12px", fontSize: "12px", color: "#334155" }}>
                                             ({monthKey})
                                         </span>
-                                    </h2> : `${site} MSC ▼`}
+                                        {powerSource === "DG" && (
+                                            <div style={{
+                                                background: "#7f1d1d",
+                                                color: "#fff",
+                                                padding: "4px 10px",
+                                                borderRadius: "6px",
+                                                fontSize: "12px",
+                                                fontWeight: "600",
+                                                marginBottom: "6px"
+                                            }}>
+                                                ⛽ DG Running: {formatDuration(dgSecondsMap[site] || 0)}
+
+                                                {thisConfig?.designCph?.[dgNumber] && (
+                                                    <div>
+                                                        | Est. Fuel Consumption:
+                                                        <strong style={{
+                                                            background: "red",
+                                                            color: "wheat",
+                                                            borderRadius: "5px",
+                                                            marginLeft: "5px",
+                                                            padding: "2px 5px"
+                                                        }}>
+                                                            {(
+                                                                ((dgSecondsMap[site] || 0) / 3600) *
+                                                                thisConfig.designCph[dgNumber]
+                                                            ).toFixed(2)} Ltrs
+                                                        </strong>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </h2>
+                                    : <div>
+                                        {site} MSC ▼
+                                        {powerSource === "DG" && (
+                                            <div style={{
+                                                background: "#7f1d1d",
+                                                color: "#fff",
+                                                padding: "4px 10px",
+                                                borderRadius: "6px",
+                                                fontSize: "12px",
+                                                fontWeight: "600",
+                                                marginBottom: "6px"
+                                            }}>
+                                                ⛽ DG Running: {formatDuration(dgSecondsMap[site] || 0)}
+
+                                                {thisConfig?.designCph?.[dgNumber] && (
+                                                    <div>
+                                                        | Est. Fuel Consumption:
+                                                        <strong style={{
+                                                            background: "red",
+                                                            color: "wheat",
+                                                            borderRadius: "5px",
+                                                            marginLeft: "5px",
+                                                            padding: "2px 5px"
+                                                        }}>
+                                                            {(
+                                                                ((dgSecondsMap[site] || 0) / 3600) *
+                                                                thisConfig.designCph[dgNumber]
+                                                            ).toFixed(2)} Ltrs
+                                                        </strong>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                }
                             </strong>
 
                             {collaps[site] ? (
