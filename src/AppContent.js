@@ -4,6 +4,7 @@ import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { db, auth } from "./firebase";
 import { useNavigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 
 
 import Login from "./pages/Login";
@@ -145,6 +146,13 @@ export default function AppContent() {
         return () => clearInterval(interval);
     }, [userData]);
 
+    useEffect(() => {
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("/sw.js")
+                .then((reg) => console.log("SW registered", reg))
+                .catch((err) => console.error("SW failed", err));
+        }
+    }, []);
 
 
     if (loading) return <div>Loading...</div>;
@@ -154,6 +162,8 @@ export default function AppContent() {
             {userData?.name !== `${userData?.site} MSC` && (
                 <AutoLogout timeoutMs={8 * 60 * 60 * 1000} />
             )}
+            <Toaster position="top-right" />
+
             <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login setUserData={setUserData} />} />

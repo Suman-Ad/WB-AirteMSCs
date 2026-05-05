@@ -5,6 +5,7 @@ import * as XLSX from "xlsx";
 import { Link, useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto"; // auto-registers needed controllers
 import "../assets/daily-activity.css";
+import toast from "react-hot-toast";
 
 /** Column headers in the exact ordered structure you requested */
 const LABELS = [
@@ -117,6 +118,8 @@ const isAdminAssignmentValid = (userData) => {
 export default function DailyActivityDashboard({ userData }) {
   const [editingRow, setEditingRow] = useState(null);
   const [draftRow, setDraftRow] = useState({});
+  const [crqAlertShown, setCrqAlertShown] = useState(false);
+  const [crqWarning, setCrqWarning] = useState([]);
   function startEdit(rowObj) {
     setEditingRow({
       sheetId: rowObj._sheetId,
@@ -152,7 +155,6 @@ export default function DailyActivityDashboard({ userData }) {
     const dd = String(d.getDate()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}`;
   };
-
 
   /** filter popup state */
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -1118,6 +1120,255 @@ export default function DailyActivityDashboard({ userData }) {
   }, [filteredRows]);
 
 
+  useEffect(() => {
+    if ("Notification" in window) {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // const sendBrowserNotification = ({
+  //   title,
+  //   body,
+  //   crqList = [],
+  // }) => {
+  //   if (!("Notification" in window)) return;
+
+  //   if (Notification.permission !== "granted") return;
+
+  //   const notification = new Notification(title, {
+  //     body,
+  //     icon: "/vertiv192.png",
+  //     badge: "/vertiv192.png",
+  //     tag: "crq-alert", // prevents duplicate spam
+  //     renotify: true,
+  //     requireInteraction: true, // stays until user clicks
+  //     data: {
+  //       crqList,
+  //       phone: "18001039090",
+  //     },
+  //   });
+
+  //   // 🔥 CLICK ACTION (VERY IMPORTANT)
+  //   notification.onclick = () => {
+  //     window.focus();
+
+  //     // open dialer (works on mobile, some desktop apps)
+  //     window.location.href = `tel:${notification.data.phone}`;
+
+  //     // OR open dashboard
+  //     // window.open("/dashboard", "_blank");
+
+  //     notification.close();
+  //   };
+  // };
+
+  const sendBrowserNotification = async ({
+    title,
+    body,
+    crqList = [],
+  }) => {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission !== "granted") return;
+
+    const registration = await navigator.serviceWorker.getRegistration();
+
+    if (!registration) {
+      console.warn("No SW registered");
+      return;
+    }
+
+    registration.showNotification(title, {
+      body,
+      icon: "/vertiv192.png",
+      badge: "/vertiv192.png",
+      tag: "crq-alert",
+      renotify: true,
+      requireInteraction: true,
+
+      data: {
+        crqList,
+        phone: "18001039090",
+      },
+
+      // 🔥 REAL BUTTONS HERE
+      actions: [
+        {
+          action: "call",
+          title: "📞 Call Now",
+        },
+        {
+          action: "open",
+          title: "📊 Open Dashboard",
+        },
+      ],
+    });
+  };
+
+  const isCRQCloseTime = (row) => {
+    if (row.date !== getTodayISO()) return false;
+
+    const isCRQ =
+      (row.crqType || "").toUpperCase().includes("CRQ") ||
+      (row.crqNo || "").toUpperCase().startsWith("CRQ");
+
+    if (!isCRQ) return false;
+    if (row.pmStatus === "Completed") return false;
+    if (!row.activityEndTime) return false;
+
+    const [hh, mm] = row.activityEndTime.split(":");
+
+    const endTime = new Date();
+    endTime.setHours(hh, mm, 0, 0);
+
+    const alertTime = new Date(endTime.getTime() - 30 * 60000); // minus 30 min
+
+    return new Date() >= alertTime;
+  };
+
+  // ✅ CRQ Alert on load if any pending CRQ activity is overdue
+  useEffect(() => {
+    if (!filteredRows.length || crqAlertShown) return;
+
+    const now = new Date();
+
+    const overdueCRQs = filteredRows.filter((r) => {
+      if (r.date !== getTodayISO()) return false;
+
+      const isCRQ =
+        (r.crqType || "").toUpperCase().includes("CRQ") ||
+        (r.crqNo || "").toUpperCase().startsWith("CRQ");
+
+      if (!isCRQ) return false;
+      if ((r.pmStatus || "Pending") !== "Pending") return false;
+      if (!r.activityStartTime) return false;
+
+      const [hh, mm] = r.activityStartTime.split(":");
+      const startTime = new Date();
+      startTime.setHours(hh, mm, 0, 0);
+
+      return now > startTime;
+    });
+
+    if (overdueCRQs.length > 0) {
+      const crqList = overdueCRQs.map(r => r.crqNo).filter(Boolean).join(", ");
+
+      // alert(
+      //   `⚠️ CRQ Pending Alert!\n\nPlease call 1800101644308 for Open/Implement CRQ.\nCRQ No: ${crqList}`
+      // );
+
+      sendBrowserNotification({
+        title: "⚠️ CRQ Pending Alert",
+        body: `CRQ Pending: ${crqList}\nTap to Call Support`,
+        crqList: overdueCRQs.map(r => r.crqNo),
+      });
+
+
+      if (overdueCRQs.length > 0) {
+        const crqList = overdueCRQs.map(r => r.crqNo).filter(Boolean).join(", ");
+
+        setCrqWarning(overdueCRQs);
+        playAlertSound();
+
+        sendBrowserNotification({
+          title: "⚠️ CRQ Pending!",
+          body: `CRQ No: ${crqList}\nCall 18001039090`,
+          crqList: overdueCRQs.map(r => r.crqNo),
+        });
+
+        setCrqAlertShown(true);
+      }
+
+      setCrqAlertShown(true);
+      playAlertSound();
+    }
+  }, [filteredRows, crqAlertShown]);
+
+  const alertedCRQs = useRef(new Set());
+
+  useEffect(() => {
+    const overdueCRQs = filteredRows.filter(isCRQOverdue);
+
+    overdueCRQs.forEach((r) => {
+      if (!alertedCRQs.current.has(r.crqNo)) {
+        alertedCRQs.current.add(r.crqNo);
+
+        toast.error(`⚠️ CRQ Pending: ${r.crqNo}`);
+        sendBrowserNotification({
+          title: "⚠️ CRQ Pending",
+          body: `CRQ: ${r.crqNo}\nTap to Call`,
+          crqList: [r.crqNo],
+        });
+        playAlertSound();
+      }
+    });
+  }, [filteredRows]);
+
+  const playAlertSound = () => {
+    const audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+    audio.play();
+  };
+
+  const isCRQOverdue = (row) => {
+    if (row.date !== getTodayISO()) return false;
+
+    const isCRQ =
+      (row.crqType || "").toUpperCase().includes("CRQ") ||
+      (row.crqNo || "").toUpperCase().startsWith("CRQ");
+
+    if (!isCRQ) return false;
+    if ((row.pmStatus || "Pending") !== "Pending") return false;
+    if (!row.activityStartTime) return false;
+
+    const [hh, mm] = row.activityStartTime.split(":");
+    const startTime = new Date();
+    startTime.setHours(hh, mm, 0, 0);
+
+    return new Date() > startTime;
+  };
+
+  const isCRQClosingSoon = (row) => isCRQCloseTime(row);
+
+  const [closeAlertShown, setCloseAlertShown] = useState(false);
+
+
+  useEffect(() => {
+    if (!filteredRows.length || closeAlertShown) return;
+
+    const closingCRQs = filteredRows.filter((r) => isCRQClosingSoon(r));
+
+    if (closingCRQs.length > 0) {
+      const crqListArr = closingCRQs.map(r => r.crqNo).filter(Boolean);
+      const crqList = crqListArr.join(", ");
+
+      // 🔴 UI TOAST
+      toast.error(
+        `⚠️ CRQ CLOSURE ALERT!\nClose before end time\nCRQ: ${crqList}`
+      );
+
+      // 🔔 BROWSER NOTIFICATION (NEW)
+      sendBrowserNotification({
+        title: "⚠️ CRQ Closing Soon!",
+        body: `Close before end time\nCRQ: ${crqList}\nTap to Call`,
+        crqList: crqListArr,
+      });
+
+      // 🔊 SOUND
+      playAlertSound();
+
+      setCloseAlertShown(true);
+    }
+  }, [filteredRows, closeAlertShown]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRows(prev => [...prev]); // force re-check
+    }, 60000); // every 1 min
+
+    return () => clearInterval(interval);
+  }, []);
+
+
   return (
     <div className="dhr-dashboard-container">
       {loading && (
@@ -1162,6 +1413,70 @@ export default function DailyActivityDashboard({ userData }) {
           </div>
         </div>
       )}
+
+      {crqWarning.length > 0 && (
+        <div
+          style={{
+            background: "#fee2e2",
+            color: "#991b1b",
+            padding: "14px",
+            borderRadius: "10px",
+            marginBottom: "12px",
+            fontWeight: "600",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "10px",
+            boxShadow: "0 4px 10px rgba(0,0,0,0.1)"
+          }}
+        >
+          {/* LEFT SIDE TEXT */}
+          <div style={{ lineHeight: "1.5" }}>
+            ⚠️ <b>CRQ Pending!</b> Please call support
+            <br />
+            CRQ No: {crqWarning.map(r => r.crqNo).join(", ")}
+          </div>
+
+          {/* RIGHT SIDE BUTTONS */}
+          <div style={{ display: "flex", gap: "8px" }}>
+
+            {/* CLICKABLE NUMBER */}
+            <a
+              href="tel:18001039090"
+              style={{
+                background: "#fff",
+                color: "#991b1b",
+                padding: "8px 12px",
+                borderRadius: "6px",
+                textDecoration: "none",
+                border: "1px solid #dc2626",
+                fontWeight: "bold"
+              }}
+            >
+              📞 18001039090
+            </a>
+
+            {/* CALL BUTTON */}
+            <button
+              onClick={() => window.location.href = "tel:18001039090"}
+              style={{
+                background: "#dc2626",
+                color: "#fff",
+                border: "none",
+                padding: "8px 14px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontWeight: "bold"
+              }}
+            >
+              Call Now
+            </button>
+
+          </div>
+        </div>
+      )}
+
       <div className="daily-activity-header">
         <h1 className="dashboard-header">
           <strong>🏗️ Daily Activity Dashboard</strong>
@@ -1449,9 +1764,19 @@ export default function DailyActivityDashboard({ userData }) {
               {filteredRows.map((rowObj, idx) => (
                 <tr key={`${rowObj._sheetId}-${rowObj._rowIndex}`}
                   style={{
-                    borderLeft: isPMOverdue(rowObj)
-                      ? "6px solid #dc2626"
-                      : "none",
+                    backgroundColor: isCRQClosingSoon(rowObj)
+                      ? "#fff7ed"   // ORANGE (closing warning)
+                      : isCRQOverdue(rowObj)
+                        ? "#fff1f2"   // RED (start overdue)
+                        : "",
+                    borderLeft:
+                      isCRQClosingSoon(rowObj)
+                        ? "6px solid #f97316"
+                        : isCRQOverdue(rowObj)
+                          ? "6px solid #dc2626"
+                          : isPMOverdue(rowObj)
+                            ? "6px solid #dc2626"
+                            : "none",
                   }}
                 >
                   <td
