@@ -1120,47 +1120,11 @@ export default function DailyActivityDashboard({ userData }) {
   }, [filteredRows]);
 
 
-  useEffect(() => {
-    if ("Notification" in window) {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  // const sendBrowserNotification = ({
-  //   title,
-  //   body,
-  //   crqList = [],
-  // }) => {
-  //   if (!("Notification" in window)) return;
-
-  //   if (Notification.permission !== "granted") return;
-
-  //   const notification = new Notification(title, {
-  //     body,
-  //     icon: "/vertiv192.png",
-  //     badge: "/vertiv192.png",
-  //     tag: "crq-alert", // prevents duplicate spam
-  //     renotify: true,
-  //     requireInteraction: true, // stays until user clicks
-  //     data: {
-  //       crqList,
-  //       phone: "18001039090",
-  //     },
-  //   });
-
-  //   // 🔥 CLICK ACTION (VERY IMPORTANT)
-  //   notification.onclick = () => {
-  //     window.focus();
-
-  //     // open dialer (works on mobile, some desktop apps)
-  //     window.location.href = `tel:${notification.data.phone}`;
-
-  //     // OR open dashboard
-  //     // window.open("/dashboard", "_blank");
-
-  //     notification.close();
-  //   };
-  // };
+  // useEffect(() => {
+  //   if ("Notification" in window) {
+  //     Notification.requestPermission();
+  //   }
+  // }, []);
 
   const sendBrowserNotification = async ({
     title,
@@ -1352,6 +1316,7 @@ export default function DailyActivityDashboard({ userData }) {
         body: `Close before end time\nCRQ: ${crqList}\nTap to Call`,
         crqList: crqListArr,
       });
+      setCrqWarning(closingCRQs);
 
       // 🔊 SOUND
       playAlertSound();
@@ -1433,7 +1398,7 @@ export default function DailyActivityDashboard({ userData }) {
         >
           {/* LEFT SIDE TEXT */}
           <div style={{ lineHeight: "1.5" }}>
-            ⚠️ <b>CRQ Pending!</b> Please call support
+            ⚠️ <b>{crqAlertShown ? "CRQ Pending Open!" : "CRQ Pending Close!"}</b> Please call support
             <br />
             CRQ No: {crqWarning.map(r => r.crqNo).join(", ")}
           </div>

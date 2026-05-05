@@ -16,7 +16,7 @@
     "date-fns": "^4.1.0",
     "docxtemplater": "^3.66.7",
     "file-saver": "^2.0.5",
-    "firebase": "^12.0.0",
+    "firebase": "^12.12.1",
     "framer-motion": "^12.23.12",
     "hot-formula-parser": "^4.0.0",
     "html-docx-js": "^0.3.1",
