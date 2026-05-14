@@ -435,7 +435,7 @@ const AcDcRackDashboard = ({ userData }) => {
             "Circle": item.circle,
             "Site Name": item.siteName,
             "Equipment Location": item.equipmentLocation,
-            "Equipment Name": item.equipmentRackNo,
+            "Rack/Equipment No": item.equipmentRackNo,
             "Rack Name": item.rackName,
             "RFAI No.": item.rfaiNo,
             "Rack Power On Date": item.rackPowerOnDate,
@@ -461,10 +461,12 @@ const AcDcRackDashboard = ({ userData }) => {
             "DB Number A": item.dbNumberA,
             "Incomer Rating A (Amps)": item.incomerRatingA,
             "Incomer DB Cable Size A (Sq mm)": item.cableSizeA,
+            "Incomer DB Cable Length A (Mtr)": item.cableLengthA,
             "Cable Runs A (Nos)": item.cableRunA,
             "Equipment Rack No A": item.equipmentRackNoA,
             "Rack Name A": item.rackNameA,
             "Rack Incoming Power Cable Size A (Sq mm)": item.rackIncomingCableSizeA,
+            "Rack Cable Length A (Mtr)": item.rackCableLengthA,
             "Rack Cable Run A (Nos)": item.rackCableRunA,
             "DB MCB Number A": item.dbMcbNumberA,
             "DB MCB Rating A (Amps)": item.dbMcbRatingA,
@@ -484,10 +486,12 @@ const AcDcRackDashboard = ({ userData }) => {
             "DB Number B": item.dbNumberB,
             "Incomer Rating B (Amps)": item.incomerRatingB,
             "Incomer DB Cable Size B (Sq mm)": item.cableSizeB,
+            "Cable Length B (Mtr)": item.cableLengthB,
             "Cable Runs B (Nos)": item.cableRunB,
             "Equipment Rack No B": item.equipmentRackNoB,
             "Rack Name B": item.rackNameB,
             "Rack Incoming Power Cable Size B (Sq mm)": item.rackIncomingCableSizeB,
+            "Rack Cable Length B (Mtr)": item.rackCableLengthB,
             "Rack Cable Run B (Nos)": item.rackCableRunB,
             "DB MCB Number B": item.dbMcbNumberB,
             "DB MCB Rating B (Amps)": item.dbMcbRatingB,
@@ -1034,6 +1038,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 5 }}>Equipment/Rack No</th>
                             <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 4 }}>Equipment/Rack Name</th>
                             <th style={getHeaderStyle(`gen`)}>RFAI No.</th>
+                            <th style={getHeaderStyle(`gen`)}>Rack On Date.</th>
                             <th style={getHeaderStyle(`gen`)}>Power Type</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Type</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Size (HxWxD in mm)</th>
@@ -1045,11 +1050,13 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`(A)`)}>(A) Source DB Number</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Incomer rating of DB (Amps):</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Incomer DB Cable Size (Sq mm)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Cable Length (Mtr)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Cable Runs (Nos)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Equipment Rack No</th>
                             <th style={getHeaderStyle(`(A)`)} >(A) Rack Name/Equipment Name</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Rack/Node Incoming Power Cable Size (Sq mm)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Cable Run (Nos)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Length (Mtr)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Run (Nos)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Number</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Rating (Amps)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Temp On Mcb/Fuse (°C)</th>
@@ -1068,10 +1075,12 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`(B)`)}>(B) DB Number</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Rating (Amps):</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Cable Size (Sq mm)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Cable Length (Mtr)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Cable Runs (Nos)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Equipment Rack No</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Rack Name A</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Rack Incoming Power Cable Size (Sq mm)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Rack/Node Incoming Power Cable Size (Sq mm)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Length (Mtr)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Run (Nos)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Number</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Rating (Amps)</th>
@@ -1125,6 +1134,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td className="sticky-col" style={{ position: "sticky", left: 0, zIndex: 3 }}>{item.equipmentRackNo}</td>
                                 <td className="sticky-col">{item.rackName}</td>
                                 <td>{item.rfaiNo ? item.rfaiNo : "---"}</td>
+                                <td>{item.rackPowerOnDate ? item.rackPowerOnDate : "---"}</td>
                                 <td>{item.powerType}</td>
                                 <td>{item.rackType}</td>
                                 <td>{item.rackSize}</td>
@@ -1141,10 +1151,12 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.dbNumberA}</td>
                                 <td>{item.incomerRatingA}</td>
                                 <td>{item.cableSizeA}</td>
+                                <td>{item.cableLengthA}</td>
                                 <td>{item.cableRunA}</td>
                                 <td>{item.equipmentRackNoA}</td>
                                 <td>{item.rackNameA}</td>
                                 <td>{item.rackIncomingCableSizeA}</td>
+                                <td>{item.rackCableLengthA}</td>
                                 <td>{item.rackCableRunA}</td>
                                 <td>{item.dbMcbNumberA}</td>
                                 <td>{item.dbMcbRatingA}</td>
@@ -1166,10 +1178,12 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.dbNumberB}</td>
                                 <td>{item.incomerRatingB}</td>
                                 <td>{item.cableSizeB}</td>
+                                <td>{item.cableLengthB}</td>
                                 <td>{item.cableRunB}</td>
                                 <td>{item.equipmentRackNoB}</td>
                                 <td>{item.rackNameB}</td>
                                 <td>{item.rackIncomingCableSizeB}</td>
+                                <td>{item.rackCableLengthB}</td>
                                 <td>{item.rackCableRunB}</td>
                                 <td>{item.dbMcbNumberB}</td>
                                 <td>{item.dbMcbRatingB}</td>

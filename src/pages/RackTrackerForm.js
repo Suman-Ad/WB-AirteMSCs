@@ -105,15 +105,15 @@ function computeCapacityAnalysis(form) {
 }
 
 const isAdminAssignmentValid = (userData) => {
-    if (!userData?.isAdminAssigned) return false;
-    if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+  if (!userData?.isAdminAssigned) return false;
+  if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
 
-    const today = new Date();
-    const from = new Date(userData.adminAssignFrom);
-    const to = new Date(userData.adminAssignTo);
+  const today = new Date();
+  const from = new Date(userData.adminAssignFrom);
+  const to = new Date(userData.adminAssignTo);
 
-    return today >= from && today <= to;
-  };
+  return today >= from && today <= to;
+};
 
 
 const RackTrackerForm = ({ userData }) => {
@@ -192,10 +192,12 @@ const RackTrackerForm = ({ userData }) => {
         dbNumberA: "",
         incomerRatingA: "",
         cableSizeA: "",
+        cableLengthA: "",
         cableRunA: "",
         equipmentRackNoA: "",
         rackNameA: "",
         rackIncomingCableSizeA: "",
+        rackCableLengthA: "",
         rackCableRunA: "",
         dbMcbNumberA: "",
         dbMcbRatingA: "",
@@ -216,10 +218,12 @@ const RackTrackerForm = ({ userData }) => {
         dbNumberB: "",
         incomerRatingB: "",
         cableSizeB: "",
+        cableLengthB: "",
         cableRunB: "",
         equipmentRackNoB: "",
         rackNameB: "",
         rackIncomingCableSizeB: "",
+        rackCableLengthB: "",
         rackCableRunB: "",
         dbMcbNumberB: "",
         dbMcbRatingB: "",
@@ -1057,6 +1061,8 @@ const RackTrackerForm = ({ userData }) => {
               <input type="number" name="incomerRatingA" value={formData.incomerRatingA} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Cable Size (Sq mm):</label>
               <input type="any" name="cableSizeA" value={formData.cableSizeA} onChange={handleChange} />
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Cable Length (mtr):</label>
+              <input type="any" name="cableLengthA" value={formData.cableLengthA} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>PP - DB Cable Runs (Nos):</label>
               <input type="any" name="cableRunA" value={formData.cableRunA} onChange={handleChange} />
             </div>
@@ -1072,6 +1078,8 @@ const RackTrackerForm = ({ userData }) => {
             <div style={{ borderTop: "2px solid #888013ff", padding: "5px" }}>
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack/Node Incoming Power Cable Size (Sq mm):</label>
               <input type="number" name="rackIncomingCableSizeA" value={formData.rackIncomingCableSizeA} onChange={handleChange} />
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack/Node Incoming Power Cable Length (mtr):</label>
+              <input type="number" name="rackCableLengthA" value={formData.rackCableLengthA} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB - RackDB Cable Run (Nos):</label>
               <input type="number" name="rackCableRunA" value={formData.rackCableRunA} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Number:</label>
@@ -1123,6 +1131,8 @@ const RackTrackerForm = ({ userData }) => {
               <input type="number" name="incomerRatingB" value={formData.incomerRatingB} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Cable Size (Sq mm):</label>
               <input type="any" name="cableSizeB" value={formData.cableSizeB} onChange={handleChange} />
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Cable Length (mtr):</label>
+              <input type="any" name="cableLengthB" value={formData.cableLengthB} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>PP - DB Cable Runs (Nos):</label>
               <input type="any" name="cableRunB" value={formData.cableRunB} onChange={handleChange} />
             </div>
@@ -1137,6 +1147,8 @@ const RackTrackerForm = ({ userData }) => {
             <div style={{ borderTop: "2px solid #888013ff", padding: "5px" }}>
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack Incoming Power Cable Size (Sq mm):</label>
               <input type="number" name="rackIncomingCableSizeB" value={formData.rackIncomingCableSizeB} onChange={handleChange} />
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack/Node Incoming Power Cable Length (mtr):</label>
+              <input type="number" name="rackCableLengthB" value={formData.rackCableLengthB} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB - RackDB Cable Run (Nos):</label>
               <input type="number" name="rackCableRunB" value={formData.rackCableRunB} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Number:</label>
