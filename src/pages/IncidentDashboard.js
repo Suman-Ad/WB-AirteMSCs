@@ -474,6 +474,8 @@ const IncidentDashboard = ({ userData }) => {
                 <th>Status</th>
                 <th>RCA Status</th>
                 <th>RCA File</th>
+                <th>Reported By</th>
+                <th>Updated By</th>
                 {(userData.role === "Admin" || userData.role === "Super Admin" || userData.role === "Super User") &&
                   <th>Action</th>
                 }
@@ -503,6 +505,8 @@ const IncidentDashboard = ({ userData }) => {
                         👁️‍🗨️
                       </Link> : "N/A"}
                   </td>
+                  <td>{incident.uploadedBy?.name || "Unknown"}-{incident.uploadedBy?.empId || ""}</td>
+                  <td>{incident.updatedBy?.name || "Unknown"}-{incident.updatedBy?.empId || ""}</td>
                   {(userData.role === "Admin" || userData.role === "Super Admin" || userData.role === "Super User") &&
                     <td>
                       <button onClick={(e) => {

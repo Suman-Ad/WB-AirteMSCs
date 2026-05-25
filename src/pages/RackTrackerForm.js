@@ -200,6 +200,7 @@ const RackTrackerForm = ({ userData }) => {
         rackCableLengthA: "",
         rackCableRunA: "",
         dbMcbNumberA: "",
+        dbVoltageA: "",
         dbMcbRatingA: "",
         tempOnMcbA: "",
         runningLoadA: "",
@@ -208,6 +209,7 @@ const RackTrackerForm = ({ userData }) => {
         pctLoadMcbA: "",
         rackEndNoDbA: "",
         rackEndDcdbNameA: "",
+        rackEndVoltageA: "",
         rackEndRunningLoadA: "",
         rackEndMcbRatingA: "",
         rackEndPctLoadMcbA: "",
@@ -226,6 +228,7 @@ const RackTrackerForm = ({ userData }) => {
         rackCableLengthB: "",
         rackCableRunB: "",
         dbMcbNumberB: "",
+        dbVoltageB: "",
         dbMcbRatingB: "",
         tempOnMcbB: "",
         runningLoadB: "",
@@ -234,6 +237,7 @@ const RackTrackerForm = ({ userData }) => {
         pctLoadMcbB: "",
         rackEndNoDbB: "",
         rackEndDcdbNameB: "",
+        rackEndVoltageB: "",
         rackEndRunningLoadB: "",
         rackEndMcbRatingB: "",
         rackEndPctLoadMcbB: "",
@@ -1057,6 +1061,8 @@ const RackTrackerForm = ({ userData }) => {
               <input type="text" name="smpsNameA" value={formData.smpsNameA} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>A Source DB Number:</label>
               <input type="text" name="dbNumberA" value={formData.dbNumberA} onChange={handleChange} />
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>A Source DB Voltage (V):</label>
+              <input type="number" name="dbVoltageA" value={formData.dbVoltageA} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Rating (Amps):</label>
               <input type="number" name="incomerRatingA" value={formData.incomerRatingA} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Cable Size (Sq mm):</label>
@@ -1084,6 +1090,8 @@ const RackTrackerForm = ({ userData }) => {
               <input type="number" name="rackCableRunA" value={formData.rackCableRunA} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Number:</label>
               <input type="text" name="dbMcbNumberA" value={formData.dbMcbNumberA} onChange={handleChange} />
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack End Voltage (V):</label>
+              <input type="number" name="rackEndVoltageA" value={formData.rackEndVoltageA} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Rating (Amps):</label>
               <input type="number" name="dbMcbRatingA" value={formData.dbMcbRatingA} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>Temp On Mcb/Fuse (°C):</label>
@@ -1127,6 +1135,8 @@ const RackTrackerForm = ({ userData }) => {
               <input type="text" name="smpsNameB" value={formData.smpsNameB} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>B Source DB Number:</label>
               <input type="text" name="dbNumberB" value={formData.dbNumberB} onChange={handleChange} />
+              <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>B Source DB Voltage (V):</label>
+              <input type="number" name="dbVoltageB" value={formData.dbVoltageB} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Rating (Amps):</label>
               <input type="number" name="incomerRatingB" value={formData.incomerRatingB} onChange={handleChange} />
               <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>Incomer DB Cable Size (Sq mm):</label>
@@ -1153,6 +1163,8 @@ const RackTrackerForm = ({ userData }) => {
               <input type="number" name="rackCableRunB" value={formData.rackCableRunB} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Number:</label>
               <input type="text" name="dbMcbNumberB" value={formData.dbMcbNumberB} onChange={handleChange} />
+              <label style={{ color: "#888013ff", fontWeight: "bold" }}>Rack End Voltage (V):</label>
+              <input type="number" name="rackEndVoltageB" value={formData.rackEndVoltageB} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>DB MCB Rating (Amps):</label>
               <input type="number" name="dbMcbRatingB" value={formData.dbMcbRatingB} onChange={handleChange} />
               <label style={{ color: "#888013ff", fontWeight: "bold" }}>Temp On Mcb/Fuse (°C):</label>

@@ -459,6 +459,7 @@ const AcDcRackDashboard = ({ userData }) => {
             "SMPS Rating A (Amps)": item.smpsRatingA,
             "SMPS Name A": item.smpsNameA,
             "DB Number A": item.dbNumberA,
+            "DB Voltage A (V)": item.dbVoltageA,
             "Incomer Rating A (Amps)": item.incomerRatingA,
             "Incomer DB Cable Size A (Sq mm)": item.cableSizeA,
             "Incomer DB Cable Length A (Mtr)": item.cableLengthA,
@@ -469,6 +470,7 @@ const AcDcRackDashboard = ({ userData }) => {
             "Rack Cable Length A (Mtr)": item.rackCableLengthA,
             "Rack Cable Run A (Nos)": item.rackCableRunA,
             "DB MCB Number A": item.dbMcbNumberA,
+            "Rack End Voltage A (V)": item.rackEndVoltageA,
             "DB MCB Rating A (Amps)": item.dbMcbRatingA,
             "Temp On Mcb/Fuse A (°C)": item.tempOnMcbA,
             "Source Running Load A (Amps)": item.runningLoadA,
@@ -484,6 +486,7 @@ const AcDcRackDashboard = ({ userData }) => {
             "SMPS Rating B (Amps)": item.smpsRatingB,
             "SMPS Name B": item.smpsNameB,
             "DB Number B": item.dbNumberB,
+            "DB Voltage B (V)": item.dbVoltageB,
             "Incomer Rating B (Amps)": item.incomerRatingB,
             "Incomer DB Cable Size B (Sq mm)": item.cableSizeB,
             "Cable Length B (Mtr)": item.cableLengthB,
@@ -494,6 +497,7 @@ const AcDcRackDashboard = ({ userData }) => {
             "Rack Cable Length B (Mtr)": item.rackCableLengthB,
             "Rack Cable Run B (Nos)": item.rackCableRunB,
             "DB MCB Number B": item.dbMcbNumberB,
+            "Rack End Voltage B (V)": item.rackEndVoltageB,
             "DB MCB Rating B (Amps)": item.dbMcbRatingB,
             "Temp On Mcb/Fuse B (°C)": item.tempOnMcbB,
             "Running Load B (Amps)": item.runningLoadB,
@@ -1048,6 +1052,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Rating (Amps/kVA)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Name</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Source DB Number</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) DB Voltage (V)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Incomer rating of DB (Amps):</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Incomer DB Cable Size (Sq mm)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Cable Length (Mtr)</th>
@@ -1058,6 +1063,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Length (Mtr)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Run (Nos)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Number</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Rack End Voltage (V)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Rating (Amps)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Temp On Mcb/Fuse (°C)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Source Running Load (Amps):</th>
@@ -1073,6 +1079,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`(B)`)}>(B) SMPS/UPS Rating (Amps/kVA)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) SMPS/UPS Name</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB Number</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) DB Voltage (V)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Rating (Amps):</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Cable Size (Sq mm)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Cable Length (Mtr)</th>
@@ -1083,6 +1090,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Length (Mtr)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Run (Nos)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Number</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Rack End Voltage (V)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Rating (Amps)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Temp On Mcb/Fuse (°C)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Running Load (Amps):</th>
@@ -1149,6 +1157,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.smpsRatingA}</td>
                                 <td>{item.smpsNameA}</td>
                                 <td>{item.dbNumberA}</td>
+                                <td>{item.dbVoltageA}</td>
                                 <td>{item.incomerRatingA}</td>
                                 <td>{item.cableSizeA}</td>
                                 <td>{item.cableLengthA}</td>
@@ -1159,6 +1168,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.rackCableLengthA}</td>
                                 <td>{item.rackCableRunA}</td>
                                 <td>{item.dbMcbNumberA}</td>
+                                <td>{item.rackEndVoltageA}</td>
                                 <td>{item.dbMcbRatingA}</td>
                                 <td>{item.tempOnMcbA}</td>
                                 <td>{item.runningLoadA}</td>
@@ -1176,6 +1186,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.smpsRatingB}</td>
                                 <td>{item.smpsNameB}</td>
                                 <td>{item.dbNumberB}</td>
+                                <td>{item.dbVoltageB}</td>
                                 <td>{item.incomerRatingB}</td>
                                 <td>{item.cableSizeB}</td>
                                 <td>{item.cableLengthB}</td>
@@ -1186,6 +1197,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.rackCableLengthB}</td>
                                 <td>{item.rackCableRunB}</td>
                                 <td>{item.dbMcbNumberB}</td>
+                                <td>{item.rackEndVoltageB}</td>
                                 <td>{item.dbMcbRatingB}</td>
                                 <td>{item.tempOnMcbB}</td>
                                 <td>{item.runningLoadB}</td>

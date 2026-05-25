@@ -149,7 +149,8 @@ const IncidentManagement = ({ userData }) => {
         await updateDoc(doc(db, "incidents", incidentId), {
           ...formData,
           updatedAt: serverTimestamp(),
-          rcaFileUrl: formData.rcaFileUrl || ""   // ✅ Update RCA file link
+          rcaFileUrl: formData.rcaFileUrl || "",  // ✅ Update RCA file link
+          updatedBy: userData,
         });
         alert("Incident updated successfully!");
       } else {
@@ -167,7 +168,8 @@ const IncidentManagement = ({ userData }) => {
           day,
           dateKey: `${year}-${month}-${day}`,
           siteDateKey: `${userData.site}_${year}-${month}-${day}`,
-          rcaFileUrl: formData.rcaFileUrl || ""   // ✅ Save RCA file link
+          rcaFileUrl: formData.rcaFileUrl || "",  // ✅ Save RCA file link
+          uploadedBy: userData,
         });
         setIsSubmitting(false);
         alert("Incident reported successfully!");

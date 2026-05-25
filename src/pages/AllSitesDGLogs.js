@@ -825,7 +825,7 @@ const AllSitesDGLogs = ({ userData }) => {
 
     return (
         <div className="daily-log-container">
-            <h2>All Sites DG Logs Monthly Summary - <strong>{monthKey}</strong> </h2>
+            <h2>All Sites Daily Energy Logs Monthly Summary - <strong>{monthKey}</strong> </h2>
 
             <div
                 style={{
