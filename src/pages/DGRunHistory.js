@@ -12,7 +12,15 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  subMonths
+} from "date-fns";
 
 
 const formatDuration = (sec) => {
@@ -43,6 +51,8 @@ const DGRunHistory = ({ userData }) => {
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
 
+  const [monthLogs, setMonthLogs] = useState([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
 
   /** permissions */
@@ -121,7 +131,6 @@ const DGRunHistory = ({ userData }) => {
       // orderBy("createdAt", "desc")
     );
 
-
     const unsub = onSnapshot(q, (snap) => {
       const rows = snap.docs.map((d, i) => ({
         id: d.id,
@@ -134,26 +143,342 @@ const DGRunHistory = ({ userData }) => {
     return () => unsub();
   }, [userData?.site, selectedDate]);
 
+  useEffect(() => {
+    if (!userData?.site) return;
+
+    const monthStart = format(
+      startOfMonth(currentMonth),
+      "yyyy-MM-dd"
+    );
+
+    const monthEnd = format(
+      endOfMonth(currentMonth),
+      "yyyy-MM-dd"
+    );
+
+    const q = query(
+      collection(
+        db,
+        "dgRunLogs",
+        userData.site,
+        "entries"
+      ),
+      where("date", ">=", monthStart),
+      where("date", "<=", monthEnd)
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      setMonthLogs(
+        snap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+      );
+    });
+
+    return () => unsub();
+  }, [userData?.site, currentMonth]);
+
+  const pendingLogs =
+    logs.filter(
+      row =>
+        !row.dgLogAdded &&
+        !row.dgLogId
+    ).length;
+
+  const getDateStatus = (dateObj) => {
+    const date = format(
+      dateObj,
+      "yyyy-MM-dd"
+    );
+
+    const dayLogs =
+      monthLogs.filter(
+        x => x.date === date
+      );
+
+    if (dayLogs.length === 0)
+      return "empty";
+
+    const updated =
+      dayLogs.filter(
+        x =>
+          x.dgLogAdded ||
+          x.dgLogId
+      ).length;
+
+    if (updated === 0)
+      return "pending";
+
+    if (updated === dayLogs.length)
+      return "complete";
+
+    return "partial";
+  };
+
+  const summary = {
+    complete: 0,
+    partial: 0,
+    pending: 0
+  };
+
+  const uniqueDates =
+    [...new Set(
+      monthLogs.map(
+        x => x.date
+      )
+    )];
+
+  uniqueDates.forEach(date => {
+
+    const rows =
+      monthLogs.filter(
+        x => x.date === date
+      );
+
+    const updated =
+      rows.filter(
+        x =>
+          x.dgLogAdded ||
+          x.dgLogId
+      ).length;
+
+    if (updated === rows.length)
+      summary.complete++;
+
+    else if (updated === 0)
+      summary.pending++;
+
+    else
+      summary.partial++;
+  });
+
   return (
     <div className="daily-log-container" style={{ padding: "16px" }}>
       <h3>⛽ DG Run History</h3>
 
-      <div style={{ marginBottom: "12px" }}>
-        <label style={{ fontWeight: "bold" }}>
-          📅 Select Date:&nbsp;
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            style={{
-              padding: "6px",
-              borderRadius: "6px",
-              border: "1px solid #ccc",
-            }}
-          />
-        </label>
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+          marginBottom: "15px"
+        }}
+      >
+
+        <div
+          style={{
+            background: "#14532d",
+            color: "#fff",
+            padding: "10px",
+            borderRadius: "8px"
+          }}
+        >
+          🟢 Updated Days
+          <br />
+          {summary.complete}
+        </div>
+
+        <div
+          style={{
+            background: "#92400e",
+            color: "#fff",
+            padding: "10px",
+            borderRadius: "8px"
+          }}
+        >
+          🟡 Partial Days
+          <br />
+          {summary.partial}
+        </div>
+
+        <div
+          style={{
+            background: "#991b1b",
+            color: "#fff",
+            padding: "10px",
+            borderRadius: "8px"
+          }}
+        >
+          🔴 Pending Days
+          <br />
+          {summary.pending}
+        </div>
+
+      </div>
+      <div
+        style={{
+          marginBottom: "20px"
+        }}
+      >
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: "10px"
+          }}
+        >
+          <button
+            onClick={() =>
+              setCurrentMonth(
+                subMonths(
+                  currentMonth,
+                  1
+                )
+              )
+            }
+          >
+            ◀ Previous Month
+          </button>
+
+          <button
+            onClick={() =>
+              setCurrentMonth(
+                addMonths(
+                  currentMonth,
+                  1
+                )
+              )
+            }
+          >
+            Next Month ▶
+          </button>
+        </div>
+
+        <Calendar
+          value={
+            new Date(selectedDate)
+          }
+          onChange={(value) =>
+            setSelectedDate(
+              format(
+                value,
+                "yyyy-MM-dd"
+              )
+            )
+          }
+          activeStartDate={currentMonth}
+          onActiveStartDateChange={({ activeStartDate }) =>
+            setCurrentMonth(activeStartDate)
+          }
+          tileContent={({ date, view }) => {
+            if (view !== "month") return null;
+
+            const status = getDateStatus(date);
+
+            let color = "";
+
+            if (status === "complete")
+              color = "#22c55e";
+
+            if (status === "partial")
+              color = "#f59e0b";
+
+            if (status === "pending")
+              color = "#ef4444";
+
+            if (!color) return null;
+
+            return (
+              <div
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: color,
+                  margin: "2px auto 0"
+                }}
+              />
+            );
+          }}
+        />
+
+      </div>
+      <div
+        style={{
+          marginBottom: "12px",
+          padding: "10px",
+          background:
+            pendingLogs > 0
+              ? "#7f1d1d"
+              : "#14532d",
+          color: "#fff",
+          borderRadius: "8px",
+          fontWeight: "bold",
+        }}
+      >
+        {pendingLogs > 0
+          ? `🚨 ${pendingLogs} DG entries pending update`
+          : "✅ All DG entries updated"}
       </div>
 
+      {/* <div style={{ marginBottom: "12px" }}>
+        <label style={{ fontWeight: "bold" }}>
+          📅 Select Date:&nbsp;
+          <div
+            style={{
+              marginBottom: "12px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              flexWrap: "flex"
+            }}
+          >
+            <button
+              onClick={() =>
+                setSelectedDate(
+                  format(
+                    subDays(
+                      new Date(selectedDate),
+                      1
+                    ),
+                    "yyyy-MM-dd"
+                  )
+                )
+              }
+            >
+              ⬅ Prev
+            </button>
+
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) =>
+                setSelectedDate(e.target.value)
+              }
+            />
+
+            <button
+              onClick={() =>
+                setSelectedDate(
+                  format(
+                    addDays(
+                      new Date(selectedDate),
+                      1
+                    ),
+                    "yyyy-MM-dd"
+                  )
+                )
+              }
+            >
+              Next ➡
+            </button>
+          </div>
+        </label>
+      </div> */}
+      {pendingLogs > 0 && (
+        <div
+          style={{
+            marginBottom: "10px",
+            color: "#dc2626",
+            fontWeight: "bold",
+            fontSize: "14px",
+          }}
+        >
+          🔴 Selected date contains DG entries that are not updated.
+        </div>
+      )}
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
@@ -185,7 +510,19 @@ const DGRunHistory = ({ userData }) => {
               const isUpdated = r.dgLogAdded === true || !!r.dgLogId;
 
               return (
-                <tr key={r.id}>
+                <tr
+                  key={r.id}
+                  style={{
+                    background:
+                      !isUpdated
+                        ? "#fef2f2"
+                        : "transparent",
+                    borderLeft:
+                      !isUpdated
+                        ? "5px solid #dc2626"
+                        : "5px solid transparent",
+                  }}
+                >
                   <td>{r.sl}</td>
                   <td>{r.date}</td>
                   <td>{r.dgNumber}</td>
@@ -296,7 +633,7 @@ const DGRunHistory = ({ userData }) => {
                             color: "#fff",
                             borderRadius: "6px",
                             border: "none",
-                            cursor: r.dgLogAdded  && userData.name !== "Suman Adhikari" ? "not-allowed" : "pointer",
+                            cursor: r.dgLogAdded && userData.name !== "Suman Adhikari" ? "not-allowed" : "pointer",
                           }}
                         >
                           ✏️ Edit

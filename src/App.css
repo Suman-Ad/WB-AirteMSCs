@@ -32,6 +32,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -41,10 +42,12 @@
 ::-webkit-scrollbar {
   width: 6px;
 }
+
 ::-webkit-scrollbar-thumb {
   background-color: rgba(100, 100, 100, 0.5);
   border-radius: 10px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -54,13 +57,53 @@
   transition: all 0.3s ease-in-out;
 }
 
+.dg-complete {
+  background: #22c55e !important;
+  color: white !important;
+}
+
+.dg-partial {
+  background: #f59e0b !important;
+  color: white !important;
+}
+
+.dg-pending {
+  background: #ef4444 !important;
+  color: white !important;
+}
+
+.react-calendar {
+  width: 100%;
+  border-radius: 12px;
+}
+
+.react-calendar__tile {
+  height: 50px;
+  font-weight: bold;
+}
+
 @keyframes gradientMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes floaty {
-  0%,100% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
 }

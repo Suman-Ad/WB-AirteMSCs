@@ -32,6 +32,7 @@ const AcDcRackDashboard = ({ userData }) => {
     const [rackData, setRackData] = useState([]);
     // 🔹 Filter popup states
     const [showFilterPopup, setShowFilterPopup] = useState(false);
+    const [showAuditOnly, setShowAuditOnly] = useState(false);
     const [filters, setFilters] = useState(() => {
         const saved = localStorage.getItem("acdcRackFilters");
         return saved
@@ -63,62 +64,6 @@ const AcDcRackDashboard = ({ userData }) => {
     const [equipPopupData, setEquipPopupData] = useState(null);
     const [loading, setLoading] = useState(false);
     const rackTableRef = React.useRef(null);
-
-    // 🔹 Fetch site data based on user role
-    // useEffect(() => {
-    //     const fetchData = async () => {
-    //         try {
-    //             let allRacks = [];
-
-    //             // ✅ Super Admin / Admin can see ALL sites
-    //             if (userData?.role === "Admin" || userData?.role === "Super Admin" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM") {
-    //                 const sitesSnapshot = await getDocs(collection(db, "acDcRackDetails"));
-
-    //                 for (const siteDoc of sitesSnapshot.docs) {
-    //                     const siteKey = String(siteDoc.id);
-    //                     const racksRef = collection(db, "acDcRackDetails", siteKey, "racks");
-    //                     const racksSnapshot = await getDocs(racksRef);
-
-    //                     racksSnapshot.forEach((rackDoc) => {
-    //                         allRacks.push({
-    //                             id: rackDoc.id,
-    //                             siteKey,
-    //                             ...rackDoc.data(),
-    //                         });
-    //                     });
-    //                 }
-    //             }
-
-    //             // ✅ Normal user — only see their own site
-    //             else if (userData?.site) {
-    //                 const siteKey = userData.site.trim().toUpperCase().replace(/[\/\s]+/g, "_");
-    //                 const racksRef = collection(db, "acDcRackDetails", siteKey, "racks");
-    //                 const racksSnapshot = await getDocs(racksRef);
-
-    //                 racksSnapshot.forEach((rackDoc) => {
-    //                     allRacks.push({
-    //                         id: rackDoc.id,
-    //                         siteKey,
-    //                         ...rackDoc.data(),
-    //                     });
-    //                 });
-    //             } else {
-    //                 console.warn("⚠️ No site assigned to this user");
-    //             }
-
-    //             setRackData(allRacks);
-    //             console.log(`✅ Loaded ${allRacks.length} rack records`);
-    //         } catch (error) {
-    //             console.error("Error fetching data:", error);
-    //         }
-    //     };
-
-    //     localStorage.setItem("acdcRackFilters", JSON.stringify(filters));
-
-    //     fetchData();
-    // }, [userData, filters]);
-
-
 
     useEffect(() => {
         if (!userData) return;
@@ -420,6 +365,68 @@ const AcDcRackDashboard = ({ userData }) => {
         }
     };
 
+    const getMissingFields = (rack) => {
+        const missing = [];
+
+        if (!rack.rfaiNo) missing.push("RFAI No");
+        if (!rack.rackPowerOnDate) missing.push("Rack Power On Date");
+
+        if (!rack.rackOwnerName) missing.push("Rack Owner");
+
+        if (!rack.frontTopTemp)
+            missing.push("Front Top Temp");
+
+        if (!rack.frontMiddleTemp)
+            missing.push("Front Mid Temp");
+
+        if (!rack.frontBottomTemp)
+            missing.push("Front Bottom Temp");
+
+        if (!rack.backTopTemp)
+            missing.push("Back Top Temp");
+
+        if (!rack.backMiddleTemp)
+            missing.push("Back Mid Temp");
+
+        if (!rack.backBottomTemp)
+            missing.push("Back Bottom Temp");
+
+        if (!rack.rackDimensions?.height)
+            missing.push("Rack Height");
+
+        if (!rack.rackDimensions?.width)
+            missing.push("Rack Width");
+
+        if (!rack.rackDimensions?.depth)
+            missing.push("Rack Depth");
+
+        if (!rack.rackEquipments?.length)
+            missing.push("Rack Equipments");
+
+        if (
+            rack.sourceType === "Dual Source" &&
+            (!rack.smpsNameB || !rack.dbNumberB)
+        ) {
+            missing.push("Source B");
+        }
+
+        return missing;
+    };
+
+    const auditData = rackData.map(rack => ({
+        ...rack,
+        missingFields: getMissingFields(rack),
+    }));
+
+    const incompleteRacks =
+        auditData.filter(
+            r => r.missingFields.length > 0
+        );
+
+    const completeRacks =
+        auditData.filter(
+            r => r.missingFields.length === 0
+        );
 
     // 🔹 Download Excel
     const handleDownloadExcel = () => {
@@ -724,6 +731,7 @@ const AcDcRackDashboard = ({ userData }) => {
                 )}
             </div>
 
+
             {/* 🔹 Site-wise Summary Table */}
             <div style={{ marginTop: "20px", overflowX: "auto" }}>
                 <table
@@ -813,6 +821,21 @@ const AcDcRackDashboard = ({ userData }) => {
                     onClick={() => setShowFilterPopup(true)}
                 >
                     🔍 Filter
+                </button>
+
+                <button
+                    style={{
+                        background: "#dc2626",
+                        color: "#fff",
+                        padding: "8px 18px",
+                        border: "none",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                    }}
+                    onClick={() => setShowAuditOnly(!showAuditOnly)}
+                >
+                    🚨 Missing Data Only
                 </button>
             </div>
 
@@ -1109,6 +1132,14 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`Total`)}>% Load on MCB</th>
                             <th style={getHeaderStyle(`Total`)}>Both MCB Same</th>
                             <th style={getHeaderStyle(`Total`)}>Source Type</th>
+                            <th
+                                style={{
+                                    background: "#dc2626",
+                                    color: "#fff"
+                                }}
+                            >
+                                Missing Fields
+                            </th>
                         </tr>
                     </thead>
 
@@ -1216,6 +1247,11 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.bothPctLoadMcb}</td>
                                 <td>{item.isBothMcbSame}</td>
                                 <td>{item.sourceType}</td>
+                                <td>
+                                    {getMissingFields(item)
+                                        .slice(0, 3)
+                                        .join(", ")}
+                                </td>
                             </tr>
                         ))}
                     </tbody>
