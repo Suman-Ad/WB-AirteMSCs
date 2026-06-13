@@ -31,6 +31,7 @@ const isAdminAssignmentValid = (userData) => {
 const AcDcRackDashboard = ({ userData }) => {
     const [rackData, setRackData] = useState([]);
     // 🔹 Filter popup states
+    const [universalFilter, setUniversalFilter] = useState("");
     const [showFilterPopup, setShowFilterPopup] = useState(false);
     const [showAuditOnly, setShowAuditOnly] = useState(false);
     const [filters, setFilters] = useState(() => {
@@ -240,7 +241,55 @@ const AcDcRackDashboard = ({ userData }) => {
             ? d.rackType?.toLowerCase() === filters.rackType.toLowerCase()
             : true;
 
+        const search = universalFilter.trim().toLowerCase();
+
+        const equipmentMatch =
+            d.rackEquipments?.some((eq) =>
+                [
+                    eq.name,
+                    eq.remarks,
+                    eq.startU,
+                    eq.endU,
+                ]
+                    .filter(Boolean)
+                    .join(" ")
+                    .toLowerCase()
+                    .includes(search)
+            );
+
+        const universalMatch =
+            !search ||
+            equipmentMatch ||
+            [
+                d.siteName,
+                d.circle,
+                d.region,
+                d.equipmentLocation,
+                d.equipmentRackNo,
+                d.rackName,
+                d.rfaiNo,
+                d.powerType,
+                d.sourceType,
+                d.rackType,
+                d.rackDomainType,
+                d.rackOwnerName,
+                d.smpsNameA,
+                d.smpsNameB,
+                d.dbNumberA,
+                d.dbNumberB,
+                d.remarksA,
+                d.remarksB,
+            ]
+                .filter(Boolean)
+                .some((value) =>
+                    String(value)
+                        .toLowerCase()
+                        .includes(search)
+                );
+
+
         const matchesAll =
+            universalMatch &&
             siteMatch &&
             locationMatch &&
             equipMatch &&
@@ -292,7 +341,7 @@ const AcDcRackDashboard = ({ userData }) => {
 
         // Switch Off logic
         const totalLoad = Number(rack.totalLoadBoth) || 0;
-        if (totalLoad === 0) s.totalSwitchOff += 1;
+        if ((totalLoad === 0) && !rack.rackName.includes("ODF")) s.totalSwitchOff += 1;
     });
 
     // Convert map to array for Recharts
@@ -1034,6 +1083,48 @@ const AcDcRackDashboard = ({ userData }) => {
                 </div>
             )}
 
+            <div
+                style={{
+                    marginBottom: "12px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "10px",
+                }}
+            >
+                <input
+                    type="text"
+                    placeholder="🔍 Search Site, Rack, Location, Owner, RFAI, Source..."
+                    value={universalFilter}
+                    onChange={(e) => setUniversalFilter(e.target.value)}
+                    style={{
+                        width: "100%",
+                        maxWidth: "500px",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        border: "1px solid #475569",
+                        background: "#0f172a",
+                        color: "#000000",
+                    }}
+                />
+
+                {universalFilter && (
+                    <button
+                        onClick={() => setUniversalFilter("")}
+                        style={{
+                            background: "#dc2626",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "10px 14px",
+                            cursor: "pointer",
+                        }}
+                    >
+                        ❌ Clear
+                    </button>
+                )}
+            </div>
+
             <div style={{ display: "flex", marginBottom: "10px", fontWeight: "bold", fontSize: "12px", color: "#333" }}>
                 <div style={{ justifyContent: "left" }}>🔢 <strong>Total Racks:</strong> {filteredData.length}nos.</div>
                 <div style={{ marginLeft: "auto" }}>
@@ -1071,6 +1162,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`gen`)}>Rack Size (HxWxD in mm)</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Temperature (T-M-B)</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Description</th>
+                            <th style={getHeaderStyle(`gen`)}>Rack Domain Type</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Owner Details</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Rating (Amps/kVA)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Name</th>
@@ -1126,7 +1218,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`Rack End`)}>(B) Rack End DB MCB Rating (Amps)</th>
                             <th style={getHeaderStyle(`%`)}>(B) Rack End % Load MCB</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Remarks</th>
-                            <th style={getHeaderStyle(`Total`)}>Total Load Both Sources: A</th>
+                            <th style={getHeaderStyle(`Total`)}>Total Load Both Sources: A & B</th>
                             <th style={getHeaderStyle(`Total`)}>Both Cable Capacity</th>
                             <th style={getHeaderStyle(`Total`)}>% Load on Cable</th>
                             <th style={getHeaderStyle(`Total`)}>% Load on MCB</th>
@@ -1182,6 +1274,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                     <p>BT:{item.backTopTemp}°C BM:{item.backMiddleTemp}°C BB:{item.backBottomTemp}°C</p>
                                 </td>
                                 <td>{item.rackDescription}</td>
+                                <td>{item.rackDomainType}</td>
                                 <td>{item.rackOwnerName}</td>
 
                                 {/* A Source */}
@@ -1241,7 +1334,7 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.rackEndMcbRatingB}</td>
                                 <td>{item.rackEndPctLoadMcbB}</td>
                                 <td>{item.remarksB}</td>
-                                <td>{item.totalLoadBoth}</td>
+                                <td>{Number(item.totalLoadBoth || 0).toFixed(2)}</td>
                                 <td>{item.bothCableCapacity}</td>
                                 <td>{item.bothPctLoadCable}</td>
                                 <td>{item.bothPctLoadMcb}</td>
