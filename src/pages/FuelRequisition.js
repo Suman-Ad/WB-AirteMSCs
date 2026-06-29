@@ -245,7 +245,9 @@ const FuelRequisition = () => {
                 const dg2OpeningStock = Number(latestDaily?.["DG-2 Fuel Closing"] || 0);
                 const dg2PresentStock = dg2OpeningStock - dg2LiveData.totalFuelConsumed;
 
-                const totalCapa = Number(siteConfig.dgDayTankCapacity) + Number(siteConfig.dgExtrnlTankCapacity);
+                const dayTankCapacity = Number(siteConfig?.dgConfigs?.["DG-1"]?.dayTankLtrs) + Number(siteConfig?.dgConfigs?.["DG-2"]?.dayTankLtrs);
+                const externalTankCapacity = Number(siteConfig?.dgConfigs?.["DG-1"]?.externalTankLtrs) + Number(siteConfig?.dgConfigs?.["DG-2"]?.externalTankLtrs);
+                const totalCapa = dayTankCapacity + externalTankCapacity;
                 const presentStock = dg1PresentStock + dg2PresentStock;
 
                 setTotalFuelReq((totalCapa - presentStock).toFixed(2))

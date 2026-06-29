@@ -1,5 +1,5 @@
 // src/pages/AcDcRackDashboard.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { auth, db } from "../firebase";
 import {
     collection,
@@ -14,19 +14,10 @@ import { saveAs } from "file-saver";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-import { styleEffect } from "framer-motion";
-import { filter } from "jszip";
 
-const isAdminAssignmentValid = (userData) => {
-    if (!userData?.isAdminAssigned) return false;
-    if (!userData?.adminAssignFrom || !userData?.adminAssignTo) return false;
+import { isPrivilegedUser, isAdminAssignmentValid } from "../hooks/useRackPermissions";
+import { useFilteredRacks } from "../hooks/useFilteredRacks";
 
-    const today = new Date();
-    const from = new Date(userData.adminAssignFrom);
-    const to = new Date(userData.adminAssignTo);
-
-    return today >= from && today <= to;
-};
 
 const AcDcRackDashboard = ({ userData }) => {
     const [rackData, setRackData] = useState([]);
@@ -46,16 +37,11 @@ const AcDcRackDashboard = ({ userData }) => {
                 powerType: "",
                 sourceType: "",
                 rackType: "",
+                rackDomainType: "",
             };
     });
 
-    const isPrivileged =
-        userData?.role === "Admin" ||
-        userData?.role === "Super Admin" ||
-        userData?.designation === "Vertiv CIH" ||
-        userData?.isAdminAssigned ||
-        isAdminAssignmentValid(userData) ||
-        userData?.designation === "Vertiv ZM";
+    const isPrivileged = isPrivilegedUser(userData);
 
     const [status, setStatus] = useState("");
     const navigate = useNavigate();
@@ -65,6 +51,8 @@ const AcDcRackDashboard = ({ userData }) => {
     const [equipPopupData, setEquipPopupData] = useState(null);
     const [loading, setLoading] = useState(false);
     const rackTableRef = React.useRef(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const rowsPerPage = 25;
 
     useEffect(() => {
         if (!userData) return;
@@ -73,8 +61,6 @@ const AcDcRackDashboard = ({ userData }) => {
             setLoading(true); // 🔄 START loading
             try {
                 let allRacks = [];
-
-
 
                 if (isPrivileged) {
                     const sitesSnapshot = await getDocs(collection(db, "acDcRackDetails"));
@@ -110,7 +96,7 @@ const AcDcRackDashboard = ({ userData }) => {
 
                 setRackData(allRacks);
                 // localStorage.setItem("acdcRackFilters", JSON.stringify(allRacks));
-                console.log("✅ Total racks fetched:", allRacks.length);
+                // console.log("✅ Total racks fetched:", allRacks.length);
             } catch (err) {
                 console.error("❌ Fetch error:", err);
             } finally {
@@ -152,11 +138,7 @@ const AcDcRackDashboard = ({ userData }) => {
         if (!window.confirm(confirmMsg)) return;
 
         try {
-            const isPrivileged =
-                userData?.role === "Admin" ||
-                userData?.role === "Super Admin" ||
-                userData?.designation === "Vertiv CIH" ||
-                userData?.designation === "Vertiv ZM";
+            // const isPrivileged = isPrivilegedUser(userData);
 
             // Delete each rack using its own siteKey (works for multi-site / admin view)
             const deletePromises = filteredData.map((rack) =>
@@ -178,7 +160,6 @@ const AcDcRackDashboard = ({ userData }) => {
             setStatus("❌ Failed to delete all records");
         }
     };
-
 
     useEffect(() => {
         setFilters((prev) => ({ ...prev, location: "" }));
@@ -211,141 +192,175 @@ const AcDcRackDashboard = ({ userData }) => {
 
     // 🔹 Advanced Filter Logic
     // 🔹 Multi-field filter logic
-    const filteredData = rackData.filter((d) => {
+    // const filteredData = useMemo(() => {
+    //     return rackData.filter((d) => {
 
-        const siteMatch = filters.site
-            ? d.siteName?.toLowerCase().includes(filters.site.toLowerCase())
-            : true;
+    //         const siteMatch = filters.site
+    //             ? d.siteName?.toLowerCase().includes(filters.site.toLowerCase())
+    //             : true;
 
-        const locationMatch = filters.location
-            ? d.equipmentLocation?.toLowerCase().includes(filters.location.toLowerCase())
-            : true;
+    //         const locationMatch = filters.location
+    //             ? d.equipmentLocation?.toLowerCase().includes(filters.location.toLowerCase())
+    //             : true;
 
-        const equipMatch = filters.equipNo
-            ? d.equipmentRackNo?.toLowerCase().includes(filters.equipNo.toLowerCase())
-            : true;
+    //         const equipMatch = filters.equipNo
+    //             ? d.equipmentRackNo?.toLowerCase().includes(filters.equipNo.toLowerCase())
+    //             : true;
 
-        const rackMatch = filters.rackName
-            ? d.rackName?.toLowerCase().includes(filters.rackName.toLowerCase())
-            : true;
+    //         const rackMatch = filters.rackName
+    //             ? d.rackName?.toLowerCase().includes(filters.rackName.toLowerCase())
+    //             : true;
 
-        const powerMatch = filters.powerType
-            ? d.powerType?.toLowerCase() === filters.powerType.toLowerCase()
-            : true;
+    //         const powerMatch = filters.powerType
+    //             ? d.powerType?.toLowerCase() === filters.powerType.toLowerCase()
+    //             : true;
 
-        const sourceMatch = filters.sourceType
-            ? d.sourceType?.toLowerCase() === filters.sourceType.toLowerCase()
-            : true;
+    //         const sourceMatch = filters.sourceType
+    //             ? d.sourceType?.toLowerCase() === filters.sourceType.toLowerCase()
+    //             : true;
 
-        const typeMatch = filters.rackType
-            ? d.rackType?.toLowerCase() === filters.rackType.toLowerCase()
-            : true;
+    //         const typeMatch = filters.rackType
+    //             ? d.rackType?.toLowerCase() === filters.rackType.toLowerCase()
+    //             : true;
 
-        const search = universalFilter.trim().toLowerCase();
+    //         const domainMatch = filters.rackDomainType
+    //             ? d.rackDomainType?.toLowerCase() === filters.rackDomainType.toLowerCase()
+    //             : true;
 
-        const equipmentMatch =
-            d.rackEquipments?.some((eq) =>
-                [
-                    eq.name,
-                    eq.remarks,
-                    eq.startU,
-                    eq.endU,
-                ]
-                    .filter(Boolean)
-                    .join(" ")
-                    .toLowerCase()
-                    .includes(search)
-            );
+    //         const search = universalFilter.trim().toLowerCase();
 
-        const universalMatch =
-            !search ||
-            equipmentMatch ||
-            [
-                d.siteName,
-                d.circle,
-                d.region,
-                d.equipmentLocation,
-                d.equipmentRackNo,
-                d.rackName,
-                d.rfaiNo,
-                d.powerType,
-                d.sourceType,
-                d.rackType,
-                d.rackDomainType,
-                d.rackOwnerName,
-                d.smpsNameA,
-                d.smpsNameB,
-                d.dbNumberA,
-                d.dbNumberB,
-                d.remarksA,
-                d.remarksB,
-            ]
-                .filter(Boolean)
-                .some((value) =>
-                    String(value)
-                        .toLowerCase()
-                        .includes(search)
-                );
+    //         const equipmentMatch =
+    //             d.rackEquipments?.some((eq) =>
+    //                 [
+    //                     eq.name,
+    //                     eq.remarks,
+    //                     eq.startU,
+    //                     eq.endU,
+    //                 ]
+    //                     .filter(Boolean)
+    //                     .join(" ")
+    //                     .toLowerCase()
+    //                     .includes(search)
+    //             );
+
+    //         const universalMatch =
+    //             !search ||
+    //             equipmentMatch ||
+    //             [
+    //                 d.siteName,
+    //                 d.circle,
+    //                 d.region,
+    //                 d.equipmentLocation,
+    //                 d.equipmentRackNo,
+    //                 d.rackName,
+    //                 d.rfaiNo,
+    //                 d.powerType,
+    //                 d.sourceType,
+    //                 d.rackType,
+    //                 d.rackDomainType,
+    //                 d.rackOwnerName,
+    //                 d.smpsNameA,
+    //                 d.smpsNameB,
+    //                 d.dbNumberA,
+    //                 d.dbNumberB,
+    //                 d.remarksA,
+    //                 d.remarksB,
+    //             ]
+    //                 .filter(Boolean)
+    //                 .some((value) =>
+    //                     String(value)
+    //                         .toLowerCase()
+    //                         .includes(search)
+    //                 );
 
 
-        const matchesAll =
-            universalMatch &&
-            siteMatch &&
-            locationMatch &&
-            equipMatch &&
-            rackMatch &&
-            powerMatch &&
-            sourceMatch &&
-            typeMatch;
+    //         const matchesAll =
+    //             universalMatch &&
+    //             siteMatch &&
+    //             locationMatch &&
+    //             equipMatch &&
+    //             rackMatch &&
+    //             powerMatch &&
+    //             sourceMatch &&
+    //             typeMatch &&
+    //             domainMatch;
 
-        if (isPrivileged) return matchesAll;
+    //         if (isPrivileged) return matchesAll;
 
-        return (
-            d.siteName?.toLowerCase() === userData?.site?.toLowerCase() &&
-            matchesAll
-        );
-    });
+    //         return (
+    //             d.siteName?.toLowerCase() === userData?.site?.toLowerCase() &&
+    //             matchesAll
+    //         );
+    //     })
+    // }, [
+    //     rackData,
+    //     filters,
+    //     universalFilter,
+    //     userData,
+    //     isPrivileged
+    // ]);
+
+    const filteredData = useFilteredRacks(
+        rackData,
+        filters,
+        universalFilter,
+        userData,
+        isPrivileged
+    );
 
     // 🔹 Site-wise Summary Calculation
-    const siteSummaryMap = {};
+    const siteSummaryChartData = useMemo(() => {
+        const siteSummaryMap = {};
 
-    filteredData.forEach(rack => {
-        const site = rack.siteName || "UNKNOWN";
+        filteredData.forEach(rack => {
+            const site = rack.siteName || "UNKNOWN";
 
-        if (!siteSummaryMap[site]) {
-            siteSummaryMap[site] = {
-                site,
-                totalInstalled: 0,
-                totalPassive: 0,
-                totalActive: 0,
-                totalCore: 0,
-                totalTNG: 0,
-                totalOther: 0,
-                totalSwitchOff: 0,
-            };
-        }
+            if (!siteSummaryMap[site]) {
+                siteSummaryMap[site] = {
+                    site,
+                    totalInstalled: 0,
+                    totalPassive: 0,
+                    totalActive: 0,
+                    totalCore: 0,
+                    totalTNG: 0,
+                    totalOther: 0,
+                    totalSwitchOff: 0,
+                };
+            }
 
-        const s = siteSummaryMap[site];
+            const s = siteSummaryMap[site];
 
-        // Total installed
-        s.totalInstalled += 1;
+            // Total installed
+            s.totalInstalled += 1;
 
-        // Rack type
-        if (rack.rackType === "Passive") s.totalPassive += 1;
-        if (rack.rackType === "Active") s.totalActive += 1;
+            // Rack type
+            if (rack.rackType === "Passive") s.totalPassive += 1;
+            if (rack.rackType === "Active") s.totalActive += 1;
 
-        // Domain type
-        if (rack.rackDomainType === "Core") s.totalCore += 1;
-        else if (rack.rackDomainType === "TNG") s.totalTNG += 1;
-        else if (rack.rackDomainType) s.totalOther += 1;
+            // Domain type
+            if (rack.rackDomainType === "Core") s.totalCore += 1;
+            else if (rack.rackDomainType === "TNG") s.totalTNG += 1;
+            else if (rack.rackDomainType) s.totalOther += 1;
 
-        // Switch Off logic
-        const totalLoad = Number(rack.totalLoadBoth) || 0;
-        if ((totalLoad === 0) && !rack.rackName.includes("ODF")) s.totalSwitchOff += 1;
-    });
+            // Switch Off logic
+            const totalLoad = Number(rack.totalLoadBoth) || 0;
+            if ((totalLoad === 0) && !rack.rackName.includes("ODF")) s.totalSwitchOff += 1;
+        });
+        return Object.values(siteSummaryMap);
+    }, [filteredData]);
+
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+
+    const paginatedData = useMemo(() => {
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        return filteredData.slice(
+            startIndex,
+            startIndex + rowsPerPage
+        );
+    }, [filteredData, currentPage]);
 
     // Convert map to array for Recharts
-    const siteSummaryChartData = Object.values(siteSummaryMap);
+    // const siteSummaryChartData = Object.values(siteSummaryMap);
 
 
     const applyRackSheetStyles = (ws) => {
@@ -420,6 +435,9 @@ const AcDcRackDashboard = ({ userData }) => {
         if (!rack.rfaiNo) missing.push("RFAI No");
         if (!rack.rackPowerOnDate) missing.push("Rack Power On Date");
 
+        if (!rack.drTestStatus) missing.push("DR Test Status");
+        if (!rack.drTestDate) missing.push("DR Test Date");
+
         if (!rack.rackOwnerName) missing.push("Rack Owner");
 
         if (!rack.frontTopTemp)
@@ -487,7 +505,7 @@ const AcDcRackDashboard = ({ userData }) => {
         // Map Firestore data to a flat table
         const exportData = filteredData.map((item) => ({
             "Sl. No": filteredData.indexOf(item) + 1,
-            "Reagion": item.region,
+            "Region": item.region,
             "Circle": item.circle,
             "Site Name": item.siteName,
             "Equipment Location": item.equipmentLocation,
@@ -511,6 +529,8 @@ const AcDcRackDashboard = ({ userData }) => {
             "Total Free U": item.freeRackUSpace,
             "% of Rack Occupied": item.pctRackOccupied,
             "Domain Type": item.rackDomainType,
+            "DR Test Status": item.drTestStatus,
+            "DR Test Date": item.drTestDate,
             "Rack Owner Details": item.rackOwnerName,
             "SMPS Rating A (Amps)": item.smpsRatingA,
             "SMPS Name A": item.smpsNameA,
@@ -626,13 +646,15 @@ const AcDcRackDashboard = ({ userData }) => {
         if (header.includes("Cable Load Capacity") || header.startsWith("%")) return { backgroundColor: "#FFD700", color: "#000" };
         if (header.includes("Rack End")) return { backgroundColor: "#FFC000", color: "#000" };
         if (header.includes("Total")) return { backgroundColor: "#C4D79B", color: "#000" };
-        if (header.includes("gen")) return { backgroundColor: "#F2F2F2", color: "#000" };
+        if (header.includes("gen")) return { backgroundColor: "#336e3d", color: "#000" };
+        if (header.includes("DR Test")) return { backgroundColor: "#faef52", color: "#000" };
+        if (header.includes("missing")) return { backgroundColor: "#dc2626", color: "#fff" };
         // if (header.startsWith("%") || header === "PUE" || header === "Site Running kW") return { backgroundColor: "#F57C00", color: "#fff" };
         return { backgroundColor: "#FFFFFF", color: "#000" };
     };
 
-    const preview = (index) => {
-        const record = filteredData[index];
+    const preview = (record) => {
+        // const record = filteredData[index];
         setPreviewData(record);
         setPreviewOpen(true);
     };
@@ -679,6 +701,10 @@ const AcDcRackDashboard = ({ userData }) => {
         padding: "8px",
         textAlign: "center",
     };
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filteredData.length]);
 
 
     return (
@@ -1022,6 +1048,20 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <option value="Dual Source">Dual Source</option>
                                 <option value="Single Source">Single Source</option>
                             </select>
+
+                            <select
+                                type="text"
+                                placeholder="⇨Domain Name"
+                                value={filters.rackDomainType}
+                                onChange={(e) => setFilters((prev) => ({ ...prev, rackDomainType: e.target.value }))
+                                }
+                                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                            >
+                                <option value="">⇨○ Select Domain Name</option>
+                                <option value="Core">Core</option>
+                                <option value="TNG">TNG</option>
+                                <option value="Others">Others</option>
+                            </select>
                         </div>
 
                         {/* Buttons */}
@@ -1150,6 +1190,7 @@ const AcDcRackDashboard = ({ userData }) => {
                     <thead style={{ background: "#e8e8e8" }}>
                         <tr>
                             <th style={getHeaderStyle(`gen`)}>Sl. No</th>
+                            <th style={getHeaderStyle(`gen`)}>Region</th>
                             <th style={getHeaderStyle(`gen`)}>Circle</th>
                             <th style={getHeaderStyle(`gen`)}>Site Name</th>
                             <th style={getHeaderStyle(`gen`)}>Equipment Location(Switch Room)</th>
@@ -1164,6 +1205,8 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`gen`)}>Rack Description</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Domain Type</th>
                             <th style={getHeaderStyle(`gen`)}>Rack Owner Details</th>
+                            <th style={getHeaderStyle(`DR Test`)}>DR Test Status</th>
+                            <th style={getHeaderStyle(`DR Test`)}>DR Test Date</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Rating (Amps/kVA)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Name</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Source DB Number</th>
@@ -1177,10 +1220,12 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`(A)`)}>(A) Rack/Node Incoming Power Cable Size (Sq mm)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Length (Mtr)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Run (Nos)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) Cable Tagging</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Number</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Rack End Voltage (V)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Rating (Amps)</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Temp On Mcb/Fuse (°C)</th>
+                            <th style={getHeaderStyle(`(A)`)}>(A) MCB Label</th>
                             <th style={getHeaderStyle(`(A)`)}>(A) Source Running Load (Amps):</th>
                             <th style={getHeaderStyle(`Cable Load Capacity`)}>(A) Cable Load Capacity</th>
                             <th style={getHeaderStyle(`%`)}>(A) % Load Cable</th>
@@ -1204,10 +1249,12 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`(B)`)}>(B) Rack/Node Incoming Power Cable Size (Sq mm)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Length (Mtr)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Run (Nos)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) Cable Tagging</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Number</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Rack End Voltage (V)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Rating (Amps)</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Temp On Mcb/Fuse (°C)</th>
+                            <th style={getHeaderStyle(`(B)`)}>(B) MCB Label</th>
                             <th style={getHeaderStyle(`(B)`)}>(B) Running Load (Amps):</th>
                             <th style={getHeaderStyle(`Cable Load Capacity`)}>(B) Cable Load Capacity</th>
                             <th style={getHeaderStyle(`%`)}>(B) % Load Cable</th>
@@ -1225,10 +1272,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             <th style={getHeaderStyle(`Total`)}>Both MCB Same</th>
                             <th style={getHeaderStyle(`Total`)}>Source Type</th>
                             <th
-                                style={{
-                                    background: "#dc2626",
-                                    color: "#fff"
-                                }}
+                                style={{ ...getHeaderStyle(`missing`), position: "sticky", right: 0, zIndex: 5 }}
                             >
                                 Missing Fields
                             </th>
@@ -1236,7 +1280,7 @@ const AcDcRackDashboard = ({ userData }) => {
                     </thead>
 
                     <tbody>
-                        {filteredData.length === 0 && (
+                        {paginatedData.length === 0 && (
                             <tr>
                                 <td colSpan="9" style={{ textAlign: "center" }}>
                                     No data found
@@ -1244,11 +1288,11 @@ const AcDcRackDashboard = ({ userData }) => {
                             </tr>
                         )}
 
-                        {filteredData.map((item, index) => (
+                        {paginatedData.map((item, index) => (
                             <tr
                                 key={item.id}
                                 onClick={() => {
-                                    preview(index);
+                                    preview(item);
                                     setEquipPopupData(item);   // pass full rack record
 
                                 }
@@ -1259,6 +1303,7 @@ const AcDcRackDashboard = ({ userData }) => {
                             >
 
                                 <td>{index + 1}</td>
+                                <td>{item.region}</td>
                                 <td>{item.circle}</td>
                                 <td>{item.siteName}</td>
                                 <td>{item.equipmentLocation}</td>
@@ -1276,6 +1321,8 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.rackDescription}</td>
                                 <td>{item.rackDomainType}</td>
                                 <td>{item.rackOwnerName}</td>
+                                <td>{item.drTestStatus}</td>
+                                <td>{item.drTestDate}</td>
 
                                 {/* A Source */}
                                 <td>{item.smpsRatingA}</td>
@@ -1291,10 +1338,12 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.rackIncomingCableSizeA}</td>
                                 <td>{item.rackCableLengthA}</td>
                                 <td>{item.rackCableRunA}</td>
+                                <td>{item.cableTaggingA}</td>
                                 <td>{item.dbMcbNumberA}</td>
                                 <td>{item.rackEndVoltageA}</td>
                                 <td>{item.dbMcbRatingA}</td>
                                 <td>{item.tempOnMcbA}</td>
+                                <td>{item.dbMcbLabelA}</td>
                                 <td>{item.runningLoadA}</td>
                                 <td>{item.cableCapacityA}</td>
                                 <td>{item.pctLoadCableA}</td>
@@ -1320,10 +1369,12 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.rackIncomingCableSizeB}</td>
                                 <td>{item.rackCableLengthB}</td>
                                 <td>{item.rackCableRunB}</td>
+                                <td>{item.cableTaggingB}</td>
                                 <td>{item.dbMcbNumberB}</td>
                                 <td>{item.rackEndVoltageB}</td>
                                 <td>{item.dbMcbRatingB}</td>
                                 <td>{item.tempOnMcbB}</td>
+                                <td>{item.dbMcbLabelB}</td>
                                 <td>{item.runningLoadB}</td>
                                 <td>{item.cableCapacityB}</td>
                                 <td>{item.pctLoadCableB}</td>
@@ -1340,7 +1391,10 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <td>{item.bothPctLoadMcb}</td>
                                 <td>{item.isBothMcbSame}</td>
                                 <td>{item.sourceType}</td>
-                                <td>
+                                <td
+                                    className="sticky-col"
+                                    style={{ position: "sticky", right: 0, zIndex: 3, fontSize: "11px", color: getMissingFields(item).length > 0 ? "#ef4444" : "#10b981", fontWeight: "bold" }}
+                                >
                                     {getMissingFields(item)
                                         .slice(0, 3)
                                         .join(", ")}
@@ -1349,6 +1403,44 @@ const AcDcRackDashboard = ({ userData }) => {
                         ))}
                     </tbody>
                 </table>
+            </div>
+            <div style={{ display: "flex", justifyContent: "center", marginTop: "10px", alignItems: "center" }}>
+                <div className="flex items-center justify-center gap-2 mt-4">
+                    <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage((p) => p - 1)}
+                        className="px-3 py-1 border rounded"
+                    >
+                        Previous
+                    </button>
+
+                    <span>
+                        Page {currentPage} of {totalPages}
+                    </span>
+                    {/* <div className="flex flex-wrap gap-1 justify-center mt-4">
+                    {Array.from({ length: totalPages }, (_, i) => (
+                        <button
+                            key={i + 1}
+                            onClick={() => setCurrentPage(i + 1)}
+                            className={`px-3 py-1 rounded ${currentPage === i + 1
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-200"
+                                }`}
+                        >
+                            {i + 1}
+                        </button>
+                    ))}
+                </div> */}
+
+                    <button
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((p) => p + 1)}
+                        className="px-3 py-1 border rounded"
+                    >
+                        Next
+                    </button>
+                </div>
+
             </div>
 
             {status && <p style={{ marginTop: "10px" }}>{status}</p>}
@@ -1652,6 +1744,8 @@ const AcDcRackDashboard = ({ userData }) => {
                             </tbody>
 
                         </table>
+
+
 
                         <div style={{ marginTop: "15px", textAlign: "center" }}>
                             {(userData?.site?.toLowerCase() === previewData.siteName?.toLowerCase() || userData.role === "Super Admin" || userData.role === "Admin" || isAdminAssignmentValid(userData)) && (

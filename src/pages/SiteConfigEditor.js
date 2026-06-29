@@ -631,12 +631,103 @@ const SiteConfigEdit = ({ userData }) => {
               })}
 
               <label>SMPS Count</label>
-              <input
-                type="number"
-                name="smpsCount"
-                value={config.smpsCount || 0}
-                onChange={handleChange}
-              />
+  
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => {
+                      const newCount = Math.max(0, (prev.smpsCount || 0) - 1);
+                      return {
+                        ...prev,
+                        smpsCount: newCount,
+                        smpsConfigs: prev.smpsConfigs || {},
+                      };
+                    })
+                  }
+                  disabled={(config.smpsCount || 0) <= 0}
+                >
+                  –
+                </button>
+
+                <strong>{config.smpsCount || 0}</strong>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => {
+                      const newCount = Math.min(10, (prev.smpsCount || 0) + 1);
+                      return {
+                        ...prev,
+                        smpsCount: newCount,
+                        smpsConfigs: prev.smpsConfigs || {},
+                      };
+                    })
+                  }
+                  disabled={(config.smpsCount || 0) >= 10}
+                >
+                  +
+                </button>
+              </div>
+
+              {/* 🔹 SMPS WISE CONFIG */}
+              {Array.from({ length: config.smpsCount || 0 }).map((_, i) => {
+                const smpsKey = `SMPS-${i + 1}`;
+                const smps = config.smpsConfigs?.[smpsKey] || {};
+
+                return (
+                  <div
+                    key={smpsKey}
+                    style={{
+                      marginTop: "15px",
+                      padding: "12px",
+                      border: "1px solid #ddd",
+                      borderRadius: "8px",
+                      background: "#fafafa11"
+                    }}
+                  >
+                    <h4>{smpsKey} Details</h4>
+
+                    {/* Capacity */}
+                    <label>{smpsKey} Capacity (Amp)</label>
+                    <input
+                      type="number"
+                      value={smps.capacityAmp || ""}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          smpsConfigs: {
+                            ...prev.smpsConfigs,
+                            [smpsKey]: {
+                              ...prev.smpsConfigs?.[smpsKey],
+                              capacityAmp: Number(e.target.value),
+                            },
+                          },
+                        }))
+                      }
+                    />
+
+                    {/* ✅ SMPS MANUFACTURE DATE */}
+                    <label>{smpsKey} Manufacture Date</label>
+                    <input
+                      type="date"
+                      value={smps.mfgDate || ""}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          smpsConfigs: {
+                            ...prev.smpsConfigs,
+                            [smpsKey]: {
+                              ...prev.smpsConfigs?.[smpsKey],
+                              mfgDate: e.target.value,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </div>
+                );
+              })}
 
               <label>PAC Count</label>
               <input
@@ -647,12 +738,103 @@ const SiteConfigEdit = ({ userData }) => {
               />
 
               <label>UPS Count</label>
-              <input
-                type="number"
-                name="upsCount"
-                value={config.upsCount || 0}
-                onChange={handleChange}
-              />
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => {
+                      const newCount = Math.max(0, (prev.upsCount || 0) - 1);
+                      return {
+                        ...prev,
+                        upsCount: newCount,
+                        upsConfigs: prev.upsConfigs || {},
+                      };
+                    })
+                  }
+                  disabled={(config.upsCount || 0) <= 0}
+                >
+                  –
+                </button>
+
+                <strong>{config.upsCount || 0}</strong>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => {
+                      const newCount = Math.min(10, (prev.upsCount || 0) + 1);
+                      return {
+                        ...prev,
+                        upsCount: newCount,
+                        upsConfigs: prev.upsConfigs || {},
+                      };
+                    })
+                  }
+                  disabled={(config.upsCount || 0) >= 10}
+                >
+                  +
+                </button>
+              </div>
+
+              {/* 🔹 UPS WISE CONFIG */}
+              {Array.from({ length: config.upsCount || 0 }).map((_, i) => {
+                const upsKey = `UPS-${i + 1}`;
+                const ups = config.upsConfigs?.[upsKey] || {};
+
+                return (
+                  <div
+                    key={upsKey}
+                    style={{
+                      marginTop: "15px",
+                      padding: "12px",
+                      border: "1px solid #ddd",
+                      borderRadius: "8px",
+                      background: "#fafafa11"
+                    }}
+                  >
+                    <h4>{upsKey} Details</h4>
+
+                    {/* Capacity */}
+                    <label>{upsKey} Capacity (kVA)</label>
+                    <input
+                      type="number"
+                      value={ups.capacityKva || ""}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          upsConfigs: {
+                            ...prev.upsConfigs,
+                            [upsKey]: {
+                              ...prev.upsConfigs?.[upsKey],
+                              capacityKva: Number(e.target.value),
+                            },
+                          },
+                        }))
+                      }
+                    />
+
+                    {/* ✅ UPS MANUFACTURE DATE */}
+                    <label>{upsKey} Manufacture Date</label>
+                    <input
+                      type="date"
+                      value={ups.mfgDate || ""}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          upsConfigs: {
+                            ...prev.upsConfigs,
+                            [upsKey]: {
+                              ...prev.upsConfigs?.[upsKey],
+                              mfgDate: e.target.value,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </div>
+                );
+              })}
 
               <label>CRV Count</label>
               <input
