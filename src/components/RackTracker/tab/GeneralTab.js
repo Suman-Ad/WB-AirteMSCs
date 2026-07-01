@@ -8,7 +8,8 @@ const GeneralTab = ({
     userRole,
     floorList,
     rackType,
-    powerType
+    powerType,
+    rackStatus
 }) => {
     return (
         <>
@@ -66,6 +67,25 @@ const GeneralTab = ({
                             </>
                         )}
                     </select>
+
+                    <label>Rack Status:</label>
+                    <select
+                        name="rackStatus"
+                        value={formData.rackStatus}
+                        onChange={handleChange}
+                    >
+                        <option value="">Select Rack Status</option>
+                        {rackStatus.map((q) => (
+                            <option key={q} value={q}>{q}</option>
+                        ))}
+                    </select>
+
+                    {formData.rackStatus === "Switched-OFF" && (
+                        <div className="form-section">
+                            <label>Switched-OFF Date:</label>
+                            <input type="date" name="switchedOffDate" value={formData.switchedOffDate} onChange={handleChange} />
+                        </div>
+                    )}
                 </div>
                 <label>Rack Description:</label>
                 <textarea type="text" name="rackDescription" value={formData.rackDescription} onChange={handleChange} />

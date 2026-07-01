@@ -38,6 +38,10 @@ export const useFilteredRacks = (
                 ? d.rackType?.toLowerCase() === filters.rackType.toLowerCase()
                 : true;
 
+            const statusMatch = filters.rackStatus
+                ? d.rackStatus?.toLowerCase() === filters.rackStatus.toLowerCase()
+                : true;
+
             const domainMatch = filters.rackDomainType
                 ? d.rackDomainType?.toLowerCase() === filters.rackDomainType.toLowerCase()
                 : true;
@@ -94,6 +98,7 @@ export const useFilteredRacks = (
                 locationMatch &&
                 equipMatch &&
                 rackMatch &&
+                statusMatch &&
                 powerMatch &&
                 sourceMatch &&
                 typeMatch &&

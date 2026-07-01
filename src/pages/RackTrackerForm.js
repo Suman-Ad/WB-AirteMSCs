@@ -15,6 +15,7 @@ import DomainDRTab from "../components/RackTracker/tab/DomainDRTab.js";
 import BulkUploadTab from "../components/RackTracker/tab/BulkUploadTab.js";
 import SourceTab from "../components/RackTracker/tab/SourceTab.js";
 import CapacityAnalysisTab from "../components/RackTracker/tab/CapacityAnalysisTab.js";
+import ActivityTab from "../components/RackTracker/tab/ActivityTab";
 import { createInitialFormData } from "../constants/initialFormData.js";
 import { saveRack, rollbackBulkUpload, bulkUploadRacks } from "../services/rackService.js";
 import { getTabCompletion } from "../utils/tabCompletion.js";
@@ -30,6 +31,7 @@ const RackTrackerForm = ({ userData }) => {
   const editData = location.state?.editData || null;
   const powerType = ["AC", "DC", "AC+DC"];
   const rackType = ["Active", "Passive"];
+  const rackStatus = ["Installed Rack", "New Installed Rack", "Switched-OFF", "Switched-OFF Rack Removed", "Free Rack space", "Reserve Rack Space"]
   const [saving, setSaving] = useState(false);
   const bulkControlRef = React.useRef({
     paused: false,
@@ -45,6 +47,7 @@ const RackTrackerForm = ({ userData }) => {
     "Capacity",
     "Domain & DR",
     "Bulk Upload",
+    "Activity",
   ];
 
   const [activeTab, setActiveTab] = useState("General");
@@ -70,6 +73,7 @@ const RackTrackerForm = ({ userData }) => {
       userData,
       editData,
       rackType,
+      rackStatus,
     })
   );
 
@@ -214,6 +218,7 @@ const RackTrackerForm = ({ userData }) => {
               floorList={floorList}
               rackType={rackType}
               powerType={powerType}
+              rackStatus={rackStatus}
             />
           )}
 
@@ -225,6 +230,7 @@ const RackTrackerForm = ({ userData }) => {
               setFormData={setFormData}
               recomputeUSpaceFromEquipments={recomputeUSpaceFromEquipments}
               computeCapacityAnalysis={computeCapacityAnalysis}
+              handleChange={handleChange}
             />
           )}
 
@@ -293,6 +299,17 @@ const RackTrackerForm = ({ userData }) => {
             <CapacityAnalysisTab
               formData={formData}
             />
+          )}
+
+          {/* Activity Log */}
+          {activeTab === "Activity" && (
+            <>
+              <h2>Activity History</h2>
+              <ActivityTab
+                formData={formData}
+              />
+            </>
+
           )}
 
         </div>

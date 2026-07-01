@@ -17,10 +17,15 @@ import {
 
 import { isPrivilegedUser, isAdminAssignmentValid } from "../hooks/useRackPermissions";
 import { useFilteredRacks } from "../hooks/useFilteredRacks";
+import useRackData from "../hooks/useRackData";
+import { exportRackExcel } from "../utils/excelExport";
+import { buildRackAudit, getMissingFields } from "../utils/rackAudit";
+import RackTable from "../components/rackDashboard/RackTable";
+import ActivityTab from "../components/RackTracker/tab/ActivityTab";
 
 
 const AcDcRackDashboard = ({ userData }) => {
-    const [rackData, setRackData] = useState([]);
+    // const [rackData, setRackData] = useState([]);
     // 🔹 Filter popup states
     const [universalFilter, setUniversalFilter] = useState("");
     const [showFilterPopup, setShowFilterPopup] = useState(false);
@@ -41,7 +46,26 @@ const AcDcRackDashboard = ({ userData }) => {
             };
     });
 
+    const rackStatus = ["Installed Rack", "New Installed Rack", "Switched-OFF", "Switched-OFF Rack Removed", "Free Rack space", "Reserve Rack Space"]
+
+
     const isPrivileged = isPrivilegedUser(userData);
+
+    const {
+        rackData,
+        setRackData,
+        loading,
+        refreshRackData,
+    } = useRackData(userData);
+
+    const {
+        auditData,
+        completeRacks,
+        incompleteRacks,
+    } = useMemo(
+        () => buildRackAudit(rackData),
+        [rackData]
+    );
 
     const [status, setStatus] = useState("");
     const navigate = useNavigate();
@@ -49,67 +73,15 @@ const AcDcRackDashboard = ({ userData }) => {
     const [previewData, setPreviewData] = useState(null);
     const [equipPopupOpen, setEquipPopupOpen] = useState(false);
     const [equipPopupData, setEquipPopupData] = useState(null);
-    const [loading, setLoading] = useState(false);
+    // const [loading, setLoading] = useState(false);
     const rackTableRef = React.useRef(null);
     const [currentPage, setCurrentPage] = useState(1);
     const rowsPerPage = 25;
 
     useEffect(() => {
-        if (!userData) return;
-
-        const fetchData = async () => {
-            setLoading(true); // 🔄 START loading
-            try {
-                let allRacks = [];
-
-                if (isPrivileged) {
-                    const sitesSnapshot = await getDocs(collection(db, "acDcRackDetails"));
-
-                    for (const siteDoc of sitesSnapshot.docs) {
-                        const siteKey = siteDoc.id;
-                        const racksRef = collection(db, "acDcRackDetails", siteKey, "racks");
-                        const racksSnapshot = await getDocs(racksRef);
-
-                        racksSnapshot.forEach((rackDoc) => {
-                            allRacks.push({
-                                id: rackDoc.id,
-                                siteKey,
-                                ...rackDoc.data(),
-                                siteName: rackDoc.data().siteName || siteKey, // ✅ fallback
-                            });
-                        });
-                    }
-                } else if (userData?.site) {
-                    const siteKey = userData.site.trim().toUpperCase().replace(/[\/\s]+/g, "_");
-                    const racksRef = collection(db, "acDcRackDetails", siteKey, "racks");
-                    const racksSnapshot = await getDocs(racksRef);
-
-                    racksSnapshot.forEach((rackDoc) => {
-                        allRacks.push({
-                            id: rackDoc.id,
-                            siteKey,
-                            ...rackDoc.data(),
-                            siteName: rackDoc.data().siteName || siteKey,
-                        });
-                    });
-                }
-
-                setRackData(allRacks);
-                // localStorage.setItem("acdcRackFilters", JSON.stringify(allRacks));
-                // console.log("✅ Total racks fetched:", allRacks.length);
-            } catch (err) {
-                console.error("❌ Fetch error:", err);
-            } finally {
-                setLoading(false); // ✅ STOP loading (important)
-            }
-        };
-
-        fetchData();
-    }, [userData]);
-
-    useEffect(() => {
         localStorage.setItem("acdcRackFilters", JSON.stringify(filters));
     }, [filters]);
+
 
     // 🔹 Handle delete
     const handleDelete = async (siteName) => {
@@ -190,116 +162,6 @@ const AcDcRackDashboard = ({ userData }) => {
         )
     ).sort();
 
-    // 🔹 Advanced Filter Logic
-    // 🔹 Multi-field filter logic
-    // const filteredData = useMemo(() => {
-    //     return rackData.filter((d) => {
-
-    //         const siteMatch = filters.site
-    //             ? d.siteName?.toLowerCase().includes(filters.site.toLowerCase())
-    //             : true;
-
-    //         const locationMatch = filters.location
-    //             ? d.equipmentLocation?.toLowerCase().includes(filters.location.toLowerCase())
-    //             : true;
-
-    //         const equipMatch = filters.equipNo
-    //             ? d.equipmentRackNo?.toLowerCase().includes(filters.equipNo.toLowerCase())
-    //             : true;
-
-    //         const rackMatch = filters.rackName
-    //             ? d.rackName?.toLowerCase().includes(filters.rackName.toLowerCase())
-    //             : true;
-
-    //         const powerMatch = filters.powerType
-    //             ? d.powerType?.toLowerCase() === filters.powerType.toLowerCase()
-    //             : true;
-
-    //         const sourceMatch = filters.sourceType
-    //             ? d.sourceType?.toLowerCase() === filters.sourceType.toLowerCase()
-    //             : true;
-
-    //         const typeMatch = filters.rackType
-    //             ? d.rackType?.toLowerCase() === filters.rackType.toLowerCase()
-    //             : true;
-
-    //         const domainMatch = filters.rackDomainType
-    //             ? d.rackDomainType?.toLowerCase() === filters.rackDomainType.toLowerCase()
-    //             : true;
-
-    //         const search = universalFilter.trim().toLowerCase();
-
-    //         const equipmentMatch =
-    //             d.rackEquipments?.some((eq) =>
-    //                 [
-    //                     eq.name,
-    //                     eq.remarks,
-    //                     eq.startU,
-    //                     eq.endU,
-    //                 ]
-    //                     .filter(Boolean)
-    //                     .join(" ")
-    //                     .toLowerCase()
-    //                     .includes(search)
-    //             );
-
-    //         const universalMatch =
-    //             !search ||
-    //             equipmentMatch ||
-    //             [
-    //                 d.siteName,
-    //                 d.circle,
-    //                 d.region,
-    //                 d.equipmentLocation,
-    //                 d.equipmentRackNo,
-    //                 d.rackName,
-    //                 d.rfaiNo,
-    //                 d.powerType,
-    //                 d.sourceType,
-    //                 d.rackType,
-    //                 d.rackDomainType,
-    //                 d.rackOwnerName,
-    //                 d.smpsNameA,
-    //                 d.smpsNameB,
-    //                 d.dbNumberA,
-    //                 d.dbNumberB,
-    //                 d.remarksA,
-    //                 d.remarksB,
-    //             ]
-    //                 .filter(Boolean)
-    //                 .some((value) =>
-    //                     String(value)
-    //                         .toLowerCase()
-    //                         .includes(search)
-    //                 );
-
-
-    //         const matchesAll =
-    //             universalMatch &&
-    //             siteMatch &&
-    //             locationMatch &&
-    //             equipMatch &&
-    //             rackMatch &&
-    //             powerMatch &&
-    //             sourceMatch &&
-    //             typeMatch &&
-    //             domainMatch;
-
-    //         if (isPrivileged) return matchesAll;
-
-    //         return (
-    //             d.siteName?.toLowerCase() === userData?.site?.toLowerCase() &&
-    //             matchesAll
-    //         );
-    //     })
-    // }, [
-    //     rackData,
-    //     filters,
-    //     universalFilter,
-    //     userData,
-    //     isPrivileged
-    // ]);
-
     const filteredData = useFilteredRacks(
         rackData,
         filters,
@@ -363,283 +225,6 @@ const AcDcRackDashboard = ({ userData }) => {
     // const siteSummaryChartData = Object.values(siteSummaryMap);
 
 
-    const applyRackSheetStyles = (ws) => {
-        const range = XLSX.utils.decode_range(ws["!ref"]);
-
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-            const headerCell = XLSX.utils.encode_cell({ r: 0, c: C });
-            const cell = ws[headerCell];
-            if (!cell || !cell.v) continue;
-
-            const headerText = String(cell.v);
-
-            // 🎨 Header color logic
-            let fillColor = "FFD9D9D9"; // default grey
-
-            if (headerText.trim().endsWith("A")) {
-                fillColor = "FFDBEAFE"; // blue
-            } else if (headerText.trim().endsWith("B")) {
-                fillColor = "FFFFEDD5"; // orange
-            }
-
-            cell.s = {
-                font: {
-                    bold: true,
-                },
-                alignment: {
-                    wrapText: true,
-                    horizontal: "center",
-                    vertical: "center",
-                },
-                fill: {
-                    fgColor: { rgb: fillColor },
-                },
-                border: {
-                    top: { style: "thin" },
-                    bottom: { style: "thin" },
-                    left: { style: "thin" },
-                    right: { style: "thin" },
-                },
-            };
-        }
-
-        // 📐 Auto column width
-        ws["!cols"] = Array(range.e.c + 1).fill({ wch: 22 });
-    };
-
-    const applyAllBorders = (ws) => {
-        const range = XLSX.utils.decode_range(ws["!ref"]);
-
-        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
-                const cell = ws[cellRef];
-                if (!cell) continue;
-
-                cell.s = {
-                    ...(cell.s || {}),
-                    border: {
-                        top: { style: "thin" },
-                        bottom: { style: "thin" },
-                        left: { style: "thin" },
-                        right: { style: "thin" },
-                    },
-                };
-            }
-        }
-    };
-
-    const getMissingFields = (rack) => {
-        const missing = [];
-
-        if (!rack.rfaiNo) missing.push("RFAI No");
-        if (!rack.rackPowerOnDate) missing.push("Rack Power On Date");
-
-        if (!rack.drTestStatus) missing.push("DR Test Status");
-        if (!rack.drTestDate) missing.push("DR Test Date");
-
-        if (!rack.rackOwnerName) missing.push("Rack Owner");
-
-        if (!rack.frontTopTemp)
-            missing.push("Front Top Temp");
-
-        if (!rack.frontMiddleTemp)
-            missing.push("Front Mid Temp");
-
-        if (!rack.frontBottomTemp)
-            missing.push("Front Bottom Temp");
-
-        if (!rack.backTopTemp)
-            missing.push("Back Top Temp");
-
-        if (!rack.backMiddleTemp)
-            missing.push("Back Mid Temp");
-
-        if (!rack.backBottomTemp)
-            missing.push("Back Bottom Temp");
-
-        if (!rack.rackDimensions?.height)
-            missing.push("Rack Height");
-
-        if (!rack.rackDimensions?.width)
-            missing.push("Rack Width");
-
-        if (!rack.rackDimensions?.depth)
-            missing.push("Rack Depth");
-
-        if (!rack.rackEquipments?.length)
-            missing.push("Rack Equipments");
-
-        if (
-            rack.sourceType === "Dual Source" &&
-            (!rack.smpsNameB || !rack.dbNumberB)
-        ) {
-            missing.push("Source B");
-        }
-
-        return missing;
-    };
-
-    const auditData = rackData.map(rack => ({
-        ...rack,
-        missingFields: getMissingFields(rack),
-    }));
-
-    const incompleteRacks =
-        auditData.filter(
-            r => r.missingFields.length > 0
-        );
-
-    const completeRacks =
-        auditData.filter(
-            r => r.missingFields.length === 0
-        );
-
-    // 🔹 Download Excel
-    const handleDownloadExcel = () => {
-        if (filteredData.length === 0) {
-            alert("No data to export!");
-            return;
-        }
-
-        // Map Firestore data to a flat table
-        const exportData = filteredData.map((item) => ({
-            "Sl. No": filteredData.indexOf(item) + 1,
-            "Region": item.region,
-            "Circle": item.circle,
-            "Site Name": item.siteName,
-            "Equipment Location": item.equipmentLocation,
-            "Rack/Equipment No": item.equipmentRackNo,
-            "Rack Name": item.rackName,
-            "RFAI No.": item.rfaiNo,
-            "Rack Power On Date": item.rackPowerOnDate,
-            "Rack Type (Active/Passive)": item.rackType,
-            "Power Type (AC/DC/AC+DC)": item.powerType,
-            "Source Type": item.sourceType,
-            "Rack Size (H x W x D)": item.rackSize,
-            "Temp Front Top": item.frontTopTemp,
-            "Temp Front Mid": item.frontMiddleTemp,
-            "Temp Front Bottom": item.frontBottomTemp,
-            "Temp Back Top": item.backTopTemp,
-            "Temp Back Mid": item.backMiddleTemp,
-            "Temp Back Bottom": item.backBottomTemp,
-            "Rack Description": item.rackDescription,
-            "Total Rack U": item.totalRackUSpace,
-            "Total Used U": item.usedRackUSpace,
-            "Total Free U": item.freeRackUSpace,
-            "% of Rack Occupied": item.pctRackOccupied,
-            "Domain Type": item.rackDomainType,
-            "DR Test Status": item.drTestStatus,
-            "DR Test Date": item.drTestDate,
-            "Rack Owner Details": item.rackOwnerName,
-            "SMPS Rating A (Amps)": item.smpsRatingA,
-            "SMPS Name A": item.smpsNameA,
-            "DB Number A": item.dbNumberA,
-            "DB Voltage A (V)": item.dbVoltageA,
-            "Incomer Rating A (Amps)": item.incomerRatingA,
-            "Incomer DB Cable Size A (Sq mm)": item.cableSizeA,
-            "Incomer DB Cable Length A (Mtr)": item.cableLengthA,
-            "Cable Runs A (Nos)": item.cableRunA,
-            "Equipment Rack No A": item.equipmentRackNoA,
-            "Rack Name A": item.rackNameA,
-            "Rack Incoming Power Cable Size A (Sq mm)": item.rackIncomingCableSizeA,
-            "Rack Cable Length A (Mtr)": item.rackCableLengthA,
-            "Rack Cable Run A (Nos)": item.rackCableRunA,
-            "DB MCB Number A": item.dbMcbNumberA,
-            "Rack End Voltage A (V)": item.rackEndVoltageA,
-            "DB MCB Rating A (Amps)": item.dbMcbRatingA,
-            "Temp On Mcb/Fuse A (°C)": item.tempOnMcbA,
-            "Source Running Load A (Amps)": item.runningLoadA,
-            "Cable Load Capacity A": item.cableCapacityA,
-            "% Load Cable A": item.pctLoadCableA,
-            "% PCT Load MCB A (Amps)": item.pctLoadMcbA,
-            "Rack End No of DB / Power Strip A (nos.)": item.rackEndNoDbA,
-            "Rack End DCDB / Power Strip Name A": item.rackEndDcdbNameA,
-            "Rack End DB Running Load A (Amps)": item.rackEndRunningLoadA,
-            "Rack End DB MCB Rating A (Amps)": item.rackEndMcbRatingA,
-            "Rack End % Load MCB A": item.rackEndPctLoadMcbA,
-            "Remarks A": item.remarksA,
-            "SMPS Rating B (Amps)": item.smpsRatingB,
-            "SMPS Name B": item.smpsNameB,
-            "DB Number B": item.dbNumberB,
-            "DB Voltage B (V)": item.dbVoltageB,
-            "Incomer Rating B (Amps)": item.incomerRatingB,
-            "Incomer DB Cable Size B (Sq mm)": item.cableSizeB,
-            "Cable Length B (Mtr)": item.cableLengthB,
-            "Cable Runs B (Nos)": item.cableRunB,
-            "Equipment Rack No B": item.equipmentRackNoB,
-            "Rack Name B": item.rackNameB,
-            "Rack Incoming Power Cable Size B (Sq mm)": item.rackIncomingCableSizeB,
-            "Rack Cable Length B (Mtr)": item.rackCableLengthB,
-            "Rack Cable Run B (Nos)": item.rackCableRunB,
-            "DB MCB Number B": item.dbMcbNumberB,
-            "Rack End Voltage B (V)": item.rackEndVoltageB,
-            "DB MCB Rating B (Amps)": item.dbMcbRatingB,
-            "Temp On Mcb/Fuse B (°C)": item.tempOnMcbB,
-            "Running Load B (Amps)": item.runningLoadB,
-            "Cable Load Capacity B": item.cableCapacityB,
-            "% Load Cable B": item.pctLoadCableB,
-            "% PCT Load MCB B (Amps)": item.pctLoadMcbB,
-            "Rack End No of DB / Power Strip B (nos.)": item.rackEndNoDbB,
-            "Rack End DCDB / Power Strip Name B": item.rackEndDcdbNameB,
-            "Rack End DB Running Load B (Amps)": item.rackEndRunningLoadB,
-            "Rack End DB MCB Rating B (Amps)": item.rackEndMcbRatingB,
-            "Rack End % Load MCB B": item.rackEndPctLoadMcbB,
-            "Remarks B": item.remarksB,
-            "Total Load Both Sources": item.totalLoadBoth,
-            "Both Cable Capacity": item.bothCableCapacity,
-            "% Load on Cable": item.bothPctLoadCable,
-            "% Load on MCB": item.bothPctLoadMcb,
-            "Both MCB Same": item.bothMcbSame,
-            "Last Updated": item.updatedBy?.name
-                ? `${item.updatedBy.name}(${item.updatedBy.empId}) - ${item.updatedAt}`
-                : item.updatedAt,
-        }));
-
-        const exportEquipment = filteredData.flatMap((eqItem, rackIndex) => {
-            // If no rack equipments, still export one empty row
-            if (!Array.isArray(eqItem.rackEquipments) || eqItem.rackEquipments.length === 0) {
-                return [{
-                    "Sl. No": rackIndex + 1,
-                    "Site Name": eqItem.siteName || "-",
-                    "Equipment Location": eqItem.equipmentLocation || "-",
-                    "Equipment Rack No": eqItem.equipmentRackNo || "-",
-                    "Equipment Name": "-",
-                    "Start U": "-",
-                    "End U": "-",
-                    "Remarks": "-",
-                }];
-            }
-
-            // One row per equipment
-            return eqItem.rackEquipments.map((eq, eqIndex) => ({
-                "Sl. No": `${rackIndex + 1}.${eqIndex + 1}`,   // keeps grouping
-                "Site Name": eqItem.siteName || "-",
-                "Equipment Location": eqItem.equipmentLocation || "-",
-                "Equipment Rack No": eqItem.equipmentRackNo || "-",
-                "Equipment Name": eq.name || "-",
-                "Start U": eq.startU ?? "-",
-                "End U": eq.endU ?? "-",
-                "Remarks": eq.remarks || "-",
-            }));
-        });
-
-
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        const ws1 = XLSX.utils.json_to_sheet(exportEquipment)
-        applyRackSheetStyles(ws);
-        applyAllBorders(ws);
-
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Rack Data");
-        XLSX.utils.book_append_sheet(wb, ws1, "Rack Equipments");
-
-        const wbout = XLSX.write(wb, { type: "array", bookType: "xlsx", cellStyles: true });
-        const blob = new Blob([wbout], { type: "application/octet-stream" });
-        saveAs(blob, `ACDC_RackData_${new Date().toISOString().split("T")[0]}.xlsx`);
-        // XLSX.writeFile(wb, `ACDC_RackData_${new Date().toISOString().split("T")[0]}.xlsx`);
-    };
-
     const getHeaderStyle = (header) => {
         if (header.startsWith("(A)")) return { backgroundColor: "#F2DCDB", color: "#020202ff" };
         if (header.startsWith("(B)")) return { backgroundColor: "#C5D9F1", color: "#000" };
@@ -656,6 +241,7 @@ const AcDcRackDashboard = ({ userData }) => {
     const preview = (record) => {
         // const record = filteredData[index];
         setPreviewData(record);
+        setEquipPopupData(record);
         setPreviewOpen(true);
     };
 
@@ -881,7 +467,10 @@ const AcDcRackDashboard = ({ userData }) => {
                 >
                     + Add New Rack ✏️
                 </button>
-                <button className="download-btn" onClick={handleDownloadExcel}>📥 Download Excel</button>
+                <button
+                    className="download-btn"
+                    onClick={() => exportRackExcel(filteredData)}
+                >📥 Download Excel</button>
 
                 <button
                     style={{
@@ -1062,6 +651,21 @@ const AcDcRackDashboard = ({ userData }) => {
                                 <option value="TNG">TNG</option>
                                 <option value="Others">Others</option>
                             </select>
+
+                            <select
+                                type="text"
+                                placeholder="⚡ Rack Status"
+                                value={filters.rackStatus}
+                                onChange={(e) => setFilters((prev) => ({ ...prev, rackStatus: e.target.value }))
+                                }
+                                style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                            >
+                                <option value="">⇨⚡ Select Rack Status</option>
+                                {rackStatus.map((q) => (
+                                    <option key={q} value={q}>{q}</option>
+                                ))}
+                            </select>
+
                         </div>
 
                         {/* Buttons */}
@@ -1185,224 +789,15 @@ const AcDcRackDashboard = ({ userData }) => {
                     </p>)}
             </div>
 
-            <div ref={rackTableRef} className="table-container" style={{ maxHeight: "600px" }}>
-                <table border="1" cellPadding="6" style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead style={{ background: "#e8e8e8" }}>
-                        <tr>
-                            <th style={getHeaderStyle(`gen`)}>Sl. No</th>
-                            <th style={getHeaderStyle(`gen`)}>Region</th>
-                            <th style={getHeaderStyle(`gen`)}>Circle</th>
-                            <th style={getHeaderStyle(`gen`)}>Site Name</th>
-                            <th style={getHeaderStyle(`gen`)}>Equipment Location(Switch Room)</th>
-                            <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 5 }}>Equipment/Rack No</th>
-                            <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 4 }}>Equipment/Rack Name</th>
-                            <th style={getHeaderStyle(`gen`)}>RFAI No.</th>
-                            <th style={getHeaderStyle(`gen`)}>Rack On Date.</th>
-                            <th style={getHeaderStyle(`gen`)}>Power Type</th>
-                            <th style={getHeaderStyle(`gen`)}>Rack Type</th>
-                            <th style={getHeaderStyle(`gen`)}>Rack Size (HxWxD in mm)</th>
-                            <th style={getHeaderStyle(`gen`)}>Rack Temperature (T-M-B)</th>
-                            <th style={getHeaderStyle(`gen`)}>Rack Description</th>
-                            <th style={getHeaderStyle(`gen`)}>Rack Domain Type</th>
-                            <th style={getHeaderStyle(`gen`)}>Rack Owner Details</th>
-                            <th style={getHeaderStyle(`DR Test`)}>DR Test Status</th>
-                            <th style={getHeaderStyle(`DR Test`)}>DR Test Date</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Rating (Amps/kVA)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Name</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Source DB Number</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) DB Voltage (V)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Incomer rating of DB (Amps):</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Incomer DB Cable Size (Sq mm)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Cable Length (Mtr)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Cable Runs (Nos)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Equipment Rack No</th>
-                            <th style={getHeaderStyle(`(A)`)} >(A) Rack Name/Equipment Name</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Rack/Node Incoming Power Cable Size (Sq mm)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Length (Mtr)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Run (Nos)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Cable Tagging</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Number</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Rack End Voltage (V)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Rating (Amps)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Temp On Mcb/Fuse (°C)</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) MCB Label</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Source Running Load (Amps):</th>
-                            <th style={getHeaderStyle(`Cable Load Capacity`)}>(A) Cable Load Capacity</th>
-                            <th style={getHeaderStyle(`%`)}>(A) % Load Cable</th>
-                            <th style={getHeaderStyle(`%`)}>(A) % PCT Load MCB (Amps)</th>
-                            <th style={getHeaderStyle(`Rack End`)}>(A) Rack End No of DB / Power Strip (nos.)</th>
-                            <th style={getHeaderStyle(`Rack End`)}>(A) Rack End DCDB / Power Strip Name</th>
-                            <th style={getHeaderStyle(`Rack End`)}>(A) Rack End DB Running Load (Amps)</th>
-                            <th style={getHeaderStyle(`Rack End`)}>(A) Rack End DB MCB Rating (Amps)</th>
-                            <th style={getHeaderStyle(`%`)}>(A) Rack End % Load MCB</th>
-                            <th style={getHeaderStyle(`(A)`)}>(A) Remarks</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) SMPS/UPS Rating (Amps/kVA)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) SMPS/UPS Name</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) DB Number</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) DB Voltage (V)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Rating (Amps):</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Cable Size (Sq mm)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Cable Length (Mtr)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Cable Runs (Nos)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Equipment Rack No</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Rack Name A</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Rack/Node Incoming Power Cable Size (Sq mm)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Length (Mtr)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Run (Nos)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Cable Tagging</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Number</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Rack End Voltage (V)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Rating (Amps)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Temp On Mcb/Fuse (°C)</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) MCB Label</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Running Load (Amps):</th>
-                            <th style={getHeaderStyle(`Cable Load Capacity`)}>(B) Cable Load Capacity</th>
-                            <th style={getHeaderStyle(`%`)}>(B) % Load Cable</th>
-                            <th style={getHeaderStyle(`%`)}>(B) % PCT Load MCB (Amps)</th>
-                            <th style={getHeaderStyle(`Rack End`)}>(B) Rack End No of DB / Power Strip (nos.)</th>
-                            <th style={getHeaderStyle(`Rack End`)}>(B) Rack End DCDB / Power Strip Name</th>
-                            <th style={getHeaderStyle(`Rack End`)}>(B) Rack End DB Running Load (Amps)</th>
-                            <th style={getHeaderStyle(`Rack End`)}>(B) Rack End DB MCB Rating (Amps)</th>
-                            <th style={getHeaderStyle(`%`)}>(B) Rack End % Load MCB</th>
-                            <th style={getHeaderStyle(`(B)`)}>(B) Remarks</th>
-                            <th style={getHeaderStyle(`Total`)}>Total Load Both Sources: A & B</th>
-                            <th style={getHeaderStyle(`Total`)}>Both Cable Capacity</th>
-                            <th style={getHeaderStyle(`Total`)}>% Load on Cable</th>
-                            <th style={getHeaderStyle(`Total`)}>% Load on MCB</th>
-                            <th style={getHeaderStyle(`Total`)}>Both MCB Same</th>
-                            <th style={getHeaderStyle(`Total`)}>Source Type</th>
-                            <th
-                                style={{ ...getHeaderStyle(`missing`), position: "sticky", right: 0, zIndex: 5 }}
-                            >
-                                Missing Fields
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {paginatedData.length === 0 && (
-                            <tr>
-                                <td colSpan="9" style={{ textAlign: "center" }}>
-                                    No data found
-                                </td>
-                            </tr>
-                        )}
-
-                        {paginatedData.map((item, index) => (
-                            <tr
-                                key={item.id}
-                                onClick={() => {
-                                    preview(item);
-                                    setEquipPopupData(item);   // pass full rack record
-
-                                }
-                                }
-                                style={{ cursor: "pointer", transition: "background 0.2s" }}
-                            // onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
-                            // onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                            >
-
-                                <td>{index + 1}</td>
-                                <td>{item.region}</td>
-                                <td>{item.circle}</td>
-                                <td>{item.siteName}</td>
-                                <td>{item.equipmentLocation}</td>
-                                <td className="sticky-col" style={{ position: "sticky", left: 0, zIndex: 3 }}>{item.equipmentRackNo}</td>
-                                <td className="sticky-col">{item.rackName}</td>
-                                <td>{item.rfaiNo ? item.rfaiNo : "---"}</td>
-                                <td>{item.rackPowerOnDate ? item.rackPowerOnDate : "---"}</td>
-                                <td>{item.powerType}</td>
-                                <td>{item.rackType}</td>
-                                <td>{item.rackSize}</td>
-                                <td style={{ display: "flex", flex: "1" }}>
-                                    <p>FT:{item.frontTopTemp}°C FM:{item.frontMiddleTemp}°C FB:{item.frontBottomTemp}°C</p>
-                                    <p>BT:{item.backTopTemp}°C BM:{item.backMiddleTemp}°C BB:{item.backBottomTemp}°C</p>
-                                </td>
-                                <td>{item.rackDescription}</td>
-                                <td>{item.rackDomainType}</td>
-                                <td>{item.rackOwnerName}</td>
-                                <td>{item.drTestStatus}</td>
-                                <td>{item.drTestDate}</td>
-
-                                {/* A Source */}
-                                <td>{item.smpsRatingA}</td>
-                                <td>{item.smpsNameA}</td>
-                                <td>{item.dbNumberA}</td>
-                                <td>{item.dbVoltageA}</td>
-                                <td>{item.incomerRatingA}</td>
-                                <td>{item.cableSizeA}</td>
-                                <td>{item.cableLengthA}</td>
-                                <td>{item.cableRunA}</td>
-                                <td>{item.equipmentRackNoA}</td>
-                                <td>{item.rackNameA}</td>
-                                <td>{item.rackIncomingCableSizeA}</td>
-                                <td>{item.rackCableLengthA}</td>
-                                <td>{item.rackCableRunA}</td>
-                                <td>{item.cableTaggingA}</td>
-                                <td>{item.dbMcbNumberA}</td>
-                                <td>{item.rackEndVoltageA}</td>
-                                <td>{item.dbMcbRatingA}</td>
-                                <td>{item.tempOnMcbA}</td>
-                                <td>{item.dbMcbLabelA}</td>
-                                <td>{item.runningLoadA}</td>
-                                <td>{item.cableCapacityA}</td>
-                                <td>{item.pctLoadCableA}</td>
-                                <td>{item.pctLoadMcbA}</td>
-                                <td>{item.rackEndNoDbA}</td>
-                                <td>{item.rackEndDcdbNameA}</td>
-                                <td>{item.rackEndRunningLoadA}</td>
-                                <td>{item.rackEndMcbRatingA}</td>
-                                <td>{item.rackEndPctLoadMcbA}</td>
-                                <td>{item.remarksA}</td>
-
-                                {/* B Source */}
-                                <td>{item.smpsRatingB}</td>
-                                <td>{item.smpsNameB}</td>
-                                <td>{item.dbNumberB}</td>
-                                <td>{item.dbVoltageB}</td>
-                                <td>{item.incomerRatingB}</td>
-                                <td>{item.cableSizeB}</td>
-                                <td>{item.cableLengthB}</td>
-                                <td>{item.cableRunB}</td>
-                                <td>{item.equipmentRackNoB}</td>
-                                <td>{item.rackNameB}</td>
-                                <td>{item.rackIncomingCableSizeB}</td>
-                                <td>{item.rackCableLengthB}</td>
-                                <td>{item.rackCableRunB}</td>
-                                <td>{item.cableTaggingB}</td>
-                                <td>{item.dbMcbNumberB}</td>
-                                <td>{item.rackEndVoltageB}</td>
-                                <td>{item.dbMcbRatingB}</td>
-                                <td>{item.tempOnMcbB}</td>
-                                <td>{item.dbMcbLabelB}</td>
-                                <td>{item.runningLoadB}</td>
-                                <td>{item.cableCapacityB}</td>
-                                <td>{item.pctLoadCableB}</td>
-                                <td>{item.pctLoadMcbB}</td>
-                                <td>{item.rackEndNoDbB}</td>
-                                <td>{item.rackEndDcdbNameB}</td>
-                                <td>{item.rackEndRunningLoadB}</td>
-                                <td>{item.rackEndMcbRatingB}</td>
-                                <td>{item.rackEndPctLoadMcbB}</td>
-                                <td>{item.remarksB}</td>
-                                <td>{Number(item.totalLoadBoth || 0).toFixed(2)}</td>
-                                <td>{item.bothCableCapacity}</td>
-                                <td>{item.bothPctLoadCable}</td>
-                                <td>{item.bothPctLoadMcb}</td>
-                                <td>{item.isBothMcbSame}</td>
-                                <td>{item.sourceType}</td>
-                                <td
-                                    className="sticky-col"
-                                    style={{ position: "sticky", right: 0, zIndex: 3, fontSize: "11px", color: getMissingFields(item).length > 0 ? "#ef4444" : "#10b981", fontWeight: "bold" }}
-                                >
-                                    {getMissingFields(item)
-                                        .slice(0, 3)
-                                        .join(", ")}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+            <div ref={rackTableRef}>
+                <RackTable
+                    data={paginatedData}
+                    currentPage={currentPage}
+                    rowsPerPage={rowsPerPage}
+                    getHeaderStyle={getHeaderStyle}
+                    getMissingFields={getMissingFields}
+                    onPreview={preview}
+                />
             </div>
             <div style={{ display: "flex", justifyContent: "center", marginTop: "10px", alignItems: "center" }}>
                 <div className="flex items-center justify-center gap-2 mt-4">
@@ -1457,8 +852,10 @@ const AcDcRackDashboard = ({ userData }) => {
                         justifyContent: "center",
                         alignItems: "center",
                         zIndex: 1000,
+                        // fontSize: "10px"
                     }}
                 >
+
                     <div
                         className="child-container"
 
@@ -1466,16 +863,16 @@ const AcDcRackDashboard = ({ userData }) => {
                             // background: "white",
                             padding: "20px",
                             borderRadius: "10px",
-                            width: "90%",
-                            maxWidth: "700px",
-                            maxHeight: "90%",
+                            width: "100%",
+                            // maxWidth: "700px",
+                            maxHeight: "99%",
                             overflowY: "auto",
-                            boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                            boxShadow: "0 4px 20px rgb(0, 0, 0)",
                         }}
                     >
-                        <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "2px solid #2083a1ff", position: "sticky", top: "0" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "2px solid #2083a1ff", position: "sticky", top: "0", zIndex: 2000, background: "#0c334d" }}>
                             <div style={{ left: 0, textAlign: "center", }}>
-                                <h2 style={{ cursor: "pointer", borderBottom: "2px solid #2083a1ff", borderRadius: "5px", background: 'linear-gradient(105deg, #3ba2b4a6 10%, #a3a360 100%)', padding: 2 }}
+                                <h2 style={{ cursor: "pointer", borderBottom: "2px solid #2083a1ff", borderRadius: "5px", padding: 2 }}
                                     onClick={() => setEquipPopupOpen(true)}
                                     onMouseMove={(e) => { e.currentTarget.style.backgroundColor = "#c72525ff" }}
                                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#3ba2b4a6" }}
@@ -1483,6 +880,44 @@ const AcDcRackDashboard = ({ userData }) => {
                                     🗄️ Viwe Rack Details Preview
                                 </h2>
                             </div>
+
+                            {/*Action Button */}
+                            <div style={{ marginTop: "15px", textAlign: "center" }}>
+                                {(userData?.site?.toLowerCase() === previewData.siteName?.toLowerCase() || userData.role === "Super Admin" || userData.role === "Admin" || isAdminAssignmentValid(userData)) && (
+                                    <div style={{ display: "inline-flex", gap: "10px" }}>
+                                        <button
+                                            onClick={() => {
+                                                setPreviewOpen(false);
+                                                navigate("/rack-details-form", { state: { editData: previewData } });
+                                            }}
+                                            style={{
+                                                background: "#10b981",
+                                                color: "white",
+                                                padding: "8px 15px",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                cursor: "pointer",
+                                            }}
+                                        >
+                                            ✏️ Edit
+                                        </button>
+
+                                        <>&nbsp;&nbsp;</>
+
+                                        <button onClick={() => handleDelete(previewData.id)}
+                                            style={{
+                                                background: "#b91010ff",
+                                                color: "white",
+                                                padding: "8px 15px",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                cursor: "pointer",
+                                            }}
+                                        >🗑️</button>
+                                    </div>
+                                )}
+                            </div>
+
                             <div>
                                 <button
                                     onClick={() => setPreviewOpen(false)}
@@ -1508,281 +943,368 @@ const AcDcRackDashboard = ({ userData }) => {
                             </div>
                         </div>
 
-                        <table style={{ width: "100%", marginTop: "10px" }}>
-                            {/* ---- Preview table body with explicit ordering & grouping ---- */}
-                            <tbody>
-                                {/* define ordered keys in the exact sequence you want */}
-                                {(() => {
-                                    const formatLabel = (k) =>
-                                        k
-                                            .replace(/([A-Z])/g, " $1")      // split camelCase / camelCaps
-                                            .replace(/[_\-]+/g, " ")         // replace underscores/hyphens
-                                            .replace(/\s+/g, " ")            // normalize spaces
-                                            .trim()
-                                            .replace(/\b\w/g, (c) => c.toUpperCase()); // Title Case
+                        <div
+                            style={{
+                                background: "grey",
+                                padding: "20px 20px 30px",
+                                borderRadius: "10px",
+                                width: "99%",
+                                // maxWidth: "700px",
+                                maxHeight: "90%",
+                                overflowY: "auto",
+                                // position: "relative",
+                            }}
+                        >
 
-                                    // Grouped and ordered keys (customize this list to your full fields)
+                            {/* Rack Dimensions */}
+                            {(() => {
+                                const dim = getRackDimensions(equipPopupData);
+                                return (
+                                    <div style={{ textAlign: "center", marginBottom: "15px" }}>
+                                        <div style={{ fontSize: "14px", fontWeight: "bold" }}>
+                                            📐 Rack Dimensions
+                                        </div>
 
-                                    const generalKeys = [
-                                        "circle",
-                                        "siteName",
-                                        "equipmentLocation",
-                                        "equipmentRackNo",
-                                        "rackName",
-                                        "powerType",
-                                        "sourceType",
-                                        "rackSize",
-                                        "rackDescription",
-                                        "rackOwnerName",
-                                    ];
+                                        <div style={{ marginTop: "5px", fontSize: "13px" }}>
+                                            Height: <b>{dim.H} mm</b> &nbsp; | &nbsp;
+                                            Width: <b>{dim.W} mm</b> &nbsp; | &nbsp;
+                                            Depth: <b>{dim.D} mm</b>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
-                                    const sourceAKeys = [
-                                        "smpsRatingA",
-                                        "smpsNameA",
-                                        "dbNumberA",
-                                        "incomerRatingA",
-                                        "cableSizeA",
-                                        "cableRunA",
-                                        "equipmentRackNoA",
-                                        "rackNameA",
-                                        "rackIncomingCableSizeA",
-                                        "rackCableRunA",
-                                        "dbMcbNumberA",
-                                        "dbMcbRatingA",
-                                        "tempOnMcbA",
-                                        "runningLoadA",
-                                        "cableCapacityA",
-                                        "pctLoadCableA",
-                                        "pctLoadMcbA",
-                                        "rackEndNoDbA",
-                                        "rackEndDcdbNameA",
-                                        "rackEndRunningLoadA",
-                                        "rackEndMcbRatingA",
-                                        "rackEndPctLoadMcbA",
-                                        "remarksA",
-                                    ];
+                            <div style={{ display: "flex", overflowX: "auto" }}>
+                                <div >
+                                    {/* 3D Rack View */}
+                                    <div className="rack-3d-wrapper">
+                                        <div className="rack-3d-left"></div>
 
-                                    const sourceBKeys = [
-                                        "smpsRatingB",
-                                        "smpsNameB",
-                                        "dbNumberB",
-                                        "incomerRatingB",
-                                        "cableSizeB",
-                                        "cableRunB",
-                                        "equipmentRackNoB",
-                                        "rackNameB",
-                                        "rackIncomingCableSizeB",
-                                        "rackCableRunB",
-                                        "dbMcbNumberB",
-                                        "dbMcbRatingB",
-                                        "tempOnMcbB",
-                                        "runningLoadB",
-                                        "cableCapacityB",
-                                        "pctLoadCableB",
-                                        "pctLoadMcbB",
-                                        "rackEndNoDbB",
-                                        "rackEndDcdbNameB",
-                                        "rackEndRunningLoadB",
-                                        "rackEndMcbRatingB",
-                                        "rackEndPctLoadMcbB",
-                                        "remarksB",
-                                    ];
+                                        <div className="rack-3d-main">
 
-                                    const analysisKeys = [
-                                        "totalLoadBoth",
-                                        "bothCableCapacity",
-                                        "bothPctLoadCable",
-                                        "bothPctLoadMcb",
-                                        "isBothMcbSame",
-                                    ];
+                                            {Array.from({ length: getTotalRackU(equipPopupData) }, (_, i) => {
+                                                const totalU = getTotalRackU(equipPopupData);
+                                                const u = totalU - i;
 
-                                    // Merge everything in order; you can rearrange groups or items above
-                                    const orderedKeys = [
-                                        ...generalKeys,
-                                        ...sourceAKeys,
-                                        ...sourceBKeys,
-                                        ...analysisKeys,
-                                    ];
+                                                const allEq = equipPopupData.rackEquipments || [];
 
-                                    // Helper to safely get display value
-                                    const display = (v) =>
-                                        v === null || v === undefined || String(v).trim() === "" ? "-" : String(v);
+                                                // find equipment that spans this U
+                                                const eq = allEq.find(item =>
+                                                    Number(item.startU) === u ||
+                                                    (u <= Number(item.startU) && u >= Number(item.endU))
+                                                );
 
-                                    // Build rows: render section headers when a new group starts
-                                    const rows = [];
-                                    const pushSectionHeader = (title) =>
-                                        rows.push(
-                                            <tr key={`hdr-${title}`}>
-                                                <td colSpan="2"
-                                                    style={title === "Rack Equipments (U-by-U)" ? { background: 'linear-gradient(105deg, #3ba2b4a6 10%, #a3a360 100%)', cursor: "pointer", borderRadius: "8px" } : { background: "#f3f4f6", fontWeight: "700", padding: "8px 10px", borderBottom: "1px solid #ddd", borderRadius: "8px" }}
-                                                    onClick={() => title === "Rack Equipments (U-by-U)" ? setEquipPopupOpen(true) : ""}
-                                                    onMouseMove={(e) => title === "Rack Equipments (U-by-U)" ? e.currentTarget.style.backgroundColor = "#ec1414ff" : ""}
-                                                    onMouseLeave={(e) => title === "Rack Equipments (U-by-U)" ? e.currentTarget.style.backgroundColor = "#3ba2b4a6" : ""}
-                                                >
-                                                    {title}
-                                                </td>
-                                            </tr>
-                                        );
+                                                const isStart = eq && Number(eq.startU) === u;
+                                                const isInside = eq && u < Number(eq.startU) && u >= Number(eq.endU);
 
-                                    // Add General header
-                                    pushSectionHeader("General");
+                                                return (
+                                                    <div key={u} className="rack-u-row" style={{ height: "18px" }}>
+                                                        <div className="u-label">{u}</div>
 
-                                    orderedKeys.forEach((key) => {
-                                        // insert section headers where appropriate
-                                        if (sourceAKeys.includes(key) && !rows.some(r => r.key === "hdr-Source A")) pushSectionHeader("Source A");
-                                        if (sourceBKeys.includes(key) && !rows.some(r => r.key === "hdr-Source B")) pushSectionHeader("Source B");
-                                        if (analysisKeys.includes(key) && !rows.some(r => r.key === "hdr-Capacity Analysis")) pushSectionHeader("Capacity Analysis");
+                                                        {isStart ? (
+                                                            // Draw full-size block ONLY at startU
+                                                            <div
+                                                                className="u-equipment"
+                                                                style={{
+                                                                    height: `${eq.sizeU * 18}px`,
+                                                                    position: "relative",
+                                                                    background: "cyan",
+                                                                    border: "1px solid #8bb6ff",
+                                                                    zIndex: 9,
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    paddingLeft: "5px",
+                                                                    borderTop: "2px solid rgba(30, 79, 134, 1)",
+                                                                    borderRadius: "6px"
+                                                                }}
+                                                            >
+                                                                {isStart && (
+                                                                    <div
+                                                                        className="u-details"
+                                                                        style={{ maxHeight: `${eq.sizeU * 18}px` }}
+                                                                    >
 
-                                        rows.push(
-                                            <tr key={key}>
-                                                <td style={{ fontWeight: "bold", textTransform: "none", padding: "6px 10px", borderBottom: "1px solid #eee", width: "45%" }}>
-                                                    {formatLabel(key)}
-                                                </td>
-                                                <td style={{ padding: "6px 10px", borderBottom: "1px solid #eee", width: "55%" }}>
-                                                    {display(previewData[key])}
-                                                </td>
-                                            </tr>
-                                        );
-                                    });
+                                                                        <div className="equipment-details"
+                                                                        >
+                                                                            <b
+                                                                                style={{
+                                                                                    color: "rgba(44, 42, 156, 1)",
+                                                                                    borderRadius: "3px",
+                                                                                    borderBottom: "1px solid",
+                                                                                    borderTop: "1px solid",
+                                                                                    borderBottomColor: "ActiveBorder",
+                                                                                }}>{eq.name}</b><br />
+                                                                            {eq.remarks || "—"}
+                                                                        </div>
 
-                                    // 🔹 Show Rack Dimensions properly
-                                    if (previewData.rackDimensions) {
-                                        pushSectionHeader("Rack Dimensions");
+                                                                    </div>
+                                                                )}
 
-                                        rows.push(
-                                            <tr key="dim-height">
-                                                <td style={{ fontWeight: "bold" }}>Height</td>
-                                                <td>{previewData.rackDimensions.height} mm</td>
-                                            </tr>
-                                        );
-                                        rows.push(
-                                            <tr key="dim-width">
-                                                <td style={{ fontWeight: "bold" }}>Width</td>
-                                                <td>{previewData.rackDimensions.width} mm</td>
-                                            </tr>
-                                        );
-                                        rows.push(
-                                            <tr key="dim-depth">
-                                                <td style={{ fontWeight: "bold" }}>Depth</td>
-                                                <td>{previewData.rackDimensions.depth} mm</td>
-                                            </tr>
-                                        );
-                                    }
+                                                            </div>
+                                                        ) : isInside ? (
+                                                            // Middle U rows (equipment covers this, but no block here)
+                                                            <div className="u-gap"></div>
+                                                        ) : (
+                                                            // Normal empty U
+                                                            <div className="u-empty"><span>empty</span></div>
+                                                        )}
 
-                                    // 🔹 Show Rack Equipments properly
-                                    if (previewData.rackEquipments && previewData.rackEquipments.length > 0) {
-                                        pushSectionHeader("Rack Equipments (U-by-U)");
-
-                                        previewData.rackEquipments.forEach((eq, i) => {
-                                            rows.push(
-                                                <tr key={`eq-${i}`}>
-                                                    <td style={{ fontWeight: "bold", verticalAlign: "top" }}>
-                                                        {eq.name}
-                                                    </td>
-                                                    <td>
-                                                        <div><b>Start U:</b> {eq.startU}</div>
-                                                        <div><b>End U:</b> {eq.endU}</div>
-                                                        <div><b>Size U:</b> {eq.sizeU}</div>
-                                                        <div><b>Remarks:</b> {eq.remarks || "—"}</div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        });
-                                    }
-
-                                    // If there are any extra keys in previewData not listed in orderedKeys, show them at the end
-                                    const extraKeys = Object.keys(previewData || {}).filter(
-                                        (k) => !orderedKeys.includes(k) && k !== "rackDimensions" && k !== "rackEquipments" && k !== "updatedBy" && k !== "updatedAt"
-                                    )
-                                    if (extraKeys.length > 0) {
-                                        pushSectionHeader("Other Fields");
-                                        extraKeys.forEach((k) =>
-                                            rows.push(
-                                                <tr key={`extra-${k}`}>
-                                                    <td style={{ fontWeight: "bold", padding: "6px 10px", borderBottom: "1px solid #eee" }}>{formatLabel(k)}</td>
-                                                    <td style={{ padding: "6px 10px", borderBottom: "1px solid #eee" }}>{display(previewData[k])}</td>
-                                                </tr>
-                                            )
-                                        );
-                                    }
-
-                                    // Update By
-                                    if (previewData?.updatedBy && typeof previewData.updatedBy === "object") {
-                                        pushSectionHeader("Updated By");
-
-                                        rows.push(
-                                            <tr key="updatedBy-name">
-                                                <td style={{ fontWeight: "bold" }}>Name</td>
-                                                <td>Mr. {previewData.updatedBy.name || "-"}</td>
-                                            </tr>
-                                        );
-
-                                        rows.push(
-                                            <tr key="updatedBy-empId">
-                                                <td style={{ fontWeight: "bold" }}>Emp. ID</td>
-                                                <td>{previewData.updatedBy.empId || "-"}</td>
-                                            </tr>
-                                        );
-
-                                        rows.push(
-                                            <tr key="updatedBy-role">
-                                                <td style={{ fontWeight: "bold" }}>Role</td>
-                                                <td>{previewData.updatedBy.role || "-"}</td>
-                                            </tr>
-                                        );
-
-                                        rows.push(
-                                            <tr key="updatedAt">
-                                                <td style={{ fontWeight: "bold" }}>Update At</td>
-                                                <td>{previewData.updatedAt || "-"}</td>
-                                            </tr>
-                                        );
-                                    }
-
-                                    return rows;
-                                })()}
-                            </tbody>
-
-                        </table>
-
-
-
-                        <div style={{ marginTop: "15px", textAlign: "center" }}>
-                            {(userData?.site?.toLowerCase() === previewData.siteName?.toLowerCase() || userData.role === "Super Admin" || userData.role === "Admin" || isAdminAssignmentValid(userData)) && (
-                                <div style={{ display: "inline-flex", gap: "10px" }}>
-                                    <button
-                                        onClick={() => {
-                                            setPreviewOpen(false);
-                                            navigate("/rack-details-form", { state: { editData: previewData } });
-                                        }}
-                                        style={{
-                                            background: "#10b981",
-                                            color: "white",
-                                            padding: "8px 15px",
-                                            border: "none",
-                                            borderRadius: "6px",
-                                            cursor: "pointer",
-                                        }}
-                                    >
-                                        ✏️ Edit
-                                    </button>
-
-                                    <>&nbsp;&nbsp;</>
-
-                                    <button onClick={() => handleDelete(previewData.id)}
-                                        style={{
-                                            background: "#b91010ff",
-                                            color: "white",
-                                            padding: "8px 15px",
-                                            border: "none",
-                                            borderRadius: "6px",
-                                            cursor: "pointer",
-                                        }}
-                                    >🗑️</button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
+                                <div>
+                                    {/* Table */}
+                                    <div style={{ overflowY: "auto", maxHeight: window.innerHeight, borderRadius: "8px" }}>
+                                        <table style={{ width: "100%", marginTop: "10px" }}>
+                                            {/* ---- Preview table body with explicit ordering & grouping ---- */}
+                                            <tbody>
+                                                {/* define ordered keys in the exact sequence you want */}
+                                                {(() => {
+                                                    const formatLabel = (k) =>
+                                                        k
+                                                            .replace(/([A-Z])/g, " $1")      // split camelCase / camelCaps
+                                                            .replace(/[_\-]+/g, " ")         // replace underscores/hyphens
+                                                            .replace(/\s+/g, " ")            // normalize spaces
+                                                            .trim()
+                                                            .replace(/\b\w/g, (c) => c.toUpperCase()); // Title Case
+
+                                                    // Grouped and ordered keys (customize this list to your full fields)
+
+                                                    const generalKeys = [
+                                                        "circle",
+                                                        "siteName",
+                                                        "equipmentLocation",
+                                                        "equipmentRackNo",
+                                                        "rackName",
+                                                        "powerType",
+                                                        "sourceType",
+                                                        "rackSize",
+                                                        "rackDescription",
+                                                        "rackOwnerName",
+                                                    ];
+
+                                                    const sourceAKeys = [
+                                                        "smpsRatingA",
+                                                        "smpsNameA",
+                                                        "dbNumberA",
+                                                        "incomerRatingA",
+                                                        "cableSizeA",
+                                                        "cableRunA",
+                                                        "equipmentRackNoA",
+                                                        "rackNameA",
+                                                        "rackIncomingCableSizeA",
+                                                        "rackCableRunA",
+                                                        "dbMcbNumberA",
+                                                        "dbMcbRatingA",
+                                                        "tempOnMcbA",
+                                                        "runningLoadA",
+                                                        "cableCapacityA",
+                                                        "pctLoadCableA",
+                                                        "pctLoadMcbA",
+                                                        "rackEndNoDbA",
+                                                        "rackEndDcdbNameA",
+                                                        "rackEndRunningLoadA",
+                                                        "rackEndMcbRatingA",
+                                                        "rackEndPctLoadMcbA",
+                                                        "remarksA",
+                                                    ];
+
+                                                    const sourceBKeys = [
+                                                        "smpsRatingB",
+                                                        "smpsNameB",
+                                                        "dbNumberB",
+                                                        "incomerRatingB",
+                                                        "cableSizeB",
+                                                        "cableRunB",
+                                                        "equipmentRackNoB",
+                                                        "rackNameB",
+                                                        "rackIncomingCableSizeB",
+                                                        "rackCableRunB",
+                                                        "dbMcbNumberB",
+                                                        "dbMcbRatingB",
+                                                        "tempOnMcbB",
+                                                        "runningLoadB",
+                                                        "cableCapacityB",
+                                                        "pctLoadCableB",
+                                                        "pctLoadMcbB",
+                                                        "rackEndNoDbB",
+                                                        "rackEndDcdbNameB",
+                                                        "rackEndRunningLoadB",
+                                                        "rackEndMcbRatingB",
+                                                        "rackEndPctLoadMcbB",
+                                                        "remarksB",
+                                                    ];
+
+                                                    const analysisKeys = [
+                                                        "totalLoadBoth",
+                                                        "bothCableCapacity",
+                                                        "bothPctLoadCable",
+                                                        "bothPctLoadMcb",
+                                                        "isBothMcbSame",
+                                                    ];
+
+                                                    // Merge everything in order; you can rearrange groups or items above
+                                                    const orderedKeys = [
+                                                        ...generalKeys,
+                                                        ...sourceAKeys,
+                                                        ...sourceBKeys,
+                                                        ...analysisKeys,
+                                                    ];
+
+                                                    // Helper to safely get display value
+                                                    const display = (v) =>
+                                                        v === null || v === undefined || String(v).trim() === "" ? "-" : String(v);
+
+                                                    // Build rows: render section headers when a new group starts
+                                                    const rows = [];
+                                                    const pushSectionHeader = (title) =>
+                                                        rows.push(
+                                                            <tr key={`hdr-${title}`}>
+                                                                <td colSpan="2"
+                                                                    style={title === "Rack Equipments (U-by-U)" ? { background: 'linear-gradient(105deg, #3ba2b4a6 10%, #a3a360 100%)', cursor: "pointer", borderRadius: "8px" } : { background: "#f3f4f6", fontWeight: "700", padding: "8px 10px", borderBottom: "1px solid #ddd", borderRadius: "8px" }}
+                                                                    onClick={() => title === "Rack Equipments (U-by-U)" ? setEquipPopupOpen(true) : ""}
+                                                                    onMouseMove={(e) => title === "Rack Equipments (U-by-U)" ? e.currentTarget.style.backgroundColor = "#ec1414ff" : ""}
+                                                                    onMouseLeave={(e) => title === "Rack Equipments (U-by-U)" ? e.currentTarget.style.backgroundColor = "#3ba2b4a6" : ""}
+                                                                >
+                                                                    {title}
+                                                                </td>
+                                                            </tr>
+                                                        );
+
+                                                    // Add General header
+                                                    pushSectionHeader("General");
+
+                                                    orderedKeys.forEach((key) => {
+                                                        // insert section headers where appropriate
+                                                        if (sourceAKeys.includes(key) && !rows.some(r => r.key === "hdr-Source A")) pushSectionHeader("Source A");
+                                                        if (sourceBKeys.includes(key) && !rows.some(r => r.key === "hdr-Source B")) pushSectionHeader("Source B");
+                                                        if (analysisKeys.includes(key) && !rows.some(r => r.key === "hdr-Capacity Analysis")) pushSectionHeader("Capacity Analysis");
+
+                                                        rows.push(
+                                                            <tr key={key}>
+                                                                <td style={{ fontWeight: "bold", textTransform: "none", padding: "6px 10px", borderBottom: "1px solid #eee", width: "45%" }}>
+                                                                    {formatLabel(key)}
+                                                                </td>
+                                                                <td style={{ padding: "6px 10px", borderBottom: "1px solid #eee", width: "55%" }}>
+                                                                    {display(previewData[key])}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    });
+
+                                                    // 🔹 Show Rack Dimensions properly
+                                                    if (previewData.rackDimensions) {
+                                                        pushSectionHeader("Rack Dimensions");
+
+                                                        rows.push(
+                                                            <tr key="dim-height">
+                                                                <td style={{ fontWeight: "bold" }}>Height</td>
+                                                                <td>{previewData.rackDimensions.height} mm</td>
+                                                            </tr>
+                                                        );
+                                                        rows.push(
+                                                            <tr key="dim-width">
+                                                                <td style={{ fontWeight: "bold" }}>Width</td>
+                                                                <td>{previewData.rackDimensions.width} mm</td>
+                                                            </tr>
+                                                        );
+                                                        rows.push(
+                                                            <tr key="dim-depth">
+                                                                <td style={{ fontWeight: "bold" }}>Depth</td>
+                                                                <td>{previewData.rackDimensions.depth} mm</td>
+                                                            </tr>
+                                                        );
+                                                    }
+
+                                                    // 🔹 Show Rack Equipments properly
+                                                    if (previewData.rackEquipments && previewData.rackEquipments.length > 0) {
+                                                        pushSectionHeader("Rack Equipments (U-by-U)");
+
+                                                        previewData.rackEquipments.forEach((eq, i) => {
+                                                            rows.push(
+                                                                <tr key={`eq-${i}`}>
+                                                                    <td style={{ fontWeight: "bold", verticalAlign: "top" }}>
+                                                                        {eq.name}
+                                                                    </td>
+                                                                    <td>
+                                                                        <div><b>Start U:</b> {eq.startU}</div>
+                                                                        <div><b>End U:</b> {eq.endU}</div>
+                                                                        <div><b>Size U:</b> {eq.sizeU}</div>
+                                                                        <div><b>Remarks:</b> {eq.remarks || "—"}</div>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        });
+                                                    }
+
+                                                    // If there are any extra keys in previewData not listed in orderedKeys, show them at the end
+                                                    const extraKeys = Object.keys(previewData || {}).filter(
+                                                        (k) => !orderedKeys.includes(k) && k !== "rackDimensions" && k !== "rackEquipments" && k !== "updatedBy" && k !== "updatedAt"
+                                                    )
+                                                    if (extraKeys.length > 0) {
+                                                        pushSectionHeader("Other Fields");
+                                                        extraKeys.forEach((k) =>
+                                                            rows.push(
+                                                                <tr key={`extra-${k}`}>
+                                                                    <td style={{ fontWeight: "bold", padding: "6px 10px", borderBottom: "1px solid #eee" }}>{formatLabel(k)}</td>
+                                                                    <td style={{ padding: "6px 10px", borderBottom: "1px solid #eee" }}>{display(previewData[k])}</td>
+                                                                </tr>
+                                                            )
+                                                        );
+                                                    }
+
+                                                    // Update By
+                                                    if (previewData?.updatedBy && typeof previewData.updatedBy === "object") {
+                                                        pushSectionHeader("Updated By");
+
+                                                        rows.push(
+                                                            <tr key="updatedBy-name">
+                                                                <td style={{ fontWeight: "bold" }}>Name</td>
+                                                                <td>Mr. {previewData.updatedBy.name || "-"}</td>
+                                                            </tr>
+                                                        );
+
+                                                        rows.push(
+                                                            <tr key="updatedBy-empId">
+                                                                <td style={{ fontWeight: "bold" }}>Emp. ID</td>
+                                                                <td>{previewData.updatedBy.empId || "-"}</td>
+                                                            </tr>
+                                                        );
+
+                                                        rows.push(
+                                                            <tr key="updatedBy-role">
+                                                                <td style={{ fontWeight: "bold" }}>Role</td>
+                                                                <td>{previewData.updatedBy.role || "-"}</td>
+                                                            </tr>
+                                                        );
+
+                                                        rows.push(
+                                                            <tr key="updatedAt">
+                                                                <td style={{ fontWeight: "bold" }}>Update At</td>
+                                                                <td>{previewData.updatedAt || "-"}</td>
+                                                            </tr>
+                                                        );
+                                                    }
+
+                                                    return rows;
+                                                })()}
+                                            </tbody>
+
+                                        </table>
+                                    </div>
+
+                                    <div style={{ marginTop: "20px", borderTop: "2px solid #2083a1ff", paddingTop: "10px" }}>
+                                        <ActivityTab formData={previewData} />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                     </div>
+
                 </div>
             )}
 

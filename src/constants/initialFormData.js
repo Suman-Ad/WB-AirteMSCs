@@ -4,6 +4,7 @@ export const createInitialFormData = ({
     userData,
     editData,
     rackType,
+    rackStatus,
 }) => {
 
     if (editData) {
@@ -44,6 +45,8 @@ export const createInitialFormData = ({
         rackOwnerName: "",
         drTestStatus: "",
         drTestDate: "",
+        rackStatus: rackStatus[0],
+        switchedOffDate: "",
 
         // Source A
         smpsRatingA: "",
