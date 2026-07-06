@@ -155,6 +155,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
               onClick={handleLogout}
               className="logout-manage-btn"
               title="Logout"
+              style={{ width: "fit-content" }}
             >
               📴
             </button>
@@ -165,6 +166,8 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
             title="Site Settings"
             className="logout-manage-btn"
             onClick={() => navigate('/site-config') & setCollapsed(true)}
+            style={{ width: "fit-content" }}
+
           >
             ⚙️
           </button>

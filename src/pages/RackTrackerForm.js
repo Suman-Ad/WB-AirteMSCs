@@ -192,7 +192,7 @@ const RackTrackerForm = ({ userData }) => {
               onClick={() => setActiveTab(tab)}
               style={{
                 flexShrink: 0,
-                minWidth: "120px",
+                width: "fit-content"
               }}
             >
               <div>{tab}</div>

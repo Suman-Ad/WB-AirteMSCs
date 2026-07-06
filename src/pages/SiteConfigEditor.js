@@ -493,7 +493,7 @@ const SiteConfigEdit = ({ userData }) => {
             <div className="chart-container">
               <h1>Site Equipment Details</h1>
 
-              <label>DG Count</label>
+              <h2>DG Count</h2>
 
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <button
@@ -550,6 +550,33 @@ const SiteConfigEdit = ({ userData }) => {
                     }}
                   >
                     <h4>{dgKey} Details</h4>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          dgConfigs: {
+                            ...prev.dgConfigs,
+                            [dgKey]: {
+                              ...prev.dgConfigs?.[dgKey],
+                              active: !(prev.dgConfigs?.[dgKey]?.active ?? true),
+                            },
+                          },
+                        }))
+                      }
+                      style={{
+                        background:
+                          (dg.active ?? true) ? "#28a745" : "#dc3545",
+                        color: "#fff",
+                        border: "none",
+                        padding: "6px 14px",
+                        borderRadius: "20px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {(dg.active ?? true) ? "🟢 Active" : "🔴 Inactive"}
+                    </button>
 
                     {/* Capacity */}
                     <label>{dgKey} Capacity (kVA)</label>
@@ -630,8 +657,8 @@ const SiteConfigEdit = ({ userData }) => {
                 );
               })}
 
-              <label>SMPS Count</label>
-  
+              <h2>SMPS Count</h2>
+
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <button
                   type="button"
@@ -688,6 +715,34 @@ const SiteConfigEdit = ({ userData }) => {
                   >
                     <h4>{smpsKey} Details</h4>
 
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          smpsConfigs: {
+                            ...prev.smpsConfigs,
+                            [smpsKey]: {
+                              ...prev.smpsConfigs?.[smpsKey],
+                              active: !(prev.smpsConfigs?.[smpsKey]?.active ?? true),
+                            },
+                          },
+                        }))
+                      }
+                      style={{
+                        background:
+                          (smps.active ?? true) ? "#28a745" : "#dc3545",
+                        color: "#fff",
+                        border: "none",
+                        padding: "6px 14px",
+                        borderRadius: "20px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {(smps.active ?? true) ? "🟢 Active" : "🔴 Inactive"}
+                    </button>
+
                     {/* Capacity */}
                     <label>{smpsKey} Capacity (Amp)</label>
                     <input
@@ -729,7 +784,7 @@ const SiteConfigEdit = ({ userData }) => {
                 );
               })}
 
-              <label>PAC Count</label>
+              <h2>PAC Count</h2>
               <input
                 type="number"
                 name="pacCount"
@@ -737,7 +792,7 @@ const SiteConfigEdit = ({ userData }) => {
                 onChange={handleChange}
               />
 
-              <label>UPS Count</label>
+              <h2>UPS Count</h2>
 
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <button
@@ -794,6 +849,34 @@ const SiteConfigEdit = ({ userData }) => {
                     }}
                   >
                     <h4>{upsKey} Details</h4>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          upsConfigs: {
+                            ...prev.upsConfigs,
+                            [upsKey]: {
+                              ...prev.upsConfigs?.[upsKey],
+                              active: !(prev.upsConfigs?.[upsKey]?.active ?? true),
+                            },
+                          },
+                        }))
+                      }
+                      style={{
+                        background:
+                          (ups.active ?? true) ? "#28a745" : "#dc3545",
+                        color: "#fff",
+                        border: "none",
+                        padding: "6px 14px",
+                        borderRadius: "20px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {(ups.active ?? true) ? "🟢 Active" : "🔴 Inactive"}
+                    </button>
 
                     {/* Capacity */}
                     <label>{upsKey} Capacity (kVA)</label>

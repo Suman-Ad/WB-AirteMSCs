@@ -64,7 +64,15 @@ const DEFAULT_EQUIP_LIST = [
   "UPS", "UPS BB", "DCDB/ACDB", "Transformer"
 ];
 
-const FREQUENCIES = ["monthly", "quarterly", "half-yearly", "yearly"];
+const FREQUENCIES = ["monthly", "bi-monthly", "quarterly", "half-yearly", "yearly"];
+
+/* months array for checkboxes */
+const MONTHS = [
+  { num: 1, label: "Jan" }, { num: 2, label: "Feb" }, { num: 3, label: "Mar" },
+  { num: 4, label: "Apr" }, { num: 5, label: "May" }, { num: 6, label: "Jun" },
+  { num: 7, label: "Jul" }, { num: 8, label: "Aug" }, { num: 9, label: "Sep" },
+  { num: 10, label: "Oct" }, { num: 11, label: "Nov" }, { num: 12, label: "Dec" }
+];
 
 function pad2(n) { return n < 10 ? `0${n}` : `${n}`; }
 function todayISO() { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
@@ -140,6 +148,7 @@ export default function DailyActivityManage({ userData }) {
   const [equipmentQtyMap, setEquipmentQtyMap] = useState({});
 
   const [dynamicEquip, setDynamicEquip] = useState("");
+  const [othersDynamicEquip, setOthersDynamicEquip] = useState("");
   const [dynamicActivity, setDynamicActivity] = useState("");
   const [vendorName, setVendorName] = useState("");
   const [vendorNameInHouse, setVendorNameInHouse] = useState("");
@@ -646,6 +655,39 @@ export default function DailyActivityManage({ userData }) {
       copy.equipmentSchedules[equipment] = arr;
       return copy;
     });
+  }
+
+  function updateScheduleEntryFull(equipmentName, entryId, updates) {
+    setPmDoc(prev => {
+      const copy = { ...prev };
+      copy.equipmentSchedules ||= {};
+
+      const arr = (copy.equipmentSchedules[equipmentName] || []).map(e =>
+        e.id === entryId ? { ...e, ...updates } : e
+      );
+
+      copy.equipmentSchedules[equipmentName] = arr;
+      return copy;
+    });
+  }
+
+  // apply quick frequency -> months helper (monthly/quarterly/half/yearly)
+  function applyFrequencyToEntry(entryId, equipmentName, frequency, startMonth = 1) {
+    const months = [];
+    if (frequency === "monthly") {
+      for (let m = 1; m <= 12; m++) months.push(m);
+    } else if (frequency === "bi-monthly") {
+      for (let m = startMonth; m <= 12; m += 2) months.push(m);
+    } else if (frequency === "quarterly") {
+      for (let m = startMonth; m <= 12; m += 3) months.push(m);
+    } else if (frequency === "half-yearly") {
+      months.push(startMonth);
+      const other = ((startMonth + 6 - 1) % 12) + 1;
+      if (!months.includes(other)) months.push(other);
+    } else if (frequency === "yearly") {
+      months.push(startMonth);
+    }
+    updateSchedule(equipmentName, entryId, "months", months);
   }
 
   function removeSchedule(equipment, entryId) {
@@ -1459,12 +1501,31 @@ export default function DailyActivityManage({ userData }) {
                                 </div>
 
                                 <div>
+                                  {/* Frequency */}
                                   <div>
                                     <label style={{ fontSize: 12, color: "#666" }}>Frequency</label>
-                                    <select className="daily-activity-select" value={entry.frequency || "monthly"} onChange={(e) => updateSchedule(eq, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
+                                    <select className="daily-activity-select" value={entry.frequency || "monthly"}
+                                      onChange={(e) => {
+                                        const freq = e.target.value;
+
+                                        const months =
+                                          freq === "monthly" ? Array.from({ length: 12 }, (_, i) => i + 1) :
+                                            freq === "bi-monthly" ? [1, 3, 5, 7, 9, 11] :
+                                              freq === "quarterly" ? [1, 4, 7, 10] :
+                                                freq === "half-yearly" ? [1, 7] :
+                                                  [1];
+
+                                        updateScheduleEntryFull(eq, entry.id, {
+                                          frequency: freq,
+                                          months
+                                        });
+                                      }}
+                                      disabled={!canEdit}>
                                       {FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
                                     </select>
                                   </div>
+
+                                  {/* Months */}
                                   <div>
                                     <label style={{ fontSize: 12, color: "#666" }}>Months (comma separated)</label>
                                     <input className="daily-activity-input" value={(entry.months || []).join(",")} onChange={(e) => {
@@ -1472,7 +1533,32 @@ export default function DailyActivityManage({ userData }) {
                                       updateSchedule(eq, entry.id, "months", Array.from(new Set(months)).sort((a, b) => a - b));
                                     }} disabled={!canEdit} />
                                     <div style={{ fontSize: 11, color: "#666" }}>{(entry.months || []).length ? `Months: ${(entry.months || []).join(",")}` : "No months set"}</div>
+
+                                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                      {MONTHS.map(m => {
+                                        const checked = Array.isArray(entry.months) && entry.months.includes(m.num);
+                                        return (
+                                          <button key={m.num}
+                                            className={`daily-activity-btn ${checked ? "daily-activity-btn-primary" : "daily-activity-btn-secondary"}`}
+                                            onClick={() => {
+                                              if (!canEdit) return;
+                                              const next = new Set(Array.isArray(entry.months) ? entry.months : []);
+                                              if (next.has(m.num)) next.delete(m.num); else next.add(m.num);
+                                              updateSchedule(eq, entry.id, "months", Array.from(next).sort((a, b) => a - b));
+                                            }}
+                                            type="button"
+                                            style={{ padding: "6px 8px", borderRadius: 6 }}
+                                          >
+                                            {m.label}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                    <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => applyFrequencyToEntry(entry.id, eq, entry.frequency || "monthly", (entry.months && entry.months[0]) || 1)} disabled={!canEdit}>Apply Frequency → Months</button>
+
                                   </div>
+
+                                  {/* Day */}
                                   <div style={{ marginBottom: 6 }}>
                                     <label style={{ display: "block", fontSize: 12, color: "#666" }}>Day (1-31)</label>
                                     <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1} onChange={(e) => updateSchedule(eq, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1", 10))))} disabled={!canEdit} />
@@ -1483,6 +1569,8 @@ export default function DailyActivityManage({ userData }) {
                                   </p>
                                 </div>
                                 <div>
+                                  <label>Quantity: <input type="text" className="daily-activity-input" value={entry.quantity || ""} onChange={(e) => updateSchedule(eq, entry.id, "quantity", e.target.value )} /></label>
+
                                   <label style={{ fontSize: 12, color: "#666" }}>Vendor Name: </label>
                                   <select
                                     value={entry.vendor || vendorName}
@@ -1543,6 +1631,7 @@ export default function DailyActivityManage({ userData }) {
         </div>
       )}
 
+      {/* Add Dynamic Activity */}
       <div className="child-container" style={{ marginBottom: 12, border: "1px dashed #ccc", padding: 10 }}>
         <h4>➕ Add Dynamic Activity (Site User)</h4>
 
@@ -1553,6 +1642,7 @@ export default function DailyActivityManage({ userData }) {
           value={selectDate}
           onChange={(e) => setSelectDate(e.target.value)}
         />
+
         <select
           className="daily-activity-select"
           value={dynamicEquip}
@@ -1571,7 +1661,15 @@ export default function DailyActivityManage({ userData }) {
           <option value="Others" >Others</option>
         </select>
 
-
+        {dynamicEquip === "Others" && (
+          <input
+            type="text"
+            className="daily-activity-input"
+            placeholder="Enter Equipment Name"
+            value={othersDynamicEquip}
+            onChange={(e) => setOthersDynamicEquip(e.target.value)}
+          />
+        )}
 
         {/* Activity */}
         {dynamicEquip && (
@@ -1630,8 +1728,10 @@ export default function DailyActivityManage({ userData }) {
               a => a.activityDescription === dynamicActivity
             );
 
+            const nodeName = dynamicEquip === "Others" ? othersDynamicEquip : dynamicEquip;
+
             const newRow = sanitize({
-              nodeName: dynamicEquip,
+              nodeName: nodeName,
               activityDetails: meta.activityDescription ?? "",
               activityType: meta.activityType ?? "Major",
               activityCategory: meta.activityCategory ?? "PM",
@@ -1686,6 +1786,7 @@ export default function DailyActivityManage({ userData }) {
           Add
         </button>
       </div>
+
       {/* Daily sheet */}
       <div style={{ marginTop: 12, border: "1px solid #eee", padding: 12, borderRadius: 8 }}>
         <div style={{ fontWeight: 700 }}>Daily Sheet — {site} — {dateFrom} — {dateTo}({dailyRows.length})</div>

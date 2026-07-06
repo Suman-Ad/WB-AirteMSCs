@@ -139,6 +139,7 @@ export default function PMRegister({ userData }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState("");
 
+  const [expandedEntries, setExpandedEntries] = useState({});
 
   // permissions
   const isAdmin = userData?.role === "Admin" ||
@@ -180,49 +181,6 @@ export default function PMRegister({ userData }) {
       a => a.activityDescription === activityDescription
     ) || null;
   }
-
-
-  // // load site list from assets_register if available
-  // useEffect(() => {
-  //   if (!circle || !site) return;
-  //   async function loadAssetsFlatData() {
-  //     try {
-  //       setLoading(true);
-
-  //       const snap = await getDocs(collection(db, "assets_flat"));
-
-  //       const equipSet = new Set();
-  //       const vendorSet = new Set();
-
-  //       snap.forEach(docSnap => {
-  //         const d = docSnap.data();
-  //         // 🔐 Admin / Super Admin → ALL sites
-  //         if (isAdmin) {
-  //           if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
-  //           if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
-  //           return;
-  //         }
-
-  //         // 👤 Other users → EXISTING site-based logic
-  //         if (
-  //           d.Circle === circle &&
-  //           d.UniqueCode === (userData?.siteId || site)
-  //         ) {
-  //           if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
-  //           if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
-  //         }
-  //       });
-
-  //       setEquipmentList(Array.from(equipSet).sort());
-  //       setVendorList(Array.from(vendorSet).sort());
-  //       setLoading(false);
-  //     } catch (e) {
-  //       console.error("assets_flat load failed", e);
-  //     }
-  //   }
-
-  //   loadAssetsFlatData();
-  // }, [circle, site]);
 
   // load site list from assets_register with correct filtering
   useEffect(() => {
@@ -539,6 +497,8 @@ export default function PMRegister({ userData }) {
     const months = [];
     if (frequency === "monthly") {
       for (let m = 1; m <= 12; m++) months.push(m);
+    } else if (frequency === "bi-monthly") {
+      for (let m = startMonth; m <= 12; m += 2) months.push(m);
     } else if (frequency === "quarterly") {
       for (let m = startMonth; m <= 12; m += 3) months.push(m);
     } else if (frequency === "half-yearly") {
@@ -732,6 +692,15 @@ export default function PMRegister({ userData }) {
     setExpandedEquipments((prev) => ({
       ...prev,
       [equipmentName]: !prev[equipmentName],
+    }));
+  };
+
+  const toggleEntry = (equipmentName, entryId) => {
+    const key = `${equipmentName}_${entryId}`;
+
+    setExpandedEntries(prev => ({
+      ...prev,
+      [key]: !prev[key],
     }));
   };
 
@@ -1284,213 +1253,252 @@ export default function PMRegister({ userData }) {
                       {expandedEquipments[equipmentName] && (
                         <div className="chart-container" style={{ display: "grid", gap: 12 }}>
                           {entries.length === 0 && <div style={{ color: "#666" }}>No entries for this equipment</div>}
-                          {entries.map((entry, idx) => (
-                            <div key={entry.id} style={{ borderTop: "1px dashed #eee", paddingTop: 8 }}>
-                              <b>Entry #{idx + 1}</b>
-                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                                <label style={{ minWidth: 110 }}>
-                                  Activity Name:
-                                  <select
-                                    className="daily-activity-select"
-                                    value={entry.pmType || ""}
-                                    disabled={!canEdit}
-                                    onChange={(e) => {
-                                      const activity = getActivityDetails(equipmentName, e.target.value);
-                                      if (!activity) return;
-
-                                      updateScheduleEntryFull(equipmentName, entry.id, {
-                                        pmType: activity.activityDescription,
-                                        activityCategory: activity.activityCategory,
-                                        activityCode: activity.activityCode,
-                                        activityType: activity.activityType,
-                                        avgMonthlyCount: activity.avgMonthlyCount,
-                                        crRequired: activity.crRequired,
-                                        crDaysBefore: activity.crDaysBefore,
-                                        approvalLevel: activity.approvalLevel,
-                                        approvalLevels: activity.approvalLevels,
-                                        information: activity.information || "",
-                                        performBy: activity.performBy || "In-House",
-                                        mopRequired: activity.mopRequired || false,
-                                        approvalLevels: activity.approvalLevels
-                                      });
+                          {entries.map((entry, idx) => {
+                            const entryKey = `${equipmentName}_${entry.id}`;
+                            const isExpanded = expandedEntries[entryKey];
+                            return (
+                              (
+                                <div key={entry.id} style={{ borderTop: "1px dashed #eee", paddingTop: 8 }}>
+                                  <div
+                                    onClick={() => toggleEntry(equipmentName, entry.id)}
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      cursor: "pointer",
+                                      background: "#f8fafc",
+                                      padding: "8px 12px",
+                                      borderRadius: 6,
+                                      marginBottom: 8,
+                                      fontWeight: 600,
                                     }}
-
                                   >
-                                    {(ACTIVITY_MASTER[equipmentName] || ACTIVITY_MASTER.Other || []).map(a => (
-                                      <option key={a.activityDescription} value={a.activityDescription}>
-                                        {a.activityDescription}
-                                      </option>
-                                    ))}
-                                  </select>
+                                    <span>Activity #{idx + 1} {entry.pmType}: {entry.notes}</span>
 
-                                </label>
+                                    <span>
+                                      {isExpanded ? "▼" : "▶"}
+                                    </span>
+                                  </div>
 
-                                <label>Quantity: <input type="text" className="daily-activity-input" value={entry.quantity || equipmentQtyMap[equipmentName] || ""} disabled /></label>
+                                  {isExpanded && (
+                                    <div>
 
-                                <label style={{ minWidth: 160 }}>
-                                  Frequency:
-                                  <select className="daily-activity-select" value={entry.frequency || "monthly"}
-                                    // onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
-                                    onChange={(e) => {
-                                      const freq = e.target.value;
+                                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                                        <label style={{ minWidth: 110 }}>
+                                          Activity Name:
+                                          <select
+                                            className="daily-activity-select"
+                                            value={entry.pmType || ""}
+                                            disabled={!canEdit}
+                                            onChange={(e) => {
+                                              const activity = getActivityDetails(equipmentName, e.target.value);
+                                              if (!activity) return;
 
-                                      const months =
-                                        freq === "monthly" ? Array.from({ length: 12 }, (_, i) => i + 1) :
-                                          freq === "quarterly" ? [1, 4, 7, 10] :
-                                            freq === "half-yearly" ? [1, 7] :
-                                              [1];
+                                              updateScheduleEntryFull(equipmentName, entry.id, {
+                                                pmType: activity.activityDescription,
+                                                activityCategory: activity.activityCategory,
+                                                activityCode: activity.activityCode,
+                                                activityType: activity.activityType,
+                                                avgMonthlyCount: activity.avgMonthlyCount,
+                                                crRequired: activity.crRequired,
+                                                crDaysBefore: activity.crDaysBefore,
+                                                approvalLevel: activity.approvalLevel,
+                                                approvalLevels: activity.approvalLevels,
+                                                information: activity.information || "",
+                                                performBy: activity.performBy || "In-House",
+                                                mopRequired: activity.mopRequired || false,
+                                                approvalLevels: activity.approvalLevels
+                                              });
+                                            }}
 
-                                      updateScheduleEntryFull(equipmentName, entry.id, {
-                                        frequency: freq,
-                                        months
-                                      });
-                                    }}
+                                          >
+                                            {(ACTIVITY_MASTER[equipmentName] || ACTIVITY_MASTER.Other || []).map(a => (
+                                              <option key={a.activityDescription} value={a.activityDescription}>
+                                                {a.activityDescription}
+                                              </option>
+                                            ))}
+                                          </select>
 
-                                    disabled={!canEdit}
-                                  >
+                                        </label>
 
-                                    <option value="monthly">Monthly</option>
-                                    <option value="quarterly">Quarterly</option>
-                                    <option value="half-yearly">Half-Yearly</option>
-                                    <option value="yearly">Yearly</option>
-                                  </select>
-                                </label>
+                                        <label>Quantity: <input type="text" className="daily-activity-input" value={entry.quantity || equipmentQtyMap[equipmentName] || ""} onChange={(e) => updateScheduleEntryFull(equipmentName, entry.id, { quantity: e.target.value })} /></label>
 
-                                <label>
-                                  Day:
-                                  <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1}
-                                    // onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1", 10))))} disabled={!canEdit}
-                                    onChange={(e) =>
-                                      updateScheduleEntryFull(equipmentName, entry.id, {
-                                        dayOfMonth: Math.max(1, Math.min(31, Number(e.target.value)))
-                                      })
-                                    }
-                                  />
-                                </label>
+                                        <label style={{ minWidth: 160 }}>
+                                          Frequency:
+                                          <select className="daily-activity-select" value={entry.frequency || "monthly"}
+                                            // onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "frequency", e.target.value)} disabled={!canEdit}>
+                                            onChange={(e) => {
+                                              const freq = e.target.value;
 
-                                <label>
-                                  Vendor:
-                                  <select
-                                    className="daily-activity-select"
-                                    value={entry.vendor || ""}
-                                    // onChange={(e) =>
-                                    //   updateScheduleEntry(equipmentName, entry.id, "vendor", e.target.value)
-                                    // }
-                                    onChange={(e) =>
-                                      updateScheduleEntryFull(equipmentName, entry.id, {
-                                        vendor: e.target.value
-                                      })
-                                    }
+                                              const months =
+                                                freq === "monthly" ? Array.from({ length: 12 }, (_, i) => i + 1) :
+                                                  freq === "bi-monthly" ? [1, 3, 5, 7, 9, 11] :
+                                                    freq === "quarterly" ? [1, 4, 7, 10] :
+                                                      freq === "half-yearly" ? [1, 7] :
+                                                        [1];
 
-                                    disabled={!canEdit}
-                                  >
-                                    <option value="">Select Vendor</option>
-                                    {vendorList.map(v => (
-                                      <option key={v} value={v}>{v}</option>
-                                    ))}
-                                  </select>
-                                </label>
+                                              updateScheduleEntryFull(equipmentName, entry.id, {
+                                                frequency: freq,
+                                                months
+                                              });
+                                            }}
 
-                                <label>
-                                  Floor:
-                                  <select
-                                    className="daily-activity-select"
-                                    value={entry.floor || ""}
-                                    // onChange={(e) =>
-                                    //   updateScheduleEntry(equipmentName, entry.id, "vendor", e.target.value)
-                                    // }
-                                    onChange={(e) =>
-                                      updateScheduleEntryFull(equipmentName, entry.id, {
-                                        floor: e.target.value
-                                      })
-                                    }
+                                            disabled={!canEdit}
+                                          >
 
-                                    disabled={!canEdit}
-                                  >
-                                    <option value="">Select Floor</option>
-                                    {equipmentFloor.map(v => (
-                                      <option key={v} value={v}>{v}</option>
-                                    ))}
-                                  </select>
-                                </label>
+                                            <option value="monthly">Monthly</option>
+                                            <option value="bi-monthly">Bi-Monthly</option>
+                                            <option value="quarterly">Quarterly</option>
+                                            <option value="half-yearly">Half-Yearly</option>
+                                            <option value="yearly">Yearly</option>
+                                          </select>
+                                        </label>
+
+                                        <label>
+                                          Day:
+                                          <input type="number" className="daily-activity-input" min="1" max="31" value={entry.dayOfMonth || 1}
+                                            // onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "dayOfMonth", Math.max(1, Math.min(31, parseInt(e.target.value || "1", 10))))} disabled={!canEdit}
+                                            onChange={(e) =>
+                                              updateScheduleEntryFull(equipmentName, entry.id, {
+                                                dayOfMonth: Math.max(1, Math.min(31, Number(e.target.value)))
+                                              })
+                                            }
+                                          />
+                                        </label>
+
+                                        <label>
+                                          Vendor:
+                                          <select
+                                            className="daily-activity-select"
+                                            value={entry.vendor || ""}
+                                            // onChange={(e) =>
+                                            //   updateScheduleEntry(equipmentName, entry.id, "vendor", e.target.value)
+                                            // }
+                                            onChange={(e) =>
+                                              updateScheduleEntryFull(equipmentName, entry.id, {
+                                                vendor: e.target.value
+                                              })
+                                            }
+
+                                            disabled={!canEdit}
+                                          >
+                                            <option value="">Select Vendor</option>
+                                            {vendorList.map(v => (
+                                              <option key={v} value={v}>{v}</option>
+                                            ))}
+                                          </select>
+                                        </label>
+
+                                        <label>
+                                          Floor:
+                                          <select
+                                            className="daily-activity-select"
+                                            value={entry.floor || ""}
+                                            // onChange={(e) =>
+                                            //   updateScheduleEntry(equipmentName, entry.id, "vendor", e.target.value)
+                                            // }
+                                            onChange={(e) =>
+                                              updateScheduleEntryFull(equipmentName, entry.id, {
+                                                floor: e.target.value
+                                              })
+                                            }
+
+                                            disabled={!canEdit}
+                                          >
+                                            <option value="">Select Floor</option>
+                                            {equipmentFloor.map(v => (
+                                              <option key={v} value={v}>{v}</option>
+                                            ))}
+                                          </select>
+                                        </label>
 
 
-                                <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                                  <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => applyFrequencyToEntry(entry.id, equipmentName, entry.frequency || "monthly", (entry.months && entry.months[0]) || 1)} disabled={!canEdit}>Apply Frequency → Months</button>
-                                  <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => removeScheduleEntry(equipmentName, entry.id)} disabled={!canEdit}>Remove Entry</button>
-                                </label>
-                              </div>
+                                        <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                                          <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => applyFrequencyToEntry(entry.id, equipmentName, entry.frequency || "monthly", (entry.months && entry.months[0]) || 1)} disabled={!canEdit}>Apply Frequency → Months</button>
+                                          <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => removeScheduleEntry(equipmentName, entry.id)} disabled={!canEdit}>Remove Entry</button>
+                                        </label>
+                                      </div>
 
-                              <div style={{ marginTop: 8 }}>
-                                <div style={{ fontSize: 13, marginBottom: 6 }}>Months (click to toggle):</div>
-                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                                  {MONTHS.map(m => {
-                                    const checked = Array.isArray(entry.months) && entry.months.includes(m.num);
-                                    return (
-                                      <button key={m.num}
-                                        className={`daily-activity-btn ${checked ? "daily-activity-btn-primary" : "daily-activity-btn-secondary"}`}
-                                        onClick={() => {
-                                          if (!canEdit) return;
-                                          const next = new Set(Array.isArray(entry.months) ? entry.months : []);
-                                          if (next.has(m.num)) next.delete(m.num); else next.add(m.num);
-                                          updateScheduleEntry(equipmentName, entry.id, "months", Array.from(next).sort((a, b) => a - b));
-                                        }}
-                                        type="button"
-                                        style={{ padding: "6px 8px", borderRadius: 6 }}
-                                      >
-                                        {m.label}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
+                                      <div style={{ marginTop: 8 }}>
+                                        <div style={{ fontSize: 13, marginBottom: 6 }}>Months (click to toggle):</div>
 
-                              <div style={{ marginTop: 8 }}>
-                                <textarea placeholder="Notes / instructions" className="daily-activity-input" value={entry.notes || ""}
-                                  // onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "notes", e.target.value)} disabled={!canEdit} 
-                                  onChange={(e) =>
-                                    updateScheduleEntryFull(equipmentName, entry.id, {
-                                      notes: e.target.value
-                                    })
+                                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                          {MONTHS.map(m => {
+                                            const checked = Array.isArray(entry.months) && entry.months.includes(m.num);
+                                            return (
+                                              <button key={m.num}
+                                                className={`daily-activity-btn ${checked ? "daily-activity-btn-primary" : "daily-activity-btn-secondary"}`}
+                                                onClick={() => {
+                                                  if (!canEdit) return;
+                                                  const next = new Set(Array.isArray(entry.months) ? entry.months : []);
+                                                  if (next.has(m.num)) next.delete(m.num); else next.add(m.num);
+                                                  updateScheduleEntry(equipmentName, entry.id, "months", Array.from(next).sort((a, b) => a - b));
+                                                }}
+                                                type="button"
+                                                style={{ padding: "6px 8px", borderRadius: 6 }}
+                                              >
+                                                {m.label}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+
+                                      </div>
+
+                                      <div style={{ marginTop: 8 }}>
+                                        <textarea placeholder="Notes / instructions" className="daily-activity-input" value={entry.notes || ""}
+                                          // onChange={(e) => updateScheduleEntry(equipmentName, entry.id, "notes", e.target.value)} disabled={!canEdit} 
+                                          onChange={(e) =>
+                                            updateScheduleEntryFull(equipmentName, entry.id, {
+                                              notes: e.target.value
+                                            })
+                                          }
+                                        />
+                                      </div>
+
+                                      <div style={{ marginTop: 8 }}>
+                                        <label style={{ fontSize: 12, color: "#666", display: "block" }}>
+                                          Approvers
+                                        </label>
+                                        <textarea
+                                          className="daily-activity-input"
+                                          value={formatApproversFromArray(getApproversFromLevels(entry.approvalLevels || []))}
+                                          disabled
+                                          rows={3}
+                                        />
+                                      </div>
+
+                                      <div style={{ marginTop: 8 }}>
+                                        <label style={{ fontSize: 12, color: "#666", display: "block" }}>
+                                          Actvivity Information
+                                        </label>
+                                        <p
+                                          className="daily-activity-input"
+                                          style={{ minHeight: 60, whiteSpace: "pre-wrap" }}
+                                          disabled
+                                          rows={3}
+                                        >
+                                          Activity Code - {entry.activityCode || ""}{"\n"}
+                                          Activity Type - {entry.activityType || ""}{"\n"}
+                                          Activity Category - {entry.activityCategory || ""}{"\n"}
+                                          Perform By - {entry.performBy || ""}{"\n"}
+                                          MOP Required - {entry.mopRequired ? "Yes" : "No"}{"\n"}
+                                          Average Monthly Count - {entry.avgMonthlyCount || "N/A"}{"\n"}
+                                          CR Required - {entry.crRequired ? "Yes" : "No"}{"\n"}
+                                          {entry.crRequired ? `CR Days Before - ${entry.crDaysBefore || "N/A"}` : ""}{"\n"}
+                                          Approval Level - {entry.approvalLevel || "N/A"}{"\n"}
+                                          {entry.information || ""}
+                                        </p>
+                                      </div>
+
+                                    </div>
+                                  )
                                   }
-                                />
-                              </div>
-                              <div style={{ marginTop: 8 }}>
-                                <label style={{ fontSize: 12, color: "#666", display: "block" }}>
-                                  Approvers
-                                </label>
-                                <textarea
-                                  className="daily-activity-input"
-                                  value={formatApproversFromArray(getApproversFromLevels(entry.approvalLevels || []))}
-                                  disabled
-                                  rows={3}
-                                />
-                              </div>
-                              <div style={{ marginTop: 8 }}>
-                                <label style={{ fontSize: 12, color: "#666", display: "block" }}>
-                                  Actvivity Information
-                                </label>
-                                <p
-                                  className="daily-activity-input"
-                                  style={{ minHeight: 60, whiteSpace: "pre-wrap" }}
-                                  disabled
-                                  rows={3}
-                                >
-                                  Activity Code - {entry.activityCode || ""}{"\n"}
-                                  Activity Type - {entry.activityType || ""}{"\n"}
-                                  Activity Category - {entry.activityCategory || ""}{"\n"}
-                                  Perform By - {entry.performBy || ""}{"\n"}
-                                  MOP Required - {entry.mopRequired ? "Yes" : "No"}{"\n"}
-                                  Average Monthly Count - {entry.avgMonthlyCount || "N/A"}{"\n"}
-                                  CR Required - {entry.crRequired ? "Yes" : "No"}{"\n"}
-                                  {entry.crRequired ? `CR Days Before - ${entry.crDaysBefore || "N/A"}` : ""}{"\n"}
-                                  Approval Level - {entry.approvalLevel || "N/A"}{"\n"}
-                                  {entry.information || ""}
-                                </p>
-                              </div>
 
-                            </div>
-                          ))}
+                                </div>
+                              )
+                            )
+                          })}
                         </div>
                       )}
                     </div>

@@ -1191,6 +1191,9 @@ export const ACTIVITY_MASTER = {
       approvalLevels: ["Initiator", "Level-1", "Level-2"],
       information: "",
       activityTime: "Day"
+    },
+    {
+      activityDescription: "Others",
     }
   ]
 };

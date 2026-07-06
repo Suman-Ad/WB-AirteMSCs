@@ -1003,19 +1003,42 @@ const LoadEntryForm = ({ userData }) => {
           </ul>
         </div>
       )}
+
       {formData.equipmentType && (
         <div className="equipment-details" style={{ borderRadius: "10px", width: "100%", height: window.innerHeight - 350, overflowY: "auto", padding: "20px", backgroundColor: "#f9f9f9" }}>
           {formData.equipmentType === "SMPS" && (
             <>
               <h4>SMPS Details</h4>
 
-              <select name="equipmentId" value={formData.equipmentId} onChange={handleChange}>
+              {/* <select name="equipmentId" value={formData.equipmentId} onChange={handleChange}>
                 <option value="">Select SMPS</option>
                 {Array.from({ length: siteConfig.smpsCount }, (_, i) => (
                   <option key={i + 1} value={`SMPS-${i + 1}`}>
                     {`SMPS-${i + 1}`}
                   </option>
                 ))}
+              </select> */}
+
+              <select
+                name="equipmentId"
+                value={formData.equipmentId}
+                onChange={handleChange}
+              >
+                <option value="">Select SMPS</option>
+
+                {Array.from({ length: siteConfig.smpsCount || 0 }, (_, i) => {
+                  const smpsKey = `SMPS-${i + 1}`;
+
+                  if (siteConfig.smpsConfigs?.[smpsKey]?.active === false) {
+                    return null;
+                  }
+
+                  return (
+                    <option key={smpsKey} value={smpsKey}>
+                      {smpsKey}
+                    </option>
+                  );
+                })}
               </select>
 
               <select

@@ -15,31 +15,56 @@ const SourceTab = ({ formData, handleChange, isAdmin, editData, siteConfig, sour
                 <div className="chart-container" style={{ paddingBottom: "10px", display: "normal", border: "2px solid #2083a1ff", marginTop: "20px" }}>
                     <h2 style={{ borderBottom: "2px solid #2083a1ff", padding: "5px" }}><strong>{sourceTitle}</strong></h2>
                     <div>
+                        <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>{formData.powerType === "AC" ? "UPS Name:" : formData.powerType === "DC" ? "SMPS Name:" : "SMPS/UPS Name:"}</label>
+                        {formData.powerType !== "AC+DC" && (
+                            <select type="text" name={field("smpsName")} value={get("smpsName")} onChange={handleChange} >
+                                <option value="">Select</option>
+                                {(siteConfig?.smpsCount > 0 && formData.powerType === "DC") ? (
+                                    Array.from({ length: siteConfig.smpsCount }, (_, i) => {
+                                        const smpsKey = `SMPS-${i + 1}`;
+
+                                        if (siteConfig.smpsConfigs?.[smpsKey]?.active === false) {
+                                            return null;
+                                        }
+
+                                        return (
+                                            <option key={smpsKey} value={smpsKey}>
+                                                {smpsKey}
+                                            </option>
+                                        );
+                                    })
+                                ) : (siteConfig?.upsCount > 0 && formData.powerType === "AC") ? (
+                                    Array.from({ length: siteConfig.upsCount }, (_, i) => {
+                                        const upsKey = `UPS-${i + 1}`;
+
+                                        if (siteConfig.upsConfigs?.[upsKey]?.active === false) {
+                                            return null;
+                                        }
+
+                                        return (
+                                            <option key={upsKey} value={upsKey}>
+                                                {upsKey}
+                                            </option>
+                                        );
+                                    })
+                                ) : null}
+                            </select>
+                        )}
+                        
+                        {formData.powerType === "AC+DC" && (
+                            <input
+                                type="text"
+                                name={field("smpsName")}
+                                value={get("smpsName") || ""}
+                                placeholder="Input Suorce Name"
+                                onChange={handleChange}
+                            />
+                        )}
+                        
+                        <br />
+                        <br />
                         <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>{formData.powerType === "AC" ? "UPS Rating (kVA):" : formData.powerType === "DC" ? "SMPS Rating (kW/Amps):" : "SMPS/UPS Rating (Amps/kVA):"}</label>
                         <input type="number" name={field("smpsRating")} value={get("smpsRating") || (formData.powerType === "DC" ? siteConfig?.smpsConfigs?.[get("smpsName")]?.capacityAmp : siteConfig?.upsConfigs?.[get("smpsName")]?.capacityKva)} onChange={handleChange} />
-                        <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>{formData.powerType === "AC" ? "UPS Name:" : formData.powerType === "DC" ? "SMPS Name:" : "SMPS/UPS Name:"}</label>
-                        <select type="text" name={field("smpsName")} value={get("smpsName")} onChange={handleChange} >
-                            <option value="">Select</option>
-                            {(siteConfig?.smpsCount > 0 && formData.powerType === "DC") ? (
-                                Array.from({ length: siteConfig.smpsCount }, (_, i) => (
-                                    <option key={i + 1} value={`SMPS-${i + 1}`}>
-                                        SMPS-{i + 1}
-                                    </option>
-                                ))
-                            ) : (siteConfig?.upsCount > 0 && formData.powerType === "AC") ? (
-                                Array.from({ length: siteConfig.upsCount }, (_, i) => (
-                                    <option key={i + 1} value={`UPS-${i + 1}`}>
-                                        UPS-{i + 1}
-                                    </option>
-                                ))
-                            ) : (formData.powerType === "AC+DC") ? (
-                                Array.from({ length: siteConfig.upsCount }, (_, i) => (
-                                    <option key={i + 1} value={`UPS-${i + 1}`}>
-                                        UPS-{i + 1}
-                                    </option>
-                                ))
-                            ) : null}
-                        </select>
                         <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>{sourceTitle} DB Number:</label>
                         <input type="text" name={field("dbNumber")} value={get("dbNumber")} onChange={handleChange} />
                         <label style={{ color: "#2083a1ff", fontWeight: "bold" }}>{sourceTitle} DB Voltage (V):</label>

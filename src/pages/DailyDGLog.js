@@ -1617,8 +1617,8 @@ const DailyDGLog = ({ userData }) => {
         (parseFloat(form["DG-4 Fuel Opening"]) || 0);
       const currentFuel = availableFuel - dayFuelCon + dayFuelFill + dayExFuelFill;
       const currentHrs = currentFuel / (totalOnLoadCon / totalOnLoadHrs)
-      setFuelAlert(currentHrs < (siteConfig?.fuelAlertThreshold || 23) && currentFuel > 0);
-      if (currentHrs < (siteConfig?.fuelAlertThreshold || 23) && currentFuel > 0) alert("Give Fuel Requisition");
+      setFuelAlert(currentHrs < (siteConfig?.fuelAlertThreshold || 48) && currentFuel > 0);
+      if (currentHrs < (siteConfig?.fuelAlertThreshold || 48) && currentFuel > 0) alert("Give Fuel Requisition");
 
     }
 
@@ -3947,6 +3947,7 @@ const DailyDGLog = ({ userData }) => {
         <button
           className="segr-manage-btn warning"
           onClick={() => navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig, dayFuelCon, siteName } })}
+          style={{ width: "fit-content" }}
         >
           🔰 DG Run Logs
         </button>
@@ -3960,6 +3961,7 @@ const DailyDGLog = ({ userData }) => {
                   state: { logs, siteName, avgSiteRunningKw, fuelRate, userData, siteConfig },
                 })
               }
+              style={{ width: "fit-content" }}
             >
               ⛽ Generate Fuel Request
             </button>
@@ -3970,6 +3972,7 @@ const DailyDGLog = ({ userData }) => {
           userData?.role === "Super User") && (
             <button
               className="pm-manage-btn"
+              style={{ width: "fit-content" }}
               onClick={() => handleGenerateDayCCMS(form)}
             >
               🧾 Generate {form.Date} CCMS
@@ -3981,6 +3984,7 @@ const DailyDGLog = ({ userData }) => {
         {(isAdmin || userData?.designation === "Vertiv Site Infra Engineer") && (
           <button
             className="segr-manage-btn info"
+            style={{ width: "fit-content" }}
             onClick={() => setShowEditModal(!showEditModal)}
           >
             {showEditModal ? "✖ Close" : "✎ Add / Edit Daily DG Log Entry"}
@@ -4177,7 +4181,8 @@ const DailyDGLog = ({ userData }) => {
         )}
         <button onClick={() => navigate("/monthly-data", {
           state: { logs, siteConfig, selectedMonth },
-        })} className="sidepanel-manage-btn" style={{ background: "blue" }}>
+        })} className="sidepanel-manage-btn" style={{ background: "blue", width: "fit-content" }}
+        >
           📊 Preview Monthly Data
         </button>
       </div>
