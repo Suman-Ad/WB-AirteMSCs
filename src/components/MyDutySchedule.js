@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { collection, getDocs, getDoc, doc } from "firebase/firestore";
 import { startOfMonth, endOfMonth, eachDayOfInterval, format } from "date-fns";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import "../assets/MyDutySchedule.css"
-import { useMemo } from "react";
 
 function getShiftName(code) {
   switch (code) {
@@ -265,6 +264,36 @@ export default function MyDutySchedule({ currentUser }) {
     total.WO += u.WO;
   });
 
+  const calendarCells = useMemo(() => {
+    const start = startOfMonth(selectedMonth);
+    const end = endOfMonth(selectedMonth);
+    const dutyByDate = new Map(
+      myDays.map(duty => [duty.date, duty])
+    );
+
+    const cells = Array.from(
+      { length: start.getDay() },
+      () => null
+    );
+
+    eachDayOfInterval({ start, end }).forEach(day => {
+      const date = format(day, "yyyy-MM-dd");
+      cells.push({
+        date,
+        dayNumber: format(day, "d"),
+        duty: dutyByDate.get(date) || null,
+      });
+    });
+
+    while (cells.length % 7 !== 0) {
+      cells.push(null);
+    }
+
+    return cells;
+  }, [selectedMonth, myDays]);
+
+  const today = format(new Date(), "yyyy-MM-dd");
+
   return (
     <div className="daily-log-container">
       <h2>My Duty Schedule</h2>
@@ -437,41 +466,117 @@ export default function MyDutySchedule({ currentUser }) {
 
 
       <div className="mds-duty-list">
-        {myDays.length === 0 && <p>No duty assigned this month.</p>}
-
-        {myDays.map((d) => (
-          <div
-            key={d.date}
-            className={
-              "mds-duty-row " +
-              (d.otShift && d.mainShift !== "WO"
-                ? "mds-bg-ot-main"
-                : d.otShift
-                  ? "mds-bg-ot-only"
-                  : d.cl
-                    ? "mds-bg-cl"
-                    : "mds-bg-normal")
-            }
-          >
-            <strong style={{ color: "white" }}>{d.date}:- </strong>
-            <span
-              style={{
-                color: d.mainShift === "G" ? "#fff" :
-                  d.mainShift === "M" ? "#f57e1c" :
-                    d.mainShift === "E" ? "#e5f74a" :
-                      d.mainShift === "N" ? "#ba40c5" : "#ac7a7a",
-                fontWeight: "bold",
-              }}>
-              {formatDutyDisplay(d.mainShift, d.otShift, d.replacedUserName, d.cl)}
-            </span>
-
-            {!d.otShift && !d.cl && (
-              <span className="mds-apply-cl"
-                onClick={() => navigate("/cl-application", { state: { date: d.date } })}
-              >Apply For CL</span>
-            )}
+        <div className="mds-calendar-heading">
+          <div>
+            <span className="mds-calendar-eyebrow">Duty calendar</span>
+            <h2>{format(selectedMonth, "MMMM yyyy")}</h2>
           </div>
-        ))}
+
+          <div className="mds-calendar-legend" aria-label="Shift legend">
+            <span><i className="mds-legend-dot mds-dot-general" /> General</span>
+            <span><i className="mds-legend-dot mds-dot-morning" /> Morning</span>
+            <span><i className="mds-legend-dot mds-dot-evening" /> Evening</span>
+            <span><i className="mds-legend-dot mds-dot-night" /> Night</span>
+            <span><i className="mds-legend-dot mds-dot-off" /> Weekly Off</span>
+          </div>
+        </div>
+
+        {myDays.length === 0 && (
+          <div className="mds-calendar-empty">
+            No duty has been assigned for this month.
+          </div>
+        )}
+
+        <div className="mds-calendar-scroll">
+          <div className="mds-calendar-grid">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+              <div className="mds-calendar-weekday" key={day}>
+                {day}
+              </div>
+            ))}
+
+            {calendarCells.map((cell, index) => {
+              if (!cell) {
+                return (
+                  <div
+                    className="mds-calendar-day mds-calendar-day-outside"
+                    key={`blank-${index}`}
+                    aria-hidden="true"
+                  />
+                );
+              }
+
+              const d = cell.duty;
+              const dutyClass = !d
+                ? "mds-calendar-no-duty"
+                : d.cl
+                  ? "mds-calendar-cl"
+                  : d.otShift
+                    ? "mds-calendar-ot"
+                    : `mds-calendar-shift-${d.mainShift || "none"}`;
+
+              return (
+                <div
+                  key={cell.date}
+                  className={
+                    `mds-calendar-day ${dutyClass}` +
+                    (cell.date === today ? " mds-calendar-today" : "")
+                  }
+                >
+                  <div className="mds-calendar-date-row">
+                    <span className="mds-calendar-date">
+                      {cell.dayNumber}
+                    </span>
+
+                    {cell.date === today && (
+                      <span className="mds-today-label">Today</span>
+                    )}
+                  </div>
+
+                  {d ? (
+                    <>
+                      <div className="mds-calendar-duty">
+                        <span className="mds-shift-code">
+                          {d.cl ? "CL" : d.mainShift || "OT"}
+                        </span>
+                        <span className="mds-shift-name">
+                          {formatDutyDisplay(
+                            d.mainShift,
+                            d.otShift,
+                            d.replacedUserName,
+                            d.cl
+                          )}
+                        </span>
+                      </div>
+
+                      {d.otShift && (
+                        <span className="mds-duty-tag">
+                          Overtime
+                        </span>
+                      )}
+
+                      {!d.otShift && !d.cl && (
+                        <button
+                          type="button"
+                          className="mds-apply-cl"
+                          onClick={() =>
+                            navigate("/cl-application", {
+                              state: { date: d.date },
+                            })
+                          }
+                        >
+                          Apply for CL
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <span className="mds-no-duty-label">No duty</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -48,59 +48,244 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-/* Duty List Container */
+/* Duty calendar */
 .mds-duty-list {
   margin-top: 20px;
+  border: 1px solid #dbe3ef;
+  border-radius: 16px;
+  width: 100%;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.mds-calendar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #0b1739 0%, #172554 100%);
+  color: #ffffff;
+}
+
+.mds-calendar-heading h2 {
+  margin: 2px 0 0;
+  font-size: 1.35rem;
+}
+
+.mds-calendar-eyebrow {
+  color: #93c5fd;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mds-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 14px;
+  font-size: 0.75rem;
+  color: #dbeafe;
+}
+
+.mds-calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mds-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.mds-dot-general { background: #2563eb; }
+.mds-dot-morning { background: #f59e0b; }
+.mds-dot-evening { background: #10b981; }
+.mds-dot-night { background: #8b5cf6; }
+.mds-dot-off { background: #64748b; }
+
+.mds-calendar-empty {
+  padding: 10px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 0.9rem;
+}
+
+.mds-calendar-scroll {
+  overflow-x: auto;
+}
+
+.mds-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(100px, 1fr));
+  min-width: 760px;
+}
+
+.mds-calendar-weekday {
+  padding: 9px 8px;
+  text-align: center;
+  color: #475569;
+  background: #f8fafc;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mds-calendar-day {
+  min-height: 142px;
+  padding: 10px;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  position: relative;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mds-calendar-day:hover {
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px #bfdbfe;
+}
+
+.mds-calendar-day-outside {
+  background: #f8fafc;
+}
+
+.mds-calendar-day-outside:hover {
+  box-shadow: none;
+}
+
+.mds-calendar-date-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.mds-calendar-date {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #334155;
+  font-weight: 800;
+}
+
+.mds-calendar-today {
+  background: #eff6ff;
+}
+
+.mds-calendar-today .mds-calendar-date {
+  color: #ffffff;
+  background: #2563eb;
+}
+
+.mds-today-label {
+  color: #2563eb;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mds-calendar-duty {
   display: flex;
   flex-direction: column;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  width: 100%;
-  height: 400px;
-  overflow-y: auto;
+  gap: 5px;
+  padding-left: 8px;
+  border-left: 3px solid #2563eb;
 }
 
-/* Duty Row */
-.mds-duty-row {
-  padding: 10px;
-  border-bottom: 1px solid #e5e7eb;
-  /* display: flex;
-  flex-direction: column; */
-  justify-content: space-between;
-  align-items: center;
+.mds-shift-code {
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 900;
 }
 
-/* Background colors based on condition */
-.mds-bg-ot-main {
-  background-color: #eb7527ff;
+.mds-shift-name {
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
-.mds-bg-ot-only {
-  background-color: #4b9b33ff;
+.mds-calendar-shift-M .mds-calendar-duty {
+  border-left-color: #f59e0b;
 }
 
-.mds-bg-cl {
-  background-color: #eb2121ff;
+.mds-calendar-shift-E .mds-calendar-duty {
+  border-left-color: #10b981;
 }
 
-.mds-bg-normal {
-  background-color: #0b1627;
+.mds-calendar-shift-N .mds-calendar-duty {
+  border-left-color: #8b5cf6;
+}
+
+.mds-calendar-shift-WO .mds-calendar-duty,
+.mds-calendar-shift-W .mds-calendar-duty,
+.mds-calendar-shift-W\/O .mds-calendar-duty {
+  border-left-color: #64748b;
+}
+
+.mds-calendar-cl {
+  background: #fff1f2;
+}
+
+.mds-calendar-cl .mds-calendar-duty {
+  border-left-color: #e11d48;
+}
+
+.mds-calendar-ot {
+  background: #fff7ed;
+}
+
+.mds-calendar-ot .mds-calendar-duty {
+  border-left-color: #ea580c;
+}
+
+.mds-duty-tag {
+  display: inline-flex;
+  margin-top: 9px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #9a3412;
+  background: #ffedd5;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.mds-no-duty-label {
+  color: #94a3b8;
+  font-size: 0.72rem;
 }
 
 /* Apply For CL Button */
 .mds-apply-cl {
-  margin-top: 12px;
-  font-size: 0.875rem;
-  color: #ffffff;
+  margin-top: 10px;
+  border: 0;
+  color: #1d4ed8;
   cursor: pointer;
-  background: #1c468502;
-  padding: 4px 8px;
-  border-radius: 4px;
+  background: #dbeafe;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
   transition: background-color 0.2s ease-in-out;
 }
 
 .mds-apply-cl:hover {
-  background-color: #447dd3ff;
+  background-color: #bfdbfe;
 }
 
 .mds-weekly-template {
@@ -152,10 +337,22 @@
     padding: 10px;
   }
 
-  .mds-duty-row {
-    flex-direction: column;
+  .mds-calendar-heading {
     align-items: flex-start;
-    gap: 5px;
+    flex-direction: column;
+    padding: 15px;
+  }
+
+  .mds-calendar-legend {
+    justify-content: flex-start;
+  }
+
+  .mds-calendar-grid {
+    min-width: 700px;
+  }
+
+  .mds-calendar-day {
+    min-height: 130px;
   }
 
   .mds-summary-table th,
