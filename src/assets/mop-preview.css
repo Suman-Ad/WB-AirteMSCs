@@ -1,0 +1,523 @@
+:root {
+  --mop-border: #111827;
+  --mop-title: #ffc000;
+  --mop-yellow: #fff2cc;
+  --mop-grey: #d9d9d9;
+  --mop-green: #00b050;
+  --mop-blue: #00b0f0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.mop-editor-page {
+  min-height: 100vh;
+  padding: 20px;
+  background: #d7dce2;
+  color: #111827;
+}
+
+.mop-editor-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  max-width: 1500px;
+  margin: 0 auto 16px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #fff;
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.25);
+}
+
+.mop-toolbar-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.mop-toolbar-title span {
+  margin-top: 2px;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.mop-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mop-toolbar-actions button {
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 5px;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mop-toolbar-actions .mop-pdf-button {
+  background: #dc2626;
+  color: #fff;
+}
+
+.mop-toolbar-actions .mop-excel-button {
+  background: #15803d;
+  color: #fff;
+}
+
+.mop-excel-sheet {
+  width: min(100%, 1500px);
+  margin: 0 auto;
+  background: #fff;
+  border: 3px solid var(--mop-border);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.2);
+  overflow-x: auto;
+}
+
+.mop-excel-sheet input,
+.mop-excel-sheet textarea,
+.mop-excel-sheet select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.75);
+  color: #111827;
+  font: inherit;
+}
+
+.mop-excel-sheet input:focus,
+.mop-excel-sheet textarea:focus,
+.mop-excel-sheet select:focus {
+  border-color: #2563eb;
+  background: #fff;
+  outline: 2px solid rgba(37, 99, 235, 0.16);
+}
+
+.mop-excel-sheet textarea {
+  min-height: 52px;
+  resize: vertical;
+}
+
+.mop-main-title {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  border-bottom: 1px solid var(--mop-border);
+  background: var(--mop-title);
+}
+
+.mop-main-title input {
+  background: transparent;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mop-document-row {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  border-bottom: 1px solid var(--mop-border);
+}
+
+.mop-document-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  font-weight: 700;
+}
+
+.mop-document-row label + label {
+  border-left: 1px solid var(--mop-border);
+}
+
+.mop-five-column-row {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 40fr)
+    minmax(150px, 25fr)
+    minmax(150px, 25fr)
+    minmax(170px, 30fr)
+    minmax(130px, 20fr);
+  border-bottom: 1px solid var(--mop-border);
+}
+
+.mop-five-column-row > * {
+  min-height: 42px;
+  border-right: 1px solid var(--mop-border);
+}
+
+.mop-five-column-row > *:last-child {
+  border-right: 0;
+}
+
+.mop-site-row {
+  background: #fff;
+}
+
+.mop-static-cell,
+.mop-label-cell,
+.mop-row-section-label {
+  padding: 8px;
+  font-weight: 700;
+}
+
+.mop-inline-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 5px;
+}
+
+.mop-inline-field span {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mop-yellow-block {
+  background: var(--mop-yellow);
+}
+
+.mop-yellow-block input,
+.mop-yellow-block textarea {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.mop-merged-four {
+  grid-column: span 4;
+}
+
+.mop-empty-cell {
+  background: inherit;
+}
+
+.mop-grey-row,
+.mop-row-section-label {
+  background: var(--mop-grey);
+}
+
+.mop-table-section-header {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 40fr)
+    repeat(4, minmax(130px, 25fr));
+  background: var(--mop-grey);
+  color: #111827;
+  font-weight: 800;
+  border-bottom: 1px solid var(--mop-border);
+}
+
+.mop-table-section-header > div {
+  min-height: 42px;
+  padding: 8px;
+  border-right: 1px solid var(--mop-border);
+}
+
+.mop-table-section-header > div:last-child {
+  border-right: 0;
+}
+
+.mop-green-section .mop-table-section-header {
+  background: var(--mop-green);
+  color: #fff;
+}
+
+.mop-blue-section .mop-table-section-header {
+  background: var(--mop-blue);
+  color: #fff;
+}
+
+.mop-table-edit-row {
+  position: relative;
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 40fr)
+    repeat(4, minmax(130px, 25fr));
+  border-bottom: 1px solid var(--mop-border);
+}
+
+.mop-table-edit-row > textarea,
+.mop-table-edit-row > div {
+  border-right: 1px solid var(--mop-border);
+}
+
+.mop-list-edit-row {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 40fr)
+    minmax(600px, 100fr);
+  border-bottom: 1px solid var(--mop-border);
+}
+
+.mop-list-content {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 5px 90px 5px 7px;
+}
+
+.mop-list-content > span {
+  min-width: 25px;
+  padding-top: 8px;
+  font-weight: 700;
+}
+
+.mop-list-content textarea {
+  min-height: 55px;
+}
+
+.mop-row-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 3px;
+}
+
+.mop-row-actions button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: #475569;
+  color: #fff;
+  cursor: pointer;
+}
+
+.mop-row-actions button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.mop-row-actions .mop-remove-button {
+  background: #dc2626;
+  font-size: 18px;
+}
+
+.mop-table-edit-row .mop-row-actions {
+  right: 5px;
+  top: 8px;
+}
+
+.mop-table-edit-row textarea:last-of-type {
+  padding-right: 90px;
+}
+
+.mop-section-add-row {
+  padding: 5px 8px;
+  display: flex;
+  justify-content: flex-end;
+  border-bottom: 1px solid var(--mop-border);
+  background: #f8fafc;
+}
+
+.mop-section-add-row button {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: #1d4ed8;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mop-resource-row {
+  position: relative;
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 40fr)
+    minmax(300px, 50fr)
+    minmax(300px, 50fr);
+  border-bottom: 1px solid var(--mop-border);
+}
+
+.mop-resource-row > * {
+  border-right: 1px solid var(--mop-border);
+}
+
+.mop-resource-row textarea:last-of-type {
+  padding-right: 90px;
+}
+
+.mop-header-span-two {
+  grid-column: span 2;
+  text-align: center;
+}
+
+.mop-approval-row {
+  grid-template-columns:
+    minmax(190px, 40fr)
+    minmax(230px, 45fr)
+    minmax(280px, 55fr)
+    minmax(260px, 50fr);
+}
+
+.mop-approval-row > * {
+  border-right: 1px solid var(--mop-border);
+}
+
+.mop-empty-message {
+  padding: 12px;
+  color: #64748b;
+  font-style: italic;
+}
+
+@media (max-width: 900px) {
+  .mop-editor-page {
+    padding: 6px;
+  }
+
+  .mop-editor-toolbar {
+    position: relative;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .mop-excel-sheet {
+    min-width: 1100px;
+  }
+}
+
+.mop-print-document {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 6mm;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .mop-editor-toolbar,
+  .mop-screen-editor {
+    display: none !important;
+  }
+
+  .mop-editor-page {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .mop-print-document {
+    display: block !important;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .mop-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    color: #000;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 7.5pt;
+    line-height: 1.25;
+  }
+
+  .mop-print-col-1 {
+    width: 22%;
+  }
+
+  .mop-print-col-2 {
+    width: 19.5%;
+  }
+
+  .mop-print-col-3 {
+    width: 19.5%;
+  }
+
+  .mop-print-col-4 {
+    width: 20%;
+  }
+
+  .mop-print-col-5 {
+    width: 19%;
+  }
+
+  .mop-print-table td,
+  .mop-print-table th {
+    padding: 3px 4px;
+    border: 1px solid #000;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    white-space: pre-wrap;
+  }
+
+  .mop-print-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .mop-print-title-row {
+    background: #ffc000 !important;
+  }
+
+  .mop-print-title-row td {
+    padding: 8px;
+    text-align: center;
+    font-size: 13pt;
+    font-weight: 700;
+  }
+
+  .mop-print-document-info {
+    padding: 5px !important;
+    text-align: center;
+  }
+
+  .mop-print-document-separator {
+    display: inline-block;
+    width: 40px;
+  }
+
+  .mop-print-yellow {
+    background: #fff2cc !important;
+  }
+
+  .mop-print-grey {
+    background: #d9d9d9 !important;
+  }
+
+  .mop-print-green {
+    background: #00b050 !important;
+    color: #fff !important;
+  }
+
+  .mop-print-blue {
+    background: #00b0f0 !important;
+    color: #fff !important;
+  }
+}
+
+@media screen {
+  .mop-print-document {
+    display: none !important;
+  }
+}

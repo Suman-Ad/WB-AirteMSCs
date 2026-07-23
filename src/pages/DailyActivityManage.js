@@ -12,7 +12,7 @@ import {
   query, where
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../assets/daily-activity.css";
 import { ACTIVITY_MASTER, getApproversFromLevels, getMopByActivity } from "../config/activityMaster";
 import { generateMopPDF, generateMopExcel } from "../utils/mopGenerator";
@@ -35,28 +35,6 @@ const formatApproversFromArray = (approversArr) => {
     .join("\n");
 };
 
-
-/*
-  DailyActivityManage (PM-focused)
-  - Uses pm_registers collection with doc id: `${region}__${circle}__${site}__${year}`
-  - Document shape (per your screenshot):
-    {
-      region, circle, site, year,
-      createdBy,
-      equipmentSchedules: {
-        "ACS": [
-           { id, frequency, months: [1,4,7,10], dayOfMonth: 13, vendor?, notes? },
-           ...
-        ],
-        ...
-      },
-      updatedAt
-    }
-  - userData prop expected: { uid, role, region, circle, site, siteId, name, ... }
-  - Admin / Admin-assigned users can create/edit/delete schedules.
-  - Site users can view and add scheduled items to daily_activity_sheets (one-click).
-  - Daily sheets are saved under daily_activity_sheets doc id: `${siteId || site}_${YYYY-MM-DD}`
-*/
 
 const DEFAULT_EQUIP_LIST = [
   "ACS", "Air Conditioner", "BMS", "CCTV", "Comfort AC", "Diesel Generator", "Earth Pit", "Exhust Fan",
@@ -93,6 +71,29 @@ const isAdminAssignmentValid = (userData) => {
   return today >= from && today <= to;
 };
 
+const DEFAULT_MANUAL_META = {
+  activityCategory: "",
+  activityType: "",
+  activityCode: "",
+  activityTime: "",
+  performBy: "",
+  mopRequired: false,
+  crRequired: false,
+  crDaysBefore: 0,
+  approvalLevel: "",
+  approvalLevels: [],
+  information: "",
+};
+
+const REQUIRED_DYNAMIC_META_FIELDS = [
+  "activityCategory",
+  "activityType",
+  "activityCode",
+  "activityTime",
+  "performBy",
+];
+
+
 export default function DailyActivityManage({ userData }) {
   // selection
   const [region, setRegion] = useState(userData?.region || "");
@@ -109,6 +110,8 @@ export default function DailyActivityManage({ userData }) {
   // pm doc
   const [pmDoc, setPmDoc] = useState(null);
   const [loadingPm, setLoadingPm] = useState(false);
+
+  const navigate = useNavigate();
 
   const getFirstDayOfMonth = () => {
     const d = new Date();
@@ -148,14 +151,248 @@ export default function DailyActivityManage({ userData }) {
   const [equipmentQtyMap, setEquipmentQtyMap] = useState({});
 
   const [dynamicEquip, setDynamicEquip] = useState("");
-  const [othersDynamicEquip, setOthersDynamicEquip] = useState("");
-  const [dynamicActivity, setDynamicActivity] = useState("");
+  const [othersDynamicEquip, setOthersDynamicEquip] =
+    useState("");
+  const [othersDynamicActivity, setOthersDynamicActivity] =
+    useState("");
+  const [dynamicActivity, setDynamicActivity] =
+    useState("");
+
   const [vendorName, setVendorName] = useState("");
-  const [vendorNameInHouse, setVendorNameInHouse] = useState("");
-  const [vendorNameOthers, setVendorNameOthers] = useState("");
+  const [vendorNameInHouse, setVendorNameInHouse] =
+    useState("");
+  const [vendorNameOthers, setVendorNameOthers] =
+    useState("");
 
   const [siteConfig, setSiteConfig] = useState({});
   const siteKey = site?.toUpperCase();
+
+  const [manualMeta, setManualMeta] = useState(
+    DEFAULT_MANUAL_META
+  );
+
+  /*
+   * First resolve the selected master metadata.
+   */
+  const selectedDynamicMeta = useMemo(() => {
+    const activities =
+      ACTIVITY_MASTER[dynamicEquip] ||
+      ACTIVITY_MASTER["Others"] ||
+      [];
+
+    return activities.find(
+      item =>
+        item.activityDescription === dynamicActivity
+    );
+  }, [dynamicEquip, dynamicActivity]);
+
+  /*
+   * Resolve activity description separately.
+   */
+  const resolvedDynamicActivityDetails = useMemo(() => {
+    if (!dynamicActivity) return "";
+
+    if (dynamicActivity === "Others") {
+      return othersDynamicActivity.trim();
+    }
+
+    return dynamicActivity.trim();
+  }, [dynamicActivity, othersDynamicActivity]);
+
+  const missingDynamicMetaFields = useMemo(() => {
+    if (!dynamicActivity) return [];
+
+    return REQUIRED_DYNAMIC_META_FIELDS.filter(
+      field => {
+        /*
+         * For a normal master activity, check the master value first.
+         */
+        if (
+          dynamicActivity !== "Others" &&
+          selectedDynamicMeta
+        ) {
+          const masterValue =
+            selectedDynamicMeta[field];
+
+          if (
+            masterValue !== undefined &&
+            masterValue !== null &&
+            String(masterValue).trim() !== ""
+          ) {
+            return false;
+          }
+        }
+
+        /*
+         * The master value is unavailable, so check
+         * whether the user supplied a manual value.
+         */
+        const manualValue = manualMeta[field];
+
+        return (
+          manualValue === undefined ||
+          manualValue === null ||
+          String(manualValue).trim() === ""
+        );
+      }
+    );
+  }, [
+    dynamicActivity,
+    selectedDynamicMeta,
+    manualMeta,
+  ]);
+
+  const isManualMetaRequired =
+    Boolean(dynamicActivity) &&
+    (
+      dynamicActivity === "Others" ||
+      !selectedDynamicMeta ||
+      missingDynamicMetaFields.length > 0
+    );
+
+  const resolvedDynamicMeta = useMemo(() => {
+    const masterMeta = selectedDynamicMeta || {};
+
+    const resolveTextValue = (
+      field,
+      fallback = ""
+    ) => {
+      const masterValue = masterMeta[field];
+
+      if (
+        masterValue !== undefined &&
+        masterValue !== null &&
+        String(masterValue).trim() !== ""
+      ) {
+        return masterValue;
+      }
+
+      const manualValue = manualMeta[field];
+
+      if (
+        manualValue !== undefined &&
+        manualValue !== null &&
+        String(manualValue).trim() !== ""
+      ) {
+        return manualValue;
+      }
+
+      return fallback;
+    };
+
+    const hasMasterField = field =>
+      Object.prototype.hasOwnProperty.call(
+        masterMeta,
+        field
+      );
+
+    return {
+      activityDescription:
+        resolvedDynamicActivityDetails,
+
+      activityCategory: resolveTextValue(
+        "activityCategory"
+      ),
+
+      activityType: resolveTextValue(
+        "activityType"
+      ),
+
+      activityCode: resolveTextValue(
+        "activityCode"
+      ),
+
+      activityTime: resolveTextValue(
+        "activityTime"
+      ),
+
+      performBy: resolveTextValue(
+        "performBy"
+      ),
+
+      mopRequired: hasMasterField("mopRequired")
+        ? Boolean(masterMeta.mopRequired)
+        : Boolean(manualMeta.mopRequired),
+
+      crRequired: hasMasterField("crRequired")
+        ? Boolean(masterMeta.crRequired)
+        : Boolean(manualMeta.crRequired),
+
+      crDaysBefore:
+        hasMasterField("crDaysBefore") &&
+          masterMeta.crDaysBefore !== null
+          ? Number(masterMeta.crDaysBefore || 0)
+          : Number(manualMeta.crDaysBefore || 0),
+
+      approvalLevel: resolveTextValue(
+        "approvalLevel",
+        "NA"
+      ),
+
+      approvalLevels:
+        Array.isArray(masterMeta.approvalLevels) &&
+          masterMeta.approvalLevels.length > 0
+          ? masterMeta.approvalLevels
+          : Array.isArray(manualMeta.approvalLevels)
+            ? manualMeta.approvalLevels
+            : [],
+
+      information: resolveTextValue(
+        "information"
+      ),
+
+      siteCategory: resolveTextValue(
+        "siteCategory",
+        siteConfig?.siteCategory || "Major"
+      ),
+
+      metadataSource:
+        selectedDynamicMeta
+          ? missingDynamicMetaFields.length > 0
+            ? "ACTIVITY_MASTER_WITH_MANUAL_FIELDS"
+            : "ACTIVITY_MASTER"
+          : "MANUAL",
+    };
+  }, [
+    selectedDynamicMeta,
+    manualMeta,
+    resolvedDynamicActivityDetails,
+    missingDynamicMetaFields,
+    siteConfig?.siteCategory,
+  ]);
+
+  const hasMasterMopRequired =
+    Boolean(selectedDynamicMeta) &&
+    Object.prototype.hasOwnProperty.call(
+      selectedDynamicMeta,
+      "mopRequired"
+    );
+
+  const hasMasterCrRequired =
+    Boolean(selectedDynamicMeta) &&
+    Object.prototype.hasOwnProperty.call(
+      selectedDynamicMeta,
+      "crRequired"
+    );
+
+  const approvalLevels = [
+    "Level-1",
+    "Level-2",
+    "Level-3",
+    "Level-4",
+    "Level-5",
+    "Level-6",
+    "Level-7",
+  ];
+
+  const toggleApprovalLevel = (level) => {
+    setManualMeta((prev) => ({
+      ...prev,
+      approvalLevels: prev.approvalLevels.includes(level)
+        ? prev.approvalLevels.filter((l) => l !== level)
+        : [...prev.approvalLevels, level],
+    }));
+  };
 
   const [editRowIndex, setEditRowIndex] = useState(null);
   const [editRowData, setEditRowData] = useState(null);
@@ -275,51 +512,6 @@ export default function DailyActivityManage({ userData }) {
     }
   };
 
-
-  // load site hierarchy from assets_register if available (best-effort)
-  // useEffect(() => {
-  //   if (!circle || !(userData?.siteId || site)) return;
-
-  //   async function loadAssetsFlat() {
-  //     try {
-  //       setLoading(true);
-  //       const snap = await getDocs(collection(db, "assets_flat"));
-
-  //       const equipSet = new Set();
-  //       const vendorSet = new Set();
-
-  //       snap.forEach(docSnap => {
-  //         const d = docSnap.data();
-
-  //         // 🔐 Admin / Super Admin → ALL sites
-  //         if (isAdmin || isSuperAdmin) {
-  //           if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
-  //           if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
-  //           return;
-  //         }
-
-  //         // 👤 Other users → EXISTING site-based logic
-  //         if (
-  //           d.Circle === circle &&
-  //           d.UniqueCode === (userData?.siteId || site)
-  //         ) {
-  //           if (d.EquipmentCategory) equipSet.add(d.EquipmentCategory);
-  //           if (d.AMC_Partner_Name) vendorSet.add(d.AMC_Partner_Name);
-  //         }
-  //       });
-
-  //       setEquipmentList(Array.from(equipSet).sort());
-  //       setVendorList(Array.from(vendorSet).sort());
-  //       setLoading(false);
-  //     } catch (e) {
-  //       console.error("assets_flat load failed", e);
-  //     }
-  //   }
-
-  //   fetchConfig();
-
-  //   loadAssetsFlat();
-  // }, [circle, site, userData?.siteId, siteKey]);
 
   // load site list from assets_register with correct filtering
   useEffect(() => {
@@ -576,18 +768,7 @@ export default function DailyActivityManage({ userData }) {
     });
   }
 
-  // function addSchedule(equipment, payload = null) {
-  //   if (!pmDoc) return;
-  //   const entry = payload || { id: genId(), frequency: "monthly", months: [1], dayOfMonth: 1, vendor: "", notes: "" };
-  //   setPmDoc(prev => {
-  //     const copy = { ...(prev || {}) };
-  //     copy.equipmentSchedules = copy.equipmentSchedules || {};
-  //     const arr = Array.isArray(copy.equipmentSchedules[equipment]) ? [...copy.equipmentSchedules[equipment]] : [];
-  //     arr.push(entry);
-  //     copy.equipmentSchedules[equipment] = arr;
-  //     return copy;
-  //   });
-  // }
+
 
   function addSchedule(equipment, payload = null) {
     if (!pmDoc) return;
@@ -791,86 +972,6 @@ export default function DailyActivityManage({ userData }) {
     }
   }
 
-  // Add scheduled items for the selected date into daily_activity_sheets
-  // Logic: for each equipment in pmDoc, for each schedule entry check if selectedDate matches:
-  // - if entry.months includes the month (1..12) AND entry.dayOfMonth equals day -> include
-  // - OR if entry has scheduleDates array (YYYY-MM-DD strings) -> check includes selectedDate
-  // async function addScheduledItemsToDailySheet() {
-  //   if (!pmDoc) return alert("No PM template loaded.");
-  //   const month = monthOfISO(selectedDate);
-  //   const day = dayOfISO(selectedDate);
-  //   if (!month || !day) return alert("Invalid date selected.");
-  //   const matches = [];
-  //   Object.entries(pmDoc.equipmentSchedules || {}).forEach(([eq, arr]) => {
-  //     (Array.isArray(arr) ? arr : []).forEach(entry => {
-  //       const months = Array.isArray(entry.months) ? entry.months : [];
-  //       const scheduleDates = Array.isArray(entry.scheduleDates) ? entry.scheduleDates : [];
-  //       const matchesByMonths = months.length ? months.includes(month) && (entry.dayOfMonth ? entry.dayOfMonth === day : true) : false;
-  //       const matchesByDates = scheduleDates.length ? scheduleDates.includes(selectedDate) : false;
-  //       if (matchesByMonths || matchesByDates) {
-  //         matches.push({
-  //           // circle: pmDoc.circle || "",
-  //           nodeName: eq,
-  //           activityDetails: entry.pmType || "",
-  //           vendor: entry.vendor || "",
-  //           activityType: entry.activityType || "Major",
-  //           siteCategory: entry.siteCategory || "Super Critical",
-  //           mopRequired: entry.mopRequired ? "Yes" : "No",
-  //           activityCode: entry.activityCode,
-  //           activityCategory: entry.activityCategory || "",        // NEW
-  //           approvalRequire: entry.approvalLevel || "",        // Yes / No
-  //           approvers: getApproversFromLevels(entry.approvalLevels) || "",
-  //           performBy: entry.performBy || "",
-  //           crqType: entry.crRequired ? "CRQ" : "PE",
-  //           crqNo: "CRQ00000",
-  //           activityStartTime: entry.activityStartTime && entry.activityStartTime.trim() !== ""
-  //             ? entry.activityStartTime
-  //             : "10:00 AM", // ✅ Default Start Time
-  //           activityEndTime: entry.activityEndTime && entry.activityEndTime.trim() !== ""
-  //             ? entry.activityEndTime
-  //             : "06:00 PM", // ✅ Default End Time
-  //           createdFromPmId: entry.id || null,
-  //           pmEntry: entry,
-  //         });
-  //       }
-  //     });
-  //   });
-
-  //   if (matches.length === 0) {
-  //     alert("No scheduled PM items for selected date.");
-  //     return;
-  //   }
-
-  //   // Merge into existing dailyRows, avoid duplicates by nodeName + pmEntry.id
-  //   const merged = [...dailyRows];
-  //   matches.forEach(m => {
-  //     const exists = merged.some(r => (r.nodeName === m.nodeName) && (r.createdFromPmId && r.createdFromPmId === m.createdFromPmId));
-  //     if (!exists) {
-  //       merged.push(m);
-  //     }
-  //   });
-
-  //   // save to daily_activity_sheets
-  //   const docId = `${userData?.siteId || site}_${selectedDate}`.replace(/\s+/g, "_");
-  //   try {
-  //     await setDoc(doc(db, "daily_activity_sheets", docId), {
-  //       siteId: userData?.siteId || site,
-  //       region: userData?.region || region || "",
-  //       circle: userData?.circle || circle || "",
-  //       siteName: userData?.site || site,
-  //       date: selectedDate,
-  //       rows: merged,
-  //       lastUpdatedBy: userData?.uid || null,
-  //       lastUpdatedAt: serverTimestamp()
-  //     }, { merge: true });
-  //     setDailyRows(merged);
-  //     alert(`Added ${matches.length} scheduled item(s) to daily sheet.`);
-  //   } catch (e) {
-  //     console.error("addScheduledItemsToDailySheet error", e);
-  //     alert("Failed to add scheduled items.");
-  //   }
-  // }
-
   function isDuplicateDailyRow(existingRows, newRow) {
     return existingRows.some(r =>
       // Strong match (preferred)
@@ -1006,6 +1107,9 @@ export default function DailyActivityManage({ userData }) {
 
           if (byMonth || byDate) {
             matches.push({
+              rowId:
+                entry.rowId ||
+                `${siteId}_${date}_${entry.id || genId()}`,
               nodeName: eq,
               activityDetails: entry.pmType || "",
               vendor: entry.vendor || "",
@@ -1027,6 +1131,7 @@ export default function DailyActivityManage({ userData }) {
               quantity: entry.quantity || 1, // default quantity for PM tasks
               activityTime: entry.activityTime || "Day", // Day / Night
               floor: entry.floor || "",
+              mopDocument: null,
             });
           }
         });
@@ -1238,28 +1343,44 @@ export default function DailyActivityManage({ userData }) {
   }
 
   const handleGenerateMOP = (row) => {
-    const mop = getMopByActivity(row, userData, siteConfig);
+    const generatedMop = getMopByActivity(
+      row,
+      userData,
+      siteConfig
+    );
 
-    if (!mop) {
+    if (!generatedMop) {
       alert("MOP format not found for this activity");
       return;
     }
 
-    // First alert
-    alert("MOP Generated Successfully!");
+    // Open saved MOP when it exists; otherwise use master template.
+    const mop = row.mopDocument?.data
+      ? JSON.parse(JSON.stringify(row.mopDocument.data))
+      : generatedMop;
 
-    // Ask user for format
-    const choice = window.prompt(
-      "Choose Download Format:\nType 1 for PDF\nType 2 for Excel"
-    );
+    const sheetDate = row._sheetDate;
 
-    if (choice === "1") {
-      generateMopPDF(mop);
-    } else if (choice === "2") {
-      generateMopExcel(mop);
-    } else {
-      alert("Invalid selection. Please type 1 or 2.");
+    if (!sheetDate) {
+      alert("Activity date not found. Cannot open MOP.");
+      return;
     }
+
+    const sheetId = `${siteId || userData?.siteId
+      }_${sheetDate}`.replace(/\s+/g, "_");
+
+    navigate("/mop-preview", {
+      state: {
+        mop,
+        hardCodedMop: generatedMop,
+        sourceRow: row,
+        sheetId,
+        rowId: row.rowId || null,
+        createdFromPmId: row.createdFromPmId || null,
+        mode: "edit",
+        returnTo: "/daily-activity-manage",
+      },
+    });
   };
 
   return (
@@ -1569,7 +1690,7 @@ export default function DailyActivityManage({ userData }) {
                                   </p>
                                 </div>
                                 <div>
-                                  <label>Quantity: <input type="text" className="daily-activity-input" value={entry.quantity || ""} onChange={(e) => updateSchedule(eq, entry.id, "quantity", e.target.value )} /></label>
+                                  <label>Quantity: <input type="text" className="daily-activity-input" value={entry.quantity || ""} onChange={(e) => updateSchedule(eq, entry.id, "quantity", e.target.value)} /></label>
 
                                   <label style={{ fontSize: 12, color: "#666" }}>Vendor Name: </label>
                                   <select
@@ -1635,7 +1756,8 @@ export default function DailyActivityManage({ userData }) {
       <div className="child-container" style={{ marginBottom: 12, border: "1px dashed #ccc", padding: 10 }}>
         <h4>➕ Add Dynamic Activity (Site User)</h4>
 
-        {/* Equipment */}
+        {/* Date Selection */}
+        <label>Select Date:</label>
         <input
           type="date"
           className="daily-activity-date-picker"
@@ -1643,6 +1765,8 @@ export default function DailyActivityManage({ userData }) {
           onChange={(e) => setSelectDate(e.target.value)}
         />
 
+        {/* Equipment Name */}
+        <label>Equipment Name:</label>
         <select
           className="daily-activity-select"
           value={dynamicEquip}
@@ -1661,31 +1785,416 @@ export default function DailyActivityManage({ userData }) {
           <option value="Others" >Others</option>
         </select>
 
+        {/* Other Equipment Name */}
         {dynamicEquip === "Others" && (
-          <input
-            type="text"
-            className="daily-activity-input"
-            placeholder="Enter Equipment Name"
-            value={othersDynamicEquip}
-            onChange={(e) => setOthersDynamicEquip(e.target.value)}
-          />
+          <>
+            <label>Other Equipment Name:</label>
+            <input
+              type="text"
+              className="daily-activity-input"
+              placeholder="Enter Equipment Name"
+              value={othersDynamicEquip}
+              onChange={(e) => setOthersDynamicEquip(e.target.value)}
+            />
+          </>
+
         )}
 
         {/* Activity */}
         {dynamicEquip && (
-          <select
-            className="daily-activity-select"
-            value={dynamicActivity}
-            onChange={(e) => setDynamicActivity(e.target.value)}
-            style={{ marginLeft: 8 }}
-          >
-            <option value="">Select Activity</option>
-            {(ACTIVITY_MASTER[dynamicEquip] || ACTIVITY_MASTER["Others"] || []).map(a => (
-              <option key={a.activityDescription} value={a.activityDescription}>{a.activityDescription}</option>
-            ))}
-          </select>
+          <>
+            <label>Activity Details</label>
+            <select
+              className="daily-activity-select"
+              value={dynamicActivity}
+              onChange={(e) => setDynamicActivity(e.target.value)}
+              style={{ marginLeft: 8 }}
+            >
+              <option value="">Select Activity</option>
+              {(ACTIVITY_MASTER[dynamicEquip] || ACTIVITY_MASTER["Others"] || []).map(a => (
+                <option key={a.activityDescription} value={a.activityDescription}>{a.activityDescription}</option>
+              ))}
+              <option value="Others">Others</option>
+            </select>
+          </>
         )}
 
+        {/* Other Activity Details */}
+        {dynamicActivity === "Others" && (
+          <>
+            <label>Other Activity Details:</label>
+            <input
+              type="text"
+              className="daily-activity-input"
+              placeholder="Enter Activity Details"
+              value={othersDynamicActivity}
+              onChange={(e) => setOthersDynamicActivity(e.target.value)}
+            />
+          </>
+        )}
+
+        {isManualMetaRequired && (
+          <div className="dynamic-meta-panel">
+            <h4>Activity Metadata</h4>
+
+            {(
+              !selectedDynamicMeta?.activityCategory ||
+              dynamicActivity === "Others"
+            ) && (
+                <label>
+                  Activity Category
+
+                  <select
+                    className="daily-activity-select"
+                    value={manualMeta.activityCategory}
+                    onChange={(event) =>
+                      setManualMeta(previous => ({
+                        ...previous,
+                        activityCategory: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">
+                      Select Activity Category
+                    </option>
+
+                    <option value="Super Critical">
+                      Super Critical
+                    </option>
+
+                    <option value="Major">Major</option>
+                    <option value="Minor">Minor</option>
+                    <option value="PM">PM</option>
+                    <option value="CM">CM</option>
+                    <option value="Breakdown">
+                      Breakdown
+                    </option>
+                  </select>
+                </label>
+              )}
+
+            {(
+              !selectedDynamicMeta?.activityType ||
+              dynamicActivity === "Others"
+            ) && (
+                <label>
+                  Activity Type
+
+                  <input
+                    className="daily-activity-input"
+                    value={manualMeta.activityType}
+                    placeholder="Enter activity type"
+                    onChange={(event) =>
+                      setManualMeta(previous => ({
+                        ...previous,
+                        activityType: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              )}
+
+            {(
+              !selectedDynamicMeta?.activityCode ||
+              dynamicActivity === "Others"
+            ) && (
+                <label>
+                  Activity Code
+
+                  <select
+                    className="daily-activity-select"
+                    value={manualMeta.activityCode}
+                    onChange={(event) =>
+                      setManualMeta(previous => ({
+                        ...previous,
+                        activityCode: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">
+                      Select Activity Code
+                    </option>
+                    <option value="RED">RED</option>
+                    <option value="AMBER">AMBER</option>
+                    <option value="GREEN">GREEN</option>
+                    <option value="BLUE">BLUE</option>
+                  </select>
+                </label>
+              )}
+
+            {(
+              !selectedDynamicMeta?.activityTime ||
+              dynamicActivity === "Others"
+            ) && (
+                <label>
+                  Activity Time
+
+                  <select
+                    className="daily-activity-select"
+                    value={manualMeta.activityTime}
+                    onChange={(event) =>
+                      setManualMeta(previous => ({
+                        ...previous,
+                        activityTime: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">
+                      Select Activity Time
+                    </option>
+                    <option value="Day">Day</option>
+                    <option value="Night">Night</option>
+                  </select>
+                </label>
+              )}
+
+            {(
+              !selectedDynamicMeta?.performBy ||
+              dynamicActivity === "Others"
+            ) && (
+                <label>
+                  Perform By
+
+                  <input
+                    className="daily-activity-input"
+                    value={manualMeta.performBy}
+                    placeholder="Enter activity owner"
+                    onChange={(event) =>
+                      setManualMeta(previous => ({
+                        ...previous,
+                        performBy: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              )}
+
+            {(
+              dynamicActivity === "Others" ||
+              !hasMasterMopRequired
+            ) && (
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={manualMeta.mopRequired}
+                    onChange={(event) =>
+                      setManualMeta(previous => ({
+                        ...previous,
+                        mopRequired: event.target.checked,
+                      }))
+                    }
+                  />
+
+                  MOP Required
+                </label>
+              )}
+
+            {(
+              dynamicActivity === "Others" ||
+              !hasMasterCrRequired
+            ) && (
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={manualMeta.crRequired}
+                    onChange={(event) =>
+                      setManualMeta(previous => ({
+                        ...previous,
+                        crRequired: event.target.checked,
+                      }))
+                    }
+                  />
+
+                  CRQ Required
+                </label>
+              )}
+
+            {/* {(
+              !selectedDynamicMeta?.approvalLevel ||
+              dynamicActivity === "Others"
+            ) && (
+                <label>
+                  Approval Requirement
+
+                  <select
+                    className="daily-activity-select"
+                    value={manualMeta.approvalLevel}
+                    onChange={(event) => {
+                      const value = event.target.value;
+
+                      setManualMeta(previous => ({
+                        ...previous,
+                        approvalLevel: value,
+
+                        approvalLevels:
+                          value === "NA" || value === "No"
+                            ? []
+                            : previous.approvalLevels,
+                      }));
+                    }}
+                  >
+                    <option value="">
+                      Select Approval Requirement
+                    </option>
+
+                    <option value="NA">
+                      No Approval Required
+                    </option>
+
+                    <option value="Level-1">Level-1</option>
+                    <option value="Level-2">Level-2</option>
+                    <option value="Level-3">Level-3</option>
+                    <option value="Level-4">Level-4</option>
+                    <option value="Level-5">Level-5</option>
+                    <option value="Level-6">Level-6</option>
+                    <option value="Level-7">Level-7</option>
+                  </select>
+                </label>
+              )} */}
+
+
+            <label>
+              Approval Required
+
+              <select
+                value={manualMeta.approvalLevel}
+                onChange={(event) =>
+                  setManualMeta(previous => ({
+                    ...previous,
+                    approvalLevel: event.target.value,
+                    approvalLevels:
+                      event.target.value === "No"
+                        ? []
+                        : previous.approvalLevels,
+                  }))
+                }
+              >
+                <option value="">
+                  Select Approval Requirement
+                </option>
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </label>
+
+
+            {/* {manualMeta.approvalLevel &&
+              manualMeta.approvalLevel !== "NA" && (
+                <label>
+                  Approval Levels
+
+                  <select
+                    multiple
+                    className="daily-activity-select"
+                    value={manualMeta.approvalLevels}
+                    onChange={(event) => {
+                      const selectedLevels = Array.from(
+                        event.target.selectedOptions,
+                        option => option.value
+                      );
+
+                      setManualMeta(previous => ({
+                        ...previous,
+                        approvalLevels: selectedLevels,
+                      }));
+                    }}
+                  >
+                    {[
+                      "Level-1",
+                      "Level-2",
+                      "Level-3",
+                      "Level-4",
+                      "Level-5",
+                      "Level-6",
+                      "Level-7",
+                    ].map(level => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )
+            } */}
+
+            {manualMeta.approvalLevel &&
+              manualMeta.approvalLevel === "Yes" && (
+                <div className="approval-dropdown">
+                  <div className="dropdown-header">
+                    {manualMeta.approvalLevels.length
+                      ? manualMeta.approvalLevels.join(", ")
+                      : "Select Approval Levels"}
+                  </div>
+
+                  <div className="dropdown-menu">
+                    {approvalLevels.map((level) => (
+                      <label key={level} className="dropdown-item">
+                        <input
+                          type="checkbox"
+                          checked={manualMeta.approvalLevels.includes(level)}
+                          onChange={() => toggleApprovalLevel(level)}
+                        />
+                        {level}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+
+            {(
+              dynamicActivity === "Others" ||
+              !selectedDynamicMeta?.information
+            ) && (
+                <label>
+                  Activity Information
+
+                  <textarea
+                    className="daily-activity-input"
+                    value={manualMeta.information}
+                    placeholder="Enter activity information"
+                    onChange={(event) =>
+                      setManualMeta(previous => ({
+                        ...previous,
+                        information: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              )}
+          </div>
+        )}
+
+        {resolvedDynamicMeta.crRequired && (
+          <label>
+            CRQ Days Before
+
+            <input
+              type="number"
+              min="0"
+              className="daily-activity-input"
+              value={
+                selectedDynamicMeta?.crDaysBefore ??
+                manualMeta.crDaysBefore
+              }
+              disabled={
+                selectedDynamicMeta?.crDaysBefore !==
+                undefined &&
+                selectedDynamicMeta?.crDaysBefore !== null
+              }
+              onChange={(event) =>
+                setManualMeta(previous => ({
+                  ...previous,
+                  crDaysBefore:
+                    Number(event.target.value) || 0,
+                }))
+              }
+            />
+          </label>
+        )}
+
+        {/* Vendor Name */}
+        <label>Vendor Name</label>
         <select
           value={vendorName}
           onChange={(e) => setVendorName(e.target.value)}
@@ -1709,81 +2218,329 @@ export default function DailyActivityManage({ userData }) {
         )}
 
         {vendorName === "Others" && (
-          <input
-            type="text"
-            className="daily-activity-input"
-            placeholder="Enter Vendor Name"
-            value={vendorNameOthers}
-            onChange={(e) => setVendorNameOthers(e.target.value)}
-          />
+          <>
+            <label>Other Vendor Name</label>
+            <input
+              type="text"
+              className="daily-activity-input"
+              placeholder="Enter Vendor Name"
+              value={vendorNameOthers}
+              onChange={(e) => setVendorNameOthers(e.target.value)}
+            />
+          </>
+
         )}
 
         {/* Add Button */}
         <button
           className="daily-activity-btn daily-activity-btn-primary"
           style={{ marginLeft: 8 }}
-          disabled={!dynamicEquip || !dynamicActivity}
+          // disabled={!dynamicEquip || !dynamicActivity}
+          disabled={
+            saving ||
+            !dynamicEquip ||
+            !dynamicActivity ||
+            (
+              dynamicEquip === "Others" &&
+              !othersDynamicEquip.trim()
+            ) ||
+            (
+              dynamicActivity === "Others" &&
+              !othersDynamicActivity.trim()
+            ) ||
+            missingDynamicMetaFields.length > 0
+          }
+
           onClick={async () => {
-            const meta = ACTIVITY_MASTER[dynamicEquip].find(
-              a => a.activityDescription === dynamicActivity
-            );
+            if (!selectDate) {
+              alert("Please select an activity date.");
+              return;
+            }
 
-            const nodeName = dynamicEquip === "Others" ? othersDynamicEquip : dynamicEquip;
+            if (!dynamicEquip || !dynamicActivity) {
+              alert("Please select equipment and activity.");
+              return;
+            }
 
-            const newRow = sanitize({
-              nodeName: nodeName,
-              activityDetails: meta.activityDescription ?? "",
-              activityType: meta.activityType ?? "Major",
-              activityCategory: meta.activityCategory ?? "PM",
-              performBy: meta.performBy ?? "In-House",
-              vendor: vendorName === "In-House" ? `${vendorNameInHouse}(In-House)` : vendorName === "Others" ? vendorNameOthers : vendorName,
-              mopRequired: meta.mopRequired ? "Yes" : "No",
-              activityCode: meta.activityCode ?? "*",
-              activityTime: meta.activityTime ?? "Day",
-              floor: equipmentFloor || "",
-              siteCategory: siteConfig?.siteCategory ?? "Major",
+            const meta = resolvedDynamicMeta;
 
-              approvalRequire: meta.approvalLevel ?? "No",
-              approvers: getApproversFromLevels(meta.approvalLevels) ?? null,
+            if (!meta) {
+              alert("Activity configuration not found.");
+              return;
+            }
 
-              crDaysBefore: meta.crDaysBefore ?? 0,
+            const selectedSiteId = siteId || userData?.siteId;
 
-              crqType: meta.crRequired ? "CRQ" : "PE",
-              crqNo: null,
+            if (!selectedSiteId) {
+              alert("Site identity not found.");
+              return;
+            }
 
-              activityStartTime: "10:00",
-              activityEndTime: "18:00",
+            const nodeName =
+              dynamicEquip === "Others"
+                ? othersDynamicEquip?.trim()
+                : dynamicEquip;
 
-              isDynamic: true,
-              activitySource: "DYNAMIC",
-              createdAt: serverTimestamp()
-            });
+            const activityDetails =
+              resolvedDynamicActivityDetails;
 
-            const updated = [...dailyRows, newRow];
-            setDailyRows(updated);
+            if (!nodeName) {
+              alert("Please enter equipment name.");
+              return;
+            }
 
-            const docId = `${siteId}_${selectDate}`.replace(/\s+/g, "_");
-            await setDoc(
-              doc(db, "daily_activity_sheets", docId),
-              sanitize({
-                siteId: siteId || "",
-                region: region || "",
-                circle: circle || "",
-                siteName: site,
-                date: selectDate,
-                rows: updated,
-                lastUpdatedBy: userData?.uid || null,
-                lastUpdatedAt: serverTimestamp()
-              }),
-              { merge: true }
-            );
+            if (!activityDetails) {
+              alert("Please enter activity details.");
+              return;
+            }
 
+            let selectedVendor = vendorName || "";
 
-            setDynamicEquip("");
-            setDynamicActivity("");
+            if (vendorName === "In-House") {
+              selectedVendor = vendorNameInHouse?.trim()
+                ? `${vendorNameInHouse.trim()} (In-House)`
+                : "In-House";
+            }
+
+            if (vendorName === "Others") {
+              selectedVendor = vendorNameOthers?.trim() || "Others";
+            }
+
+            const missingFields = [];
+
+            if (!meta.activityCategory) {
+              missingFields.push("Activity Category");
+            }
+
+            if (!meta.activityType) {
+              missingFields.push("Activity Type");
+            }
+
+            if (!meta.activityCode) {
+              missingFields.push("Activity Code");
+            }
+
+            if (!meta.activityTime) {
+              missingFields.push("Activity Time");
+            }
+
+            if (!meta.performBy) {
+              missingFields.push("Perform By");
+            }
+
+            if (
+              meta.crRequired &&
+              Number(meta.crDaysBefore) < 0
+            ) {
+              missingFields.push("Valid CRQ Days Before");
+            }
+
+            if (missingFields.length) {
+              alert(
+                `Please complete the following metadata:\n\n${missingFields.join(
+                  "\n"
+                )}`
+              );
+
+              return;
+            }
+
+            setSaving(true);
+
+            try {
+              const docId =
+                `${selectedSiteId}_${selectDate}`.replace(/\s+/g, "_");
+
+              const sheetRef = doc(
+                db,
+                "daily_activity_sheets",
+                docId
+              );
+
+              /*
+               * Important:
+               * Read only the selected date document.
+               * Do not use the range-level dailyRows array here.
+               */
+              const sheetSnapshot = await getDoc(sheetRef);
+
+              const existingRowsForDate = sheetSnapshot.exists()
+                ? Array.isArray(sheetSnapshot.data().rows)
+                  ? sheetSnapshot.data().rows
+                  : []
+                : [];
+
+              const newRow = {
+                rowId: `${selectedSiteId}_${selectDate}_${genId()}`,
+
+                nodeName,
+                activityDetails,
+
+                activityType: meta.activityType,
+                activityCategory: meta.activityCategory,
+                performBy: meta.performBy,
+                mopRequired: meta.mopRequired ? "Yes" : "No",
+                activityCode: meta.activityCode,
+                activityTime: meta.activityTime,
+
+                siteCategory:
+                  meta.siteCategory ||
+                  siteConfig?.siteCategory ||
+                  "Major",
+
+                approvalRequire:
+                  meta.approvalLevel || "NA",
+
+                approvers:
+                  getApproversFromLevels(
+                    meta.approvalLevels || []
+                  ) || [],
+
+                crDaysBefore:
+                  Number(meta.crDaysBefore || 0),
+
+                crqType:
+                  meta.crRequired ? "CRQ" : "PE",
+
+                information:
+                  meta.information || "",
+
+                activityMeta: {
+                  activityCategory: meta.activityCategory,
+                  activityType: meta.activityType,
+                  activityCode: meta.activityCode,
+                  activityTime: meta.activityTime,
+                  performBy: meta.performBy,
+
+                  mopRequired:
+                    Boolean(meta.mopRequired),
+
+                  crRequired:
+                    Boolean(meta.crRequired),
+
+                  crDaysBefore:
+                    Number(meta.crDaysBefore || 0),
+
+                  approvalLevel:
+                    meta.approvalLevel || "NA",
+
+                  approvalLevels:
+                    meta.approvalLevels || [],
+
+                  information:
+                    meta.information || "",
+
+                  source:
+                    meta.metadataSource,
+                },
+
+                /*
+                 * Use ISO string inside an array item.
+                 * Keep serverTimestamp() at document level.
+                 */
+                createdAt: new Date().toISOString(),
+                createdBy: userData?.uid || null,
+                createdByName:
+                  userData?.name ||
+                  userData?.displayName ||
+                  "",
+              };
+
+              /*
+               * Optional duplicate protection.
+               *
+               * This blocks accidental double-clicks or repeated submission of
+               * exactly the same activity for the same equipment and date.
+               */
+              const duplicateExists = existingRowsForDate.some(
+                (row) =>
+                  row.isDynamic === true &&
+                  row.nodeName?.trim().toLowerCase() ===
+                  nodeName.trim().toLowerCase() &&
+                  row.activityDetails?.trim().toLowerCase() ===
+                  activityDetails.trim().toLowerCase() &&
+                  row.activityStartTime === newRow.activityStartTime &&
+                  row.activityEndTime === newRow.activityEndTime
+              );
+
+              if (duplicateExists) {
+                alert(
+                  "This dynamic activity already exists for the selected date."
+                );
+                return;
+              }
+
+              const rowsForSelectedDate = [
+                ...existingRowsForDate,
+                newRow,
+              ];
+
+              await setDoc(
+                sheetRef,
+                {
+                  siteId: selectedSiteId,
+                  region: region || userData?.region || "",
+                  circle: circle || userData?.circle || "",
+                  siteName: site || userData?.site || "",
+                  date: selectDate,
+
+                  /*
+                   * Only rows belonging to selectDate are saved here.
+                   */
+                  rows: rowsForSelectedDate,
+
+                  lastUpdatedBy: userData?.uid || null,
+                  lastUpdatedAt: serverTimestamp(),
+                },
+                { merge: true }
+              );
+
+              /*
+               * dailyRows is the complete date-range UI state.
+               * Add _sheetDate only locally; do not save it to Firestore.
+               */
+              setDailyRows((previousRows) => [
+                ...previousRows,
+                {
+                  ...newRow,
+                  _sheetDate: selectDate,
+                },
+              ]);
+
+              /*
+               * Keep date-wise state synchronized.
+               */
+              setDailyRowsByDate((previous) => ({
+                ...previous,
+                [selectDate]: rowsForSelectedDate,
+              }));
+
+              setDynamicEquip("");
+              setDynamicActivity("");
+              setOthersDynamicEquip("");
+              setOthersDynamicActivity("");
+              setVendorName("");
+              setVendorNameInHouse("");
+              setVendorNameOthers("");
+              setManualMeta(DEFAULT_MANUAL_META);
+
+              alert("Dynamic activity added successfully.");
+            } catch (error) {
+              console.error(
+                "Dynamic activity add failed:",
+                error
+              );
+
+              alert(
+                error?.message ||
+                "Failed to add dynamic activity."
+              );
+            } finally {
+              setSaving(false);
+            }
           }}
         >
-          Add
+          {saving ? "Adding..." : "Add"}
         </button>
       </div>
 
@@ -1864,11 +2621,11 @@ export default function DailyActivityManage({ userData }) {
               <thead>
                 <tr>
                   <th>Sl.No</th>
-                  <th>Date</th>
+                  <th style={{ position: "sticky", left: 0, zIndex: 5 }} >Date</th>
                   <th>Region</th>
                   <th>Circle</th>
                   <th>Site</th>
-                  <th>Node Name</th>
+                  <th style={{ position: "sticky", left: 0, zIndex: 5 }}>Node Name</th>
                   <th>Quantity</th>
                   <th>Activity Details</th>
                   <th>Site Category</th>
@@ -1904,11 +2661,11 @@ export default function DailyActivityManage({ userData }) {
                     }}
                   >
                     <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{idx + 1}</td>
-                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r._sheetDate || selectDate || "-"}</td>
+                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", position: "sticky", left: 0 }}>{r._sheetDate || selectDate || "-"}</td>
                     <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{region}</td>
                     <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{circle}</td>
                     <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{site}</td>
-                    <td className="daily-activity-input" style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} > {/* value={r.nodeName || ""} onChange={(e) => updateDailyRow(idx, "nodeName", e.target.value)}  */}
+                    <td className="daily-activity-input" style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", position: "sticky", left: 0 }} > {/* value={r.nodeName || ""} onChange={(e) => updateDailyRow(idx, "nodeName", e.target.value)}  */}
                       {r.nodeName || ""}
                     </td>
                     <td className="daily-activity-input" style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} > {/* value={r.quantity || ""} onChange={(e) => updateDailyRow(idx, "quantity", e.target.value)} */}
@@ -2006,11 +2763,22 @@ export default function DailyActivityManage({ userData }) {
                       style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                     >
                       {r.mopRequired === "Yes" ? (
+                        // <button
+                        //   style={{ height: "fit-content", width: "100%", fontSize: "15px", padding: "2px 2px" }}
+                        //   onClick={() => handleGenerateMOP(r)}
+                        // >
+                        //   Generate MOP
+                        // </button>
                         <button
-                          style={{ height: "fit-content", width: "100%", fontSize: "15px", padding: "2px 2px" }}
+                          style={{
+                            height: "fit-content",
+                            width: "100%",
+                            fontSize: "15px",
+                            padding: "2px",
+                          }}
                           onClick={() => handleGenerateMOP(r)}
                         >
-                          Generate MOP
+                          {r.mopDocument?.data ? "Edit MOP" : "Generate MOP"}
                         </button>
                       ) : (
                         <span style={{ color: "#999" }}>N/A</span>
@@ -2284,6 +3052,6 @@ export default function DailyActivityManage({ userData }) {
         Notes: PM register documents live in <code>pm_registers</code> collection with doc id pattern: <code>Region__Circle__Site__YYYY</code>.
         Use Add Scheduled Items to copy schedule items for the selected date into <code>daily_activity_sheets</code>.
       </div>
-    </div>
+    </div >
   );
 }

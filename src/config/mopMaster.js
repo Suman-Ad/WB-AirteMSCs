@@ -1,13 +1,28 @@
 // mopMaster.js
 
 export const calculateDuration = (startTime, endTime) => {
+  if (!startTime || !endTime) return "";
+
   const [startHour, startMinute] = startTime.split(":").map(Number);
   const [endHour, endMinute] = endTime.split(":").map(Number);
-  const startTotalMinutes = startHour * 60 + startMinute;
-  const endTotalMinutes = endHour * 60 + endMinute;
-  const durationMinutes = endTotalMinutes - startTotalMinutes;
-  const hours = Math.floor(durationMinutes / 60);
-  const minutes = durationMinutes % 60;
+
+  if (
+    [startHour, startMinute, endHour, endMinute].some(Number.isNaN)
+  ) {
+    return "";
+  }
+
+  const startTotal = startHour * 60 + startMinute;
+  let endTotal = endHour * 60 + endMinute;
+
+  if (endTotal < startTotal) {
+    endTotal += 24 * 60;
+  }
+
+  const duration = endTotal - startTotal;
+  const hours = Math.floor(duration / 60);
+  const minutes = duration % 60;
+
   return `${hours} Hrs ${minutes} Mins`;
 };
 
@@ -420,7 +435,6 @@ export const getMopMaster = (userData, row, siteConfig) => ({
     },
 
     activityInfo: {
-      node: row?.nodeName || "Unknown Node",
       node: row?.nodeName || "Unknown Node",
       nature: row?.notes ? row?.notes : "Fault / Alarm / Break Down - UPS",
       startDate: row?._sheetDate || "",

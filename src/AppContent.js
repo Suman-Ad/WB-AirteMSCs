@@ -64,6 +64,7 @@ import AllRegisterBook from "./pages/AllRegisterBook";
 import VendorEscalation from "./components/VendorEscalation";
 import LoadEntryForm from "./components/LoadEntryForm";
 import LoadDashboard from "./pages/LoadDashboard";
+import MOPPreview from "./pages/MOPPreview";
 
 export default function AppContent() {
     const [userData, setUserData] = useState(null);
@@ -361,6 +362,13 @@ export default function AppContent() {
                         <Layout userData={userData}>
                             <DailyActivityManage userData={userData} />
                         </Layout>
+                    </RoleProtectedRoute>} />
+
+                <Route path="/mop-preview" element={
+                    <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+                        {/* <Layout userData={userData}> */}
+                            <MOPPreview userData={userData} />
+                        {/* </Layout> */}
                     </RoleProtectedRoute>} />
 
                 <Route path="/pm-register" element={

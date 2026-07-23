@@ -3,391 +3,895 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import XLSX from "xlsx-js-style";
 
-// This file contains functions to generate MOP documents in PDF and Excel formats based on the provided MOP data structure. The PDF generation uses jsPDF and autoTable to create a well-formatted document, while the Excel generation uses xlsx-js-style to create a styled workbook with merged cells for better readability.
-// export const generateMopPDF = (mop) => {
-//   const doc = new jsPDF("p", "mm", "a4");
-
-//   doc.setFontSize(14);
-//   doc.text(`${mop.header.title}`, 105, 12, { align: "center" });
-
-//   doc.setFontSize(9);
-//   doc.text(
-//     `DOC NO - ${mop.header.docNo}     Release Date : ${mop.header.releaseDate}`,
-//     14,
-//     18
-//   );
-
-//   autoTable(doc, {
-//     startY: 22,
-//     body: [
-//       [
-//         "City", mop.siteInfo.city,
-//         "Location", mop.siteInfo.location,
-//         "Floor", mop.siteInfo.floor,
-//         "Tier", mop.siteInfo.tier,
-//         "T2", mop.siteInfo.t2
-//       ]
-//     ],
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   autoTable(doc, {
-//     startY: doc.lastAutoTable.finalY + 2,
-//     body: [
-//       ["Nature of Activity", mop.activityInfo.nature],
-//       ["Start Date", mop.activityInfo.startDate],
-//       ["Start Time", mop.activityInfo.startTime],
-//       ["End Date", mop.activityInfo.endDate],
-//       ["End Time", mop.activityInfo.endTime],
-//       ["Duration", mop.activityInfo.duration],
-//       ["Activity Owner", mop.activityInfo.owner],
-//       ["OEM", mop.activityInfo.oem],
-//       ["Stake Holders", mop.activityInfo.stakeholders],
-//       ["Service Impact", mop.activityInfo.serviceImpact]
-//     ],
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   autoTable(doc, {
-//     startY: doc.lastAutoTable.finalY + 3,
-//     head: [["Pre Activity Checkpoints", "Status", "Parameters"]],
-//     body: mop.preChecks,
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   autoTable(doc, {
-//     startY: doc.lastAutoTable.finalY + 3,
-//     head: [["UPS No", "Rating", "Floor", "Loading %"]],
-//     body: mop.loadDetails,
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   autoTable(doc, {
-//     startY: doc.lastAutoTable.finalY + 3,
-//     head: [["Risk Analysis"]],
-//     body: mop.risk.map(r => [r]),
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   autoTable(doc, {
-//     startY: doc.lastAutoTable.finalY + 3,
-//     head: [["Mitigation / Backup Plan"]],
-//     body: mop.mitigation.map(m => [m]),
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   autoTable(doc, {
-//     startY: doc.lastAutoTable.finalY + 3,
-//     head: [["Activity Steps"]],
-//     body: mop.activitySteps.map(a => [a]),
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   autoTable(doc, {
-//     startY: doc.lastAutoTable.finalY + 3,
-//     head: [["Fallback / Rollback Plan"]],
-//     body: mop.rollback.map(r => [r]),
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   autoTable(doc, {
-//     startY: doc.lastAutoTable.finalY + 3,
-//     head: [["Role", "Name"]],
-//     body: mop.infra,
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   autoTable(doc, {
-//     startY: doc.lastAutoTable.finalY + 3,
-//     head: [["Additional Proactive Measures"]],
-//     body: mop.proactive.map(p => [p]),
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   autoTable(doc, {
-//     startY: doc.lastAutoTable.finalY + 3,
-//     head: [["Spares Description", "Specification", "Qty", "Availability"]],
-//     body: mop.spares,
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   autoTable(doc, {
-//     startY: doc.lastAutoTable.finalY + 3,
-//     body: [
-//       ["Created By", mop.approval.createdBy],
-//       ["Reviewer", mop.approval.reviewer],
-//       ["Approver", mop.approval.approver],
-//       ["CR Number", mop.approval.crNumber]
-//     ],
-//     theme: "grid",
-//     styles: { fontSize: 8 }
-//   });
-
-//   doc.save(`${mop.header.title}.pdf`);
-// };
-
 export const generateMopPDF = (mop) => {
+  const doc = new jsPDF("l", "mm", "a4");
 
-  const doc = new jsPDF("p", "mm", "a4");
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 8;
+  let startY = 8;
 
-  let startY = 10;
+  const BORDER_COLOR = [0, 0, 0];
+  const ORANGE = [255, 192, 0];
+  const YELLOW = [255, 242, 204];
+  const GREY = [217, 217, 217];
+  const GREEN = [0, 176, 80];
+  const BLUE = [0, 176, 240];
+  const WHITE = [255, 255, 255];
 
-  // ================= TITLE =================
-  doc.setFontSize(14);
-  doc.text(mop.header.title.toUpperCase(), 105, startY, { align: "center" });
-
-  startY += 6;
-
-  doc.setFontSize(9);
-  doc.text(
-    `DOC NO - ${mop.header.docNo}     Release Date : ${mop.header.releaseDate}`,
-    14,
-    startY
+  const safeArray = (value) => (
+    Array.isArray(value) ? value : []
   );
 
-  startY += 4;
+  const cleanText = (value) => (
+    value === null || value === undefined
+      ? ""
+      : String(value)
+  );
+
+  const tableStyles = {
+    fontSize: 7,
+    cellPadding: 1.5,
+    lineColor: BORDER_COLOR,
+    lineWidth: 0.25,
+    valign: "middle",
+    overflow: "linebreak",
+  };
+
+  const getFinalY = () => (
+    doc.lastAutoTable?.finalY || startY
+  );
+
+  // ================= TITLE =================
+  autoTable(doc, {
+    startY,
+    margin: { left: margin, right: margin },
+    body: [[
+      {
+        content: cleanText(
+          mop.header?.title || "Method of Procedure"
+        ).toUpperCase(),
+        colSpan: 5,
+        styles: {
+          fillColor: ORANGE,
+          textColor: [0, 0, 0],
+          fontStyle: "bold",
+          fontSize: 14,
+          halign: "center",
+          valign: "middle",
+          cellPadding: 4,
+        },
+      },
+    ]],
+    theme: "grid",
+    styles: tableStyles,
+    columnStyles: {
+      0: { cellWidth: 56 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 54 },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 55 },
+    },
+  });
+
+  startY = getFinalY();
+
+  // ================= DOCUMENT DETAILS =================
+  autoTable(doc, {
+    startY,
+    margin: { left: margin, right: margin },
+    body: [[
+      {
+        content:
+          `DOC NO - ${cleanText(mop.header?.docNo)}` +
+          `                         ` +
+          `Release Date : ${cleanText(mop.header?.releaseDate)}`,
+        colSpan: 5,
+        styles: {
+          fontStyle: "bold",
+          halign: "center",
+          cellPadding: 2,
+        },
+      },
+    ]],
+    theme: "grid",
+    styles: tableStyles,
+    columnStyles: {
+      0: { cellWidth: 56 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 54 },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 55 },
+    },
+  });
+
+  startY = getFinalY();
 
   // ================= SITE INFO =================
   autoTable(doc, {
     startY,
+    margin: { left: margin, right: margin },
     body: [[
-      `City : ${mop.siteInfo.city}`,
-      `Location : ${mop.siteInfo.location}`,
-      `Floor : ${mop.siteInfo.floor}`,
-      `Tier : ${mop.siteInfo.tier}`,
-      `T2 : ${mop.siteInfo.t2 || ""}`
+      `City : ${cleanText(mop.siteInfo?.city)}`,
+      `Location : ${cleanText(mop.siteInfo?.location)}`,
+      `Floor : ${cleanText(mop.siteInfo?.floor)}`,
+      "Tier Category-Core/TX :",
+      cleanText(mop.siteInfo?.tier),
     ]],
-    styles: { fontSize: 8 },
     theme: "grid",
+    styles: tableStyles,
     columnStyles: {
-      0: { cellWidth: 38 },
-      1: { cellWidth: 38 },
-      2: { cellWidth: 32 },
-      3: { cellWidth: 35 },
-      4: { cellWidth: 35 }
-    }
-  });
-
-  startY = doc.lastAutoTable.finalY + 2;
-
-  // ================= ACTIVITY INFO =================
-  autoTable(doc, {
-    startY,
-    body: [
-
-      [
-        { content: "Nature of Activity / Work :", styles: { fontStyle: "bold" } },
-        { content: mop.activityInfo.nature, colSpan: 4 }
-      ],
-
-      [
-        "Activity Start Date",
-        mop.activityInfo.startDate,
-        "Activity End Date",
-        mop.activityInfo.endDate,
-        ""
-      ],
-
-      [
-        "Start Time",
-        mop.activityInfo.startTime,
-        "End Time",
-        mop.activityInfo.endTime,
-        `Duration : ${mop.activityInfo.duration}`
-      ],
-
-      [
-        "Activity Owner",
-        mop.activityInfo.owner,
-        "UPS OEM",
-        mop.activityInfo.oem,
-        ""
-      ],
-
-      [
-        "Service Impact",
-        { content: mop.activityInfo.serviceImpact, colSpan: 4 }
-      ]
-
-    ],
-    styles: { fontSize: 8 },
-    theme: "grid"
-  });
-
-  startY = doc.lastAutoTable.finalY + 3;
-
-  // ================= PRE ACTIVITY CHECK =================
-  autoTable(doc, {
-    startY,
-
-    head: [[
-      "Pre Activity Check Points",
-      "Checkpoints",
-      "Checkpoints",
-      "Status",
-      "Parameters"
-    ]],
-
-    body: mop.preChecks.map(r => [
-      "",
-      r[0],
-      "",
-      r[1],
-      r[2]
-    ]),
-
-    styles: {
-      fontSize: 8,
-      cellPadding: 2
+      0: { cellWidth: 56 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 54 },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 55 },
     },
+  });
 
+  startY = getFinalY();
+
+  // ================= ACTIVITY INFORMATION =================
+  autoTable(doc, {
+    startY,
+    margin: { left: margin, right: margin },
+    body: [
+      [
+        {
+          content: "Nature of Activity / Work :",
+          styles: {
+            fontStyle: "bold",
+            fillColor: YELLOW,
+          },
+        },
+        {
+          content: cleanText(mop.activityInfo?.nature),
+          colSpan: 4,
+          styles: {
+            fillColor: YELLOW,
+          },
+        },
+      ],
+      [
+        {
+          content: "Activity Start :",
+          rowSpan: 2,
+          styles: {
+            fontStyle: "bold",
+            fillColor: YELLOW,
+          },
+        },
+        {
+          content:
+            `Activity Start Date :\n` +
+            cleanText(mop.activityInfo?.startDate),
+          styles: {
+            fillColor: YELLOW,
+          },
+        },
+        {
+          content:
+            `Activity End Date :\n` +
+            cleanText(mop.activityInfo?.endDate),
+          styles: {
+            fillColor: YELLOW,
+          },
+        },
+        {
+          content: "Duration of Activity :",
+          rowSpan: 2,
+          styles: {
+            fontStyle: "bold",
+            fillColor: YELLOW,
+          },
+        },
+        {
+          content: cleanText(mop.activityInfo?.duration),
+          rowSpan: 2,
+          styles: {
+            fillColor: YELLOW,
+            halign: "center",
+          },
+        },
+      ],
+      [
+        {
+          content:
+            `Activity Start Time :\n` +
+            `${cleanText(mop.activityInfo?.startTime)} Hrs`,
+          styles: {
+            fillColor: YELLOW,
+          },
+        },
+        {
+          content:
+            `Activity End Time :\n` +
+            `${cleanText(mop.activityInfo?.endTime)} Hrs`,
+          styles: {
+            fillColor: YELLOW,
+          },
+        },
+      ],
+      [
+        {
+          content: "Activity Owner :",
+          styles: {
+            fontStyle: "bold",
+            fillColor: YELLOW,
+          },
+        },
+        {
+          content: cleanText(mop.activityInfo?.owner),
+          styles: {
+            fillColor: YELLOW,
+          },
+        },
+        {
+          content:
+            `${cleanText(
+              mop.activityInfo?.node || "Equipment"
+            )} OEM :\n` +
+            cleanText(mop.activityInfo?.oem),
+          styles: {
+            fillColor: YELLOW,
+          },
+        },
+        {
+          content: "Other Stake Holders :",
+          styles: {
+            fontStyle: "bold",
+            fillColor: YELLOW,
+          },
+        },
+        {
+          content: cleanText(mop.activityInfo?.stakeholders),
+          styles: {
+            fillColor: YELLOW,
+          },
+        },
+      ],
+      [
+        {
+          content: "Service Impact :",
+          styles: {
+            fontStyle: "bold",
+            fillColor: YELLOW,
+          },
+        },
+        {
+          content: cleanText(mop.activityInfo?.serviceImpact),
+          colSpan: 4,
+          styles: {
+            fillColor: YELLOW,
+          },
+        },
+      ],
+    ],
     theme: "grid",
-
+    styles: tableStyles,
     columnStyles: {
-      0: { cellWidth: 45 },
-      1: { cellWidth: 60 },
-      2: { cellWidth: 20 },
-      3: { cellWidth: 30 },
-      4: { cellWidth: 25 }
-    }
+      0: { cellWidth: 56 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 54 },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 55 },
+    },
   });
 
-  startY = doc.lastAutoTable.finalY + 3;
+  startY = getFinalY();
 
-  // ================= LOAD DETAILS =================
+  // ================= PRE-ACTIVITY CHECKS =================
+  const preChecks = safeArray(mop.preChecks);
+
+  const preCheckBody = preChecks.length
+    ? preChecks.map((row, index) => [
+        index === 0
+          ? {
+              content: "Pre Activity Check Points :",
+              rowSpan: preChecks.length,
+              styles: {
+                fontStyle: "bold",
+                fillColor: GREEN,
+                textColor: WHITE,
+              },
+            }
+          : undefined,
+        {
+          content: cleanText(row?.[0]),
+          colSpan: 2,
+        },
+        cleanText(row?.[1]),
+        cleanText(row?.[2]),
+      ].filter((cell) => cell !== undefined))
+    : [[
+        {
+          content: "Pre Activity Check Points :",
+          styles: {
+            fontStyle: "bold",
+            fillColor: GREEN,
+            textColor: WHITE,
+          },
+        },
+        {
+          content: "",
+          colSpan: 2,
+        },
+        "",
+        "",
+      ]];
+
   autoTable(doc, {
     startY,
+    margin: { left: margin, right: margin },
     head: [[
-      "UPS No",
-      "Rating",
-      "Serving Floor",
-      "Loading Percentage"
+      {
+        content: "Pre Activity Check Points :",
+        styles: {
+          fillColor: GREEN,
+          textColor: WHITE,
+          fontStyle: "bold",
+        },
+      },
+      {
+        content: "Checkpoints",
+        colSpan: 2,
+        styles: {
+          fillColor: GREEN,
+          textColor: WHITE,
+          fontStyle: "bold",
+          halign: "center",
+        },
+      },
+      {
+        content: "Status",
+        styles: {
+          fillColor: GREEN,
+          textColor: WHITE,
+          fontStyle: "bold",
+          halign: "center",
+        },
+      },
+      {
+        content: "Parameters",
+        styles: {
+          fillColor: GREEN,
+          textColor: WHITE,
+          fontStyle: "bold",
+          halign: "center",
+        },
+      },
     ]],
-    body: mop.loadDetails,
-    styles: { fontSize: 8 },
-    theme: "grid"
+    body: preCheckBody,
+    theme: "grid",
+    styles: tableStyles,
+    headStyles: {
+      fillColor: GREEN,
+      textColor: WHITE,
+    },
+    columnStyles: {
+      0: { cellWidth: 56 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 54 },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 55 },
+    },
+    showHead: "firstPage",
   });
 
-  startY = doc.lastAutoTable.finalY + 3;
+  startY = getFinalY();
 
-  // ================= RISK =================
+  // ================= LOAD / FLOOR DETAILS =================
+  const loadDetails = safeArray(mop.loadDetails);
+
+  const loadBody = loadDetails.length
+    ? loadDetails.map((row, index) => [
+        index === 0
+          ? {
+              content: "Load / Floor Details :",
+              rowSpan: loadDetails.length,
+              styles: {
+                fontStyle: "bold",
+                fillColor: BLUE,
+                textColor: WHITE,
+              },
+            }
+          : undefined,
+        cleanText(row?.[0]),
+        cleanText(row?.[1]),
+        cleanText(row?.[2]),
+        cleanText(row?.[3]),
+      ].filter((cell) => cell !== undefined))
+    : [[
+        {
+          content: "Load / Floor Details :",
+          styles: {
+            fontStyle: "bold",
+            fillColor: BLUE,
+            textColor: WHITE,
+          },
+        },
+        "",
+        "",
+        "",
+        "",
+      ]];
+
   autoTable(doc, {
     startY,
-    head: [["Risk Analysis"]],
-    body: mop.risk.map(r => [r]),
-    styles: { fontSize: 8 },
-    theme: "grid"
+    margin: { left: margin, right: margin },
+    head: [[
+      {
+        content: "Load / Floor Details :",
+        styles: {
+          fillColor: BLUE,
+          textColor: WHITE,
+          fontStyle: "bold",
+        },
+      },
+      {
+        content:
+          `${cleanText(
+            mop.activityInfo?.node || "Equipment"
+          )} No`,
+        styles: {
+          fillColor: BLUE,
+          textColor: WHITE,
+          fontStyle: "bold",
+          halign: "center",
+        },
+      },
+      {
+        content: "Rating",
+        styles: {
+          fillColor: BLUE,
+          textColor: WHITE,
+          fontStyle: "bold",
+          halign: "center",
+        },
+      },
+      {
+        content: "Serving Floor",
+        styles: {
+          fillColor: BLUE,
+          textColor: WHITE,
+          fontStyle: "bold",
+          halign: "center",
+        },
+      },
+      {
+        content: "Loading Percentage",
+        styles: {
+          fillColor: BLUE,
+          textColor: WHITE,
+          fontStyle: "bold",
+          halign: "center",
+        },
+      },
+    ]],
+    body: loadBody,
+    theme: "grid",
+    styles: tableStyles,
+    columnStyles: {
+      0: { cellWidth: 56 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 54 },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 55 },
+    },
+    showHead: "firstPage",
   });
 
-  startY = doc.lastAutoTable.finalY + 3;
+  startY = getFinalY();
 
-  // ================= MITIGATION =================
-  autoTable(doc, {
-    startY,
-    head: [["Mitigation / Backup Plan"]],
-    body: mop.mitigation.map(r => [r]),
-    styles: { fontSize: 8 },
-    theme: "grid"
-  });
+  const addFiveColumnListSection = (
+    title,
+    items,
+    options = {}
+  ) => {
+    const rows = safeArray(items);
+    const safeRows = rows.length ? rows : [""];
 
-  startY = doc.lastAutoTable.finalY + 3;
-
-  // ================= ACTIVITY =================
-  autoTable(doc, {
-    startY,
-    head: [["Activity Steps"]],
-    body: mop.activitySteps.map(r => [r]),
-    styles: { fontSize: 8 },
-    theme: "grid"
-  });
-
-  startY = doc.lastAutoTable.finalY + 3;
-
-  // ================= ROLLBACK =================
-  autoTable(doc, {
-    startY,
-    head: [["Fall Back / Rollback Plan"]],
-    body: mop.rollback.map(r => [r]),
-    styles: { fontSize: 8 },
-    theme: "grid"
-  });
-
-  startY = doc.lastAutoTable.finalY + 3;
-
-  // ================= INFRA =================
-  autoTable(doc, {
-    startY,
-    head: [["Role", "Name"]],
-    body: mop.infra,
-    styles: { fontSize: 8 },
-    theme: "grid"
-  });
-
-  startY = doc.lastAutoTable.finalY + 3;
-
-  // ================= NETWORK =================
-  if (mop.network) {
+    const body = safeRows.map((item, index) => [
+      index === 0
+        ? {
+            content: title,
+            rowSpan: safeRows.length,
+            styles: {
+              fontStyle: "bold",
+              fillColor: options.fillColor || GREY,
+              textColor: options.textColor || [0, 0, 0],
+            },
+          }
+        : undefined,
+      {
+        content:
+          options.numbered === false
+            ? cleanText(item)
+            : `${index + 1}. ${cleanText(item)}`,
+        colSpan: 4,
+      },
+    ].filter((cell) => cell !== undefined));
 
     autoTable(doc, {
       startY,
-      head: [["Role", "Name"]],
-      body: mop.network,
-      styles: { fontSize: 8 },
-      theme: "grid"
+      margin: { left: margin, right: margin },
+      body,
+      theme: "grid",
+      styles: tableStyles,
+      columnStyles: {
+        0: { cellWidth: 56 },
+        1: { cellWidth: 54 },
+        2: { cellWidth: 54 },
+        3: { cellWidth: 62 },
+        4: { cellWidth: 55 },
+      },
     });
 
-    startY = doc.lastAutoTable.finalY + 3;
+    startY = getFinalY();
+  };
+
+  // ================= RISK =================
+  addFiveColumnListSection(
+    "Risk Analysis :",
+    mop.risk
+  );
+
+  // ================= MITIGATION =================
+  addFiveColumnListSection(
+    "Mitigation / Back up Plan :",
+    mop.mitigation
+  );
+
+  // ================= CUSTOMER NOTIFICATION =================
+  autoTable(doc, {
+    startY,
+    margin: { left: margin, right: margin },
+    body: [[
+      {
+        content: "Customer Notification requires :",
+        styles: {
+          fontStyle: "bold",
+          fillColor: GREY,
+        },
+      },
+      {
+        content: cleanText(
+          mop.customerNotificationRequired || "Yes"
+        ),
+        colSpan: 4,
+      },
+    ]],
+    theme: "grid",
+    styles: tableStyles,
+    columnStyles: {
+      0: { cellWidth: 56 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 54 },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 55 },
+    },
+  });
+
+  startY = getFinalY();
+
+  // ================= ACTIVITY =================
+  const activitySteps = safeArray(mop.activitySteps);
+
+  const activitySummary =
+    `Activity - ${cleanText(mop.activityInfo?.startDate)} ` +
+    `${cleanText(mop.activityInfo?.startTime)} hrs to ` +
+    `${cleanText(mop.activityInfo?.endDate)} ` +
+    `${cleanText(mop.activityInfo?.endTime)} hrs ` +
+    `(Considered ${cleanText(
+      mop.activityInfo?.nature
+    )} work activity case)`;
+
+  const activityRows = [
+    activitySummary,
+    ...activitySteps.map(
+      (step, index) => `${index + 1}. ${cleanText(step)}`
+    ),
+  ];
+
+  const activityBody = activityRows.map((item, index) => [
+    index === 0
+      ? {
+          content: "Activity :",
+          rowSpan: activityRows.length,
+          styles: {
+            fontStyle: "bold",
+            fillColor: GREY,
+          },
+        }
+      : undefined,
+    {
+      content: item,
+      colSpan: 4,
+      styles: index === 0
+        ? {
+            fontStyle: "bold",
+            fillColor: GREY,
+          }
+        : {},
+    },
+  ].filter((cell) => cell !== undefined));
+
+  autoTable(doc, {
+    startY,
+    margin: { left: margin, right: margin },
+    body: activityBody,
+    theme: "grid",
+    styles: tableStyles,
+    columnStyles: {
+      0: { cellWidth: 56 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 54 },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 55 },
+    },
+  });
+
+  startY = getFinalY();
+
+  // ================= ROLLBACK =================
+  addFiveColumnListSection(
+    "Fall back / Roll Back Plan :",
+    mop.rollback
+  );
+
+  const addResourceSection = (title, rows) => {
+    const resources = safeArray(rows);
+    const safeRows = resources.length
+      ? resources
+      : [["", ""]];
+
+    const body = safeRows.map((row, index) => [
+      index === 0
+        ? {
+            content: title,
+            rowSpan: safeRows.length,
+            styles: {
+              fontStyle: "bold",
+              fillColor: GREY,
+            },
+          }
+        : undefined,
+      {
+        content: cleanText(row?.[0]),
+        colSpan: 2,
+      },
+      {
+        content: cleanText(row?.[1]),
+        colSpan: 2,
+      },
+    ].filter((cell) => cell !== undefined));
+
+    autoTable(doc, {
+      startY,
+      margin: { left: margin, right: margin },
+      head: [[
+        {
+          content: title,
+          styles: {
+            fillColor: GREY,
+            fontStyle: "bold",
+          },
+        },
+        {
+          content: "Role",
+          colSpan: 2,
+          styles: {
+            fillColor: GREY,
+            fontStyle: "bold",
+            halign: "center",
+          },
+        },
+        {
+          content: "Name",
+          colSpan: 2,
+          styles: {
+            fillColor: GREY,
+            fontStyle: "bold",
+            halign: "center",
+          },
+        },
+      ]],
+      body,
+      theme: "grid",
+      styles: tableStyles,
+      columnStyles: {
+        0: { cellWidth: 56 },
+        1: { cellWidth: 54 },
+        2: { cellWidth: 54 },
+        3: { cellWidth: 62 },
+        4: { cellWidth: 55 },
+      },
+      showHead: "firstPage",
+    });
+
+    startY = getFinalY();
+  };
+
+  // ================= INFRA =================
+  addResourceSection("Infra Resources :", mop.infra);
+
+  // ================= NETWORK =================
+  if (safeArray(mop.network).length) {
+    addResourceSection(
+      "Network Resources :",
+      mop.network
+    );
   }
 
   // ================= SPARES =================
+  const spares = safeArray(mop.spares);
+
+  const sparesBody = spares.length
+    ? spares.map((row, index) => [
+        index === 0
+          ? {
+              content:
+                "Additional Spares required for the Activity :",
+              rowSpan: spares.length,
+              styles: {
+                fontStyle: "bold",
+                fillColor: GREEN,
+                textColor: WHITE,
+              },
+            }
+          : undefined,
+        cleanText(row?.[0]),
+        cleanText(row?.[1]),
+        cleanText(row?.[2]),
+        cleanText(row?.[3]),
+      ].filter((cell) => cell !== undefined))
+    : [[
+        {
+          content:
+            "Additional Spares required for the Activity :",
+          styles: {
+            fontStyle: "bold",
+            fillColor: GREEN,
+            textColor: WHITE,
+          },
+        },
+        "",
+        "",
+        "",
+        "",
+      ]];
+
   autoTable(doc, {
     startY,
+    margin: { left: margin, right: margin },
     head: [[
-      "Spares Description",
-      "Specification",
-      "Quantity",
-      "Availability"
+      {
+        content:
+          "Additional Spares required for the Activity :",
+        styles: {
+          fillColor: GREEN,
+          textColor: WHITE,
+          fontStyle: "bold",
+        },
+      },
+      {
+        content: "Spares Description",
+        styles: {
+          fillColor: GREEN,
+          textColor: WHITE,
+          fontStyle: "bold",
+          halign: "center",
+        },
+      },
+      {
+        content: "Specifications",
+        styles: {
+          fillColor: GREEN,
+          textColor: WHITE,
+          fontStyle: "bold",
+          halign: "center",
+        },
+      },
+      {
+        content: "Quantity",
+        styles: {
+          fillColor: GREEN,
+          textColor: WHITE,
+          fontStyle: "bold",
+          halign: "center",
+        },
+      },
+      {
+        content:
+          "Availability Ensured at site (Yes/No)",
+        styles: {
+          fillColor: GREEN,
+          textColor: WHITE,
+          fontStyle: "bold",
+          halign: "center",
+        },
+      },
     ]],
-    body: mop.spares,
-    styles: { fontSize: 8 },
-    theme: "grid"
+    body: sparesBody,
+    theme: "grid",
+    styles: tableStyles,
+    columnStyles: {
+      0: { cellWidth: 56 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 54 },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 55 },
+    },
+    showHead: "firstPage",
   });
 
-  startY = doc.lastAutoTable.finalY + 3;
+  startY = getFinalY();
 
   // ================= APPROVAL =================
   autoTable(doc, {
     startY,
-    body: [
-
-      ["Created By", mop.approval.createdBy],
-
-      ["Reviewer", mop.approval.reviewer],
-
-      ["Approver", mop.approval.approver],
-
-      ["CR Number", mop.approval.crNumber]
-
-    ],
-    styles: { fontSize: 8 },
-    theme: "grid"
+    margin: { left: margin, right: margin },
+    body: [[
+      {
+        content:
+          `Created By :\n` +
+          cleanText(mop.approval?.createdBy),
+      },
+      {
+        content:
+          `Reviewer :\n` +
+          cleanText(mop.approval?.reviewer),
+      },
+      {
+        content:
+          `Approver :\n` +
+          cleanText(mop.approval?.approver),
+      },
+      {
+        content:
+          `CR Number :\n` +
+          cleanText(mop.approval?.crNumber),
+        colSpan: 2,
+      },
+    ]],
+    theme: "grid",
+    styles: {
+      ...tableStyles,
+      fontStyle: "bold",
+      minCellHeight: 14,
+    },
+    columnStyles: {
+      0: { cellWidth: 56 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 54 },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 55 },
+    },
   });
 
-  doc.save(`${mop.header.title}.pdf`);
+  // ================= PAGE NUMBERS =================
+  const totalPages = doc.getNumberOfPages();
 
+  for (let page = 1; page <= totalPages; page++) {
+    doc.setPage(page);
+    doc.setFontSize(7);
+    doc.setTextColor(80);
+
+    doc.text(
+      `Page ${page} of ${totalPages}`,
+      pageWidth - margin,
+      doc.internal.pageSize.getHeight() - 4,
+      { align: "right" }
+    );
+  }
+
+  const safeTitle = cleanText(
+    mop.header?.title || "MOP"
+  )
+    .replace(/[\\/:*?"<>|]/g, "_")
+    .trim();
+
+  doc.save(`${safeTitle || "MOP"}.pdf`);
 };
-
 // For Excel generation, we will use the xlsx-js-style library to create a styled workbook based on the MOP data structure. The code will create a new workbook, add a worksheet, and populate it with the MOP data while applying styles for better readability.
 export const generateMopExcel = (mop) => {
   const wb = XLSX.utils.book_new();

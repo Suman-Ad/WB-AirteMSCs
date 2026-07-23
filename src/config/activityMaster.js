@@ -535,7 +535,7 @@ export const ACTIVITY_MASTER = {
       activityTime: "Day"
     },
     {
-      activityDescription: "SRC/Comfort AC Preventive maintenance (In House)",
+      activityDescription: "SRC/Comfort AC Preventive maintenance (In-House)",
       performBy: "In-House",
       activityCategory: "Major",
       activityCode: "BLUE",
@@ -693,7 +693,7 @@ export const ACTIVITY_MASTER = {
       activityTime: "Day"
     },
     {
-      activityDescription: "Fault / Alarm / Break Down - HT Panel",
+      activityDescription: "Fault / Alarm / Break Down - LT Panel",
       performBy: "OEM",
       activityCategory: "Critical",
       activityCode: "AMBER",
@@ -709,7 +709,7 @@ export const ACTIVITY_MASTER = {
     }
   ],
 
-  "Solar system": [
+  "Solar System": [
     {
       activityDescription: "Solar system replacement/upgradation",
       performBy: "OEM",
@@ -1192,8 +1192,5 @@ export const ACTIVITY_MASTER = {
       information: "",
       activityTime: "Day"
     },
-    {
-      activityDescription: "Others",
-    }
   ]
 };
