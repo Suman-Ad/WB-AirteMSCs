@@ -225,6 +225,8 @@ export default function DutyTrackerPage({ currentUser }) {
     Sun: { M: [], E: [], N: [], G: [], WO: [] },
   });
 
+  const [isRosterView, setIsRosterView] = useState(false);
+
   useEffect(() => {
     const start = startOfMonth(selectedMonth);
     const end = endOfMonth(selectedMonth);
@@ -502,196 +504,211 @@ export default function DutyTrackerPage({ currentUser }) {
         </div>
       </div>
 
-      <div className="grid">
-        {/* Calendar (col-span 2) */}
-        <div className="calendar-panel">
-          <b>{selectedSite} - {siteIdMap[selectedSite]}</b>
-          <div className="calendar-days-header">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-              <div key={d} style={{
-                textAlign: 'center',
-                fontWeight: '500'
-              }}>
-                {d}
-              </div>
-            ))}
-          </div>
 
-          <div className="calendar-grid">
-            {calendarDays.map((day, index) => {
-              if (day === null) {
-                return (
-                  <div
-                    key={"blank-" + index}
-                    style={{ minHeight: "90px" }}
-                  />
-                );
-              }
+      <div className={`grid duty-tracker-layout ${isRosterView ? "calendar-collapsed" : ""}`}>
+        <div className={`calendar-panel ${isRosterView ? "is-collapsed" : ""}`}>
+          <button
+            type="button"
+            className="calendar-collapse-button"
+            onClick={() => setIsRosterView(prev => !prev)}
+            aria-expanded={!isRosterView}
+          >
+            {isRosterView ? "Expand Calendar ▶" : "Collapse Calendar ◀"}
+          </button>
 
-              const iso = formatISODate(day);
-              const roster = rosters[iso];
-              return (
-                <div className="calendar-day-cell" onClick={() => openDate(day)}>
-                  <div className="flex">
-                    <div style={{ fontSize: "0.875rem", fontWeight: "500" }}>
-                      {format(day, "d MMM")}
+          {!isRosterView && (
+            <div className="calendar-panel-content">
+              <div className="calendar-panel">
+
+                <b>{selectedSite} - {siteIdMap[selectedSite]}</b>
+                <div className="calendar-days-header">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                    <div key={d} style={{
+                      textAlign: 'center',
+                      fontWeight: '500'
+                    }}>
+                      {d}
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                      {iso === formatISODate(new Date()) ? "Today" : ""}
-                    </div>
-                  </div>
-
-
-
-                  <div className="shift-title">
-
-                    <div style={{ fontSize: "12px" }}> 🅶 Genarel:</div>
-                    <div
-                      style={{
-                        // display: "flex",
-                        gap: "0.25rem",
-                        marginTop: "0.25rem"
-                      }}
-                    >
-                      {(roster?.shifts?.G || []).map((uid) => {
-                        const u = siteUsers.find((su) => su.uid === uid);
-                        return (
-                          <div className="initial-badge">
-                            {u?.name ? initials(u.name) : uid.slice(0, 4)}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🌅 Morning:</div>
-                    {/* <div style={{ fontSize: "12px" }}>🌅 Morning:</div> */}
-                    <div
-                      style={{
-                        // display: "flex",
-                        gap: "0.25rem",
-                        marginTop: "0.25rem"
-                      }}
-                    >
-                      {(roster?.shifts?.M || []).map((uid) => {
-                        const u = siteUsers.find((su) => su.uid === uid);
-                        return (
-                          <div
-                            key={uid}
-                            style={{
-                              paddingLeft: "0.25rem",
-                              paddingRight: "0.25rem",
-                              paddingTop: "0.125rem",
-                              paddingBottom: "0.125rem",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "0.375rem",
-                              fontSize: "0.75rem"
-                            }}
-                          >
-                            {u?.name ? initials(u.name) : uid.slice(0, 4)}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🌇 Evening:</div>
-                    <div
-                      style={{
-                        // display: "flex",
-                        gap: "0.25rem",
-                        marginTop: "0.25rem"
-                      }}
-                    >
-                      {(roster?.shifts?.E || []).map((uid) => {
-                        const u = siteUsers.find((su) => su.uid === uid);
-                        return (
-                          <div
-                            key={uid}
-                            style={{
-                              paddingLeft: "0.25rem",
-                              paddingRight: "0.25rem",
-                              paddingTop: "0.125rem",
-                              paddingBottom: "0.125rem",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "0.375rem",
-                              fontSize: "0.75rem"
-                            }}
-                          >
-                            {u?.name ? initials(u.name) : uid.slice(0, 4)}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🌙 Night:</div>
-                    <div
-                      style={{
-                        // display: "flex",
-                        gap: "0.25rem",
-                        marginTop: "0.25rem"
-                      }}
-                    >
-                      {(roster?.shifts?.N || []).map((uid) => {
-                        const u = siteUsers.find((su) => su.uid === uid);
-                        return (
-                          <div
-                            key={uid}
-                            style={{
-                              paddingLeft: "0.25rem",
-                              paddingRight: "0.25rem",
-                              paddingTop: "0.125rem",
-                              paddingBottom: "0.125rem",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "0.375rem",
-                              fontSize: "0.75rem"
-                            }}
-                          >
-                            {u?.name ? initials(u.name) : uid.slice(0, 4)}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🅾 Weekly OFF:</div>
-                    <div
-                      style={{
-                        // display: "flex",
-                        gap: "0.25rem",
-                        marginTop: "0.25rem"
-                      }}
-                    >
-                      {(roster?.shifts?.WO || []).map((uid) => {
-                        const u = siteUsers.find((su) => su.uid === uid);
-                        return (
-                          <div
-                            key={uid}
-                            style={{
-                              paddingLeft: "0.25rem",
-                              paddingRight: "0.25rem",
-                              paddingTop: "0.125rem",
-                              paddingBottom: "0.125rem",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "0.375rem",
-                              fontSize: "0.75rem"
-                            }}
-                          >
-                            {u?.name ? initials(u.name) : uid.slice(0, 4)}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
-          {(isAdmin || currentUser?.designation === "Vertiv Site Infra Engineer") && (
-            <div>
-              <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-approve")}>1) Check <strong>"CL"</strong> Status</p>
-              <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-calendar")}>2) CL Calendar</p>
-              <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/my-leave")}>3) My Leave</p>
-              <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/monthly-cl-summary")}>4) Monthly CL Summary</p>
+
+                <div className="calendar-grid">
+                  {calendarDays.map((day, index) => {
+                    if (day === null) {
+                      return (
+                        <div
+                          key={"blank-" + index}
+                          style={{ minHeight: "90px" }}
+                        />
+                      );
+                    }
+
+                    const iso = formatISODate(day);
+                    const roster = rosters[iso];
+                    return (
+                      <div className="calendar-day-cell" onClick={() => openDate(day)}>
+                        <div className="flex">
+                          <div style={{ fontSize: "0.875rem", fontWeight: "500" }}>
+                            {format(day, "d MMM")}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+                            {iso === formatISODate(new Date()) ? "Today" : ""}
+                          </div>
+                        </div>
+
+
+
+                        <div className="shift-title">
+
+                          <div style={{ fontSize: "12px" }}> 🅶 Genarel:</div>
+                          <div
+                            style={{
+                              // display: "flex",
+                              gap: "0.25rem",
+                              marginTop: "0.25rem"
+                            }}
+                          >
+                            {(roster?.shifts?.G || []).map((uid) => {
+                              const u = siteUsers.find((su) => su.uid === uid);
+                              return (
+                                <div className="initial-badge">
+                                  {u?.name ? initials(u.name) : uid.slice(0, 4)}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🌅 Morning:</div>
+                          {/* <div style={{ fontSize: "12px" }}>🌅 Morning:</div> */}
+                          <div
+                            style={{
+                              // display: "flex",
+                              gap: "0.25rem",
+                              marginTop: "0.25rem"
+                            }}
+                          >
+                            {(roster?.shifts?.M || []).map((uid) => {
+                              const u = siteUsers.find((su) => su.uid === uid);
+                              return (
+                                <div
+                                  key={uid}
+                                  style={{
+                                    paddingLeft: "0.25rem",
+                                    paddingRight: "0.25rem",
+                                    paddingTop: "0.125rem",
+                                    paddingBottom: "0.125rem",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "0.375rem",
+                                    fontSize: "0.75rem"
+                                  }}
+                                >
+                                  {u?.name ? initials(u.name) : uid.slice(0, 4)}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🌇 Evening:</div>
+                          <div
+                            style={{
+                              // display: "flex",
+                              gap: "0.25rem",
+                              marginTop: "0.25rem"
+                            }}
+                          >
+                            {(roster?.shifts?.E || []).map((uid) => {
+                              const u = siteUsers.find((su) => su.uid === uid);
+                              return (
+                                <div
+                                  key={uid}
+                                  style={{
+                                    paddingLeft: "0.25rem",
+                                    paddingRight: "0.25rem",
+                                    paddingTop: "0.125rem",
+                                    paddingBottom: "0.125rem",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "0.375rem",
+                                    fontSize: "0.75rem"
+                                  }}
+                                >
+                                  {u?.name ? initials(u.name) : uid.slice(0, 4)}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🌙 Night:</div>
+                          <div
+                            style={{
+                              // display: "flex",
+                              gap: "0.25rem",
+                              marginTop: "0.25rem"
+                            }}
+                          >
+                            {(roster?.shifts?.N || []).map((uid) => {
+                              const u = siteUsers.find((su) => su.uid === uid);
+                              return (
+                                <div
+                                  key={uid}
+                                  style={{
+                                    paddingLeft: "0.25rem",
+                                    paddingRight: "0.25rem",
+                                    paddingTop: "0.125rem",
+                                    paddingBottom: "0.125rem",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "0.375rem",
+                                    fontSize: "0.75rem"
+                                  }}
+                                >
+                                  {u?.name ? initials(u.name) : uid.slice(0, 4)}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🅾 Weekly OFF:</div>
+                          <div
+                            style={{
+                              // display: "flex",
+                              gap: "0.25rem",
+                              marginTop: "0.25rem"
+                            }}
+                          >
+                            {(roster?.shifts?.WO || []).map((uid) => {
+                              const u = siteUsers.find((su) => su.uid === uid);
+                              return (
+                                <div
+                                  key={uid}
+                                  style={{
+                                    paddingLeft: "0.25rem",
+                                    paddingRight: "0.25rem",
+                                    paddingTop: "0.125rem",
+                                    paddingBottom: "0.125rem",
+                                    border: "1px solid #e5e7eb",
+                                    borderRadius: "0.375rem",
+                                    fontSize: "0.75rem"
+                                  }}
+                                >
+                                  {u?.name ? initials(u.name) : uid.slice(0, 4)}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {(isAdmin || currentUser?.designation === "Vertiv Site Infra Engineer") && (
+                  <div>
+                    <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-approve")}>1) Check <strong>"CL"</strong> Status</p>
+                    <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-calendar")}>2) CL Calendar</p>
+                    <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/my-leave")}>3) My Leave</p>
+                    <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/monthly-cl-summary")}>4) Monthly CL Summary</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
-
         {/* Right side panel: date editor */}
         {(isAdmin || currentUser?.designation === "Vertiv Site Infra Engineer") && (
           <motion.div

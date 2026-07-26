@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import AppContent from "./AppContent";
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
 import { doc, onSnapshot } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 function App() {
   const [updateInfo, setUpdateInfo] = useState(null);
@@ -24,32 +25,75 @@ function App() {
     return () => clearInterval(timer);
   }, [updateInfo]);
 
+  // useEffect(() => {
+  //   const ref = doc(db, "app_meta", "version");
+
+  //   const unsub = onSnapshot(ref, (snap) => {
+  //     if (!snap.exists()) return;
+
+  //     const dbVersion = snap.data().version;
+  //     const lastHandledVersion = localStorage.getItem("app_version");
+
+  //     // ✅ First time → just store version (no alert)
+  //     if (!lastHandledVersion) {
+  //       localStorage.setItem("app_version", dbVersion);
+  //       return;
+  //     }
+
+  //     // ✅ Only trigger if version changed
+  //     if (lastHandledVersion !== dbVersion) {
+  //       console.log("🔥 New version detected:", dbVersion);
+
+  //       localStorage.setItem("app_version", dbVersion);
+
+  //       setUpdateInfo(dbVersion); // show UI
+  //     }
+  //   });
+
+  //   return () => unsub();
+  // }, []);
+
   useEffect(() => {
-    const ref = doc(db, "app_meta", "version");
+    let unsubscribeVersion = null;
 
-    const unsub = onSnapshot(ref, (snap) => {
-      if (!snap.exists()) return;
-
-      const dbVersion = snap.data().version;
-      const lastHandledVersion = localStorage.getItem("app_version");
-
-      // ✅ First time → just store version (no alert)
-      if (!lastHandledVersion) {
-        localStorage.setItem("app_version", dbVersion);
-        return;
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (unsubscribeVersion) {
+        unsubscribeVersion();
+        unsubscribeVersion = null;
       }
 
-      // ✅ Only trigger if version changed
-      if (lastHandledVersion !== dbVersion) {
-        console.log("🔥 New version detected:", dbVersion);
+      if (!user) return;
 
-        localStorage.setItem("app_version", dbVersion);
+      const ref = doc(db, "app_meta", "version");
 
-        setUpdateInfo(dbVersion); // show UI
-      }
+      unsubscribeVersion = onSnapshot(
+        ref,
+        (snap) => {
+          if (!snap.exists()) return;
+
+          const dbVersion = snap.data().version;
+          const lastVersion = localStorage.getItem("app_version");
+
+          if (!lastVersion) {
+            localStorage.setItem("app_version", dbVersion);
+            return;
+          }
+
+          if (lastVersion !== dbVersion) {
+            localStorage.setItem("app_version", dbVersion);
+            setUpdateInfo(dbVersion);
+          }
+        },
+        (error) => {
+          console.warn("Version check unavailable:", error.message);
+        }
+      );
     });
 
-    return () => unsub();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeVersion) unsubscribeVersion();
+    };
   }, []);
 
   return (

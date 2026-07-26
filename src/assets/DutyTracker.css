@@ -368,6 +368,58 @@ body {
     font-size: 0.75rem;
 }
 
+.duty-tracker-layout {
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  align-items: start;
+}
+
+.duty-tracker-layout.calendar-collapsed {
+  grid-template-columns: 64px minmax(300px, 1fr);
+}
+
+.calendar-panel.is-collapsed {
+  grid-column: 1;
+  padding: 8px;
+}
+
+.editor-panel {
+  grid-column: 2;
+  min-width: 0;
+  width: 100%;
+}
+
+.calendar-collapse-button {
+  border: 0;
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: #0f172a;
+  color: white;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.calendar-panel.is-collapsed .calendar-collapse-button {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+@media (max-width: 768px) {
+  .duty-tracker-layout,
+  .duty-tracker-layout.calendar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-panel,
+  .calendar-panel.is-collapsed,
+  .editor-panel {
+    grid-column: 1;
+  }
+
+  .calendar-panel.is-collapsed .calendar-collapse-button {
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+}
 
 /* ===============================
    MOBILE RESPONSIVE — DutyTracker

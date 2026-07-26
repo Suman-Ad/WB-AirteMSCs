@@ -307,10 +307,10 @@ export default function MyDutySchedule({ currentUser }) {
       </div>
 
       {weekdayTemplate && (
-        <div className="mds-weekly-template">
+        <div className="mds-weekly-template" style={{ overflowX:"auto" }}>
           <h2 style={{ color: "#092353" }}>📅 Weekly Duty Template</h2>
 
-          <table className="mds-weekly-table">
+          <table className="mds-weekly-table" >
             <thead>
               <tr>
                 <th>Day</th>
