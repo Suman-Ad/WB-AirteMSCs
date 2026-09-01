@@ -1151,7 +1151,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                             borderRadius: "6px",
                                             fontSize: "12px",
                                             fontWeight: "600",
-                                            color: "#fff",
+                                            // color: "#fff",
                                             background:
                                                 powerSource === "DG"
                                                     ? "#dc2626"

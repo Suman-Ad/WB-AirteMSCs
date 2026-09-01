@@ -753,21 +753,24 @@ const Layout = ({ userData, children }) => {
 
 
   return (
-    <div className="layout">
+    <div className="layout" data-power-source={powerSource || "unknown"}>
       {/* Sidebar */}
+      {!collapsed && isMobile && (
+        <button type="button" className="sidebar-scrim" aria-label="Close navigation" onClick={() => setCollapsed(true)} />
+      )}
       <Sidebar userData={userData} collapsed={collapsed} setCollapsed={setCollapsed} powerSource={powerSource} />
       {/* Main Area */}
       <div className="main" >
         {/* Navbar */}
-        <div className="navbar" style={{ background: powerSource === "EB" ? "" : "#db1e1eff" }} >
+        <div className="navbar" data-power-source={powerSource || "unknown"}>
           <button
-            className="toggle-btn"
+            className="toggle-btn navbar-menu-button"
             onClick={() => setCollapsed(!collapsed)}
             title={collapsed ? "Expand Menu" : "Collapse Menu"}
           >
             {collapsed ? "☰" : "◀"}
           </button>
-          <div style={{ flex: "1", textAlign: "center" }}>
+          <div className="navbar-content">
             <header className="main-header">
               <div className="header-top">
                 {isLargeScreen ? (

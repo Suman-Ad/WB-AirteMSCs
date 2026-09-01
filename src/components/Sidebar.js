@@ -1,14 +1,40 @@
 // src/components/Sidebar.js
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink as Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import LiveClockWeather from "./LiveClockWeather";
 
 const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
+  const [themePreference, setThemePreference] = useState(
+    () => localStorage.getItem("appTheme") || "system"
+  );
+  const [systemDark, setSystemDark] = useState(
+    () => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false
+  );
   const role = userData?.role;
   const site = userData?.site;
   const navigate = useNavigate();
   const isMobile = window.innerWidth <= 568;
+
+  const resolvedTheme =
+    themePreference === "system" ? (systemDark ? "dark" : "light") : themePreference;
+
+  useEffect(() => {
+    localStorage.setItem("appTheme", themePreference);
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.style.colorScheme = resolvedTheme;
+  }, [themePreference, resolvedTheme]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!mediaQuery) return undefined;
+
+    const handleSystemThemeChange = (event) => setSystemDark(event.matches);
+    setSystemDark(mediaQuery.matches);
+    mediaQuery.addEventListener?.("change", handleSystemThemeChange);
+
+    return () => mediaQuery.removeEventListener?.("change", handleSystemThemeChange);
+  }, []);
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -75,10 +101,10 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
   };
 
   return (
-    <div className={`sidebar ${collapsed ? "collapsed" : "expanded"}`} style={{ background: powerSource === "EB" ? "" : "#db1e1ef3" }}>
+    <aside className={`sidebar ${collapsed ? "collapsed" : "expanded"}`} data-power-source={powerSource || "unknown"}>
       {/* Sidebar Header with Collapse Toggle */}
       <div className="sidebar-header">
-        <div>
+        <div className="sidebar-brand-row">
           <button
             className="toggle-btn"
             onClick={() => setCollapsed(!collapsed)}
@@ -86,6 +112,15 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
           >
             {collapsed ? "☰" : "X"}
           </button>
+          {!collapsed && (
+            <div className="sidebar-brand">
+              <span className="sidebar-brand-mark">WB</span>
+              <span>
+                <strong>MSC Operations</strong>
+                <small>{site || "West Bengal"}</small>
+              </span>
+            </div>
+          )}
           {isMobile && (
             <p style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
               <LiveClockWeather isMobile={isMobile} />
@@ -175,7 +210,8 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
       </div>
 
       {/* Navigation Links */}
-      <nav>
+      <nav aria-label="Main navigation">
+        <span className="sidebar-nav-title">Workspace</span>
         {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
           <Link to="/daily-dg-log-editor" className="sidepanel-manage-btn" title={collapsed ? "DG Log Book" : ""} onClick={() => setCollapsed(true)}>☣️ <span className="label">Daily DG Log Book</span></Link>
         )}
@@ -264,7 +300,29 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
 
         {/* <Link to="/profile" className="sidepanel-manage-btn" title={collapsed ? "Profile":""}>👷 <span className="label">Profile</span></Link> */}
       </nav>
-    </div>
+      <div className="sidebar-theme-section">
+        <span className="sidebar-theme-title">Appearance</span>
+        <div className="sidebar-theme-picker" aria-label="Application color theme">
+          {[
+            { value: "light", label: "Light", icon: "☀" },
+            { value: "dark", label: "Dark", icon: "●" },
+            { value: "system", label: "System", icon: "◐" },
+          ].map(({ value, label, icon }) => (
+            <button
+              key={value}
+              type="button"
+              className={themePreference === value ? "active" : ""}
+              onClick={() => setThemePreference(value)}
+              aria-pressed={themePreference === value}
+              title={`${label} theme`}
+            >
+              <span aria-hidden="true">{icon}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </aside>
   );
 };
 

@@ -2995,7 +2995,7 @@ const DailyDGLog = ({ userData }) => {
 
       {/* 🔹 New Monthly Stats */}
       {(() => {
-        if (!logs.length) return null;
+        // if (!logs.length) return null;
 
         // calculate all fields
         const calculatedLogs = logs.map((e) => calculateFields(e, siteConfig));
@@ -3247,10 +3247,11 @@ const DailyDGLog = ({ userData }) => {
         const totalDGOnLoadHrs = totalDG1OnLoadHrs + totalDG2OnLoadHrs + totalDG3OnLoadHrs + totalDG4OnLoadHrs;
 
         return (
-          <div className="chart-container" >
+          <div>
 
-            <div className="status-header">
+            <div className="status-header current-status-panel" data-power-source={powerSource || "unknown"}>
               <span
+                className="current-status-live-badge"
                 style={{
                   marginLeft: "8px",
                   padding: "2px 10px",
@@ -3268,21 +3269,38 @@ const DailyDGLog = ({ userData }) => {
               >
                 Site Live On:- <strong>{powerSource || "N/A"}</strong> Source
               </span>
-              <h1 style={{ background: powerSource === "DG" ? "#d17272ff" : "#6ce9e35d", borderBottom: "3px solid #fff", borderTop: "3px solid #fff", borderRadius: "10px", color: "#746212ff" }}>
-                <span onClick={() => window.location.reload()} style={{ cursor: "pointer" }} title="Refresh">🔄</span>
-                Current Site Status
+              <h1 className="current-status-title">
+                <span>
+                  <small>Live monitoring</small>
+                  Current Site Status
+                </span>
+                <button type="button" onClick={() => window.location.reload()} className="current-status-refresh" title="Refresh current status" aria-label="Refresh current status">↻</button>
               </h1>
-              <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}><strong>⛽Present Stock – {totalFuelAvailable} ltrs. </strong></h1>
-              <h1 style={fuelHours < 18 ? { fontSize: "20px", color: "red", textAlign: "left" } : { fontSize: "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {fuelHours} Hrs.</strong></h1>
+              <div className="current-status-kpis">
+                <div className={`current-status-kpi ${fuelHours < 18 ? "critical" : "healthy"}`}>
+                  <span className="current-status-kpi-icon" aria-hidden="true">⛽</span>
+                  <span>
+                    <small>Present stock</small>
+                    <strong>{totalFuelAvailable} <em>litres</em></strong>
+                  </span>
+                </div>
+                <div className={`current-status-kpi ${fuelHours < 18 ? "critical" : "healthy"}`}>
+                  <span className="current-status-kpi-icon" aria-hidden="true">⏱</span>
+                  <span>
+                    <small>Estimated backup</small>
+                    <strong>{fuelHours} <em>hours</em></strong>
+                  </span>
+                </div>
+              </div>
 
               {/* ✅ Split Fuel Level Bar */}
-              <div style={{ display: "flex", alignItems: "center", marginTop: "6px", fontSize: "18px" }}>
-                🛢️
+              <div className="current-status-tank-overview">
+                <span className="current-status-tank-icon" aria-hidden="true">🛢️</span>
                 <div
                   className="fuel-bar-container"
                   style={{
                     display: "flex",
-                    width: `${(tankCapacity) * 100}%`,
+                    width: "100%",
                     height: "22px",
                     background: "#eee",
                     borderRadius: "4px",
@@ -3344,9 +3362,10 @@ const DailyDGLog = ({ userData }) => {
 
               </div>
 
-              <p style={{ fontSize: "10px", textAlign: "left", color: "#5c3c6ece" }}>Total Stock Capacity (Day Tank: {dayTankCapacity}L + External Tank: {externalTankCapacity}L) : <strong>{tankCapacity}Ltrs.</strong></p>
+              <p className="current-status-capacity">Total stock capacity: <strong>{tankCapacity} L</strong><span>Day tank {dayTankCapacity} L · External tank {externalTankCapacity} L</span></p>
 
               {/* 🔹 Individual DG Fuel Bars */}
+              <div className="current-status-dg-list">
               {Array.from({ length: siteConfig?.dgCount || 0 }).map((_, idx) => {
                 const dgNo = idx + 1;
                 const dgCNo = `DG-${dgNo}`
@@ -3376,7 +3395,7 @@ const DailyDGLog = ({ userData }) => {
                 const externalUsed = dgExternalUsed?.[dgCNo] || 0;  // CURRENT
 
                 return (
-                  <div key={dgNo} style={{ marginBottom: "4px", display: "flex" }}>
+                  <div key={dgNo} className="current-status-dg-row">
                     <div>
                       {/* 🔹 Fuel Bar */}
                       <div
@@ -3536,8 +3555,9 @@ const DailyDGLog = ({ userData }) => {
                   </div>
                 );
               })}
+              </div>
 
-              <div style={{ display: "flex", gap: "5px", marginTop: "10px", flexWrap: "wrap" }}>
+              <div className="current-status-daily-grid">
 
                 {/* 🔹 Today Consumption */}
                 <p style={cardStyle}>
@@ -3612,20 +3632,22 @@ const DailyDGLog = ({ userData }) => {
               </div>
             </div>
 
+            {/* Summary Start */}
+            <section className="dg-summary-panel">
             <h1
-              style={{ borderTop: "3px solid #eee", color: "#fefeffff", textAlign: "center" }}
-              className="noticeboard-header"
+              className="dg-summary-header"
             >
-              <p>
-                <strong style={{ fontSize: "30px" }}>📊Summery - </strong>
-                <span style={{ fontSize: "10px" }}>Upto </span>
-                {allValues.length} {formatShortMonthName(selectedMonth)}'
-                <span style={{ fontSize: "10px" }}>{formatYear(selectedMonth)}</span>
-              </p>
+              <span className="dg-summary-icon" aria-hidden="true">📊</span>
+              <span>
+                <strong>Monthly Summary</strong>
+                <small>
+                  Up to day {allValues.length} · {formatShortMonthName(selectedMonth)} {formatYear(selectedMonth)}
+                </small>
+              </span>
             </h1>
 
             {/* 🔹 Monthly Averages */}
-            <div style={{ display: "flex", gap: "5px", marginTop: "10px", flexWrap: "wrap" }}>
+            <div className="dg-summary-kpis">
               {/* 🔹 Average PUE */}
               <p className={monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "20px" }}>
                 Average PUE – <strong>{monthlyAvgPUE}</strong>
@@ -3637,7 +3659,7 @@ const DailyDGLog = ({ userData }) => {
               </p>
             </div>
 
-            <div style={{ display: "flex", gap: "5px", marginTop: "10px", flexWrap: "wrap" }}>
+            <div className="dg-summary-dg-kpis">
 
               {/* 🔹 DG-wise Average SEGR */}
               {monthlyDGSEGR.map((val, i) => (
@@ -3651,17 +3673,17 @@ const DailyDGLog = ({ userData }) => {
               ))}
             </div>
 
-            <p style={{ color: "#302f74ff" }}>
+            <p className="dg-summary-total-cost">
               <strong>
                 [Total Cost (EB + DG) – ₹{fmt((totalEBKwh * EBBill.EBRate) + (totalFuel * fuelRate))}]
               </strong>
             </p>
 
-            <p style={{ borderTop: "3px solid #eee" }}>
+            <p className="dg-summary-running-load">
               ⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong>
             </p>
 
-            <div style={{ display: "flex", gap: "20px" }}>
+            <div className="dg-summary-load-grid">
               {/* 🔹 Load Averages */}
               <div>
                 <p><strong>📡 Avg IT Load – {monthlyAvgITLoad} kWh</strong></p>
@@ -3687,7 +3709,7 @@ const DailyDGLog = ({ userData }) => {
               </div>
             </div>
 
-            <div style={{ borderTop: "1px solid #eee", borderRadius: "10px", fontSize: "12px", display: "grid" }}>
+            <div className="dg-summary-detail-row">
               <strong style={{ whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}>⚡ Total EB KW Consumption – {fmt(totalEBKwh)} units x
                 <div
                   style={inputContainerStyle}
@@ -3708,7 +3730,7 @@ const DailyDGLog = ({ userData }) => {
               </strong>
             </div>
 
-            <div style={{ fontSize: "12px", display: "grid" }}>
+            <div className="dg-summary-billing">
               <strong style={{ whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}>
                 💡 EDCOM:
                 <div
@@ -3916,9 +3938,12 @@ const DailyDGLog = ({ userData }) => {
                 ) : null;
               })()
             } */}
+            </section>
           </div>
         );
       })()}
+      {/* Summery End */}
+
 
       {/* Manage Data */}
       <div className="noticeboard-header">
@@ -4289,7 +4314,7 @@ const DailyDGLog = ({ userData }) => {
                         ? "date"
                         : "name"
                   }
-                  tick={{ fill: "#aaa", fontSize: 11 }}
+                  // tick={{ fill: "#aaa", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                   height={50}

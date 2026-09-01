@@ -57,20 +57,6 @@
   color: red;
 }
 
-.upload-form {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.upload-form input,
-.upload-form select {
-  padding: 0.4rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
 .upload-btn {
   background-color: #4caf50;
   color: white;

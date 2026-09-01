@@ -51,6 +51,7 @@
   bottom: 20px;
   right: 20px;
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .modal-overlay.minimized {
@@ -58,6 +59,3 @@
   pointer-events: none;
 }
 
-.modal-container.minimized {
-  pointer-events: auto;
-}

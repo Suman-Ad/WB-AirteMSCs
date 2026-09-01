@@ -1,0 +1,324 @@
+/*
+ * Shared theme compatibility layer for components with asset-level CSS.
+ * Component styles keep ownership of layout; this file standardizes color,
+ * border, focus, and elevation behavior across Light and Dark themes.
+ */
+
+:root {
+  --theme-bg: var(--app-page-bg, #eaf2f8);
+  --theme-surface: var(--app-surface, #fdfefe);
+  --theme-surface-muted: var(--app-surface-muted, #edf6f8);
+  --theme-surface-raised: #ffffff;
+  --theme-text: var(--app-text, #17324d);
+  --theme-heading: #102f46;
+  --theme-muted: var(--app-text-muted, #587086);
+  --theme-border: var(--app-border, #c9dce8);
+  --theme-primary: #0f766e;
+  --theme-primary-hover: #115e59;
+  --theme-link: #0b6f83;
+  --theme-row-hover: #e3f2f4;
+  --theme-focus: rgba(13, 148, 136, 0.2);
+  --theme-shadow: 0 10px 28px rgba(23, 50, 77, 0.1);
+}
+
+:root[data-theme="dark"] {
+  --theme-surface-raised: #172033;
+  --theme-heading: #f1f5f9;
+  --theme-primary: #22d3ee;
+  --theme-primary-hover: #67e8f9;
+  --theme-link: #67e8f9;
+  --theme-row-hover: #1e293b;
+  --theme-focus: rgba(34, 211, 238, 0.18);
+  --theme-shadow: 0 12px 32px rgba(2, 6, 23, 0.34);
+}
+
+@media screen {
+  html {
+    color-scheme: light;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  body {
+    color: var(--theme-text);
+    background: var(--theme-bg);
+  }
+
+  /*
+   * Semantic elements inherit one app palette. `!important` is intentional:
+   * it replaces old JSX inline theme colors, while status/brand colors can opt
+   * out with data-theme-color="preserve".
+   */
+  :where(.main-content, .content, main) :where(
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6
+  ):not([data-theme-color="preserve"]) {
+    color: var(--theme-heading) !important;
+  }
+
+  :where(.main-content, .content, main) :where(
+    p,
+    label,
+    legend,
+    dt,
+    dd
+  ):not([data-theme-color="preserve"]) {
+    color: var(--theme-text) !important;
+  }
+
+  :where(.main-content, .content, main) a:not(
+    [class*="button"],
+    [class*="btn"],
+    [data-theme-color="preserve"]
+  ) {
+    color: var(--theme-link);
+  }
+
+  :where(
+    .admin-container,
+    .dashboard-container,
+    .daily-dashboard,
+    .incident-dashboard,
+    .incident-management,
+    .pm-calendar-container,
+    .pm-history-container,
+    .profile-container,
+    .register-container,
+    .site-page,
+    .site-config-container,
+    .thermal-container,
+    .vendor-escalation-container,
+    .duty-tracker-container,
+    .activity-container,
+    .ccms-container,
+    .sld-editor-container
+  ) {
+    color: var(--theme-text);
+    background-color: var(--theme-bg);
+  }
+
+  :where(
+    [class$="-card"],
+    [class*="-card "],
+    [class$="-panel"],
+    [class*="-panel "],
+    [class$="-section"],
+    [class*="-section "],
+    [class$="-box"],
+    [class*="-box "],
+    [class$="-content"],
+    [class*="-content "]
+  ) {
+    border-color: var(--theme-border);
+  }
+
+  :where(input, select, textarea) {
+    color: var(--theme-text);
+    background-color: var(--theme-surface);
+    border-color: var(--theme-border);
+    accent-color: var(--theme-primary);
+  }
+
+  :where(input, select, textarea)::placeholder {
+    color: var(--theme-muted);
+  }
+
+  :where(input, select, textarea):focus-visible {
+    outline: none;
+    border-color: var(--theme-primary);
+    box-shadow: 0 0 0 3px var(--theme-focus);
+  }
+
+  :where(button, a, input, select, textarea) {
+    transition:
+      color 160ms ease,
+      background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+
+  :where(table) {
+    color: var(--theme-text);
+    background-color: var(--theme-surface);
+    border-color: var(--theme-border);
+  }
+
+  :where(th, td) {
+    border-color: var(--theme-border);
+  }
+
+  :where(thead th) {
+    color: var(--theme-heading);
+    background-color: var(--theme-surface-muted);
+  }
+
+  :where(tbody td) {
+    color: var(--theme-text);
+    background-color: var(--theme-surface);
+  }
+
+  :where(tbody tr:hover td) {
+    background-color: var(--theme-row-hover);
+  }
+
+  /*
+   * Normalize the most common legacy inline neutral colors. This deliberately
+   * does not match red, amber, green, chart fills, diagrams, or status badges.
+   */
+  :where(.main-content, .content, main)
+    :where(div, section, article, form)
+    :is(
+      [style*="background: white"],
+      [style*="background: rgb(255, 255, 255)"],
+      [style*="background-color: white"],
+      [style*="background-color: rgb(255, 255, 255)"],
+      [style*="background: rgb(248, 249, 250)"],
+      [style*="background-color: rgb(248, 249, 250)"],
+      [style*="background: rgb(250, 250, 250)"],
+      [style*="background-color: rgb(250, 250, 250)"]
+    ):not([data-theme-color="preserve"]) {
+    background-color: var(--theme-surface) !important;
+  }
+
+  :where(.main-content, .content, main)
+    :where(table, thead, tbody, tr, th, td)
+    :is(
+      [style*="background: white"],
+      [style*="background: rgb(255, 255, 255)"],
+      [style*="background-color: white"],
+      [style*="background-color: rgb(255, 255, 255)"],
+      [style*="background: rgb(242, 242, 242)"],
+      [style*="background-color: rgb(242, 242, 242)"],
+      [style*="background: rgb(248, 249, 250)"],
+      [style*="background-color: rgb(248, 249, 250)"]
+    ):not([data-theme-color="preserve"]) {
+    color: var(--theme-text) !important;
+    background-color: var(--theme-surface) !important;
+  }
+
+  :where(.main-content, .content, main)
+    :where(div, span, small)
+    :is(
+      [style*="color: rgb(17, 24, 39)"],
+      [style*="color: rgb(31, 41, 55)"],
+      [style*="color: rgb(55, 65, 81)"],
+      [style*="color: rgb(102, 102, 102)"],
+      [style*="color: rgb(107, 114, 128)"],
+      [style*="color: rgb(119, 119, 119)"],
+      [style*="color: rgb(153, 153, 153)"]
+    ):not([data-theme-color="preserve"]) {
+    color: var(--theme-muted) !important;
+  }
+
+  :where(.modal-overlay, .modal-backdrop, .popup-overlay) {
+    backdrop-filter: blur(3px);
+  }
+
+  :root[data-theme="dark"] :where(
+    .admin-panel,
+    .admin-card,
+    .dashboard-card,
+    .dashboard-panel,
+    .incident-card,
+    .incident-panel,
+    .modal-container,
+    .modal-content,
+    .pm-card,
+    .profile-card,
+    .register-card,
+    .site-card,
+    .summary-card,
+    .thermal-card,
+    .vendor-card,
+    .duty-card,
+    .activity-card,
+    .form-card,
+    .table-container,
+    .upload-form
+  ) {
+    color: var(--theme-text);
+    background-color: var(--theme-surface);
+    border-color: var(--theme-border);
+    box-shadow: var(--theme-shadow);
+  }
+
+  :root[data-theme="dark"] :where(
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td
+  ) {
+    color: var(--theme-text);
+    border-color: var(--theme-border);
+  }
+
+  :root[data-theme="dark"] :where(th) {
+    color: var(--theme-heading) !important;
+    background-color: var(--theme-surface-muted) !important;
+  }
+
+  :root[data-theme="dark"] :where(td) {
+    color: var(--theme-text);
+    background-color: var(--theme-surface);
+  }
+
+  :root[data-theme="dark"] :where(tbody tr:hover td) {
+    background-color: var(--theme-row-hover);
+  }
+
+  :root[data-theme="dark"] :where(
+    input,
+    select,
+    textarea,
+    .search-input,
+    .filter-input
+  ) {
+    color: var(--theme-text) !important;
+    background-color: #0f172a !important;
+    border-color: #475569 !important;
+  }
+
+  :root[data-theme="dark"] :where(
+    .modal-container,
+    .modal-content,
+    .popup-modal,
+    .dropdown-menu,
+    .dropdown-content
+  ) {
+    color: var(--theme-text);
+    background-color: var(--theme-surface);
+    border-color: var(--theme-border);
+    box-shadow: var(--theme-shadow);
+  }
+
+  :root[data-theme="dark"] :where(
+    .empty-state,
+    .no-data,
+    .helper-text,
+    .subtitle,
+    .description,
+    small
+  ) {
+    color: var(--theme-muted);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

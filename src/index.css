@@ -1,3 +1,5 @@
+@import "./assets/ThemeCompatibility.css";
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -6,6 +8,80 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+:root {
+  --app-page-bg: #eaf2f8;
+  --app-surface: #fdfefe;
+  --app-surface-muted: #edf6f8;
+  --app-text: #17324d;
+  --app-text-muted: #587086;
+  --app-border: #c9dce8;
+}
+
+:root[data-theme="dark"] {
+  --app-page-bg: #0b1120;
+  --app-surface: #111827;
+  --app-surface-muted: #1e293b;
+  --app-text: #e5e7eb;
+  --app-text-muted: #94a3b8;
+  --app-border: #334155;
+}
+
+body {
+  color: var(--app-text);
+  background: var(--app-page-bg);
+  transition: color 180ms ease, background-color 180ms ease;
+}
+
+:root[data-theme="dark"] .layout,
+:root[data-theme="dark"] .main,
+:root[data-theme="dark"] .main-content,
+:root[data-theme="dark"] .content,
+:root[data-theme="dark"] .contentback {
+  color: var(--app-text);
+  background-color: var(--app-page-bg);
+}
+
+:root[data-theme="dark"] :is(
+  .logs-table,
+  .site-card,
+  .popup-modal,
+  .modal-content,
+  .dg-summary-panel,
+  table,
+  input,
+  select,
+  textarea
+) {
+  color: var(--app-text);
+  background-color: var(--app-surface);
+  border-color: var(--app-border);
+}
+
+:root[data-theme="dark"] :is(th, .logs-table th) {
+  color: #f8fafc;
+  background-color: #1e293b;
+  border-color: var(--app-border);
+}
+
+:root[data-theme="dark"] :is(td, .logs-table td) {
+  color: var(--app-text);
+  background-color: var(--app-surface);
+  border-color: var(--app-border);
+}
+
+:root[data-theme="dark"] :is(h1, h2, h3, h4, h5, h6, p, label) {
+  border-color: var(--app-border);
+}
+
+:root[data-theme="dark"] .dg-summary-panel {
+  --summary-ink: #e2e8f0;
+  --summary-border: #334155;
+  background:
+    radial-gradient(circle at 100% 0, rgba(14, 165, 233, 0.16), transparent 32%),
+    linear-gradient(145deg, #111827 0%, #0f172a 100%);
+}
+
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
