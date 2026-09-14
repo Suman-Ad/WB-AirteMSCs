@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../assets/CCMSCopy.css';
+import { printCCMSSection } from '../utils/printCCMSSection';
 import { db } from '../firebase';
 import { collection, query, getDocs, limit, where } from 'firebase/firestore';
 
@@ -51,7 +52,7 @@ const CCMSCopy = () => {
         };
 
         fetchTxnNumber();
-    }, [siteConfig.siteName, logData.Date]);
+    }, [siteConfig?.siteName, logData?.Date]);
 
 
     if (!logData) {
@@ -104,11 +105,12 @@ const CCMSCopy = () => {
         <div className="daily-log-container ccms-container">
             <div className="ccms-controls">
                 {/* <button onClick={() => navigate(-1)}>⬅️ Back</button> */}
-                <button onClick={() => window.print()}>🖨️ Print / Save as PDF</button>
+                <button onClick={() => printCCMSSection(document.getElementById('ccmsSheet'))}>🖨️ Print / Save as PDF</button>
             </div>
 
-            <div id="ccmsSheet" className="ccms-sheet">
-                <h2 className="ccms-header" style={{ fontSize: "20px", color:"black" }}>BILL FORWARDING SHEET</h2>
+            <div className="ccms-sheet">
+                <section id="ccmsSheet" aria-label="Bill forwarding sheet">
+                <h2 className="ccms-header" style={{ fontSize: "20px" }}>BILL FORWARDING SHEET</h2>
                 <p style={{ textAlign: "center", padding: "6px", fontSize: "13px" }}>EXPENSE OF (PLEASE TICK AS APPLICABLE)</p>
                 <p style={{ textAlign: "center", padding: "7px", fontSize: "13px" }}>FOR EXPENSE TO BE DEBITED TO OTHER CIRCLE/BUSINESS, PLEASE ATTACH A MAIL CONFIRMATION FROM YOUR FUNCTIONAL COUNTER PART ACCEPTING THE DEBIT TO AVOID INTER UNIT RECO ISSUE ON THE MONTH END.</p>
                 <p style={{ paddingTop: "20px", textAlign: "center" }}><strong>Please find attached bill with details.</strong></p>
@@ -184,6 +186,7 @@ const CCMSCopy = () => {
                     </div>
                 </div>
 
+                </section>
                 <h3 style={{ paddingTop: "20px" }}>Detailed Information:</h3>
                 <div className='ccms-table-container'>
                     <table className="ccms-table detailed-table" style={{ fontSize: "13px" }}>

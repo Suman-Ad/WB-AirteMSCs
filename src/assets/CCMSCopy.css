@@ -2,12 +2,14 @@
 .ccms-container {
   padding: 20px;
   font-family: Arial, sans-serif;
-  background-color: #f4f4f4;
+  background-color: var(--theme-bg, #f4f4f4);
+  color: var(--theme-text, #17324d);
 }
 .ccms-sheet {
-  background-color: white;
+  background-color: var(--theme-surface, #fff);
+  color: var(--theme-text, #17324d);
   padding: 25px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--theme-border, #ccc);
   max-width: 800px;
   margin: 0 auto;
 }
@@ -31,13 +33,13 @@
   /* min-width: 600px; */
 }
 .ccms-table th, .ccms-table td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--theme-border, #ddd);
   padding: 8px 12px;
   text-align: left;
   /* white-space: nowrap; */
 }
 .ccms-table th {
-  background-color: #f2f2f2;
+  background-color: var(--theme-surface-muted, #f2f2f2);
 }
 .detailed-table td:first-child {
     font-weight: bold;
@@ -55,7 +57,7 @@
 }
 .signature-space {
   height: 60px; /* Space for signature */
-  border-bottom: 1px solid #000;
+  border-bottom: 1px solid var(--theme-text, #000);
   margin-bottom: 10px;
 }
 .ccms-controls {
@@ -66,33 +68,63 @@
 }
 
 
-/* Ensure only CCMS sheet prints */
+/* Only the forwarding sheet belongs in the printed document. */
 @media print {
-  /* Hide everything by default */
-  body * {
-    visibility: hidden;
+  body:has(#ccmsSheet) *:not(:has(#ccmsSheet)):not(#ccmsSheet):not(#ccmsSheet *) {
+    display: none !important;
   }
 
-  /* Show only the CCMS sheet */
-  #ccmsSheet, 
+  body:has(#ccmsSheet),
+  body:has(#ccmsSheet) *:has(#ccmsSheet) {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  #ccmsSheet,
   #ccmsSheet * {
     visibility: visible !important;
-  }
-  
-  /* Ensure CCMS sheet takes full page */
-  .ccms-sheet {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-  }
-  .ccms-upload input[type="file"] {
-    display: none !important;
-  }
-  .remove-btn {
-    display: none !important;
+    color: #000 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    border-color: #777 !important;
   }
 
+  #ccmsSheet {
+    width: 100%;
+    font-family: Arial, sans-serif;
+  }
+
+  #ccmsSheet .ccms-table-container {
+    overflow: visible !important;
+  }
+
+  #ccmsSheet .ccms-table {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  #ccmsSheet :is(th, td) {
+    overflow-wrap: anywhere;
+    padding: 6px 8px;
+  }
+
+  #ccmsSheet tr,
+  #ccmsSheet .ccms-signatures {
+    break-inside: avoid;
+  }
 }
 
 
@@ -129,7 +161,7 @@
 .bill-img {
   max-width: 250px;
   max-height: 300px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--theme-border, #ccc);
   padding: 4px;
   background: #fff;
 }

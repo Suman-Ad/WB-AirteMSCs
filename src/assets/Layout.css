@@ -921,10 +921,12 @@ body {
   padding: 7px 12px;
   align-items: flex-start;
   gap: 0.75rem;
-  background: linear-gradient(110deg, rgba(253, 254, 254, 0.96), rgba(223, 242, 244, 0.94)) !important;
+  background: linear-gradient(110deg, #fdfefe, #dff2f4) !important;
   border-bottom: 1px solid rgba(83, 146, 167, 0.3);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(14px);
+  /* Keep the sticky header crisp when the power source changes. */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .navbar[data-power-source="DG"] {
@@ -988,7 +990,7 @@ body {
 }
 
 :root[data-theme="dark"] .navbar {
-  background: linear-gradient(110deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94)) !important;
+  background: linear-gradient(110deg, #0f172a, #111827) !important;
   border-bottom-color: #334155;
 }
 

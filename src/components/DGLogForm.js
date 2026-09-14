@@ -1,7 +1,7 @@
 // src/components/DGLogForm.js
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { collection, doc, setDoc, serverTimestamp, getDocs, query, orderBy, limit, where, getDoc, addDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, setDoc, serverTimestamp, getDocs, query, orderBy, limit, where, getDoc, addDoc, updateDoc, documentId } from "firebase/firestore";
 import { oemDieselCphData } from "../config/oemDieselCphData";
 import { useNavigate, useLocation } from "react-router-dom";
 import PizZip from "pizzip";
@@ -742,82 +742,79 @@ const DGLogForm = ({ userData }) => {
 
 
     useEffect(() => {
-        const fetchPrevHrMeter = async () => {
-            if (isEditMode) return; // 🛑 STOP auto-fetch during edit
+        const fetchPrevMeterReadings = async () => {
+            if (isEditMode || !dgNumber || !form.date || !userData?.site) return;
 
             try {
-                if (!dgNumber) return;
+                const getMonthKey = (date) =>
+                    date.toLocaleString("en-US", { month: "short" }) + "-" + date.getFullYear();
 
-                const today = getTodayDate();
-                const dateObj = new Date(today);
+                const findLatestDGRun = async (monthKey, date) => {
+                    const runsRef = collection(
+                        db,
+                        "dgLogs",
+                        userData.site,
+                        monthKey,
+                        date,
+                        "runs"
+                    );
+                    const snapshot = await getDocs(query(runsRef, orderBy("createdAt", "desc")));
+                    const matchingDoc = snapshot.docs.find(
+                        (runDoc) => runDoc.data().dgNumber === dgNumber
+                    );
+                    return matchingDoc?.data() || null;
+                };
 
-                // Month key like "Sep-2025"
-                const monthKey =
-                    dateObj.toLocaleString("en-US", { month: "short" }) +
-                    "-" +
-                    dateObj.getFullYear();
+                const selectedDate = form.date;
+                const selectedDateObj = new Date(`${selectedDate}T00:00:00`);
+                const selectedMonthKey = getMonthKey(selectedDateObj);
 
-                // Path to today's runs
-                const runsRef = collection(
-                    db,
-                    "dgLogs",
-                    userData.site,
-                    monthKey,
-                    today,
-                    "runs"
-                );
+                // Prefer the latest run for this DG already saved on the selected date.
+                let found = await findLatestDGRun(selectedMonthKey, selectedDate);
 
-                // 🔹 Get last few runs today
-                const q = query(runsRef, orderBy("createdAt", "desc"), limit(5));
-                const snap = await getDocs(q);
+                // Otherwise search prior logged dates, including the previous month.
+                if (!found) {
+                    for (let monthOffset = 0; monthOffset <= 1 && !found; monthOffset += 1) {
+                        const searchMonth = new Date(
+                            selectedDateObj.getFullYear(),
+                            selectedDateObj.getMonth() - monthOffset,
+                            1
+                        );
+                        const monthKey = getMonthKey(searchMonth);
+                        const dateDocsRef = collection(db, "dgLogs", userData.site, monthKey);
+                        const dateQuery = monthOffset === 0
+                            ? query(
+                                dateDocsRef,
+                                where(documentId(), "<", selectedDate),
+                                orderBy(documentId(), "desc"),
+                                limit(31)
+                            )
+                            : query(dateDocsRef, orderBy(documentId(), "desc"), limit(31));
+                        const dateSnapshot = await getDocs(dateQuery);
 
-                let found = null;
-                snap.forEach((doc) => {
-                    const data = doc.data();
-                    if (data.dgNumber === dgNumber) {
-                        found = data;
+                        for (const dateDoc of dateSnapshot.docs) {
+                            found = await findLatestDGRun(monthKey, dateDoc.id);
+                            if (found) break;
+                        }
                     }
-                });
-
-                if (found) {
-                    setForm((prev) => ({ ...prev, hrMeterStart: found.hrMeterEnd, kwhMeterStart: found.kwhMeterEnd }));
-                    return;
                 }
 
-                // fallback → yesterday’s closing
-                const yesterday = new Date(dateObj);
-                yesterday.setDate(yesterday.getDate() - 1);
-                const yDate = yesterday.toISOString().split("T")[0];
-                const yMonthKey =
-                    yesterday.toLocaleString("en-US", { month: "short" }) +
-                    "-" +
-                    yesterday.getFullYear();
+                setForm((prev) => {
+                    // Ignore an older async response after the user changes date or DG.
+                    if (prev.date !== selectedDate || prev.dgNumber !== dgNumber) return prev;
 
-                const yRunsRef = collection(
-                    db,
-                    "dgLogs",
-                    userData.site,
-                    yMonthKey,
-                    yDate,
-                    "runs"
-                );
-
-                const yq = query(yRunsRef, orderBy("createdAt", "desc"), limit(5));
-                const ysnap = await getDocs(yq);
-
-                let yfound = null;
-                ysnap.forEach((doc) => {
-                    const data = doc.data();
-                    if (data.dgNumber === dgNumber) {
-                        yfound = data;
-                    }
+                    const hrMeterStart = found?.hrMeterEnd ?? "";
+                    const kwhMeterStart = found?.kwhMeterEnd ?? "";
+                    return {
+                        ...prev,
+                        hrMeterStart,
+                        kwhMeterStart,
+                        kwhMeterEnd: prev.remarks === "No Load" ? kwhMeterStart : "",
+                        kWHReading: prev.remarks === "No Load" ? 0 : "",
+                    };
                 });
-
-                if (yfound) {
-                    setForm((prev) => ({ ...prev, hrMeterStart: yfound.hrMeterEnd, kwhMeterStart: yfound.kwhMeterEnd }));
-                }
             } catch (err) {
-                console.error("Error fetching prev hrMeterStart:", err);
+                console.error("Error fetching previous meter readings:", err);
             }
         };
 
@@ -829,11 +826,25 @@ const DGLogForm = ({ userData }) => {
             setDgNumber(state.logData.dgNumber);
         }
 
-        fetchPrevHrMeter();
+        fetchPrevMeterReadings();
         fetchConfig();
         // ✅ NEW
         fetchTodayFuelFilledDGCount(form.date);
-    }, [dgNumber, userData.site, state, isEditMode]);
+    }, [dgNumber, form.date, userData.site, state, isEditMode]);
+
+    useEffect(() => {
+        if (form.remarks !== "No Load") return;
+
+        setForm((prev) => {
+            const noLoadKwhEnd = prev.kwhMeterStart === "" ? "" : prev.kwhMeterStart;
+            if (prev.kwhMeterEnd === noLoadKwhEnd && prev.kWHReading === 0) return prev;
+            return {
+                ...prev,
+                kwhMeterEnd: noLoadKwhEnd,
+                kWHReading: 0,
+            };
+        });
+    }, [form.remarks, form.kwhMeterStart]);
 
 
     // 🔹 Auto-calculate SEGR whenever key values change, including fuelConsumption edits
@@ -998,14 +1009,14 @@ const DGLogForm = ({ userData }) => {
 
                 {/* Hr Meter/ kWH Meter */}
                 <div className="grid grid-cols-2 gap-2">
-                    {(form.remarks === "On Load") && (
+                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
                         <label className="form-label">Start Reading (kWH):
                             <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Opening kWh)</span>
                             <input
                                 type="number"
                                 step="0.1"
                                 name="kwhMeterStart"
-                                value={form.remarks === "Fuel Filling Only" ? form.kwhMeterStart : form.remarks === "No Load" ? form.kwhMeterStart : form.kwhMeterStart}
+                                value={form.kwhMeterStart}
                                 onChange={handleChange}
                                 placeholder="Start kwh reading"
                                 className="w-full p-2 border rounded"
@@ -1014,18 +1025,19 @@ const DGLogForm = ({ userData }) => {
                         </label>
                     )}
 
-                    {(form.remarks === "On Load") && (
+                    {(form.remarks === "On Load" || form.remarks === "No Load") && (
                         <label className="form-label">End Reading (kWH):
                             <span style={{ fontSize: "10px", color: "#0a4604ff" }}>(e.g.:- Closing kWh)</span>
                             <input
                                 type="number"
                                 step="0.1"
                                 name="kwhMeterEnd"
-                                value={form.remarks === "Fuel Filling Only" ? form.kwhMeterStart : form.remarks === "No Load" ? form.kwhMeterStart : form.kwhMeterEnd}
+                                value={form.kwhMeterEnd}
                                 onChange={handleChange}
                                 placeholder="End kwh reading"
                                 className="w-full p-2 border rounded"
                                 required
+                                disabled={form.remarks === "No Load"}
                             />
                         </label>
                     )}

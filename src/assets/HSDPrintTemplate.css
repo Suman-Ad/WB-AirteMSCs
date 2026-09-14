@@ -114,8 +114,29 @@
 
 /* ===== PRINT MODE ===== */
 @media print {
-  body * {
-    visibility: hidden !important;
+  /* Remove the underlying page from pagination, rather than just hiding it. */
+  body:has(#printArea) *:not(:has(#printArea)):not(#printArea):not(#printArea *) {
+    display: none !important;
+  }
+
+  /* Fixed modal ancestors repeat on each printed page. Use normal flow. */
+  body:has(#printArea),
+  body:has(#printArea) *:has(#printArea) {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
   #printArea,
@@ -124,9 +145,8 @@
   }
 
   #printArea {
-    position: absolute;
-    left: 0.5;
-    top: 0;
+    position: static;
+    height: auto;
     width: 100%;
     margin: 0;
     padding: 8mm;
@@ -141,11 +161,7 @@
     display: none !important;
   }
 
-  [style*="rgba(0,0,0,0.6)"] {
-    display: none !important;
-  }
-
-  table, .signatures {
+  #printArea table, #printArea .signatures {
     page-break-inside: avoid;
   }
 

@@ -190,6 +190,9 @@ const DailyDGLog = ({ userData }) => {
   const fmt = (val) => (val !== undefined && val !== null ? Number(val).toFixed(2) : "0.0");
   const fmt1 = (val) => (val !== undefined && val !== null ? Number(val).toFixed(1) : "0.0");
   const [selectedMonth, setSelectedMonth] = useState(getISTMonth());
+  const [dieselReportStartMonth, setDieselReportStartMonth] = useState(getISTMonth());
+  const [dieselReportEndMonth, setDieselReportEndMonth] = useState(getISTMonth());
+  const [isDownloadingDieselReport, setIsDownloadingDieselReport] = useState(false);
 
   const [selectedSite, setSelectedSite] = useState(userData?.site?.toUpperCase() || "");
 
@@ -1339,6 +1342,293 @@ const DailyDGLog = ({ userData }) => {
   };
 
   const monthlySummary = getMonthlyDieselDetailed(logs);
+
+  const getMonthsInRange = (startMonth, endMonth) => {
+    const [startYear, startMonthNumber] = startMonth.split("-").map(Number);
+    const [endYear, endMonthNumber] = endMonth.split("-").map(Number);
+    const months = [];
+
+    let year = startYear;
+    let month = startMonthNumber;
+    while (year < endYear || (year === endYear && month <= endMonthNumber)) {
+      months.push(`${year}-${String(month).padStart(2, "0")}`);
+      month += 1;
+      if (month === 13) {
+        month = 1;
+        year += 1;
+      }
+    }
+
+    return months;
+  };
+
+  const handleDownloadMonthlyDieselStock = async () => {
+    if (!siteName) {
+      alert("Please select a site");
+      return;
+    }
+
+    if (!dieselReportStartMonth || !dieselReportEndMonth) {
+      alert("Please select both start and end months");
+      return;
+    }
+
+    if (dieselReportStartMonth > dieselReportEndMonth) {
+      alert("Start month cannot be after end month");
+      return;
+    }
+
+    setIsDownloadingDieselReport(true);
+
+    try {
+      const monthKeys = getMonthsInRange(dieselReportStartMonth, dieselReportEndMonth);
+      const dgCount = siteConfig?.dgCount || 0;
+      const monthlyLogs = await Promise.all(
+        monthKeys.map(async (monthKey) => {
+          const snapshot = await getDocs(collection(db, "dailyDGLogs", siteName, monthKey));
+          return {
+            monthKey,
+            logs: snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })),
+          };
+        })
+      );
+
+      const exportData = [];
+
+      monthlyLogs.forEach(({ monthKey, logs: monthLogs }) => {
+        const [year, month] = monthKey.split("-").map(Number);
+        const lastDay = new Date(year, month, 0).getDate();
+        const openingDate = `${monthKey}-01`;
+        const closingDate = `${monthKey}-${String(lastDay).padStart(2, "0")}`;
+        const openingLog = monthLogs.find((entry) => entry.Date === openingDate);
+        const closingLog = monthLogs.find((entry) => entry.Date === closingDate);
+
+        const buildRow = (type, date, entry) => {
+          const row = {
+            Site: siteConfig?.siteName || siteName,
+            "Site ID": siteConfig?.siteId || siteId || "",
+            Month: monthKey,
+            Type: type,
+            Date: date,
+            Status: entry ? "Available" : "No log found",
+          };
+
+          let totalStock = 0;
+          for (let dg = 1; dg <= dgCount; dg += 1) {
+            const field = `DG-${dg} Fuel ${type}`;
+            const value = entry ? Number(entry[field] || 0) : "";
+            row[`DG-${dg} ${type} Fuel (Ltr)`] = value;
+            if (entry) totalStock += value;
+          }
+
+          let externalStock = 0;
+          for (let dg = 1; dg <= dgCount; dg += 1) {
+            externalStock += entry ? Number(entry[`DG-${dg} External Fuel Stock`] || 0) : 0;
+          }
+
+          row["External Stock (Ltr)"] = entry ? externalStock : "";
+          row["Total Stock (Ltr)"] = entry ? totalStock + externalStock : "";
+          return row;
+        };
+
+        exportData.push(buildRow("Opening", openingDate, openingLog));
+        exportData.push(buildRow("Closing", closingDate, closingLog));
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Monthly Diesel Stock");
+
+      const headers = Object.keys(exportData[0]);
+      headers.forEach((header, columnIndex) => {
+        const cellRef = XLSX.utils.encode_cell({ r: 0, c: columnIndex });
+        worksheet[cellRef].s = {
+          fill: { fgColor: { rgb: "1F4E78" } },
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          alignment: { horizontal: "center", vertical: "center", wrapText: true },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } },
+          },
+        };
+      });
+
+      const range = XLSX.utils.decode_range(worksheet["!ref"]);
+      for (let row = 1; row <= range.e.r; row += 1) {
+        for (let column = 0; column <= range.e.c; column += 1) {
+          const cellRef = XLSX.utils.encode_cell({ r: row, c: column });
+          if (!worksheet[cellRef]) continue;
+          worksheet[cellRef].s = {
+            ...(worksheet[cellRef].s || {}),
+            alignment: { horizontal: "center", vertical: "center" },
+            border: {
+              top: { style: "thin", color: { rgb: "B7B7B7" } },
+              bottom: { style: "thin", color: { rgb: "B7B7B7" } },
+              left: { style: "thin", color: { rgb: "B7B7B7" } },
+              right: { style: "thin", color: { rgb: "B7B7B7" } },
+            },
+          };
+        }
+      }
+
+      worksheet["!autofilter"] = { ref: worksheet["!ref"] };
+      worksheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+      worksheet["!cols"] = headers.map((header) => ({
+        wch: Math.max(12, Math.min(28, header.length + 2)),
+      }));
+
+      XLSX.writeFile(
+        workbook,
+        `Monthly_Diesel_Stock_${siteName}_${dieselReportStartMonth}_to_${dieselReportEndMonth}.xlsx`
+      );
+    } catch (error) {
+      console.error("Monthly diesel stock download failed:", error);
+      alert("Unable to download the monthly diesel stock report");
+    } finally {
+      setIsDownloadingDieselReport(false);
+    }
+  };
+
+  const getDieselReconciliationData = () => {
+    const startDate = new Date(`${selectedMonth}-01T00:00:00`);
+    const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+    const totalHours = endDate.getDate() * 24;
+    const calculatedLogs = logs.map((entry) => calculateFields(entry, siteConfig));
+    const period = `1-${startDate.toLocaleString("default", { month: "short" })}-${startDate.getFullYear()} to ${endDate.getDate()}-${endDate.toLocaleString("default", { month: "short" })}-${endDate.getFullYear()}`;
+
+    const rows = Array.from(
+      { length: siteConfig?.dgCount || 0 },
+      (_, index) => index + 1
+    ).map((dg) => {
+      const runHrs = calculatedLogs.reduce(
+        (total, entry) => total + Number(entry[`DG-${dg} Running Hrs`] || 0),
+        0
+      );
+      const fuelCon = calculatedLogs.reduce(
+        (total, entry) => total + Number(entry[`DG-${dg} Fuel Consumption`] || 0),
+        0
+      );
+      const onLoadRunHrs = calculatedLogs.reduce(
+        (total, entry) => total + Number(entry[`DG-${dg} ON Load Hour`] || 0),
+        0
+      );
+      const ebAvailHrs = totalHours - onLoadRunHrs;
+      const designCph = Number(siteConfig?.designCph?.[`DG-${dg}`] || 100);
+      const idealCon = runHrs * designCph;
+      const unrecoDiesel = fuelCon - idealCon;
+      const percentVar = fuelCon !== 0 ? (unrecoDiesel / fuelCon) * 100 : 0;
+      const expectedRunHrs = totalHours - ebAvailHrs;
+      const excessRunHr = Math.max(0, runHrs - expectedRunHrs);
+
+      return {
+        period,
+        dg: `#${dg}`,
+        type: `${siteConfig?.dgConfigs?.[`DG-${dg}`]?.capacityKva || ""}KVA`,
+        totalHrs: totalHours,
+        ebAvailHrs,
+        runHrs,
+        excessRunHr,
+        aCheckHr: 0,
+        unrecoRunHr: excessRunHr,
+        testingHr: excessRunHr,
+        designCph,
+        idealCon,
+        actualCon: fuelCon,
+        unrecoDiesel,
+        percentVar,
+      };
+    });
+
+    return { startDate, endDate, rows };
+  };
+
+  const handleDownloadDieselReconciliation = () => {
+    if (!logs.length) {
+      alert("No data available to download");
+      return;
+    }
+
+    const { rows } = getDieselReconciliationData();
+    if (!rows.length) {
+      alert("No DG configuration is available for this site");
+      return;
+    }
+
+    const exportData = rows.map((row) => ({
+      Period: row.period,
+      "DG#": row.dg,
+      "DG Type": row.type,
+      "Total Hr": row.totalHrs,
+      "EB Availability Hrs": row.ebAvailHrs,
+      "DG Run Hrs": row.runHrs,
+      "Excess DG Run Hr": row.excessRunHr,
+      "Max DG Run A-Check Hr": row.aCheckHr,
+      "Unreconciled DG Run Hr": row.unrecoRunHr,
+      "DG Run for Testing Hr": row.testingHr,
+      "Design CPH": row.designCph,
+      "Ideal Diesel Consumption (Ltr)": row.idealCon,
+      "Actual Diesel Consumption (Ltr)": row.actualCon,
+      "Unreconciled Diesel (Ltr)": row.unrecoDiesel,
+      "% Variation Diesel": row.percentVar / 100,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Diesel Reconciliation");
+
+    const headers = Object.keys(exportData[0]);
+    headers.forEach((header, columnIndex) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: columnIndex });
+      worksheet[cellRef].s = {
+        fill: { fgColor: { rgb: "7F6000" } },
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } },
+        },
+      };
+    });
+
+    const range = XLSX.utils.decode_range(worksheet["!ref"]);
+    for (let rowIndex = 1; rowIndex <= range.e.r; rowIndex += 1) {
+      for (let columnIndex = 0; columnIndex <= range.e.c; columnIndex += 1) {
+        const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex });
+        if (!worksheet[cellRef]) continue;
+        worksheet[cellRef].s = {
+          ...(worksheet[cellRef].s || {}),
+          alignment: { horizontal: "center", vertical: "center" },
+          border: {
+            top: { style: "thin", color: { rgb: "B7B7B7" } },
+            bottom: { style: "thin", color: { rgb: "B7B7B7" } },
+            left: { style: "thin", color: { rgb: "B7B7B7" } },
+            right: { style: "thin", color: { rgb: "B7B7B7" } },
+          },
+        };
+      }
+    }
+
+    const percentageColumn = headers.indexOf("% Variation Diesel");
+    for (let rowIndex = 1; rowIndex <= range.e.r; rowIndex += 1) {
+      const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: percentageColumn });
+      if (worksheet[cellRef]) worksheet[cellRef].z = "0.0%";
+    }
+
+    worksheet["!autofilter"] = { ref: worksheet["!ref"] };
+    worksheet["!freeze"] = { xSplit: 0, ySplit: 1 };
+    worksheet["!cols"] = headers.map((header) => ({
+      wch: Math.max(12, Math.min(34, header.length + 2)),
+    }));
+
+    XLSX.writeFile(
+      workbook,
+      `Diesel_Reconciliation_${siteName}_${selectedMonth}.xlsx`
+    );
+  };
 
 
   // const peakMonth = yearlyData.reduce((max, m) =>
@@ -4588,6 +4878,39 @@ const DailyDGLog = ({ userData }) => {
       <div className="diesel-summary-card">
         <h2>⛽ Monthly Diesel Stock Report</h2>
 
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "end", gap: "10px", marginBottom: "12px" }}>
+          <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "12px" }}>
+            From month
+            <input
+              type="month"
+              value={dieselReportStartMonth}
+              max={dieselReportEndMonth}
+              onChange={(e) => setDieselReportStartMonth(e.target.value)}
+            />
+          </label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "12px" }}>
+            To month
+            <input
+              type="month"
+              value={dieselReportEndMonth}
+              min={dieselReportStartMonth}
+              onChange={(e) => setDieselReportEndMonth(e.target.value)}
+            />
+          </label>
+          <button
+            className="download-btn"
+            style={{ padding: "6px 10px" }}
+            onClick={handleDownloadMonthlyDieselStock}
+            disabled={isDownloadingDieselReport}
+          >
+            {isDownloadingDieselReport ? "Preparing Excel..." : "⬇️ Download Excel"}
+          </button>
+        </div>
+
+        <div style={{ marginBottom: "10px", color: "#666", fontSize: "12px" }}>
+          Note: For each month, the report uses the opening fuel recorded on the 1st day and the closing fuel recorded on the last calendar day for each DG.
+        </div>
+
         <table className="diesel-summary-table" border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%", fontSize: "12px", overflowX: "auto", display: "block", whiteSpace: "nowrap", borderRadius: "10px", scrollbarWidth: "thin" }}>
           <thead>
             <tr>
@@ -4631,64 +4954,20 @@ const DailyDGLog = ({ userData }) => {
       {/* 🔹 Monthly Diesel Reconciliation */}
       {(() => {
         if (!logs.length) return null;
-
-        const startDate = new Date(selectedMonth + "-01");
-        const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
-        const daysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
-        const totalHours = daysInMonth * 24;
-
-        const calculatedLogs = logs.map((e) => calculateFields(e, siteConfig));
-
-        const dgReco = Array.from(
-          { length: siteConfig?.dgCount || 0 },
-          (_, i) => i + 1
-        ).map((dg) => {
-          const runHrs = calculatedLogs.reduce(
-            (sum, cl) => sum + (cl[`DG-${dg} Running Hrs`] || 0),
-            0
-          );
-          const fuelCon = calculatedLogs.reduce(
-            (sum, cl) => sum + (cl[`DG-${dg} Fuel Consumption`] || 0),
-            0
-          );
-
-          const onLoadRunHrs = calculatedLogs.reduce(
-            (sum, cl) => sum + (cl[`DG-${dg} ON Load Hour`] || 0),
-            0
-          );
-
-          const ebAvailHrs = totalHours - onLoadRunHrs;
-          const designCph = siteConfig.designCph?.[`DG-${dg}`] || 100; // fallback
-          const idealCon = runHrs * designCph;
-          const unrecoDiesel = fuelCon - idealCon;
-          const percentVar =
-            idealCon > 0 ? ((unrecoDiesel / fuelCon) * 100).toFixed(1) + "%" : "0%";
-          const expectedRunHrs = totalHours - ebAvailHrs;
-          const excessRunHr = runHrs > expectedRunHrs
-            ? (runHrs - expectedRunHrs).toFixed(2)
-            : "0.00";
-
-          return {
-            dg: `#${dg}`,
-            type: `${siteConfig.dgConfigs?.[`DG-${dg}`]?.capacityKva}KVA`, // static for now
-            totalHrs: totalHours.toFixed(1),
-            ebAvailHrs: ebAvailHrs.toFixed(1),
-            runHrs: runHrs.toFixed(2),
-            excessRunHr,
-            aCheckHr: "0",
-            unrecoRunHr: (excessRunHr - 0).toFixed(2), // placeholder
-            testingHr: (excessRunHr - 0).toFixed(2),   // placeholder
-            designCph,
-            idealCon: idealCon.toFixed(2),
-            actualCon: fuelCon.toFixed(2),
-            unrecoDiesel: unrecoDiesel.toFixed(2),
-            percentVar,
-          };
-        });
+        const { rows: dgReco } = getDieselReconciliationData();
 
         return (
           <div style={{ marginTop: "30px" }}>
-            <h2>🛢️ Diesel Reconciliation Report</h2>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
+              <h2>🛢️ Diesel Reconciliation Report</h2>
+              <button
+                className="download-btn"
+                style={{ padding: "6px 10px" }}
+                onClick={handleDownloadDieselReconciliation}
+              >
+                ⬇️ Download Excel
+              </button>
+            </div>
             <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%", fontSize: "12px", overflowX: "auto", display: "block", maxWidth: "100%", whiteSpace: "nowrap", borderRadius: "10px", scrollbarWidth: "thin" }}>
               <thead>
                 <tr style={{ background: "#f0f0f0" }}>
@@ -4712,21 +4991,21 @@ const DailyDGLog = ({ userData }) => {
               <tbody>
                 {dgReco.map((row, idx) => (
                   <tr key={idx}>
-                    <td>{`1-${startDate.toLocaleString("default", { month: "short" })}-${startDate.getFullYear()} to ${endDate.getDate()}-${endDate.toLocaleString("default", { month: "short" })}-${endDate.getFullYear()}`}</td>
+                    <td>{row.period}</td>
                     <td>{row.dg}</td>
                     <td>{row.type}</td>
-                    <td>{row.totalHrs}</td>
-                    <td>{row.ebAvailHrs}</td>
-                    <td>{row.runHrs}</td>
-                    <td>{row.excessRunHr}</td>
-                    <td>{row.aCheckHr}</td>
-                    <td>{row.unrecoRunHr}</td>
-                    <td>{row.testingHr}</td>
+                    <td>{fmt1(row.totalHrs)}</td>
+                    <td>{fmt1(row.ebAvailHrs)}</td>
+                    <td>{fmt(row.runHrs)}</td>
+                    <td>{fmt(row.excessRunHr)}</td>
+                    <td>{fmt(row.aCheckHr)}</td>
+                    <td>{fmt(row.unrecoRunHr)}</td>
+                    <td>{fmt(row.testingHr)}</td>
                     <td>{row.designCph}</td>
-                    <td>{row.idealCon}</td>
-                    <td>{row.actualCon}</td>
-                    <td>{row.unrecoDiesel}</td>
-                    <td>{row.percentVar}</td>
+                    <td>{fmt(row.idealCon)}</td>
+                    <td>{fmt(row.actualCon)}</td>
+                    <td>{fmt(row.unrecoDiesel)}</td>
+                    <td>{`${row.percentVar.toFixed(1)}%`}</td>
                   </tr>
                 ))}
               </tbody>
