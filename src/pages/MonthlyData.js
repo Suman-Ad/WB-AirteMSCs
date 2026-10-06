@@ -390,10 +390,12 @@ export default function MonthlyData({ userData }) {
                 kwhPerLtr: Number(kwhPerLtr.toFixed(2)),
                 oemCph: oDCPH || 0,
                 gapXV: Number(gap.toFixed(2)),
-                cphStatus: cph > oDCPH ? "High" : "Low",
+                cphStatus: Number(gapMargin.toFixed(2)) > Number(gap.toFixed(2)) ? "High": (cph > oDCPH && Number(gapMargin.toFixed(2)) < Number(gap.toFixed(2))) ? "In-Line" : "Low",
+                // cphStatus: cph > oDCPH ? "High" : "Low",
                 oemCphWithMargin: oDCPH * 1.05 || 0,
                 gapXVWithMargin: Number(gapMargin.toFixed(2)),
-                rcaHighCph: cph > oDCPH ? "RCA Required" : "",
+                rcaHighCph: Number(gapMargin.toFixed(2)) > Number(gap.toFixed(2)) ? "RCA Required" : (cph > oDCPH && Number(gapMargin.toFixed(2)) < Number(gap.toFixed(2))) ? "Need Attention" : "",
+                // rcaHighCph: cph > oDCPH ? "RCA Required" : "",
                 remarks: "",
                 dgRunIncidentsOnLoad: summary?.[`${dgKey}_OnLoad`] || 0,
                 dgRunIncidentsNoLoad: summary?.[`${dgKey}_NoLoad`] || 0,
@@ -778,7 +780,7 @@ export default function MonthlyData({ userData }) {
 
                                     <td
                                         style={{
-                                            color: row.cphStatus === "High" ? "red" : "green",
+                                            color: row.cphStatus === "High" ? "red" : row.cphStatus === "In-Line" ? "Orange" : "green",
                                             fontWeight: "bold",
                                         }}
                                     >

@@ -1,5 +1,5 @@
 // src/pages/DailyDGLog.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   collection,
   doc,
@@ -247,6 +247,7 @@ const DailyDGLog = ({ userData }) => {
   const [entryUpdate, setEntryUpdate] = useState(false);
   const [totalkW, setTotalkW] = useState([]);
   const [fuelAlert, setFuelAlert] = useState(false);
+  const fuelRequisitionAlertRef = useRef("");
   const [dayLogs, setDayLogs] = useState();
   const [dayDG1FuelCon, setDayDG1FuelCon] = useState(0);
   const [dayDG2FuelCon, setDayDG2FuelCon] = useState(0);
@@ -1906,13 +1907,29 @@ const DailyDGLog = ({ userData }) => {
         (parseFloat(form["DG-3 Fuel Opening"]) || 0) +
         (parseFloat(form["DG-4 Fuel Opening"]) || 0);
       const currentFuel = availableFuel - dayFuelCon + dayFuelFill + dayExFuelFill;
-      const currentHrs = currentFuel / (totalOnLoadCon / totalOnLoadHrs)
-      setFuelAlert(currentHrs < (siteConfig?.fuelAlertThreshold || 48) && currentFuel > 0);
-      if (currentHrs < (siteConfig?.fuelAlertThreshold || 48) && currentFuel > 0) alert("Give Fuel Requisition");
+      const currentHrs = currentFuel / (totalOnLoadCon / totalOnLoadHrs);
+      const configuredThreshold = Number(siteConfig?.fuelAlertThreshold);
+      const fuelAlertThreshold = Number.isFinite(configuredThreshold) && configuredThreshold > 0
+        ? configuredThreshold
+        : 24;
+      const shouldShowFuelAlert =
+        Number.isFinite(currentHrs) &&
+        currentHrs <= fuelAlertThreshold &&
+        currentFuel > 0;
+
+      setFuelAlert(shouldShowFuelAlert);
+
+      const alertKey = `${siteName || ""}:${form.Date}:${fuelAlertThreshold}`;
+      if (shouldShowFuelAlert && fuelRequisitionAlertRef.current !== alertKey) {
+        alert("Give Fuel Requisition");
+        fuelRequisitionAlertRef.current = alertKey;
+      } else if (!shouldShowFuelAlert) {
+        fuelRequisitionAlertRef.current = "";
+      }
 
     }
 
-  }, [logs, form.Date, dayFuelCon, dayFuelFill, dayExFuelFill, yesterdayLog]);   // ✅ run also when Date changes
+  }, [logs, form.Date, dayFuelCon, dayFuelFill, dayExFuelFill, yesterdayLog, siteName, siteConfig?.fuelAlertThreshold]);   // ✅ run also when Date changes
 
   // fetch Yesterday EB & DG Units
   useEffect(() => {
@@ -3656,195 +3673,199 @@ const DailyDGLog = ({ userData }) => {
 
               {/* 🔹 Individual DG Fuel Bars */}
               <div className="current-status-dg-list">
-              {Array.from({ length: siteConfig?.dgCount || 0 }).map((_, idx) => {
-                const dgNo = idx + 1;
-                const dgCNo = `DG-${dgNo}`
+                {Array.from({ length: siteConfig?.dgCount || 0 }).map((_, idx) => {
+                  const dgNo = idx + 1;
+                  const dgCNo = `DG-${dgNo}`;
+                  const isDgActive = siteConfig?.dgConfigs?.[dgCNo]?.active;
 
-                const lastFuelClosing = Number(form?.[`DG-${dgNo} Fuel Closing`] || 0);
+                  const lastFuelClosing = Number(form?.[`DG-${dgNo} Fuel Closing`] || 0);
 
-                const dayTank =
-                  Number(siteConfig.dgConfigs?.[`DG-${dgNo}`]?.dayTankLtrs || 0);
+                  const dayTank =
+                    Number(siteConfig.dgConfigs?.[`DG-${dgNo}`]?.dayTankLtrs || 0);
 
-                const externalTankConfig =
-                  Number(siteConfig.dgConfigs?.[`DG-${dgNo}`]?.externalTankLtrs || 0);
+                  const externalTankConfig =
+                    Number(siteConfig.dgConfigs?.[`DG-${dgNo}`]?.externalTankLtrs || 0);
 
-                const externalAvailable =
-                  Number((dgExternalFuel?.[`DG-${dgNo}`]) || 0) + Number(dgNo === 1 ? dayExDG1FuelFill ? dayExDG1FuelFill : 0 : dgNo === 2 ? dayExDG2FuelFill ? dayExDG2FuelFill : 0 : dgNo === 3 ? dayExDG3FuelFill ? dayExDG3FuelFill : 0 : dgNo === 4 ? dayExDG4FuelFill ? dayExDG4FuelFill : 0 : 0);
+                  const externalAvailable =
+                    Number((dgExternalFuel?.[`DG-${dgNo}`]) || 0) + Number(dgNo === 1 ? dayExDG1FuelFill ? dayExDG1FuelFill : 0 : dgNo === 2 ? dayExDG2FuelFill ? dayExDG2FuelFill : 0 : dgNo === 3 ? dayExDG3FuelFill ? dayExDG3FuelFill : 0 : dgNo === 4 ? dayExDG4FuelFill ? dayExDG4FuelFill : 0 : 0);
 
-                const perDgCapacity = dayTank;
-                const fuelClosing = lastFuelClosing
+                  const perDgCapacity = dayTank;
+                  const fuelClosing = lastFuelClosing
 
-                const percent = perDgCapacity
-                  ? Math.min((fuelClosing / perDgCapacity) * 100, 100)
-                  : 0;
-                const exPercent = externalTankConfig
-                  ? Math.min((externalAvailable / externalTankConfig) * 100, 100)
-                  : 0;
+                  const percent = perDgCapacity
+                    ? Math.min((fuelClosing / perDgCapacity) * 100, 100)
+                    : 0;
+                  const exPercent = externalTankConfig
+                    ? Math.min((externalAvailable / externalTankConfig) * 100, 100)
+                    : 0;
 
-                const externalStock = dgExternalFuel?.[dgCNo] || 0;   // MAX
-                const externalUsed = dgExternalUsed?.[dgCNo] || 0;  // CURRENT
+                  const externalStock = dgExternalFuel?.[dgCNo] || 0;   // MAX
+                  const externalUsed = dgExternalUsed?.[dgCNo] || 0;  // CURRENT
 
-                return (
-                  <div key={dgNo} className="current-status-dg-row">
-                    <div>
-                      {/* 🔹 Fuel Bar */}
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          fontSize: "10px",
-                          maxWidth: "240px",
-                          height: "14px",
-                        }}
-                      >
-                        🛢️
-                        <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
-                          DG-{dgNo}:
-                        </p>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            width: "120px",
-                            background: "#eee",
-                            borderRadius: "3px",
-                            overflow: "hidden",
-                          }}
-                        >
-                          <p
-                            style={{
-                              width: `${percent}%`,
-                              background: "linear-gradient(to right, blue)",
-                              color: "white",
-                              fontSize: "7px",
-                              margin: 0,
-                              textAlign: "center",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            ⛽{fuelClosing}/{perDgCapacity.toFixed(1)}L
-                          </p>
-                        </div>
-
-                        <strong
-                          style={{
-                            marginLeft: "4px",
-                            color: percent < 60 ? "red" : "blue",
-                          }}
-                        >
-                          {percent.toFixed(0)}%
-                        </strong>
-                      </div>
-                      {externalTankConfig > 0 && (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            fontSize: "10px",
-                            maxWidth: "240px",
-                            height: "14px",
-                          }}
-                        >
-                          🛢️
-                          <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
-                            DG-{dgNo}Ex.:
-                          </p>
-
-                          <div
-                            style={{
-                              display: "flex",
-                              width: "120px",
-                              background: "#eee",
-                              borderRadius: "3px",
-                              overflow: "hidden",
-                            }}
-                          >
-                            <p
+                  return (
+                    <>
+                      {isDgActive !== false && (
+                        <div key={dgNo} className="current-status-dg-row">
+                          <div>
+                            {/* 🔹 Fuel Bar */}
+                            <div
                               style={{
-                                width: `${exPercent}%`,
-                                background: "linear-gradient(to right, blue)",
-                                color: "white",
-                                fontSize: "7px",
-                                margin: 0,
-                                textAlign: "center",
-                                whiteSpace: "nowrap",
+                                display: "flex",
+                                alignItems: "center",
+                                fontSize: "10px",
+                                maxWidth: "240px",
+                                height: "14px",
                               }}
                             >
-                              ⛽{externalAvailable}/{externalTankConfig.toFixed(1)}L
-                            </p>
+                              🛢️
+                              <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
+                                DG-{dgNo}:
+                              </p>
+
+                              <div
+                                style={{
+                                  display: "flex",
+                                  width: "120px",
+                                  background: "#eee",
+                                  borderRadius: "3px",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <p
+                                  style={{
+                                    width: `${percent}%`,
+                                    background: "linear-gradient(to right, blue)",
+                                    color: "white",
+                                    fontSize: "7px",
+                                    margin: 0,
+                                    textAlign: "center",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  ⛽{fuelClosing}/{perDgCapacity.toFixed(1)}L
+                                </p>
+                              </div>
+
+                              <strong
+                                style={{
+                                  marginLeft: "4px",
+                                  color: percent < 60 ? "red" : "blue",
+                                }}
+                              >
+                                {percent.toFixed(0)}%
+                              </strong>
+                            </div>
+                            {externalTankConfig > 0 && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  fontSize: "10px",
+                                  maxWidth: "240px",
+                                  height: "14px",
+                                }}
+                              >
+                                🛢️
+                                <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
+                                  DG-{dgNo}Ex.:
+                                </p>
+
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    width: "120px",
+                                    background: "#eee",
+                                    borderRadius: "3px",
+                                    overflow: "hidden",
+                                  }}
+                                >
+                                  <p
+                                    style={{
+                                      width: `${exPercent}%`,
+                                      background: "linear-gradient(to right, blue)",
+                                      color: "white",
+                                      fontSize: "7px",
+                                      margin: 0,
+                                      textAlign: "center",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    ⛽{externalAvailable}/{externalTankConfig.toFixed(1)}L
+                                  </p>
+                                </div>
+
+                                <strong
+                                  style={{
+                                    marginLeft: "4px",
+                                    color: exPercent < 60 ? "red" : "blue",
+                                  }}
+                                >
+                                  {exPercent.toFixed(0)}%
+                                </strong>
+                              </div>
+                            )}
                           </div>
 
-                          <strong
-                            style={{
-                              marginLeft: "4px",
-                              color: exPercent < 60 ? "red" : "blue",
-                            }}
-                          >
-                            {exPercent.toFixed(0)}%
-                          </strong>
+                          {/* 🔹 External Fuel Input */}
+                          {externalStock > 0 && (
+                            <div style={{ fontSize: "9px", display: "flex", gap: "4px", justifyContent: "center" }}>
+                              Drow Ex.🛢️:
+
+                              <p
+                                onClick={() => decrementExternalUsed(dgCNo)}
+                                disabled={(dgExternalUsed[dgCNo] || 0) <= 0}
+                                style={{ cursor: "pointer", fontWeight: "bolder", height: "15px", width: "15px", color: "black", border: "1px solid #fff", borderRadius: " 2px" }}
+                                onMouseMove={(e) => e.currentTarget.style.backgroundColor = "#99dd6cff"}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
+                              >
+                                −
+                              </p>
+
+                              <input
+                                value={dgExternalUsed[dgCNo] || 0}
+                                onChange={(e) =>
+                                  handleExternalUsedChange(dgCNo, e.target.value)
+                                }
+                                style={{
+                                  width: "35px",
+                                  textAlign: "center",
+                                  height: "20px",
+                                  resize: "none",
+                                }}
+                              />
+
+
+                              <p
+                                onClick={() => incrementExternalUsed(dgCNo)}
+                                disabled={
+                                  (dgExternalUsed[dgCNo] || 0) >=
+                                  (dgExternalFuel[dgCNo] || 0)
+                                }
+                                style={{ cursor: "pointer", fontWeight: "bolder", height: "15px", width: "15px", color: "black", border: "1px solid #fff", borderRadius: " 2px" }}
+                                onMouseMove={(e) => e.currentTarget.style.backgroundColor = "#dd6c6cff"}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
+                              >
+                                +
+                              </p>
+
+                              <p
+                                onClick={() => applyExternalFuel(dgCNo)}
+                                disabled={(dgExternalUsed[dgCNo] || 0) === 0}
+                                style={{ cursor: "pointer", fontSize: "10px", fontWeight: "bolder", border: "1px solid", padding: "0px 2px", height: "17px", borderRadius: "2px", background: "#84be5488" }}
+                                onMouseMove={(e) => e.currentTarget.style.backgroundColor = "#dd6c6cff"}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#84be5488"}
+                              >
+                                Apply
+                              </p>
+
+                              <span>Ltrs</span>
+                            </div>
+                          )}
                         </div>
                       )}
-                    </div>
-
-                    {/* 🔹 External Fuel Input */}
-                    {externalStock > 0 && (
-                      <div style={{ fontSize: "9px", display: "flex", gap: "4px", justifyContent: "center" }}>
-                        Drow Ex.🛢️:
-
-                        <p
-                          onClick={() => decrementExternalUsed(dgCNo)}
-                          disabled={(dgExternalUsed[dgCNo] || 0) <= 0}
-                          style={{ cursor: "pointer", fontWeight: "bolder", height: "15px", width: "15px", color: "black", border: "1px solid #fff", borderRadius: " 2px" }}
-                          onMouseMove={(e) => e.currentTarget.style.backgroundColor = "#99dd6cff"}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
-                        >
-                          −
-                        </p>
-
-                        <input
-                          value={dgExternalUsed[dgCNo] || 0}
-                          onChange={(e) =>
-                            handleExternalUsedChange(dgCNo, e.target.value)
-                          }
-                          style={{
-                            width: "35px",
-                            textAlign: "center",
-                            height: "20px",
-                            resize: "none",
-                          }}
-                        />
-
-
-                        <p
-                          onClick={() => incrementExternalUsed(dgCNo)}
-                          disabled={
-                            (dgExternalUsed[dgCNo] || 0) >=
-                            (dgExternalFuel[dgCNo] || 0)
-                          }
-                          style={{ cursor: "pointer", fontWeight: "bolder", height: "15px", width: "15px", color: "black", border: "1px solid #fff", borderRadius: " 2px" }}
-                          onMouseMove={(e) => e.currentTarget.style.backgroundColor = "#dd6c6cff"}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ""}
-                        >
-                          +
-                        </p>
-
-                        <p
-                          onClick={() => applyExternalFuel(dgCNo)}
-                          disabled={(dgExternalUsed[dgCNo] || 0) === 0}
-                          style={{ cursor: "pointer", fontSize: "10px", fontWeight: "bolder", border: "1px solid", padding: "0px 2px", height: "17px", borderRadius: "2px", background: "#84be5488" }}
-                          onMouseMove={(e) => e.currentTarget.style.backgroundColor = "#dd6c6cff"}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#84be5488"}
-                        >
-                          Apply
-                        </p>
-
-                        <span>Ltrs</span>
-                      </div>
-                    )}
-
-                  </div>
-                );
-              })}
+                    </>
+                  );
+                })}
               </div>
 
               <div className="current-status-daily-grid">
@@ -3924,296 +3945,296 @@ const DailyDGLog = ({ userData }) => {
 
             {/* Summary Start */}
             <section className="dg-summary-panel">
-            <h1
-              className="dg-summary-header"
-            >
-              <span className="dg-summary-icon" aria-hidden="true">📊</span>
-              <span>
-                <strong>Monthly Summary</strong>
-                <small>
-                  Up to day {allValues.length} · {formatShortMonthName(selectedMonth)} {formatYear(selectedMonth)}
-                </small>
-              </span>
-            </h1>
+              <h1
+                className="dg-summary-header"
+              >
+                <span className="dg-summary-icon" aria-hidden="true">📊</span>
+                <span>
+                  <strong>Monthly Summary</strong>
+                  <small>
+                    Up to day {allValues.length} · {formatShortMonthName(selectedMonth)} {formatYear(selectedMonth)}
+                  </small>
+                </span>
+              </h1>
 
-            {/* 🔹 Monthly Averages */}
-            <div className="dg-summary-kpis">
-              {/* 🔹 Average PUE */}
-              <p className={monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "20px" }}>
-                Average PUE – <strong>{monthlyAvgPUE}</strong>
-              </p>
-
-              {/* 🔹 Average SEGR */}
-              <p className={monthlyAvgSEGR < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "20px" }}>
-                Average SEGR – <strong>{monthlyAvgSEGR}</strong>
-              </p>
-            </div>
-
-            <div className="dg-summary-dg-kpis">
-
-              {/* 🔹 DG-wise Average SEGR */}
-              {monthlyDGSEGR.map((val, i) => (
-                <p
-                  key={i}
-                  className={val < 3 ? "avg-segr low" : "avg-segr high"}
-                  style={{ fontSize: "10px" }}
-                >
-                  DG-{i + 1} Average SEGR – {val}
+              {/* 🔹 Monthly Averages */}
+              <div className="dg-summary-kpis">
+                {/* 🔹 Average PUE */}
+                <p className={monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "20px" }}>
+                  Average PUE – <strong>{monthlyAvgPUE}</strong>
                 </p>
-              ))}
-            </div>
 
-            <p className="dg-summary-total-cost">
-              <strong>
-                [Total Cost (EB + DG) – ₹{fmt((totalEBKwh * EBBill.EBRate) + (totalFuel * fuelRate))}]
-              </strong>
-            </p>
-
-            <p className="dg-summary-running-load">
-              ⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong>
-            </p>
-
-            <div className="dg-summary-load-grid">
-              {/* 🔹 Load Averages */}
-              <div>
-                <p><strong>📡 Avg IT Load – {monthlyAvgITLoad} kWh</strong></p>
-                <p><strong>❄️ Avg Cooling Load – {monthlyAvgCoolingLoad} kWh</strong></p>
-                <p><strong>🏢 Avg Office Load – {monthlyAvgOfficeLoad} kWh</strong></p>
-                <p>
-                  <strong>
-                    ⛽ Avg DG CPH – {fmt1(totalOnLoadCon / totalOnLoadHrs)} Ltrs/Hrs
-                    <span style={{ fontSize: "9px", color: "#5c3c6ce8", marginLeft: "4px" }}>
-                      as per {(((totalDGGeneration / totalDGOnLoadHrs) / (siteConfig.dgConfigs?.["DG-1"]?.capacityKva * 0.8) || 0) * 100 || 0).toFixed(1)}% Avg ON Load Running
-                    </span>
-                  </strong>
+                {/* 🔹 Average SEGR */}
+                <p className={monthlyAvgSEGR < 3 ? "avg-segr low" : "avg-segr high"} style={{ fontSize: "20px" }}>
+                  Average SEGR – <strong>{monthlyAvgSEGR}</strong>
                 </p>
               </div>
 
-              {/* 🔹 DG OEM CPH */}
-              <div style={{ fontSize: "10px" }}>
-                {dgDesignCPH.map(({ dg, cph }) => (
-                  <p key={dg}>
-                    ⛽ {dg} OEM CPH – <strong>{cph} Ltrs/⏱️</strong>
+              <div className="dg-summary-dg-kpis">
+
+                {/* 🔹 DG-wise Average SEGR */}
+                {monthlyDGSEGR.map((val, i) => (
+                  <p
+                    key={i}
+                    className={val < 3 ? "avg-segr low" : "avg-segr high"}
+                    style={{ fontSize: "10px" }}
+                  >
+                    DG-{i + 1} Average SEGR – {val}
                   </p>
                 ))}
               </div>
-            </div>
 
-            <div className="dg-summary-detail-row">
-              <strong style={{ whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}>⚡ Total EB KW Consumption – {fmt(totalEBKwh)} units x
-                <div
-                  style={inputContainerStyle}
-                  onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
-                  onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
-                >
-                  ₹<input
-                    type="number"
-                    name="EBRate"
-                    step="0.01"
-                    value={EBBill.EBRate}
-                    onChange={handleEBBill}
-                    style={inputInnerStyle}
-                  // disabled
-                  />/Unit.
+              <p className="dg-summary-total-cost">
+                <strong>
+                  [Total Cost (EB + DG) – ₹{fmt((totalEBKwh * EBBill.EBRate) + (totalFuel * fuelRate))}]
+                </strong>
+              </p>
+
+              <p className="dg-summary-running-load">
+                ⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong>
+              </p>
+
+              <div className="dg-summary-load-grid">
+                {/* 🔹 Load Averages */}
+                <div>
+                  <p><strong>📡 Avg IT Load – {monthlyAvgITLoad} kWh</strong></p>
+                  <p><strong>❄️ Avg Cooling Load – {monthlyAvgCoolingLoad} kWh</strong></p>
+                  <p><strong>🏢 Avg Office Load – {monthlyAvgOfficeLoad} kWh</strong></p>
+                  <p>
+                    <strong>
+                      ⛽ Avg DG CPH – {fmt1(totalOnLoadCon / totalOnLoadHrs)} Ltrs/Hrs
+                      <span style={{ fontSize: "9px", color: "#5c3c6ce8", marginLeft: "4px" }}>
+                        as per {(((totalDGGeneration / totalDGOnLoadHrs) / (siteConfig.dgConfigs?.["DG-1"]?.capacityKva * 0.8) || 0) * 100 || 0).toFixed(1)}% Avg ON Load Running
+                      </span>
+                    </strong>
+                  </p>
                 </div>
-                <b style={{ fontSize: "10px", color: "#5c3c6ce8", justifyContent: "center", }}>= ₹{fmt(totalEBKwh * Number(EBBill.EBRate))}</b>
-              </strong>
-            </div>
 
-            <div className="dg-summary-billing">
-              <strong style={{ whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}>
-                💡 EDCOM:
-                <div
-                  style={inputContainerStyle}
-                  onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
-                  onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
-                >
-                  <input
-                    type="number"
-                    name="Unit" // Matches the key in setEBBill
-                    step="0.01"
-                    value={EBBill.Unit || ""}
-                    onChange={handleEBBill}
-                    style={inputInnerStyle}
-                  />
-                  Units</div>
-              </strong>
+                {/* 🔹 DG OEM CPH */}
+                <div style={{ fontSize: "10px" }}>
+                  {dgDesignCPH.map(({ dg, cph }) => (
+                    <p key={dg}>
+                      ⛽ {dg} OEM CPH – <strong>{cph} Ltrs/⏱️</strong>
+                    </p>
+                  ))}
+                </div>
+              </div>
 
-              <strong style={{ whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}>
-                🏦 Through NEFT/RTGS(RS):
-                <div
-                  style={inputContainerStyle}
-                  onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
-                  onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
-                >₹<input
-                    type="number"
-                    name="Amount" // Matches the key in setEBBill
-                    step="0.01"
-                    value={EBBill.Amount || ""}
-                    onChange={handleEBBill}
-                    style={inputInnerStyle}
-                  /></div>
-              </strong>
+              <div className="dg-summary-detail-row">
+                <strong style={{ whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}>⚡ Total EB KW Consumption – {fmt(totalEBKwh)} units x
+                  <div
+                    style={inputContainerStyle}
+                    onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
+                    onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
+                  >
+                    ₹<input
+                      type="number"
+                      name="EBRate"
+                      step="0.01"
+                      value={EBBill.EBRate}
+                      onChange={handleEBBill}
+                      style={inputInnerStyle}
+                    // disabled
+                    />/Unit.
+                  </div>
+                  <b style={{ fontSize: "10px", color: "#5c3c6ce8", justifyContent: "center", }}>= ₹{fmt(totalEBKwh * Number(EBBill.EBRate))}</b>
+                </strong>
+              </div>
 
-              {/* TDS is calculated automatically from the state */}
-              <b>💰 TDS Declared Amount: <strong>₹{EBBill.TDSAmount || 0}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {siteConfig.ebTDS}% of Bill Amount</span></b>
-              <b>💰 After TDS Amount: <strong>₹{(EBBill.Amount - EBBill.TDSAmount) || 0}</strong> <span style={{ color: "#5c3c6ce8" }}> after {siteConfig.ebTDS}% deduction of Bill Amount</span></b>
-            </div>
+              <div className="dg-summary-billing">
+                <strong style={{ whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}>
+                  💡 EDCOM:
+                  <div
+                    style={inputContainerStyle}
+                    onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
+                    onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
+                  >
+                    <input
+                      type="number"
+                      name="Unit" // Matches the key in setEBBill
+                      step="0.01"
+                      value={EBBill.Unit || ""}
+                      onChange={handleEBBill}
+                      style={inputInnerStyle}
+                    />
+                    Units</div>
+                </strong>
 
-            {siteConfig.solarCount > 0 && (
-              <p style={{ borderTop: "1px solid #eee" }}><strong>☀️ Total Solar KW Generation – {fmt(totalSolarKwh)} kW</strong></p>
-            )}
+                <strong style={{ whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: "4px" }}>
+                  🏦 Through NEFT/RTGS(RS):
+                  <div
+                    style={inputContainerStyle}
+                    onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
+                    onMouseOut={(e) => e.currentTarget.style.borderColor = "#e2e8f0"}
+                  >₹<input
+                      type="number"
+                      name="Amount" // Matches the key in setEBBill
+                      step="0.01"
+                      value={EBBill.Amount || ""}
+                      onChange={handleEBBill}
+                      style={inputInnerStyle}
+                    /></div>
+                </strong>
 
-            {/*⚡ Total DG KW Generation  */}
-            <p style={{ borderTop: "1px solid #eee" }}>
-              <strong>
-                ⚡ Total DG KW Generation – {fmt(totalKwh)} kW
-              </strong>
-              <b style={{ fontSize: "10px", color: "#5c3c6ce8" }}>
-                (Cost: ₹{fmt((totalFuel * fuelRate) / totalKwh)}/kW)
-              </b>
-            </p>
+                {/* TDS is calculated automatically from the state */}
+                <b>💰 TDS Declared Amount: <strong>₹{EBBill.TDSAmount || 0}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {siteConfig.ebTDS}% of Bill Amount</span></b>
+                <b>💰 After TDS Amount: <strong>₹{(EBBill.Amount - EBBill.TDSAmount) || 0}</strong> <span style={{ color: "#5c3c6ce8" }}> after {siteConfig.ebTDS}% deduction of Bill Amount</span></b>
+              </div>
 
-            <div style={{ display: "flex", flexWrap: "wrap" }}>
+              {siteConfig.solarCount > 0 && (
+                <p style={{ borderTop: "1px solid #eee" }}><strong>☀️ Total Solar KW Generation – {fmt(totalSolarKwh)} kW</strong></p>
+              )}
+
+              {/*⚡ Total DG KW Generation  */}
+              <p style={{ borderTop: "1px solid #eee" }}>
+                <strong>
+                  ⚡ Total DG KW Generation – {fmt(totalKwh)} kW
+                </strong>
+                <b style={{ fontSize: "10px", color: "#5c3c6ce8" }}>
+                  (Cost: ₹{fmt((totalFuel * fuelRate) / totalKwh)}/kW)
+                </b>
+              </p>
+
+              <div style={{ display: "flex", flexWrap: "wrap" }}>
+                {Array.from({ length: siteConfig.dgCount }).map((_, i) => {
+                  const dg = i + 1;
+                  const totalDGKw = {
+                    1: totalDG1Kw,
+                    2: totalDG2Kw,
+                    3: totalDG3Kw,
+                    4: totalDG4Kw,
+                  };
+
+                  return (
+                    <p key={dg} style={{ marginLeft: "20px" }}>
+                      • DG-{dg}: <strong>{fmt1(totalDGKw[dg] || 0)} kW</strong>
+                    </p>
+                  );
+                })}
+              </div>
+
+              {/* ⛽ Total Fuel Filling */}
+              <p style={{ borderTop: "1px solid #eee" }}>
+                <strong>⛽ Total Fuel Filling – {fmt(grandFuelFill)} Ltrs × </strong>
+                ₹<input
+                  type="number"
+                  step="0.01"
+                  value={fuelRate}
+                  onChange={handleFuelChange}
+                  style={{ width: "70px", marginLeft: "4px", height: "20px" }}
+                />
+                <strong style={{ fontSize: "10px", color: "#5c3c6ce8" }}>
+                  /Ltr = ₹{fmt(grandFuelFill * fuelRate)}
+                </strong>
+              </p>
+
+              <div style={{ display: "flex", flexWrap: "wrap" }}>
+                {Array.from({ length: siteConfig.dgCount }).map((_, i) => {
+                  const dg = i + 1;
+                  const totalDGFilling = {
+                    1: totalDG1Filling,
+                    2: totalDG2Filling,
+                    3: totalDG3Filling,
+                    4: totalDG4Filling,
+                  };
+                  return (
+                    <p key={dg} style={{ marginLeft: "20px" }}>
+                      • DG-{dg}: <strong>{fmt1(totalDGFilling[dg] || 0)} Ltrs</strong>
+                    </p>
+                  );
+                })}
+              </div>
+
+              {/* ⛽ Total Fuel Consumption */}
+              <p style={{ borderTop: "1px solid #eee" }}>
+                <strong>⛽ Total Fuel Consumption – {fmt(totalFuel)} Ltrs. </strong>
+                <b style={{ fontSize: "10px", color: "#5c3c6ce8" }}>
+                  Cost: ₹{fmt(totalFuel * fuelRate)}
+                </b>
+              </p>
+
               {Array.from({ length: siteConfig.dgCount }).map((_, i) => {
                 const dg = i + 1;
-                const totalDGKw = {
-                  1: totalDG1Kw,
-                  2: totalDG2Kw,
-                  3: totalDG3Kw,
-                  4: totalDG4Kw,
+                const totalDGOnLoadCon = {
+                  1: totalDG1OnLoadCon,
+                  2: totalDG2OnLoadCon,
+                  3: totalDG3OnLoadCon,
+                  4: totalDG4OnLoadCon,
                 };
 
+                const totalDGOffLoadCon = {
+                  1: totalDG1OffLoadCon,
+                  2: totalDG2OffLoadCon,
+                  3: totalDG3OffLoadCon,
+                  4: totalDG4OffLoadCon,
+                };
+                const totalCon =
+                  (totalDGOnLoadCon[dg] || 0) + (totalDGOffLoadCon[dg] || 0);
+
                 return (
-                  <p key={dg} style={{ marginLeft: "20px" }}>
-                    • DG-{dg}: <strong>{fmt1(totalDGKw[dg] || 0)} kW</strong>
-                  </p>
+                  <div key={dg} style={{ display: "flex" }}>
+                    <p style={{ marginLeft: "20px" }}>
+                      • DG-{dg}: <strong>{fmt1(totalCon)}</strong>
+                      <b style={{ fontSize: "10px" }}>
+                        Ltrs = ₹{fmt(totalCon * fuelRate)}
+                      </b>
+                    </p>
+                    <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                      - ON Load: <strong>{fmt1(totalDGOnLoadCon[dg] || 0)} Ltrs</strong>
+                    </p>
+                    <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                      - OFF Load: <strong>{fmt1(totalDGOffLoadCon[dg] || 0)} Ltrs</strong>
+                    </p>
+                  </div>
                 );
               })}
-            </div>
 
-            {/* ⛽ Total Fuel Filling */}
-            <p style={{ borderTop: "1px solid #eee" }}>
-              <strong>⛽ Total Fuel Filling – {fmt(grandFuelFill)} Ltrs × </strong>
-              ₹<input
-                type="number"
-                step="0.01"
-                value={fuelRate}
-                onChange={handleFuelChange}
-                style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-              />
-              <strong style={{ fontSize: "10px", color: "#5c3c6ce8" }}>
-                /Ltr = ₹{fmt(grandFuelFill * fuelRate)}
-              </strong>
-            </p>
+              {/* ⏱️ Total DG Run Hours */}
+              <p style={{ borderTop: "1px solid #eee" }}>
+                <strong>
+                  ⏱️ Total DG Run Hours – {fmt1(totalHrs)} Hour
+                </strong>{" "}
+                ({(totalHrs * 60).toFixed(0)} min)
+              </p>
 
-            <div style={{ display: "flex", flexWrap: "wrap" }}>
               {Array.from({ length: siteConfig.dgCount }).map((_, i) => {
                 const dg = i + 1;
-                const totalDGFilling = {
-                  1: totalDG1Filling,
-                  2: totalDG2Filling,
-                  3: totalDG3Filling,
-                  4: totalDG4Filling,
+                const totalDGOnLoadHrs = {
+                  1: totalDG1OnLoadHrs,
+                  2: totalDG2OnLoadHrs,
+                  3: totalDG3OnLoadHrs,
+                  4: totalDG4OnLoadHrs,
                 };
+                const totalDGOffLoadHrs = {
+                  1: totalDG1OffLoadHrs,
+                  2: totalDG2OffLoadHrs,
+                  3: totalDG3OffLoadHrs,
+                  4: totalDG4OffLoadHrs,
+                };
+
+                const totalHrs =
+                  (totalDGOnLoadHrs[dg] || 0) + (totalDGOffLoadHrs[dg] || 0);
+
                 return (
-                  <p key={dg} style={{ marginLeft: "20px" }}>
-                    • DG-{dg}: <strong>{fmt1(totalDGFilling[dg] || 0)} Ltrs</strong>
-                  </p>
+                  <div key={dg} style={{ display: "flex" }}>
+                    <p style={{ marginLeft: "20px" }}>
+                      • DG-{dg}: <strong>{fmt1(totalHrs)} hrs</strong>
+                      ({(totalHrs * 60).toFixed(0) || 0} min)
+                    </p>
+                    <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                      - ON Load: <strong>{fmt1(totalDGOnLoadHrs[dg] || 0)} hrs</strong>
+                      ({(totalDGOnLoadHrs[dg] * 60).toFixed(0) || 0} min)
+                    </p>
+                    <p style={{ marginLeft: "40px", fontSize: "11px" }}>
+                      - OFF Load: <strong>{fmt1(totalDGOffLoadHrs[dg] || 0)} hrs</strong>
+                      ({(totalDGOffLoadHrs[dg] * 60).toFixed(0) || 0} min)
+                    </p>
+                  </div>
                 );
               })}
-            </div>
 
-            {/* ⛽ Total Fuel Consumption */}
-            <p style={{ borderTop: "1px solid #eee" }}>
-              <strong>⛽ Total Fuel Consumption – {fmt(totalFuel)} Ltrs. </strong>
-              <b style={{ fontSize: "10px", color: "#5c3c6ce8" }}>
-                Cost: ₹{fmt(totalFuel * fuelRate)}
-              </b>
-            </p>
-
-            {Array.from({ length: siteConfig.dgCount }).map((_, i) => {
-              const dg = i + 1;
-              const totalDGOnLoadCon = {
-                1: totalDG1OnLoadCon,
-                2: totalDG2OnLoadCon,
-                3: totalDG3OnLoadCon,
-                4: totalDG4OnLoadCon,
-              };
-
-              const totalDGOffLoadCon = {
-                1: totalDG1OffLoadCon,
-                2: totalDG2OffLoadCon,
-                3: totalDG3OffLoadCon,
-                4: totalDG4OffLoadCon,
-              };
-              const totalCon =
-                (totalDGOnLoadCon[dg] || 0) + (totalDGOffLoadCon[dg] || 0);
-
-              return (
-                <div key={dg} style={{ display: "flex" }}>
-                  <p style={{ marginLeft: "20px" }}>
-                    • DG-{dg}: <strong>{fmt1(totalCon)}</strong>
-                    <b style={{ fontSize: "10px" }}>
-                      Ltrs = ₹{fmt(totalCon * fuelRate)}
-                    </b>
-                  </p>
-                  <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                    - ON Load: <strong>{fmt1(totalDGOnLoadCon[dg] || 0)} Ltrs</strong>
-                  </p>
-                  <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                    - OFF Load: <strong>{fmt1(totalDGOffLoadCon[dg] || 0)} Ltrs</strong>
-                  </p>
-                </div>
-              );
-            })}
-
-            {/* ⏱️ Total DG Run Hours */}
-            <p style={{ borderTop: "1px solid #eee" }}>
-              <strong>
-                ⏱️ Total DG Run Hours – {fmt1(totalHrs)} Hour
-              </strong>{" "}
-              ({(totalHrs * 60).toFixed(0)} min)
-            </p>
-
-            {Array.from({ length: siteConfig.dgCount }).map((_, i) => {
-              const dg = i + 1;
-              const totalDGOnLoadHrs = {
-                1: totalDG1OnLoadHrs,
-                2: totalDG2OnLoadHrs,
-                3: totalDG3OnLoadHrs,
-                4: totalDG4OnLoadHrs,
-              };
-              const totalDGOffLoadHrs = {
-                1: totalDG1OffLoadHrs,
-                2: totalDG2OffLoadHrs,
-                3: totalDG3OffLoadHrs,
-                4: totalDG4OffLoadHrs,
-              };
-
-              const totalHrs =
-                (totalDGOnLoadHrs[dg] || 0) + (totalDGOffLoadHrs[dg] || 0);
-
-              return (
-                <div key={dg} style={{ display: "flex" }}>
-                  <p style={{ marginLeft: "20px" }}>
-                    • DG-{dg}: <strong>{fmt1(totalHrs)} hrs</strong>
-                    ({(totalHrs * 60).toFixed(0) || 0} min)
-                  </p>
-                  <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                    - ON Load: <strong>{fmt1(totalDGOnLoadHrs[dg] || 0)} hrs</strong>
-                    ({(totalDGOnLoadHrs[dg] * 60).toFixed(0) || 0} min)
-                  </p>
-                  <p style={{ marginLeft: "40px", fontSize: "11px" }}>
-                    - OFF Load: <strong>{fmt1(totalDGOffLoadHrs[dg] || 0)} hrs</strong>
-                    ({(totalDGOffLoadHrs[dg] * 60).toFixed(0) || 0} min)
-                  </p>
-                </div>
-              );
-            })}
-
-            {/* Last update info */}
-            {/* {(userData?.role === "Super Admin" ||
+              {/* Last update info */}
+              {/* {(userData?.role === "Super Admin" ||
               userData?.role === "Admin" ||
               userData?.role === "Super User") &&
               (() => {
@@ -4261,7 +4282,7 @@ const DailyDGLog = ({ userData }) => {
 
         <button
           className="segr-manage-btn warning"
-          onClick={() => navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig, dayFuelCon, siteName } })}
+          onClick={() => navigate('/dg-log-table', { state: { totalkW, fuelAvalable, siteConfig, dayFuelCon, siteName, avgSiteRunningKw } })}
           style={{ width: "fit-content" }}
         >
           🔰 DG Run Logs
@@ -4903,7 +4924,7 @@ const DailyDGLog = ({ userData }) => {
             onClick={handleDownloadMonthlyDieselStock}
             disabled={isDownloadingDieselReport}
           >
-            {isDownloadingDieselReport ? "Preparing Excel..." : "⬇️ Download Excel"}
+            {isDownloadingDieselReport ? "Preparing Excel..." : "⬇️ Diesel Report"}
           </button>
         </div>
 
@@ -4965,7 +4986,7 @@ const DailyDGLog = ({ userData }) => {
                 style={{ padding: "6px 10px" }}
                 onClick={handleDownloadDieselReconciliation}
               >
-                ⬇️ Download Excel
+                ⬇️ Reconciliation Report
               </button>
             </div>
             <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%", fontSize: "12px", overflowX: "auto", display: "block", maxWidth: "100%", whiteSpace: "nowrap", borderRadius: "10px", scrollbarWidth: "thin" }}>

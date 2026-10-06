@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { collection, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { collection, onSnapshot, deleteDoc, doc, getDocs } from "firebase/firestore";
 import { Link, useNavigate } from "react-router-dom";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer
 } from "recharts";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 
 const isAdminAssignmentValid = (userData) => {
@@ -53,8 +55,21 @@ const LoadDashboard = ({ userData }) => {
   const [rangeType, setRangeType] = useState("daily"); // daily | monthly | yearly
   const [selectedEquipment, setSelectedEquipment] = useState("ALL");
   const [selectedType, setSelectedType] = useState("ALL");
+  const [exportingEquipmentType, setExportingEquipmentType] = useState("");
   const REQUIRED_SLOTS = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00"];
   const SMPS_REQUIRED_SLOTS = ["02:00", "08:00", "14:00", "20:00"];
+
+  const calculateLoadKW = (entry) => {
+    if (entry.equipmentType === "SMPS") {
+      return (Number(entry.dcVoltage || 0) * Number(entry.dcCurrent || 0)) / 1000;
+    }
+    if (entry.equipmentType === "UPS") {
+      return Number(entry.runningKWR || 0) + Number(entry.runningKWY || 0) + Number(entry.runningKWB || 0);
+    }
+    const voltage = (Number(entry.voltageRY || 0) + Number(entry.voltageYB || 0) + Number(entry.voltageBR || 0)) / 3;
+    const current = (Number(entry.currentR || 0) + Number(entry.currentY || 0) + Number(entry.currentB || 0)) / 3;
+    return (1.732 * voltage * current * Number(entry.powerFactor || 0.9)) / 1000;
+  };
   const getMissingSlots = (data) => {
     let equipmentSlots = {};
 
@@ -267,6 +282,15 @@ const LoadDashboard = ({ userData }) => {
           </td>
         </>
       ),
+      exportRow: (row) => [
+        row.date || "-", row.time || "-", row.equipmentId || "-",
+        row.voltageRN || "-", row.voltageYN || "-", row.voltageBN || "-",
+        row.currentR || "-", row.currentY || "-", row.currentB || "-",
+        row.tempR || "-", row.tempY || "-", row.tempB || "-", row.spdStatus || "-",
+        row.dcVoltage || "-", row.dcCurrent || "-", row.faultyModules || "-", row.systemStatus || "-",
+        Number(row.loadKW || 0).toFixed(2), row.technicianName || "-",
+        `${row.uploadedBy?.name || "-"} (${row.uploadedBy?.empId || "-"})`,
+      ],
     },
 
     UPS: {
@@ -325,6 +349,20 @@ const LoadDashboard = ({ userData }) => {
           </td>
         </>
       ),
+      exportRow: (row) => [
+        row.date || "-", row.time || "-", row.equipmentId || "-",
+        row.voltageRY || "-", row.voltageYB || "-", row.voltageBR || "-",
+        row.voltageRN || "-", row.voltageYN || "-", row.voltageBN || "-",
+        row.currentR || "-", row.currentY || "-", row.currentB || "-", row.currentN || "-",
+        row.tempR || "-", row.tempY || "-", row.tempB || "-",
+        row.outVoltageRY || "-", row.outVoltageYB || "-", row.outVoltageBR || "-",
+        row.outVoltageRN || "-", row.outVoltageYN || "-", row.outVoltageBN || "-",
+        row.outCurrentR || "-", row.outCurrentY || "-", row.outCurrentB || "-", row.outCurrentN || "-",
+        row.powerFactorR || "-", row.powerFactorY || "-", row.powerFactorB || "-",
+        row.runningKWR || "-", row.runningKWY || "-", row.runningKWB || "-",
+        Number(row.loadKW || 0).toFixed(2), row.technicianName || "-",
+        `${row.uploadedBy?.name || "-"} (${row.uploadedBy?.empId || "-"})`,
+      ],
     },
 
     LT: {
@@ -365,7 +403,70 @@ const LoadDashboard = ({ userData }) => {
           </td>
         </>
       ),
+      exportRow: (row) => [
+        row.date || "-", row.time || "-", row.equipmentId || "-",
+        row.voltageRY || "-", row.voltageYB || "-", row.voltageBR || "-",
+        row.voltageRN || "-", row.voltageYN || "-", row.voltageBN || "-",
+        row.currentR || "-", row.currentY || "-", row.currentB || "-",
+        row.tempR || "-", row.tempY || "-", row.tempB || "-", row.powerFactor || "-", row.kwh || "-",
+        Number(row.loadKW || 0).toFixed(2), row.technicianName || "-",
+        `${row.uploadedBy?.name || "-"} (${row.uploadedBy?.empId || "-"})`,
+      ],
     },
+  };
+
+  const exportMonthlyEquipmentLogs = async (equipmentType) => {
+    const config = tableConfig[equipmentType];
+    if (!siteKey || !selectedDate || !config) return;
+
+    setExportingEquipmentType(equipmentType);
+    try {
+      const [year, month] = selectedDate.split("-").map(Number);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const dates = Array.from({ length: daysInMonth }, (_, index) =>
+        formatIST(new Date(year, month - 1, index + 1))
+      );
+
+      const dailyEntries = await Promise.all(dates.map(async (date) => {
+        const snapshot = await getDocs(
+          collection(db, "loadData", siteKey, "dailyData", date, "entries")
+        );
+        return snapshot.docs.map((entryDoc) => ({
+          ...entryDoc.data(),
+          date,
+          loadKW: calculateLoadKW(entryDoc.data()),
+        }));
+      }));
+
+      const monthlyRows = dailyEntries
+        .flat()
+        .filter((entry) => entry.equipmentType === equipmentType)
+        .sort((a, b) => `${a.date}-${a.time || ""}`.localeCompare(`${b.date}-${b.time || ""}`));
+
+      if (!monthlyRows.length) {
+        alert(`No ${equipmentType} logs found for the selected month.`);
+        return;
+      }
+
+      const worksheet = XLSX.utils.aoa_to_sheet([
+        config.headers,
+        ...monthlyRows.map(config.exportRow),
+      ]);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, `${equipmentType} Monthly Log`);
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const fileName = `${siteKey}_${equipmentType}_Load_Log_${selectedDate.slice(0, 7)}.xlsx`;
+
+      saveAs(
+        new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+        fileName
+      );
+    } catch (error) {
+      console.error(`Failed to export ${equipmentType} monthly logs:`, error);
+      alert("Failed to export monthly equipment logs.");
+    } finally {
+      setExportingEquipmentType("");
+    }
   };
 
   const groupedData = data.reduce((acc, item) => {
@@ -998,6 +1099,18 @@ const LoadDashboard = ({ userData }) => {
                       .reduce((total, eq) => total + (eq.sum / eq.count), 0)
                       .toFixed(2)} kWh
                   </h4>
+                  {config?.exportRow && (
+                    <button
+                      type="button"
+                      className="segr-manage-btn success"
+                      onClick={() => exportMonthlyEquipmentLogs(type)}
+                      disabled={exportingEquipmentType === type}
+                    >
+                      {exportingEquipmentType === type
+                        ? "Exporting Monthly Excel…"
+                        : `📤 Export ${type} Monthly Excel`}
+                    </button>
+                  )}
                 </div>
 
                 <table border="1" cellPadding="6" style={{

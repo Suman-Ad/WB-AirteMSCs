@@ -1,7 +1,7 @@
 .daily-log-container {
   --dg-page-bg:
     radial-gradient(circle at 100% 0, rgba(20, 184, 166, 0.1), transparent 26%),
-    linear-gradient(145deg, #f6fbfc 0%, #e6f1f6 100%);
+    linear-gradient(145deg, #84caf5b7 0%, #a8d6ec 100%);
   --dg-surface: #fdfefe;
   --dg-surface-muted: #edf6f8;
   --dg-text: #17324d;
@@ -788,6 +788,17 @@
 
 .dglog-table th {
   background: #eaf1fa;
+}
+
+.monthly-log-filters label {
+  display: grid;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.monthly-log-filters select {
+  min-width: 145px;
+  padding: 6px 8px;
 }
 
 /***********************

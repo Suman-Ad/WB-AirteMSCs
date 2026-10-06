@@ -871,50 +871,55 @@ const Layout = ({ userData, children }) => {
                           const dg = `DG-${i + 1}`;
                           const runCount = dgRunCountMap[dg] || 0;
                           const dgCapacity = siteConfig.dgConfigs?.[dg]?.capacityKva;
+                          const isDgActive = siteConfig.dgConfigs?.[dg]?.active;
+
                           return (
-                            <button
-                              key={dg}
-                              onClick={() => confirmAndSelectDG(dg)}
-                              style={{
-                                position: "relative",
-                                padding: selectedDG === dg ? "4px 8px" : "4px 8px",
-                                borderRadius: "6px",
-                                border: "1px solid #ccc",
-                                background: selectedDG === dg && powerSource === "DG" ? "green" : "#0c2046ff",
-                                color: selectedDG === dg ? "#c9b71aff" : "#fff",
-                                cursor: powerSource === "DG" ? "not-allowed" : "pointer",
-                                fontWeight: selectedDG === dg ? "bold" : "normal",
-                                opacity: selectedDG === dg ? 1 : 0.6,
-                              }}
-                              disabled={powerSource === "DG"}
-                            >
-                              <div>
-                                <p style={{ fontSize: selectedDG === dg ? "15px" : "10px" }}>{dg}</p>
-                                <p style={{ fontSize: "7px" }}>{dgCapacity}kVA</p>
-                              </div>
-
-                              {/* 🔥 DG Run Count Badge */}
-                              {runCount > 0 && (
-                                <span
+                            <>
+                              {isDgActive !== false && (
+                                <button
+                                  key={dg}
+                                  onClick={() => confirmAndSelectDG(dg)}
                                   style={{
-                                    position: "absolute",
-                                    top: "-6px",
-                                    right: "-6px",
-                                    background: "#16a34a",
-                                    color: "#fff",
-                                    borderRadius: "999px",
-                                    padding: "2px 6px",
-                                    fontSize: "10px",
-                                    fontWeight: "bold",
-                                    lineHeight: 1,
+                                    position: "relative",
+                                    padding: selectedDG === dg ? "4px 8px" : "4px 8px",
+                                    borderRadius: "6px",
+                                    border: "1px solid #ccc",
+                                    background: selectedDG === dg && powerSource === "DG" ? "green" : "#0c2046ff",
+                                    color: selectedDG === dg ? "#c9b71aff" : "#fff",
+                                    cursor: powerSource === "DG" ? "not-allowed" : "pointer",
+                                    fontWeight: selectedDG === dg ? "bold" : "normal",
+                                    opacity: selectedDG === dg ? 1 : 0.6,
                                   }}
-                                  title={`Runs today: ${runCount}`}
+                                  disabled={powerSource === "DG"}
                                 >
-                                  {runCount}
-                                </span>
-                              )}
-                            </button>
+                                  <div>
+                                    <p style={{ fontSize: selectedDG === dg ? "15px" : "10px" }}>{dg}</p>
+                                    <p style={{ fontSize: "7px" }}>{dgCapacity}kVA</p>
+                                  </div>
 
+                                  {/* 🔥 DG Run Count Badge */}
+                                  {runCount > 0 && (
+                                    <span
+                                      style={{
+                                        position: "absolute",
+                                        top: "-6px",
+                                        right: "-6px",
+                                        background: "#16a34a",
+                                        color: "#fff",
+                                        borderRadius: "999px",
+                                        padding: "2px 6px",
+                                        fontSize: "10px",
+                                        fontWeight: "bold",
+                                        lineHeight: 1,
+                                      }}
+                                      title={`Runs today: ${runCount}`}
+                                    >
+                                      {runCount}
+                                    </span>
+                                  )}
+                                </button>
+                              )}
+                            </>
                           );
                         })}
                       </div>
@@ -1065,49 +1070,54 @@ const Layout = ({ userData, children }) => {
                         const dg = `DG-${i + 1}`;
                         const runCount = dgRunCountMap[dg] || 0;
                         const dgCapacity = siteConfig.dgConfigs?.[dg]?.capacityKva;
+                        const isDgActive = siteConfig.dgConfigs?.[dg]?.active;
                         return (
-                          <button
-                            key={dg}
-                            onClick={() => confirmAndSelectDG(dg)}
-                            style={{
-                              position: "relative",
-                              padding: selectedDG === dg ? "5px 12px" : "4px 10px",
-                              borderRadius: "6px",
-                              border: "1px solid #ccc",
-                              background: selectedDG === dg && powerSource === "DG" ? "green" : "#0c2046ff",
-                              color: selectedDG === dg ? "#c9b71aff" : "#fff",
-                              cursor: powerSource === "DG" ? "not-allowed" : "pointer",
-                              fontWeight: selectedDG === dg ? "bold" : "normal",
-                              opacity: selectedDG === dg ? 1 : 0.6,
-                            }}
-                            disabled={powerSource === "DG"}
-                          >
-                            <div>
-                              <p style={{ fontSize: selectedDG === dg ? "18px" : "12px" }}>{dg}</p>
-                              <p style={{ fontSize: "8px" }}>{dgCapacity}kVA</p>
-                            </div>
-
-                            {/* 🔥 DG Run Count Badge */}
-                            {runCount > 0 && (
-                              <span
+                          <>
+                            {isDgActive !== false && (
+                              <button
+                                key={dg}
+                                onClick={() => confirmAndSelectDG(dg)}
                                 style={{
-                                  position: "absolute",
-                                  top: "-6px",
-                                  right: "-6px",
-                                  background: "#16a34a",
-                                  color: "#fff",
-                                  borderRadius: "999px",
-                                  padding: "2px 6px",
-                                  fontSize: "10px",
-                                  fontWeight: "bold",
-                                  lineHeight: 1,
+                                  position: "relative",
+                                  padding: selectedDG === dg ? "5px 12px" : "4px 10px",
+                                  borderRadius: "6px",
+                                  border: "1px solid #ccc",
+                                  background: selectedDG === dg && powerSource === "DG" ? "green" : "#0c2046ff",
+                                  color: selectedDG === dg ? "#c9b71aff" : "#fff",
+                                  cursor: powerSource === "DG" ? "not-allowed" : "pointer",
+                                  fontWeight: selectedDG === dg ? "bold" : "normal",
+                                  opacity: selectedDG === dg ? 1 : 0.6,
                                 }}
-                                title={`Runs today: ${runCount}`}
+                                disabled={powerSource === "DG"}
                               >
-                                {runCount}
-                              </span>
+                                <div>
+                                  <p style={{ fontSize: selectedDG === dg ? "18px" : "12px" }}>{dg}</p>
+                                  <p style={{ fontSize: "8px" }}>{dgCapacity}kVA</p>
+                                </div>
+
+                                {/* 🔥 DG Run Count Badge */}
+                                {runCount > 0 && (
+                                  <span
+                                    style={{
+                                      position: "absolute",
+                                      top: "-6px",
+                                      right: "-6px",
+                                      background: "#16a34a",
+                                      color: "#fff",
+                                      borderRadius: "999px",
+                                      padding: "2px 6px",
+                                      fontSize: "10px",
+                                      fontWeight: "bold",
+                                      lineHeight: 1,
+                                    }}
+                                    title={`Runs today: ${runCount}`}
+                                  >
+                                    {runCount}
+                                  </span>
+                                )}
+                              </button>
                             )}
-                          </button>
+                          </>
                         );
                       })}
                     </div>

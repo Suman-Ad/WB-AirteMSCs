@@ -154,7 +154,7 @@ body {
 .toggle-btn {
   background: rgba(212, 27, 27, 0);
   color: white;
-  border: none;
+  border: 1px solid #020617;
   border-radius: 4px;
   width: 20px;
   cursor: pointer;
@@ -837,9 +837,9 @@ body {
   height: 38px;
   margin: 0;
   padding: 0;
-  color: #7bb0f5;
+  color: #182332;
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgb(20, 8, 8);
   border-radius: 10px;
 }
 
@@ -921,7 +921,7 @@ body {
   padding: 7px 12px;
   align-items: flex-start;
   gap: 0.75rem;
-  background: linear-gradient(110deg, #fdfefe, #dff2f4) !important;
+  background: linear-gradient(110deg, #91e1e1fe, #5aa6ae) !important;
   border-bottom: 1px solid rgba(83, 146, 167, 0.3);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
   /* Keep the sticky header crisp when the power source changes. */

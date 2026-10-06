@@ -5,10 +5,10 @@
  */
 
 :root {
-  --theme-bg: var(--app-page-bg, #eaf2f8);
-  --theme-surface: var(--app-surface, #fdfefe);
-  --theme-surface-muted: var(--app-surface-muted, #edf6f8);
-  --theme-surface-raised: #ffffff;
+  --theme-bg: var(--app-page-bg, #3181be);
+  --theme-surface: var(--app-surface, #56b3b3);
+  --theme-surface-muted: var(--app-surface-muted, #337584);
+  --theme-surface-raised: #9e6f6f;
   --theme-text: var(--app-text, #17324d);
   --theme-heading: #102f46;
   --theme-muted: var(--app-text-muted, #587086);
@@ -22,7 +22,7 @@
 }
 
 :root[data-theme="dark"] {
-  --theme-surface-raised: #172033;
+  --theme-surface-raised: #2a3c64;
   --theme-heading: #f1f5f9;
   --theme-primary: #22d3ee;
   --theme-primary-hover: #67e8f9;
