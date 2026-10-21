@@ -51,13 +51,14 @@
    * it replaces old JSX inline theme colors, while status/brand colors can opt
    * out with data-theme-color="preserve".
    */
-  :where(.main-content, .content, main) :where(
+  :where(.main-content, .content, main, .main-header) :where(
     h1,
     h2,
     h3,
     h4,
     h5,
-    h6
+    h6,
+    strong,
   ):not([data-theme-color="preserve"]) {
     color: var(--theme-heading) !important;
   }
@@ -67,7 +68,7 @@
     label,
     legend,
     dt,
-    dd
+    dd,
   ):not([data-theme-color="preserve"]) {
     color: var(--theme-text) !important;
   }

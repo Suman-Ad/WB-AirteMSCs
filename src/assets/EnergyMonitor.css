@@ -1,0 +1,87 @@
+.energy-monitor { padding: clamp(14px, 3vw, 32px); color: var(--app-text); background: var(--app-page-bg); min-height: 80vh; }
+.energy-monitor * { box-sizing: border-box; }
+.energy-monitor h1 { font-size: clamp(26px, 3vw, 36px); margin: 8px 0; letter-spacing: -.8px; }
+.energy-monitor h2 { font-size: 19px; margin: 0 0 8px; }
+.energy-monitor h3 { margin: 0 0 8px; }
+.energy-monitor p { color: var(--app-text-muted); margin: 6px 0 12px; line-height: 1.6; }
+.energy-header, .energy-section-title, .energy-toolbar, .energy-alert { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.energy-header { margin-bottom: 24px; }
+.energy-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 1.8px; color: var(--theme-primary); }
+.energy-site { display: flex; align-items: flex-start; flex-direction: column; gap: 8px; padding: 16px 22px; border-left: 3px solid var(--theme-primary); background: var(--app-surface); border-radius: 0 12px 12px 0; }
+.energy-site > span:first-child { font-size: 10px; letter-spacing: 1px; }
+.energy-muted { color: var(--app-text-muted); font-size: 13px; line-height: 1.6; }
+.energy-tabs { display: flex; gap: 8px; overflow-x: auto; border-bottom: 1px solid var(--app-border); margin-bottom: 24px; padding-bottom: 10px; }
+.energy-monitor button, .energy-monitor select { font: inherit; cursor: pointer; color: var(--app-text); border: 1px solid var(--app-border); background: var(--app-surface); border-radius: 8px; padding: 9px 13px; }
+.energy-monitor button:hover { border-color: var(--theme-primary); background: var(--app-surface-muted); }
+.energy-monitor button:focus-visible, .energy-monitor select:focus-visible { outline: 3px solid var(--theme-primary); outline-offset: 3px; }
+.energy-tabs button { white-space: nowrap; border-color: transparent; background: transparent; font-weight: 600; }
+.energy-tabs button[aria-selected="true"] { background: var(--app-surface); color: var(--theme-primary); border-color: var(--app-border); box-shadow: inset 0 -3px var(--theme-primary); }
+.energy-tab-content { display: grid; gap: 20px; }
+.energy-card { padding: 22px; border: 1px solid var(--app-border); border-radius: 14px; background: var(--app-surface); box-shadow: 0 4px 14px rgba(15, 50, 70, .04); min-width: 0; }
+.energy-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+.energy-number { font-size: 30px; font-weight: 750; letter-spacing: -.6px; margin: 14px 0 8px; overflow-wrap: anywhere; }
+.energy-number small { font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--app-text-muted); }
+.energy-network { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.energy-monitor .energy-meter-card { text-align: left; padding: 22px; border-top: 3px solid var(--theme-primary); }
+.energy-meter-link { display: block; margin-top: 22px; font-size: 12px; color: var(--theme-primary); font-weight: 600; }
+.energy-badge { display: inline-flex; padding: 5px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; border: 1px solid var(--app-border); color: var(--app-text-muted); background: var(--app-surface-muted); }
+.energy-badge.is-live { color: var(--theme-primary); border-color: var(--theme-primary); }
+.energy-notice { background: var(--app-surface-muted); color: var(--app-text-muted); padding: 14px 18px; border: 1px solid var(--app-border); border-left: 3px solid var(--theme-primary); border-radius: 8px; font-size: 13px; line-height: 1.6; margin-bottom: 10px; }
+.energy-empty { padding: 36px 20px; color: var(--app-text-muted); text-align: center; background: var(--app-surface-muted); border: 1px dashed var(--app-border); border-radius: 12px; }
+.energy-toolbar label { display: block; font-size: 12px; margin-bottom: 6px; color: var(--app-text-muted); }
+.energy-toolbar select { max-width: 100%; min-width: 180px; }
+.energy-table-wrap { overflow-x: auto; }
+.energy-monitor table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; white-space: nowrap; }
+.energy-monitor th, .energy-monitor td { padding: 14px 12px; border-bottom: 1px solid var(--app-border); }
+.energy-monitor th { color: var(--app-text-muted); background: var(--app-surface-muted); font-weight: 600; }
+.energy-monitor .energy-selected td { background: var(--app-surface-muted); }
+.energy-monitor td button { color: var(--theme-primary); }
+.energy-chart { height: 280px; margin-top: 20px; }
+.energy-chart .recharts-cartesian-axis-tick-value { fill: var(--app-text-muted); font-size: 11px; }
+@media (max-width: 600px) { .energy-card { padding: 16px; } .energy-site { width: 100%; } .energy-metrics, .energy-network { grid-template-columns: 1fr; } .energy-toolbar > div { width: 100%; } .energy-toolbar select { width: 100%; } .energy-chart { height: 230px; } }
+.energy-vector-layout { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(240px, 1fr); gap: 24px; align-items: center; }
+.energy-vector { width: 100%; max-width: 440px; margin: auto; }
+.energy-vector text { fill: var(--app-text-muted); font-size: 11px; }
+.energy-vector g text { fill: inherit; font-weight: 700; }
+.energy-detail-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.energy-monitor input[type="search"] { display: block; margin-top: 6px; padding: 10px 12px; font: inherit; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface); color: var(--app-text); max-width: 100%; }
+.energy-monitor .energy-raw-value { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 180px; max-width: 600px; }
+@media (max-width: 700px) { .energy-vector-layout { grid-template-columns: 1fr; } }
+/* Dense site cards keep the complete power tuple and key register values together. */
+.energy-overview { display: grid; gap: 12px; min-width: 0; }
+.energy-summary-strip { display: grid; grid-template-columns: minmax(260px, 2fr) repeat(2, minmax(130px, 1fr)); gap: 10px; }
+.energy-power-combined { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; }
+.energy-power-combined > strong { font-size: clamp(18px, 2vw, 25px); letter-spacing: -.5px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.energy-power-unit { font-size: 12px; color: var(--theme-primary); font-weight: 700; letter-spacing: .4px; }
+.energy-site-view { padding: clamp(12px, 2vw, 22px); }
+.energy-site-view .energy-header { margin-bottom: 14px; }
+.energy-site-view h1 { font-size: 28px; margin: 4px 0; }
+.energy-site-view .energy-header p { margin-bottom: 4px; font-size: 12px; }
+.energy-site-view .energy-site { padding: 10px 16px; gap: 4px; }
+.energy-site-view .energy-tabs { margin-bottom: 14px; }
+.energy-site-view .energy-network { grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr)); gap: 10px; }
+.energy-site-view .energy-card { padding: 14px; border-radius: 10px; }
+.energy-site-view .energy-section-title { gap: 8px; }
+.energy-site-view .energy-number { font-size: 25px; margin: 8px 0 0; }
+.energy-site-view h2 { font-size: 17px; margin-bottom: 0; }
+.energy-site-view h3 { font-size: 14px; margin: 0; }
+.energy-site-meter { border-top: 2px solid var(--theme-primary); display: grid; gap: 12px; }
+.energy-site-meter .energy-power-combined { padding-bottom: 10px; border-bottom: 1px solid var(--app-border); }
+.energy-mini-readings { display: grid; gap: 7px; }
+.energy-mini-readings > span { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 3px 10px; font-size: 11px; color: var(--app-text-muted); }
+.energy-mini-readings b { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--app-text); overflow-wrap: anywhere; }
+.energy-card-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 9px; border-top: 1px solid var(--app-border); }
+.energy-card-footer small { flex: 1 0 100%; font-size: 10px; }
+.energy-monitor .energy-card-footer button { padding: 5px 9px; font-size: 11px; }
+.energy-reading-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.energy-reading-panel th, .energy-reading-panel td { padding: 8px 10px; font-size: 12px; }
+.energy-reading-panel td:first-child { white-space: normal; }
+.energy-reading-panel td:nth-child(2) { text-align: right; font-variant-numeric: tabular-nums; }
+.energy-vector-reference line { stroke: var(--app-text-muted); stroke-dasharray: 3 6; opacity: .5; }
+.energy-vector-reference text { fill: var(--app-text-muted); font-size: 10px; text-anchor: middle; }
+.energy-reference-toggle { display: flex; align-items: center; gap: 7px; font-size: 12px; cursor: pointer; }
+.energy-vector-layout > div { min-width: 0; }
+@media (max-width: 760px) { .energy-reading-panels { grid-template-columns: 1fr; } .energy-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } .energy-summary-strip > :first-child { grid-column: 1 / -1; } }
+.energy-vector .energy-vector-reference text { fill: var(--app-text-muted); }
+.energy-angle-registers { margin: 12px 0; overflow-x: auto; }
+.energy-angle-registers summary { cursor: pointer; font-size: 12px; color: var(--theme-primary); padding: 6px 0; }

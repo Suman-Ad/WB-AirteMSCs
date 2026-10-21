@@ -1,3 +1,4 @@
+import EnergyMonitor from "./pages/EnergyMonitor";
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
@@ -593,6 +594,13 @@ export default function AppContent() {
                     <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
                         <Layout userData={userData}>
                             <LoadEntryForm userData={userData} />
+                        </Layout>
+                    </RoleProtectedRoute>} />
+
+                <Route path="/energy-monitor" element={
+                    <RoleProtectedRoute userData={userData} allowedRoles={["Admin", "Super Admin", "Super User", "User"]}>
+                        <Layout userData={userData}>
+                            <EnergyMonitor userData={userData} />
                         </Layout>
                     </RoleProtectedRoute>} />
 

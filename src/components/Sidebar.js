@@ -220,6 +220,10 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
           <Link to="/daily-activity-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Daily Activity Dashboard" : ""} onClick={() => setCollapsed(true)}>🏗️ <span className="label">Daily Activity Dashboard</span></Link>
         )}
 
+        {(["Admin", "Super Admin", "Super User", "User"].includes(role)) && (
+          <Link to="/energy-monitor" className="sidepanel-manage-btn" title={collapsed ? "Energy Monitor" : ""} onClick={() => setCollapsed(true)}>⚡ <span className="label">Energy Monitor</span></Link>
+        )}
+
         {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
           <Link to="/load-dashboard" className="sidepanel-manage-btn" title={collapsed ? "Load Dashboard" : ""} onClick={() => setCollapsed(true)}>📒 <span className="label">Load Book</span></Link>
         )}
