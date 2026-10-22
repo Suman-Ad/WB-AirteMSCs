@@ -1,39 +1,101 @@
-# EnergyMonitor reading contract
+# EnergyMonitor / EnergyBook views
 
-The UI subscribes to `energyMonitor/{siteId}/meters/{meterId}`. Existing aggregate meter fields remain supported. All received fields, including nested objects, appear in the All Readings tab. Power and session-counter values must be finite numbers. RMS, FWD display tables, and measured vectors also accept numeric strings from collectors.
+The page has five tabs: Energy Dashboard, Site Overview, Electrical SLD, Analysis Report, and Alarms. It uses the app's light/dark theme tokens and the existing account site assignment.
 
-## Energy registers
+## Live readings and units
 
-Supply either `import_kwh` (cumulative import energy in kWh), or `fwd_Wh` with `energyUnits` equal to `Wh` or `kWh`. Despite the legacy field name, no unit is inferred from `fwd_Wh`. Unknown units display as raw counter values. `powerUnits` applies only to instantaneous power.
+Live subscription: `energyMonitor/{siteId}/meters`.
 
-Energy Registers records the first and latest valid, server-confirmed counters seen in the current page session for every meter. A valid reading has `status: "OK"` and a Firestore `observedAt` timestamp. Duplicate/out-of-order timestamps and cached snapshots do not advance registers. A counter decrease invalidates consumption for that session; an energy unit change restarts the window. One sample does not establish consumption. Reloading clears the session. Daily opening/closing and historical reports require collector-side persisted period readings; this UI does not write billing or daily log records.
+- `active_power`, `apparent_power`, `reactive_power`: displayed as kW, kVA, kvar. `powerUnits: "base"` means W/VA/var (divide by 1000); `powerUnits: "kilo"` means already scaled. Unknown source scales show unavailable values.
+- Per phase: `R_current`, `Y_current`, `B_current` (A), `R_voltage_ln` / Y/B (V), and `R_voltage_ll` / Y/B (V). L-L columns correspond to R-Y, Y-B, B-R. Aggregate current/voltage remains available in the collector data.
+- EnergyBook reader fields `fwd_Wh`, `fwd_VAh`, `fwd_VARh`, `fwd_VARh_capacitive` are base counters, displayed after division by 1000 as kWh/kVAh/kvarh. Explicit `energyUnits: "kWh"` or `"kilo"` means already scaled and prevents another division. `fwd_runsec` remains seconds.
+- Failed meter readings are withheld. Cache state and upload freshness are visible. Site power totals include only live readings with known units and may include overlapping parent/submeter circuits.
+- The phase table and vectors retain the current EnergyBook measured-angle and P/Q-estimate behavior. Diagnostics are shown alongside readings. The live trend is limited to the latest 60 updates received while the page is open, not historical energy storage.
 
-## Measured vectors
+## Daily opening/closing and DG report
 
-Provide absolute phase angles in degrees, counterclockwise from the positive horizontal axis, using a shared reference for voltage and current:
+The selected date uses Asia/Kolkata. The report subscribes to existing saved records:
+
+- `dailyDGLogs/{siteName}/{YYYY-MM}` filtered by `Date == YYYY-MM-DD`: fields such as `EB-1 KWH Opening`, `EB-1 KWH Closing`, `DG-1 KWH Opening`, and other KWH Opening/Closing pairs. Values are already kWh. Missing values remain unavailable; counter decreases invalidate consumption.
+- `dgLogs/{siteName}/{Mon-YYYY}/{YYYY-MM-DD}/runs`: `dgNumber`, `startTime`, `stopTime`, `totalRunHours`, `kwhMeterStart`, `kwhMeterEnd`, `fuelConsumption`, `remarks`. Run hours prefer saved duration, then runSeconds, then valid start/stop times with midnight handling.
+
+CSV export keeps daily register rows and DG-run rows in separate sections so their energy is not double-counted. Summed DG hours are equipment-hours; simultaneous DG runs overlap. Cached or unreadable records are labelled. A current meter counter cannot reconstruct past midnight readings. Meter-level daily collector history is not manufactured or written by this page; maintain daily readings in the existing Daily DG Log.
+
+## Electrical SLD JSON
+
+Import supports up to 1 MB, 200 nodes and 500 edges. A sample JSON download is available. Graph imports and node/connection mappings autosave in device storage per site and restore after tab changes or reloads. Save site SLD writes a shared cloud copy. Graph nodes can link to live meter ids and open their dashboard readings. Lines show imported connectivity, not verified breaker/energization state.
 
 ```json
 {
-  "phases": {
-    "r": { "voltage": 230, "voltage_angle": 0, "current": 12, "current_angle": -25 },
-    "y": { "voltage": 231, "voltage_angle": -120, "current": 11, "current_angle": -145 },
-    "b": { "voltage": 229, "voltage_angle": 120, "current": 13, "current_angle": 95 }
-  }
+  "title": "Site power distribution",
+  "nodes": [
+    { "id": "utility", "label": "Utility supply", "type": "source", "x": 30, "y": 30 },
+    { "id": "main", "label": "Main incomer", "type": "breaker", "meterId": "meter-1", "x": 280, "y": 30 }
+  ],
+  "edges": [{ "source": "utility", "target": "main", "label": "Incoming" }]
 }
 ```
 
-Flat equivalents are supported: `voltage_r`, `voltage_angle_r`, `current_r`, `current_angle_r`, and corresponding `_y` / `_b` fields. Voltage magnitudes should be phase-to-neutral V; current magnitudes are A. Missing vectors are omitted rather than estimated. Voltage and current vector lengths are normalized separately. An aggregate power factor does not provide the phase sequence or measured phase displacement.
+`position: {x,y}` / `data: {label,meterId}` node fields and `from` / `to` edge endpoints are also supported. Missing coordinates receive a grid layout. Invalid ids, dangling connections, excessive graph sizes and invalid coordinates are rejected without replacing the current graph. EnergyBook native exports are also accepted directly: `{ "format": "EnergyBook drawing", "version": 1, "site": "...", "items": [...] }`. Breaker/Ellipse/Busbar dimensions, titles, font and line sizes, and Connector source/target ports, fractions and waypoints are preserved. Bounds include complete shape dimensions and connector waypoints. UTF-8 BOMs are accepted. Fit width resets zoom.
 
-## Power display units
+Native `point` UUIDs are kept separately from web meter ids. Automatic linking matches an explicit meter id or a meter's `pointId`, `point_id`, `point`, or `energyBookPointId`; equipment titles are never used to guess. Select a shape and use Linked live meter to map a node. Importing a new drawing clears its previous mappings and autosaves the replacement on the device. Use Save site SLD to replace the shared site copy. Unsupported drawing versions are rejected without replacing the current graph.
 
-Supply `active_power`, `apparent_power`, and `reactive_power` as numeric readings. Set `powerUnits: "base"` when they are W, VA, and var; the UI divides each by 1,000. Set `powerUnits: "kilo"` when they are already kW, kVA, and kvar. Cards, meter tables, overview totals, details, and active-power charts use these kilo units consistently. Missing readings or unknown source scales display an em dash. Reactive power signs are preserved; apparent/reactive readings are not estimated from power factor.
+## Alarms
 
-## RMS / FWD panels and phase compatibility
+The Alarms tab combines connection freshness, missing timestamps, meter errors, and collector `warnings` / `alarms`. It does not invent electrical thresholds or acknowledge/clear collector alarms. Each item opens the affected meter.
 
-The Live Meters view groups phase-to-neutral and line-to-line RMS voltage, phase/neutral/average RMS current, frequency, and FWD active/apparent/reactive energy. Additional received RMS and FWD fields are included as received. Unknown counter units stay labelled raw; Wh / VAh / varh convert only with matching energy metadata, while explicit kWh / kVAh / kvarh field names carry their unit.
+## Saved SLD and live power flow
 
-Phase fields match case and separators flexibly. R/Y/B and L1/L2/L3 aliases are supported, including `RMS_Voltage_L1`, `voltage_L1_angle`, `RMS_Current_L1`, `current_angle_L1`, and nested phase fields. `phase_angle_R` / `phase_angle_L1` are displayed as V–I displacement, not treated as absolute phase angles. Other angle fields remain available in the expandable register list.
+Device autosave key: `energy-monitor:sld:v1:{siteId}`. Shared Firestore document: `energyMonitor/{siteId}/config/sld`. It stores a versioned JSON payload string (to preserve nested waypoint arrays), node-meter mappings, connection-meter mappings/polarity, and server update time. Active same-site users can read; only Admin / Super Admin profiles can upload, edit or delete the shared SLD. Import automatically publishes the drawing. Mapping edits publish with Save site SLD. Viewers load the cloud copy without importing a file, and shared deletion clears their view and old device copy. A failed cloud write is explicitly reported; the local copy remains. Dirty local drafts are not overwritten by incoming shared snapshots. The saved version preserves EnergyBook geometry and point IDs. Shared saves currently use last-write-wins when different editors explicitly save the same site.
 
-The vector axes stay visible even without measured data. Optional grey balanced-reference lines at 0 / -120 / +120 degrees are explicitly illustrative. Measured vectors require both phase magnitude and absolute angle; no phase sequence or lead/lag is inferred from aggregate PF. The PF-equivalent angle is calculated from acos(abs(PF)) and is labelled as calculated, not measured.
+Select a shape to map its meter and see kW, kVA, kvar, kWh and freshness. Mapped EnergyBook shapes also display kW or stale/offline state directly on the drawing.
 
-Site Overview and meter power summaries show a single active / apparent / reactive value tuple with the exact unit caption `kW / kVA / kvar`.
+Select a connector line to map the meter measuring that connection and set its installed positive-power direction (source→target or target→source). Only explicitly mapped, live, finite power readings with known units animate. Negative active power reverses motion relative to the configured polarity; zero, cached/stale/error/unknown-unit and unmapped connections are static. A node mapping does not imply branch measurements or breaker position. Reduced-motion preferences disable animation while numeric direction labels remain.
+
+## Firestore listener stability
+
+The ca9 assertion (negative pending target responses) followed by b815 is an SDK listen-target race, not a drawing-schema or meter-unit error. Firebase's release notes identify a related fix in 12.13.0 and listen-stream robustness changes in 12.14.0: https://firebase.google.com/support/release-notes/js . Later occurrences have also been reported upstream, so a mocked lifecycle test does not prove all SDK races are eliminated.
+
+EnergyMonitor mounts SLD and Analysis Report subscriptions only when first opened, then keeps them mounted while switching tabs. Leaving the page or changing the site still cleans them up. Meter/report callbacks ignore events after cleanup. Firebase initialization reuses the default app during development module reloads.
+
+After installing the updated SDK, stop and restart the development server, then fully reload the browser tab. Fast Refresh alone can retain the old, failed Firestore client. Do not clear localStorage: it contains unsaved SLD drawings and mappings. The change does not suppress browser errors, clear IndexedDB, change security rules, or patch SDK internals.
+
+## Asansol operation simulator bridge
+
+EnergyMonitor connects to `AsansolOperationSimulator` through an external bridge without editing the simulator file. The integration appears only for Asansol site names and remains mounted while switching EnergyMonitor tabs.
+
+Under Asansol live-triggered operation simulator, open Meter mappings & voltage thresholds, map the Main Incomer and at least one DG meter, review thresholds, then enable automatic simulation. Defaults: failure below 100 V L-L; recovered supply and DG supply at or above 300 V L-L; two distinct paired updates. Configuration autosaves per site on this device (`energy-monitor:asansol-trigger:v1:{siteId}`). No equipment command or Firestore write is made by this bridge.
+
+Detection requires OK, server-confirmed, fresh timestamps. All three phase L-L readings are used when available (all must be below failure / above recovery or DG thresholds); aggregate voltage_ll is used only if phase readings are absent. Partial/inconsistent phase data cannot indicate total failure. Cached, stale, missing or failed readings do not trigger. Both Main Incomer and DG timestamps must advance between confirmations. DG-1 takes priority if both DGs meet the threshold. One trigger is latched per outage until the mapped incomer recovers; ticks and duplicate uploads do not restart the simulator.
+
+The existing simulator is mounted first with selectedDG, then receives triggeredBy="DG" on the next task so its selectedDG effect settles first. Existing internal trigger effects, timers, auto/manual sequences and controls are unchanged. The resulting animation demonstrates the existing timed logic; it is not a synchronized readout of physical breaker states. Restored incomer voltage rearms the external detector; it does not inject an unrequested EB restore command into the original simulation.
+
+## Header automatic EB to DG status
+
+Layout keeps the original EB/DG slider and its updatePowerSource click handler. A headless useAutoPowerSource hook calls that same handler for automatic DG starts; no additional header control is rendered. Configure Main Incomer and DG-1 / DG-2 under Energy Monitor → Existing header EB/DG switch · automatic meter mapping. Settings retain the per-site device key (`energy-monitor:header-power:v1:{siteId}`), apply immediately across the active page, and default to enabled. Blank older settings fall back to current simulator mappings. When explicit mappings are absent, unique meter names such as Main Incomer / DG-1 Meter / DG-2 Meter are recognized; ambiguous names require selection.
+
+Two distinct fresh, server-confirmed paired updates must show Main Incomer exactly 0 V L-L and a mapped DG strictly above 300 V L-L. All available phase values must agree; partial, stale, failed, pending-write and cached readings do not trigger. DG-1 has priority if both are live. Detection runs throughout Layout, including outside Energy Monitor, while an app session is open and the user has the existing power-change permission.
+
+The automatic entry point uses the existing header DG-start/timer/notification flow without a manual confirmation. A Firestore transaction allows only one session to claim EB → DG and stores the detected selectedDG with the status. Already-DG sessions do not restart timing or send duplicate start notifications. One trigger is latched per outage until healthy incomer readings return. Return to EB remains the existing manual action, including its DG-stop logging and form navigation. The original simulator file and manual toggle behavior are unchanged. No physical switching command is sent.
+
+Validation: five voltage/transaction tests and four header/simulator component tests passed; lint reports no errors (existing Layout warnings remain).
+
+## Meter changeover history and status lights
+
+Header EB → DG → EB transitions now write separate records to `energyChangeovers/{siteId}/runs/{runId}`. Each run captures DG opening/closing kWh, converted kW/kVA/kvar, all available numeric meter readings, sample times, EB-failure/restoration meter snapshots, actor, trigger, run duration and generation. Header status and run creation/completion commit in one transaction; repeated sessions cannot start the same run twice. The status document retains `activeEnergyRunId` to reconnect a run across browser reloads and users.
+
+During a run, fresh counter updates checkpoint `latest` to Firestore. On restoration, a fresh DG counter is preferred. If the DG meter has gone offline, its saved last valid reading is retained as closing with an explicit quality label and observation time. Missing opening readings and counter decreases never generate fabricated or negative consumption. Meter mappings come from Energy Monitor automatic-switch settings; the original run meter remains fixed through restoration even if mappings change.
+
+Analysis Report includes Meter-recorded EB / DG changeovers, filtered by run start date in Asia/Kolkata. Opening/closing values remain after restoration; captured reading details and JSON export are available. Existing manual DG and daily logs remain separate to avoid double counting. Runs already in progress before this feature can only record available restoration information; historical opening counters cannot be reconstructed.
+
+This records header status transitions while an authorized application session is running. It is not a background collector and cannot detect physical changes that never reach the header flow. No Cloud Function or collector change is required. Publish the updated `firestore.rules` before using this feature; the collection is created automatically by the first successful run write.
+
+Meter lights are green for fresh OK readings, amber for cached/reconnecting/waiting readings, and red for errors/offline/unavailable readings. This applies to Site Overview, selected-meter status and linked SLD shapes. Zero supply voltage alone does not mean a meter is offline.
+
+The existing slider shows automatic-trigger status beside its DG label and in its tooltip. Successful persisted changes move that slider immediately; a denied transaction keeps its previous source and reports the permissions blocker. Manual click/keyboard confirmation, DG-stop run logging/form navigation, notifications and simulator behavior remain in the existing updatePowerSource flow. Automatic recording still requires the published changeover rules described above.
+
+## Default selection and Site Overview supply
+
+Without a manual meter selection, the dashboard follows the active supply: Main Incomer, HT utility fallback, or a fresh running DG when utility fails. A confirmed zero-voltage Main Incomer selects DG rather than an upstream HT reading. Utility voltage must be positive; DG requires over 300 V L-L (or nonzero measured kW when voltage fields are absent). Standby DG meters with zero voltage are not treated as running just because their connection is online. Manual selections persist through subsequent uploads and source changes until leaving/resetting the page.
+
+Site Overview kW, kVA and kvar now come from that one supply meter, never a sum of main, HT and downstream meters. The source name/type is displayed. Missing/stale/cached/unmapped supply readings show unavailable values. Main Incomer / DG mappings reuse the existing Energy Monitor power-mapping settings; an optional HT panel mapping is available there. Unique HT Panel names can also be recognized automatically.

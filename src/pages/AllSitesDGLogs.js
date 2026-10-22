@@ -1,10 +1,11 @@
-import React, { use, useEffect, useState } from "react";
-import { collectionGroup, getDocs, getDoc, doc, collection, onSnapshot } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import "../assets/DailyDGLog.css"; // reuse your log CSS
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { calculateFields } from '../utils/calculatedDGLogs';
 import * as XLSX from "xlsx";
+import { configuredDGSitePaths, siteDataPaths, subscribeSiteData } from "../services/allSitesDGSubscriptions";
 
 
 const getISTMonthKey = () => {
@@ -38,6 +39,11 @@ const AllSitesDGLogs = ({ userData }) => {
     const navigate = useNavigate();
     // const location = useLocation();
     const [siteConfigs, setSiteConfigs] = useState({});
+    const [configsReady, setConfigsReady] = useState(false);
+    const [configError, setConfigError] = useState("");
+    const [runError, setRunError] = useState("");
+    const [billError, setBillError] = useState("");
+    const sitePathsKey = JSON.stringify(configuredDGSitePaths(siteConfigs));
     const [fuelRates, setFuelRates] = useState({});
     const [ebRate, setEbRate] = useState({});
 
@@ -84,25 +90,6 @@ const AllSitesDGLogs = ({ userData }) => {
     const todayDGLogs = dgLogs.filter(
         log => log.date === selectedDate
     );
-
-    const normalizeSiteId = (raw) => {
-        if (!raw) return "";
-        const lower = raw.toLowerCase();     // "asansol"
-        return lower.charAt(0).toUpperCase() + lower.slice(1); // "Asansol"
-    };
-
-    const normalizeMonthKey = (isoMonth) => {
-        if (!isoMonth || !isoMonth.includes('-')) return isoMonth;
-
-        const [year, month] = isoMonth.split('-');
-        const monthNames = [
-            '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-        ];
-
-        return `${monthNames[parseInt(month)]}-${year}`;
-    };
-
 
     // const fetchDgLogs = async () => {
     //     try {
@@ -161,42 +148,10 @@ const AllSitesDGLogs = ({ userData }) => {
     // }, [monthKey]);
 
     useEffect(() => {
-        if (!monthKey) return;
-
-        const normalizedMonthKey = normalizeMonthKey(monthKey);
-
-        const unsubscribe = onSnapshot(
-            collectionGroup(db, "runs"),
-            (snapshot) => {
-                const logs = [];
-
-                snapshot.forEach((docSnap) => {
-                    const path = docSnap.ref.path.split("/");
-
-                    // dgLogs / site / month / date / runs / runId
-                    const site = path[1];
-                    const month = path[2];
-                    const date = path[3];
-
-                    if (month !== normalizedMonthKey) return;
-
-                    logs.push({
-                        id: docSnap.id,
-                        site: site.toUpperCase(),
-                        date,
-                        ...docSnap.data(),
-                    });
-                });
-
-                setDgLogs(logs);
-            },
-            (err) => {
-                console.error("dgLogs realtime error:", err);
-            }
-        );
-
-        return () => unsubscribe();
-    }, [monthKey]);
+        if (!configsReady || !monthKey) return undefined;
+        setDgLogs([]); setRunError("");
+        return subscribeSiteData(db, siteDataPaths("runs", JSON.parse(sitePathsKey), monthKey, selectedDate), setDgLogs, setRunError);
+    }, [configsReady, sitePathsKey, monthKey, selectedDate]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -635,37 +590,10 @@ const AllSitesDGLogs = ({ userData }) => {
     // }, [userData, navigate]);
 
     useEffect(() => {
-        setLoading(true);
-        setError("");
-
-        const unsubscribe = onSnapshot(
-            collectionGroup(db, monthKey),
-            (snapshot) => {
-                const logsArr = [];
-
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    const pathParts = docSnap.ref.path.split('/');
-                    const siteId = pathParts.length > 1 ? pathParts[1] : "Unknown Site";
-
-                    logsArr.push({
-                        id: docSnap.id,
-                        site: data.site || siteId,
-                        ...data,
-                    });
-                });
-
-                setLogs(logsArr);
-                setLoading(false);
-            },
-            (err) => {
-                setError("Error fetching logs: " + err.message);
-                setLoading(false);
-            }
-        );
-
-        return () => unsubscribe(); // 🔥 IMPORTANT cleanup
-    }, [monthKey]);
+        if (!configsReady || !monthKey) return undefined;
+        setLoading(true); setError(""); setLogs([]);
+        return subscribeSiteData(db, siteDataPaths("daily", JSON.parse(sitePathsKey), monthKey), setLogs, setError, () => setLoading(false));
+    }, [configsReady, sitePathsKey, monthKey]);
 
     // useEffect(() => {
     //     // Get all unique site keys from logs (case-sensitive; match your Firestore docs)
@@ -745,9 +673,11 @@ const AllSitesDGLogs = ({ userData }) => {
                 });
 
                 setSiteConfigs(configs);
+                setConfigError(""); setConfigsReady(true);
             },
             (err) => {
-                console.error("Error fetching siteConfigs:", err);
+                setConfigError("Unable to load site configurations: " + err.message);
+                setConfigsReady(true);
             }
         );
 
@@ -775,38 +705,14 @@ const AllSitesDGLogs = ({ userData }) => {
     }, []);
 
     useEffect(() => {
-        if (!monthKey) return;
-
-        const unsubscribe = onSnapshot(
-            collectionGroup(db, "MonthlyBills"),
-            (snapshot) => {
-                const rates = {};
-
-                snapshot.forEach((docSnap) => {
-                    const path = docSnap.ref.path.split("/");
-
-                    // ebBillDetails / siteKey / MonthlyBills / monthKey
-                    const siteKey = path[1];
-                    const month = path[3];
-
-                    if (month !== monthKey) return;
-
-                    rates[siteKey.toUpperCase()] = docSnap.data();
-                });
-
-                setEbRate(rates);
-            },
-            (err) => {
-                console.error("Error fetching EB rates:", err);
-            }
-        );
-
-        return () => unsubscribe();
-    }, [monthKey]);
-
+        if (!configsReady || !monthKey) return undefined;
+        setEbRate({}); setBillError("");
+        return subscribeSiteData(db, siteDataPaths("bills", JSON.parse(sitePathsKey), monthKey),
+            (rows) => setEbRate(Object.fromEntries(rows.map((row) => [row.site, row]))), setBillError);
+    }, [configsReady, sitePathsKey, monthKey]);
 
     if (loading) return <div>⏳Loading all site logs…</div>;
-    if (error) return <div style={{ color: "red" }}>{error}</div>;
+
 
     const getHeaderStyle = (header) => {
         if (header.startsWith("EB")) return { backgroundColor: "#294985", color: "#fff" };
@@ -825,6 +731,7 @@ const AllSitesDGLogs = ({ userData }) => {
 
     return (
         <div className="daily-log-container">
+            {[configError, error && `Daily logs: ${error}`, runError && `DG runs: ${runError}`, billError && `EB bills: ${billError}`].filter(Boolean).map((message) => <p key={message} role="alert" style={{ color: "var(--app-text)", borderLeft: "3px solid #c2410c", padding: 12 }}>{message}</p>)}
             <h2>All Sites Daily Energy Logs Monthly Summary - <strong>{monthKey}</strong> </h2>
 
             <div

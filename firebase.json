@@ -6,7 +6,6 @@
       "**/.*",
       "**/node_modules/**"
     ],
-
     "headers": [
       {
         "source": "/version.json",
@@ -27,7 +26,6 @@
         ]
       }
     ],
-
     "rewrites": [
       {
         "source": "**",
@@ -35,8 +33,19 @@
       }
     ]
   },
-
   "storage": {
     "rules": "storage.rules"
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8085
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
   }
 }

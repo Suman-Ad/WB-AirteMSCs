@@ -1034,3 +1034,5 @@ body {
     height: 2.35rem !important;
   }
 }
+
+.power-auto-status { display: block; max-width: 170px; color: inherit; font-size: 9px; font-weight: normal; line-height: 1.2; white-space: normal; }

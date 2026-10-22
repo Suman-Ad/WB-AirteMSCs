@@ -27,8 +27,10 @@ export function displayReading(meter, key) {
   const v = meter?.status === "OK" ? meter[key] : null;
   const base = key.replace(/^[RYB]_/, "");
   const powerUnits = { active_power: "kW", apparent_power: "kVA", reactive_power: "kvar" };
-  if (powerUnits[base]) return { value: isNumber(v) ? v / (meter.powerUnits === "base" ? 1000 : 1) : null,
-    unit: ["base", "kilo"].includes(meter?.powerUnits) ? powerUnits[base] : "raw (units unverified)" };
+  if (powerUnits[base]) return { value: isNumber(v) && ["base", "kilo"].includes(meter?.powerUnits) ? v / (meter.powerUnits === "base" ? 1000 : 1) : null,
+    unit: powerUnits[base] };
+  const energy = { fwd_Wh: "kWh", fwd_VAh: "kVAh", fwd_VARh: "kvarh", fwd_VARh_capacitive: "kvarh" };
+  if (energy[base]) return { value: isNumber(v) ? v / (meter?.energyUnits === "kWh" || meter?.energyUnits === "kilo" ? 1 : 1000) : null, unit: energy[base] };
   const units = { voltage_ll: "V", voltage_ln: "V", current: "A", frequency: "Hz", power_factor: "",
     voltage_phase_angle: "°", current_phase_angle: "°", fwd_Wh: "Wh", fwd_VAh: "VAh",
     fwd_VARh: "varh", fwd_VARh_capacitive: "varh", fwd_runsec: "s" };

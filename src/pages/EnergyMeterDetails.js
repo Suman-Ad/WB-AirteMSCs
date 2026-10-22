@@ -2,8 +2,8 @@ import React from "react";
 import { vectors, phases, displayReading, isNumber } from "./energyMeterData";
 
 const format = (v) => isNumber(v) ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—";
-const panel = { background: "white", border: "1px solid #dce5ed", borderRadius: 12, padding: 20, marginTop: 20 };
-const cell = { padding: "10px 12px", borderBottom: "1px solid #e7edf2", textAlign: "left" };
+const panel = { background: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 10, padding: 16 };
+const cell = { padding: "10px 12px", borderBottom: "1px solid var(--app-border)", textAlign: "left" };
 
 export default function EnergyMeterDetails({ meter, state }) {
   const rows = vectors(meter);
@@ -42,8 +42,8 @@ export default function EnergyMeterDetails({ meter, state }) {
       <h2>Phase vectors · {state}</h2>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "center" }}>
         <svg viewBox="0 0 400 330" role="img" aria-label="Voltage and current phase vectors for selected meter" style={{ width: "100%", maxWidth: 420 }}>
-          {[60, 120].map((r) => <circle key={r} cx="200" cy="165" r={r} fill="none" stroke="#dce5ed" />)}
-          <path d="M60 165H340 M200 25V305" stroke="#dce5ed" />
+          {[60, 120].map((r) => <circle key={r} cx="200" cy="165" r={r} fill="none" stroke="var(--app-border)" />)}
+          <path d="M60 165H340 M200 25V305" stroke="var(--app-border)" />
           {rows.flatMap((r) => [
             r.voltage > 0 ? arrow(r.reference, 120 * r.voltage / vmax, r.color, false, `V${r.phase}`) : null,
             r.phi !== null ? arrow(r.reference - r.phi, 120 * r.current / imax, r.color, true, `I${r.phase}`) : null,
@@ -66,12 +66,12 @@ export default function EnergyMeterDetails({ meter, state }) {
           ["Forward reactive energy", "fwd_VARh"], ["Capacitive reactive energy", "fwd_VARh_capacitive"],
           ["Forward runtime", "fwd_runsec"]].map(([title, key]) => <tr key={key}><th style={cell}>{title}</th><td style={cell}>{reading(key)}</td></tr>)}
       </tbody></table>
-      <p>Counter values use the reader's base units. Verify commissioning scales against the physical meter.</p>
+      <p>Energy counters are displayed in kWh / kVAh / kvarh; forward runtime is in seconds. Wh-based reader counters are divided by 1,000 unless the collector explicitly marks them as kilo units.</p>
     </section>
     {Object.keys(meter).some((key) => key.startsWith("custom_")) && <section style={panel}>
       <h2>Additional meter readings</h2>
       {Object.keys(meter).filter((key) => key.startsWith("custom_")).map((key) => <p key={key}>{key.replace(/^custom_/, "").replace(/_/g, " ")}: {reading(key)}</p>)}
     </section>}
-    {meter.warnings?.length > 0 && <section style={panel}><h2>Meter diagnostics</h2>{meter.warnings.map((w, i) => <p key={i}>{w}</p>)}</section>}
+    {Array.isArray(meter.warnings) && meter.warnings.length > 0 && <section style={panel}><h2>Meter diagnostics</h2>{meter.warnings.map((w, i) => <p key={i}>{w}</p>)}</section>}
   </>;
 }

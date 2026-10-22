@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAppUser() {
+      return request.auth != null
+        && request.auth.uid != 'n89Dopqa4ybdE8VX6B5zUwJYMcx1';
+    }
+    function isActiveSiteUser(siteId) {
+      return isAppUser()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.siteId == siteId;
+    }
+    function isSiteAdmin(siteId) {
+      return isActiveSiteUser(siteId)
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin'];
+    }
+    // Retain the supplied legacy access for non-energyMonitor collections.
+    // All-sites reports use explicit paths so they do not query energyMonitor.
+    match /{collection}/{document=**} {
+      allow read, write: if isAppUser() && !(collection in ['energyMonitor', 'energyChangeovers']);
+    }
+    match /energyMonitor/{siteId}/meters/{meterId} {
+      allow read: if isActiveSiteUser(siteId);
+      allow create, update: if request.auth != null
+        && request.auth.uid == 'n89Dopqa4ybdE8VX6B5zUwJYMcx1'
+        && siteId == 'N19106A'
+        && (meterId == 'test-meter' || meterId.matches('meter-[0-9]{1,3}'))
+        && request.resource.data.siteId == siteId
+        && request.resource.data.meterId == meterId
+        && request.resource.data.observedAt is timestamp
+        && request.resource.data.status in ['OK', 'ERROR']
+        && request.resource.data.powerUnits in ['raw', 'base', 'kilo'];
+      allow delete: if false;
+    }
+    match /energyMonitor/{siteId}/config/sld {
+      allow read: if isActiveSiteUser(siteId);
+      allow create, update: if isSiteAdmin(siteId)
+        && request.resource.data.keys().hasOnly(['version', 'payloadJson', 'updatedAt'])
+        && request.resource.data.version == 1
+        && request.resource.data.payloadJson is string
+        && request.resource.data.payloadJson.size() <= 900000
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isSiteAdmin(siteId);
+    }
+    match /energyChangeovers/{siteId}/runs/{runId} {
+      allow read: if isActiveSiteUser(siteId);
+      function validRun() {
+        return request.resource.data.keys().hasOnly(['siteId', 'siteName', 'dgNumber', 'meterId', 'mainMeterId', 'status', 'startAtMs', 'endAtMs', 'date', 'opening', 'latest', 'closing', 'ebFailure', 'ebRestoration', 'generationKwh', 'trigger', 'createdBy', 'updatedBy', 'createdAt', 'updatedAt', 'runSeconds', 'counterReset'])
+          && request.resource.data.siteId == siteId
+          && request.resource.data.status in ['Running', 'Completed']
+          && request.resource.data.dgNumber is string
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.updatedAt == request.time;
+      }
+      allow create: if isActiveSiteUser(siteId) && validRun()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update: if isActiveSiteUser(siteId) && validRun()
+        && resource.data.status == 'Running'
+        && request.resource.data.status in ['Running', 'Completed']
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.startAtMs == resource.data.startAtMs
+        && request.resource.data.opening == resource.data.opening
+        && request.resource.data.meterId == resource.data.meterId;
+      allow delete: if false;
+    }
+  }
+}

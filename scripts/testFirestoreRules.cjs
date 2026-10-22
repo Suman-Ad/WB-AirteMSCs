@@ -1,0 +1,78 @@
+// Integration checks use only the local emulator and a demo project.
+const assert = require("node:assert/strict");
+const host = process.env.FIRESTORE_EMULATOR_HOST;
+const project = process.env.GCLOUD_PROJECT || "demo-wb-airtel-msc";
+if (!/^(127\.0\.0\.1|localhost):\d+$/.test(host || "") || !project.startsWith("demo-")) throw new Error("Run via firebase emulators:exec with a demo project.");
+const root = `http://${host}/v1/projects/${project}/databases/(default)/documents`;
+const collector = "n89Dopqa4ybdE8VX6B5zUwJYMcx1";
+const field = (value) => value === null ? { nullValue: null } : typeof value === "boolean" ? { booleanValue: value } : typeof value === "number" ? { integerValue: String(value) } : typeof value === "object" ? { mapValue: { fields: fields(value) } } : { stringValue: value };
+const fields = (value) => Object.fromEntries(Object.entries(value).map(([key, v]) => [key, field(v)]));
+const token = (uid) => {
+  const now = Math.floor(Date.now() / 1000);
+  const encode = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64url");
+  return `${encode({ alg: "none", typ: "JWT" })}.${encode({ aud: project, iss: `https://securetoken.google.com/${project}`, sub: uid, user_id: uid, auth_time: now, iat: now, exp: now + 3600, firebase: { sign_in_provider: "custom", identities: {} } })}.`;
+};
+async function call(path, uid, method = "GET", body) {
+  return fetch(root + path, { method, headers: { "Content-Type": "application/json", ...(uid ? { Authorization: `Bearer ${uid === "owner" ? "owner" : token(uid)}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(20000) });
+}
+async function seed(path, data) { const response = await call("/" + path, "owner", "PATCH", { fields: fields(data) }); assert.equal(response.status, 200, await response.text()); }
+const sldWrite = (siteId, extra = {}) => ({ writes: [{ update: { name: `projects/${project}/databases/(default)/documents/energyMonitor/${siteId}/config/sld`, fields: fields({ version: 1, payloadJson: "{}", ...extra }) }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }] }] });
+const meterWrite = (siteId, meterId) => ({ fields: { ...fields({ siteId, meterId, status: "OK", powerUnits: "base" }), observedAt: { timestampValue: new Date().toISOString() } } });
+async function main() {
+  await seed("users/human", { isActive: true, siteId: "N19106A", role: "User" });
+  await seed("users/admin", { isActive: true, siteId: "N19106A", role: "Admin" });
+  await seed("users/superadmin", { isActive: true, siteId: "N19106A", role: "Super Admin" });
+  await seed("users/other", { isActive: true, siteId: "OTHER" });
+  await seed("users/inactive", { isActive: false, siteId: "N19106A" });
+  await seed("dailyDGLogs/Asansol/2026-10/day1", { Date: "2026-10-22" });
+  await seed("dgLogs/Asansol/Oct-2026/2026-10-22/runs/run1", { dgNumber: "DG-1" });
+  await seed("ebBillDetails/Asansol/MonthlyBills/2026-10", { Amount: 100 });
+  await seed("energyMonitor/N19106A/meters/meter-1", { active_power: 100 });
+  await seed("energyMonitor/OTHER/meters/meter-1", { active_power: 200 });
+  let passed = 0;
+  async function check(name, promise, expected) {
+    const response = await promise;
+    assert.equal(response.status, expected, `${name}: ${await response.text()}`);
+    passed++; console.log(`PASS ${name}`);
+  }
+  const query = (collectionId, allDescendants = false) => ({ structuredQuery: { from: [{ collectionId, allDescendants }] } });
+  await check("human explicit daily-log query", call("/dailyDGLogs/Asansol:runQuery", "human", "POST", query("2026-10")), 200);
+  await check("human explicit DG-run query", call("/dgLogs/Asansol/Oct-2026/2026-10-22:runQuery", "human", "POST", query("runs")), 200);
+  await check("human explicit EB bill read", call("/ebBillDetails/Asansol/MonthlyBills/2026-10", "human"), 200);
+  await check("unscoped monthly group remains denied", call(":runQuery", "human", "POST", query("2026-10", true)), 403);
+  await check("anonymous reports denied", call("/dailyDGLogs/Asansol/2026-10/day1"), 403);
+  await check("collector cannot read DG logs", call("/dailyDGLogs/Asansol/2026-10/day1", collector), 403);
+  await check("same-site meter read allowed", call("/energyMonitor/N19106A/meters/meter-1", "human"), 200);
+  await check("cross-site meter read denied", call("/energyMonitor/OTHER/meters/meter-1", "human"), 403);
+  await check("inactive meter read denied", call("/energyMonitor/N19106A/meters/meter-1", "inactive"), 403);
+  await check("collector valid meter upload", call("/energyMonitor/N19106A/meters/meter-2", collector, "PATCH", meterWrite("N19106A", "meter-2")), 200);
+  await check("collector cross-site upload denied", call("/energyMonitor/OTHER/meters/meter-2", collector, "PATCH", meterWrite("OTHER", "meter-2")), 403);
+  await check("collector profile write denied", call("/users/collector-new", collector, "PATCH", { fields: fields({ isActive: true }) }), 403);
+  await check("human meter write denied", call("/energyMonitor/N19106A/meters/meter-2", "human", "PATCH", meterWrite("N19106A", "meter-2")), 403);
+  await check("same-site Admin SLD save allowed", call(":commit", "admin", "POST", sldWrite("N19106A")), 200);
+  await check("same-site SLD read allowed", call("/energyMonitor/N19106A/config/sld", "human"), 200);
+  await check("cross-site SLD read denied", call("/energyMonitor/N19106A/config/sld", "other"), 403);
+  await check("cross-site SLD save denied", call(":commit", "other", "POST", sldWrite("N19106A")), 403);
+  await check("collector SLD save denied", call(":commit", collector, "POST", sldWrite("N19106A")), 403);
+  await check("extra SLD fields rejected", call(":commit", "admin", "POST", sldWrite("N19106A", { unexpected: "value" })), 403);
+  await check("SLD deletion denied", call("/energyMonitor/N19106A/config/sld", "human", "DELETE"), 403);
+  await check("ordinary site user SLD write denied", call(":commit", "human", "POST", sldWrite("N19106A")), 403);
+  await check("Super Admin SLD write allowed", call(":commit", "superadmin", "POST", sldWrite("N19106A")), 200);
+  await check("Admin SLD deletion allowed", call("/energyMonitor/N19106A/config/sld", "admin", "DELETE"), 200);
+  await seed("energyChangeovers/N19106A/runs/r1", { siteId: "N19106A", status: "Running", createdBy: "human" });
+  await check("site user changeover history read", call("/energyChangeovers/N19106A/runs/r1", "human"), 200);
+  await check("cross-site changeover history read denied", call("/energyChangeovers/N19106A/runs/r1", "other"), 403);
+  await check("collector changeover history denied", call("/energyChangeovers/N19106A/runs/r1", collector), 403);
+  await check("cross-site changeover history write denied", call("/energyChangeovers/N19106A/runs/new", "other", "PATCH", { fields: fields({ siteId: "N19106A", status: "Running" }) }), 403);
+  const runPath = `projects/${project}/databases/(default)/documents/energyChangeovers/N19106A/runs/valid`;
+  const initialRun = fields({ siteId: "N19106A", siteName: "Asansol", dgNumber: "DG-1", meterId: "meter-2", mainMeterId: "meter-1", status: "Running", startAtMs: 100000, endAtMs: null, date: "2026-10-22", opening: { kwh: 10 }, latest: { kwh: 10 }, closing: null, ebFailure: null, ebRestoration: null, generationKwh: null, trigger: "Automatic", createdBy: "human", updatedBy: "human" });
+  await check("site user can create changeover run", call(":commit", "human", "POST", { writes: [{ update: { name: runPath, fields: initialRun }, updateTransforms: [{ fieldPath: "createdAt", setToServerValue: "REQUEST_TIME" }, { fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }] }] }), 200);
+  const savedRun = (await (await call("/energyChangeovers/N19106A/runs/valid", "human")).json()).fields;
+  const commitRun = (patch) => call(":commit", "human", "POST", { writes: [{ update: { name: runPath, fields: { ...savedRun, ...fields(patch) } }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }] }] });
+  await check("running checkpoint is allowed", commitRun({ latest: { kwh: 15 } }), 200);
+  await check("restoration completes recorded run", commitRun({ status: "Completed", closing: { kwh: 15 }, endAtMs: 160000, generationKwh: 5 }), 200);
+  await check("completed meter history cannot be rewritten", commitRun({ status: "Completed", closing: { kwh: 99 } }), 403);
+  await check("changeover history delete denied", call("/energyChangeovers/N19106A/runs/valid", "human", "DELETE"), 403);
+  console.log(`${passed} Firestore rules integration checks passed.`);
+}
+main().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -13,6 +13,8 @@ import { useRef } from "react";
 import Modal from "./Modal";
 import AsansolOperationSimulator from "./SOP/AsansolOperationSimulator";
 import LiveClockWeather from "./LiveClockWeather";
+import useAutoPowerSource from "./useAutoPowerSource";
+import { commitEnergyChangeover, checkpointEnergyRun } from "../services/energyChangeoverHistory";
 
 // Fetch today's shift
 export async function getTodayDuty(siteId, uid) {
@@ -153,6 +155,8 @@ const Layout = ({ userData, children }) => {
   // Change Toggle
   const [canTogglePower, setCanTogglePower] = useState(false);
   const powerLockRef = useRef(false);
+  const energyMeterDataRef = useRef(null);
+  const energyCheckpointRef = useRef("");
 
   // For Show Simulator
   const [showSimulator, setShowSimulator] = useState(false);
@@ -432,8 +436,10 @@ const Layout = ({ userData, children }) => {
   }, [userData?.uid, userData?.site]);
 
   // Update Power Source
-  const updatePowerSource = async () => {
-    if (powerLockRef.current) return;
+  const updatePowerSource = async (options) => {
+    const automatic = options?.automatic === true;
+    const activeDG = automatic ? options.dg : selectedDG;
+    if (powerLockRef.current) return false;
 
     if (!canTogglePower) {
       alert("Only shift in-charge can change power source");
@@ -443,10 +449,10 @@ const Layout = ({ userData, children }) => {
     const nextSource = powerSource === "EB" ? "DG" : "EB";
     const confirmMsg =
       nextSource === "DG"
-        ? `⚠️ Confirm Power Change\n\nEB → DG\n\n• ${selectedDG} will start running\n• DG log entry will be created\n\nDo you want to continue?`
-        : `⚠️ Confirm Power Change\n\nDG → EB\n\n• ${selectedDG} will be stopped\n• DG run time will be logged\n\nDo you want to continue?`;
+        ? `⚠️ Confirm Power Change\n\nEB → DG\n\n• ${activeDG} will start running\n• DG log entry will be created\n\nDo you want to continue?`
+        : `⚠️ Confirm Power Change\n\nDG → EB\n\n• ${activeDG} will be stopped\n• DG run time will be logged\n\nDo you want to continue?`;
 
-    const confirmed = window.confirm(confirmMsg);
+    const confirmed = automatic || window.confirm(confirmMsg);
     if (!confirmed) return; // ❌ stop toggle
 
     powerLockRef.current = true;
@@ -456,11 +462,11 @@ const Layout = ({ userData, children }) => {
       const snap = await getDoc(powerRef);
 
       const prev = snap.exists() ? snap.data() : {};
-      const newSource = powerSource === "EB" ? "DG" : "EB";
+      const newSource = automatic ? "DG" : powerSource === "EB" ? "DG" : "EB";
 
       let updateData = {
         powerSource: newSource,
-        dgNumber: selectedDG,
+        dgNumber: activeDG,
         updatedBy: userData.uid,
         updatedByName: userData.name || "",
         updatedByEmpId: userData.empId || "",
@@ -500,7 +506,7 @@ const Layout = ({ userData, children }) => {
           {
             site: userData.site,
             siteId: userData.siteId || "",
-            dgNumber: selectedDG, // or dynamic later
+            dgNumber: activeDG, // or dynamic later
             startTime: formatTime(start),
             endTime: formatTime(end),
             runSeconds,
@@ -518,7 +524,7 @@ const Layout = ({ userData, children }) => {
           state: {
             autoFromDgStop: true,
             runId: historyRef.id,
-            dgNumber: selectedDG, // later make dynamic
+            dgNumber: activeDG, // later make dynamic
             startTime: formatTime(start),
             stopTime: formatTime(end),
             date: format(new Date(), "yyyy-MM-dd"),
@@ -532,7 +538,18 @@ const Layout = ({ userData, children }) => {
 
       }
 
-      await setDoc(powerRef, updateData, { merge: true });
+      if (userData.siteId) {
+        const changed = await commitEnergyChangeover(db, powerRef, updateData, {
+          siteId: userData.siteId, siteName: userData.site, dg: activeDG, automatic,
+          meterData: energyMeterDataRef.current, uid: userData.uid,
+        });
+        if (!changed) return;
+      } else {
+        await setDoc(powerRef, updateData, { merge: true });
+      }
+
+      setPowerSource(newSource);
+      if (automatic) setSelectedDG(activeDG);
 
       // Notify All Site User
       const allUserQuery = query(
@@ -544,7 +561,7 @@ const Layout = ({ userData, children }) => {
       const allUserSnap = await getDocs(allUserQuery);
       const todayISO = new Date().toISOString().split("T")[0];
       const message = newSource === "DG" ?
-        `${userData.site} MSC Power fail from ${now.toLocaleString()}, Site On ${newSource} (${selectedDG}) Source. 
+        `${userData.site} MSC Power fail from ${now.toLocaleString()}, Site On ${newSource} (${activeDG}) Source.
     Reported By:\nName: ${userData?.name}.
     Emp ID: ${userData?.empId}
     Designation: ${userData?.designation}`
@@ -605,6 +622,7 @@ const Layout = ({ userData, children }) => {
     } finally {
       powerLockRef.current = false;
     }
+    return true;
   };
 
   const saveSelectedDG = async (dg) => {
@@ -752,6 +770,25 @@ const Layout = ({ userData, children }) => {
   }, [userData?.site]);
 
 
+  const { status: autoPowerStatus } = useAutoPowerSource({
+    siteId: userData?.siteId, canToggle: canTogglePower, powerSource,
+    onTrigger: (dg) => updatePowerSource({ automatic: true, dg }),
+    onMeterData: (data) => {
+      energyMeterDataRef.current = data;
+      if (!data || data.fromCache || powerSource !== "DG" || !canTogglePower) return;
+      const key = `${data.siteId}:${data.meters.map((m) => `${m.id}:${m.observedAt?.toMillis?.()}`).join(",")}`;
+      if (key === energyCheckpointRef.current) return;
+      energyCheckpointRef.current = key;
+      checkpointEnergyRun(db, doc(db, "sitePowerStatus", userData.site), { siteId: userData.siteId, uid: userData.uid, meterData: data })
+        .catch((error) => { energyCheckpointRef.current = ""; console.error("DG meter checkpoint failed", error); });
+    },
+  });
+
+  const autoPowerLabel = /blocked|failed|unavailable/i.test(autoPowerStatus) ? "Auto: blocked"
+    : /map meters/i.test(autoPowerStatus) ? "Auto: map meters"
+    : /off$/i.test(autoPowerStatus) ? "Auto off"
+    : /permission/i.test(autoPowerStatus) ? "Auto: no permission" : "Auto enabled";
+
   return (
     <div className="layout" data-power-source={powerSource || "unknown"}>
       {/* Sidebar */}
@@ -772,6 +809,7 @@ const Layout = ({ userData, children }) => {
           </button>
           <div className="navbar-content">
             <header className="main-header">
+
               <div className="header-top">
                 {isLargeScreen ? (
                   <>
@@ -926,7 +964,7 @@ const Layout = ({ userData, children }) => {
                     )}
 
                     <div
-                      title="Click to toggle power source state"
+                      title={`${autoPowerStatus}. Click to change power source manually.`}
                       style={{
                         alignItems: "center",
                         background: "#0f172aff",
@@ -942,6 +980,13 @@ const Layout = ({ userData, children }) => {
                         </span>
 
                         <div
+                          role="switch"
+                          aria-label="EB/DG power source"
+                          aria-checked={powerSource === "DG"}
+                          aria-describedby="header-power-auto-desktop"
+                          title={autoPowerStatus}
+                          tabIndex={canTogglePower ? 0 : -1}
+                          onKeyDown={(event) => { if (["Enter", " "].includes(event.key) && canTogglePower && !powerLockRef.current) { event.preventDefault(); updatePowerSource(); } }}
                           onClick={powerLockRef.current || !canTogglePower ? undefined : updatePowerSource}
                           style={{
                             width: "42px",
@@ -972,7 +1017,7 @@ const Layout = ({ userData, children }) => {
                         </div>
 
                         <span style={{ opacity: powerSource === "DG" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "DG" ? "#ffffffff" : "#ffffffaa" }}>
-                          <strong>⛽DG</strong>
+                          <strong>⛽DG</strong><small id="header-power-auto-desktop" className="power-auto-status" role="status" title={autoPowerStatus} aria-label={autoPowerStatus}>{autoPowerLabel}</small>
                         </span>
                       </div>
                       <div style={{ marginTop: "4px", fontSize: "10px", color: "#fff" }}>
@@ -1158,7 +1203,7 @@ const Layout = ({ userData, children }) => {
                       </b>
 
                       <div
-                        title="Click to toggle power source state"
+                        title={`${autoPowerStatus}. Click to change power source manually.`}
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -1173,6 +1218,13 @@ const Layout = ({ userData, children }) => {
                         </span>
 
                         <div
+                          role="switch"
+                          aria-label="EB/DG power source"
+                          aria-checked={powerSource === "DG"}
+                          aria-describedby="header-power-auto-mobile"
+                          title={autoPowerStatus}
+                          tabIndex={canTogglePower ? 0 : -1}
+                          onKeyDown={(event) => { if (["Enter", " "].includes(event.key) && canTogglePower && !powerLockRef.current) { event.preventDefault(); updatePowerSource(); } }}
                           onClick={powerLockRef.current || !canTogglePower ? undefined : updatePowerSource}
                           style={{
                             width: "42px",
@@ -1204,7 +1256,7 @@ const Layout = ({ userData, children }) => {
                         </div>
 
                         <span style={{ opacity: powerSource === "DG" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "DG" ? "#ffffffff" : "#ffffffaa" }}>
-                          <strong>⛽DG</strong>
+                          <strong>⛽DG</strong><small id="header-power-auto-mobile" className="power-auto-status" role="status" title={autoPowerStatus} aria-label={autoPowerStatus}>{autoPowerLabel}</small>
                         </span>
                         {powerSource === "DG" && (
                           <div style={{
