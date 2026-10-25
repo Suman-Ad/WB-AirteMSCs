@@ -15,13 +15,19 @@ service cloud.firestore {
       return isActiveSiteUser(siteId)
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin'];
     }
+    function isActiveAdmin() {
+      return isAppUser()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin'];
+    }
     // Retain the supplied legacy access for non-energyMonitor collections.
     // All-sites reports use explicit paths so they do not query energyMonitor.
     match /{collection}/{document=**} {
       allow read, write: if isAppUser() && !(collection in ['energyMonitor', 'energyChangeovers']);
     }
     match /energyMonitor/{siteId}/meters/{meterId} {
-      allow read: if isActiveSiteUser(siteId);
+      allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
       allow create, update: if request.auth != null
         && request.auth.uid == 'n89Dopqa4ybdE8VX6B5zUwJYMcx1'
         && siteId == 'N19106A'
@@ -32,6 +38,33 @@ service cloud.firestore {
         && request.resource.data.status in ['OK', 'ERROR']
         && request.resource.data.powerUnits in ['raw', 'base', 'kilo'];
       allow delete: if false;
+    }
+    match /energyMonitor/{siteId}/config/powerSwitch {
+      allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
+      allow create, update: if (isActiveAdmin() || (isActiveSiteUser(siteId)
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Super User'))
+        && request.resource.data.keys().hasOnly(['enabled', 'mainMeterId', 'htMeterId', 'dg1MeterId', 'dg2MeterId', 'updatedBy', 'updatedAt'])
+        && request.resource.data.enabled is bool
+        && request.resource.data.mainMeterId is string
+        && request.resource.data.htMeterId is string
+        && request.resource.data.dg1MeterId is string
+        && request.resource.data.dg2MeterId is string
+        && (request.resource.data.mainMeterId == '' || (request.resource.data.mainMeterId != request.resource.data.dg1MeterId && request.resource.data.mainMeterId != request.resource.data.dg2MeterId))
+        && (request.resource.data.dg1MeterId == '' || request.resource.data.dg1MeterId != request.resource.data.dg2MeterId)
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+    match /energyMonitor/{siteId}/config/loadBook {
+      allow read: if isActiveSiteUser(siteId);
+      allow create, update: if isSiteAdmin(siteId)
+        && request.resource.data.keys().hasOnly(['enabled', 'lt1MeterId', 'lt2MeterId', 'siteName', 'updatedAt'])
+        && request.resource.data.enabled is bool
+        && request.resource.data.lt1MeterId is string
+        && request.resource.data.lt2MeterId is string
+        && (!request.resource.data.enabled || (request.resource.data.lt1MeterId != '' && request.resource.data.lt2MeterId != '' && request.resource.data.lt1MeterId != request.resource.data.lt2MeterId))
+        && request.resource.data.siteName is string
+        && request.resource.data.updatedAt == request.time;
     }
     match /energyMonitor/{siteId}/config/sld {
       allow read: if isActiveSiteUser(siteId);

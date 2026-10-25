@@ -1,13 +1,21 @@
+import {istDateKey, shiftDateKey, useLoadBookDay} from "../hooks/useLoadBookDay";
+import LTAutoFillSettings from "../components/LTAutoFillSettings";
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { collection, onSnapshot, deleteDoc, doc, getDocs } from "firebase/firestore";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer
 } from "recharts";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
+
+const formatLTReading = value => {
+  if (value === null || value === undefined || String(value).trim() === "") return "-";
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(2) : "-";
+};
 
 const isAdminAssignmentValid = (userData) => {
   if (!userData?.isAdminAssigned) return false;
@@ -30,25 +38,21 @@ const LoadDashboard = ({ userData }) => {
   const isAdmin =
     userData?.role === "Super Admin" ||
     userData?.role === "Admin" ||
-    userData.isAdminAssigned ||
+    userData?.isAdminAssigned ||
     isAdminAssignmentValid(userData) ||
     userData?.designation === "Vertiv CIH" ||
     userData?.designation === "Vertiv ZM";
-  const [data, setData] = useState([]);
-  const [totalLoad, setTotalLoad] = useState(0);
-  const getISTDate = () => {
-    return new Date().toLocaleDateString("en-CA", {
-      timeZone: "Asia/Kolkata",
-    });
-  };
-  const today = getISTDate();
-  const formatIST = (date) => {
-    return new Date(date).toLocaleDateString("en-CA", {
-      timeZone: "Asia/Kolkata",
-    });
-  };
+  const today = istDateKey();
+  const formatIST = date => istDateKey(new Date(date));
 
-  const [selectedDate, setSelectedDate] = useState(today);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedDate = searchParams.get("date");
+  const selectedDate = /^\d{4}-\d{2}-\d{2}$/.test(requestedDate || "") ? requestedDate : today;
+  const setSelectedDate = date => setSearchParams(previous => {
+    const next = new URLSearchParams(previous);
+    next.set("date", date);
+    return next;
+  }, {replace:true});
   const navigate = useNavigate();
   const [trendData, setTrendData] = useState([]);
   const [trendRawData, setTrendRawData] = useState([]);
@@ -98,125 +102,17 @@ const LoadDashboard = ({ userData }) => {
     return missingReport;
   };
 
-  const missingSlots = getMissingSlots(data);
 
   const siteKey = userData?.siteId;
+  const {data, loading: loadingDay, error: dayError, cached: cachedDay} = useLoadBookDay(siteKey, selectedDate);
+  const equipmentLoads = {};
+  data.filter(row => row.equipmentType === "LT").forEach(row => {
+    const value = equipmentLoads[row.equipmentId] || {sum:0,count:0};
+    value.sum += row.loadKW; value.count += 1; equipmentLoads[row.equipmentId] = value;
+  });
+  const totalLoad = Object.values(equipmentLoads).reduce((sum, value) => sum + value.sum / value.count, 0);
 
-  useEffect(() => {
-    if (!siteKey || !selectedDate) return;
-
-    try {
-      const colRef = collection(
-        db,
-        "loadData",
-        siteKey,
-        "dailyData",
-        selectedDate,
-        "entries"
-      );
-
-      const unsubscribe = onSnapshot(
-        colRef,
-        (snapshot) => {
-          let equipmentMap = {};
-          let list = [];
-
-          snapshot.forEach((doc) => {
-            const d = doc.data();
-
-            let loadKW = 0;
-
-            if (d.equipmentType === "SMPS") {
-              const dcV = Number(d.dcVoltage || 0);
-              const dcI = Number(d.dcCurrent || 0);
-              loadKW = (dcV * dcI) / 1000;
-            } else if (d.equipmentType === "UPS") {
-              loadKW =
-                Number(d.runningKWR || 0) +
-                Number(d.runningKWY || 0) +
-                Number(d.runningKWB || 0);
-            } else {
-              const voltage = (Number(d.voltageRY || 0) + Number(d.voltageYB || 0) + Number(d.voltageBR || 0)) / 3;
-              const avgCurrent =
-                (Number(d.currentR || 0) +
-                  Number(d.currentY || 0) +
-                  Number(d.currentB || 0)) / 3;
-
-              const pf = Number(d.powerFactor || 0.9);
-
-              loadKW = (1.732 * voltage * avgCurrent * pf) / 1000;
-            }
-
-            const eqId = d.equipmentId || "UNKNOWN";
-            // 👉 group by equipment
-            if (!equipmentMap[eqId]) {
-              equipmentMap[eqId] = { sum: 0, count: 0, type: d.equipmentType };
-            }
-
-            equipmentMap[eqId].sum += loadKW;
-            equipmentMap[eqId].count += 1;
-
-            list.push({
-              id: doc.id,
-              ...d,
-              loadKW: loadKW || 0,
-            });
-          });
-
-          // Sort by Time → Equipment ID
-          list.sort((a, b) => {
-            // Convert time like "02:00 PM" → comparable value
-            const parseTime = (t) => {
-              if (!t) return 0;
-
-              // Handle 24-hour format (e.g., "14:00")
-              if (!t.includes("AM") && !t.includes("PM")) {
-                const [h, m] = t.split(":").map(Number);
-                return h * 60 + m;
-              }
-
-              // Handle 12-hour format
-              const [time, modifier] = t.split(" ");
-              let [hours, minutes] = time.split(":").map(Number);
-
-              if (modifier === "PM" && hours !== 12) hours += 12;
-              if (modifier === "AM" && hours === 12) hours = 0;
-
-              return hours * 60 + minutes;
-            };
-
-            const timeDiff = parseTime(a.time) - parseTime(b.time);
-
-            if (timeDiff !== 0) return timeDiff;
-
-            // Secondary sort → Equipment ID
-            return (a.equipmentId || "").localeCompare(b.equipmentId || "");
-          });
-
-          // ✅ Calculate total as sum of equipment-wise averages
-          let total = 0;
-
-          Object.values(equipmentMap).forEach((eq) => {
-            if (eq.type === "LT") {
-              total += eq.sum / eq.count;
-            }
-          });
-
-          setData(list);
-          setTotalLoad(total);
-        },
-        (error) => {
-          console.error("Realtime error:", error);
-          setData([]);
-          setTotalLoad(0);
-        }
-      );
-
-      return () => unsubscribe();
-    } catch (err) {
-      console.error("Setup error:", err);
-    }
-  }, [siteKey, selectedDate]);
+  const missingSlots = getMissingSlots(data);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure to delete?")) return;
@@ -381,20 +277,20 @@ const LoadDashboard = ({ userData }) => {
           <td>{row.date || "-"}</td>
           <td>{row.time || "-"}</td>
           <td>{row.equipmentId || "-"}</td>
-          <td>{row.voltageRY || "-"}</td>
-          <td>{row.voltageYB || "-"}</td>
-          <td>{row.voltageBR || "-"}</td>
-          <td>{row.voltageRN || "-"}</td>
-          <td>{row.voltageYN || "-"}</td>
-          <td>{row.voltageBN || "-"}</td>
-          <td>{row.currentR || "-"}</td>
-          <td>{row.currentY || "-"}</td>
-          <td>{row.currentB || "-"}</td>
-          <td>{row.tempR || "-"}</td>
-          <td>{row.tempY || "-"}</td>
-          <td>{row.tempB || "-"}</td>
-          <td>{row.powerFactor || "-"}</td>
-          <td>{row.kwh || "-"}</td>
+          <td>{formatLTReading(row.voltageRY)}</td>
+          <td>{formatLTReading(row.voltageYB)}</td>
+          <td>{formatLTReading(row.voltageBR)}</td>
+          <td>{formatLTReading(row.voltageRN)}</td>
+          <td>{formatLTReading(row.voltageYN)}</td>
+          <td>{formatLTReading(row.voltageBN)}</td>
+          <td>{formatLTReading(row.currentR)}</td>
+          <td>{formatLTReading(row.currentY)}</td>
+          <td>{formatLTReading(row.currentB)}</td>
+          <td>{formatLTReading(row.tempR)}</td>
+          <td>{formatLTReading(row.tempY)}</td>
+          <td>{formatLTReading(row.tempB)}</td>
+          <td>{formatLTReading(row.powerFactor)}</td>
+          <td>{formatLTReading(row.kwh)}</td>
           <td>{(row.loadKW || 0).toFixed(2)}</td>
           <td>{row.technicianName || "-"}</td>
           <td>
@@ -405,10 +301,10 @@ const LoadDashboard = ({ userData }) => {
       ),
       exportRow: (row) => [
         row.date || "-", row.time || "-", row.equipmentId || "-",
-        row.voltageRY || "-", row.voltageYB || "-", row.voltageBR || "-",
-        row.voltageRN || "-", row.voltageYN || "-", row.voltageBN || "-",
-        row.currentR || "-", row.currentY || "-", row.currentB || "-",
-        row.tempR || "-", row.tempY || "-", row.tempB || "-", row.powerFactor || "-", row.kwh || "-",
+        formatLTReading(row.voltageRY), formatLTReading(row.voltageYB), formatLTReading(row.voltageBR),
+        formatLTReading(row.voltageRN), formatLTReading(row.voltageYN), formatLTReading(row.voltageBN),
+        formatLTReading(row.currentR), formatLTReading(row.currentY), formatLTReading(row.currentB),
+        formatLTReading(row.tempR), formatLTReading(row.tempY), formatLTReading(row.tempB), formatLTReading(row.powerFactor), formatLTReading(row.kwh),
         Number(row.loadKW || 0).toFixed(2), row.technicianName || "-",
         `${row.uploadedBy?.name || "-"} (${row.uploadedBy?.empId || "-"})`,
       ],
@@ -500,7 +396,9 @@ const LoadDashboard = ({ userData }) => {
   }, [rangeType]);
 
   useEffect(() => {
-    if (!siteKey) return;
+    if (!siteKey || !selectedDate) return;
+    setTrendRawData([]);
+    let active = true;
 
     let unsubscribeList = [];
     let dataMap = {}; // ✅ store per date
@@ -549,7 +447,7 @@ const LoadDashboard = ({ userData }) => {
         );
 
         const unsub = onSnapshot(colRef, (snapshot) => {
-
+          if (!active) return;
           let dayData = [];
 
           snapshot.forEach((doc) => {
@@ -595,7 +493,7 @@ const LoadDashboard = ({ userData }) => {
           const merged = Object.values(dataMap).flat();
 
           setTrendRawData(merged);
-        });
+        }, error => console.error(`Load trend ${date}:`, error));
 
         unsubscribeList.push(unsub);
       });
@@ -603,7 +501,7 @@ const LoadDashboard = ({ userData }) => {
 
     fetchTrendData();
 
-    return () => unsubscribeList.forEach((u) => u && u());
+    return () => {active = false; unsubscribeList.forEach((u) => u && u());};
   }, [siteKey, selectedDate, rangeType]);
 
   // Whenever raw data or filters change, regroup and prepare for chart
@@ -932,6 +830,7 @@ const LoadDashboard = ({ userData }) => {
   return (
     <div className="daily-log-container">
       <h2>⚡ Live Load Dashboard 🟢</h2>
+      {["Admin", "Super Admin"].includes(userData?.role) && <LTAutoFillSettings userData={userData} />}
 
       <div style={{ padding: "5px 5px", borderRadius: "8px", borderBottom: "2px solid #fff", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
         <Link to="/load-entry" style={{ textDecoration: "none", color: "#00e6e6", fontWeight: "bold", border: "1px solid #00e6e625", padding: "4px 8px", borderRadius: "4px", backgroundColor: "#1e647952", transition: "background-color 0.3s" }}
@@ -940,7 +839,12 @@ const LoadDashboard = ({ userData }) => {
         >
           <p>➕ Add Load Entry</p>
         </Link>
-        <input type="date" value={selectedDate || ""} onChange={(e) => setSelectedDate(e.target.value)} />
+        <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
+          <button type="button" aria-label="Previous day" onClick={() => setSelectedDate(shiftDateKey(selectedDate, -1))}>Previous day</button>
+          <label>Load Book date <input type="date" value={selectedDate} onChange={e => {if (e.target.value) setSelectedDate(e.target.value);}} /></label>
+          <button type="button" aria-label="Next day" onClick={() => setSelectedDate(shiftDateKey(selectedDate, 1))}>Next day</button>
+          <button type="button" onClick={() => setSelectedDate(today)}>Today</button>
+        </div>
       </div>
 
 
@@ -976,7 +880,7 @@ const LoadDashboard = ({ userData }) => {
 
       </div>
 
-      {data.length > 0 && (
+      {trendData.length > 0 && (
         <div style={{ width: "100%", marginBottom: "20px", padding: "10px", borderRadius: "8px", backgroundColor: "#1e647952", border: "1px solid #00e6e625" }}>
           <h3 style={{ color: "#00e6e6" }}>📈 Load Trend Analysis</h3>
           <div style={{
@@ -1040,8 +944,10 @@ const LoadDashboard = ({ userData }) => {
         </div>
       )}
 
-      {data.length === 0 ? (
-        <p style={{ color: "white" }}>No data available for selected date</p>
+      <p role="status">{siteKey} · {selectedDate} · {loadingDay ? "Loading entries…" : `${data.length} entries`}{cachedDay ? " · Offline cache — reconnect to confirm saved history" : ""}</p>
+      {dayError && <p role="alert">{dayError}</p>}
+      {loadingDay ? <p>Loading Load Book for {selectedDate}…</p> : dayError ? null : data.length === 0 ? (
+        <p>No saved entries for {selectedDate}.{cachedDay ? " The server has not confirmed this result." : " Select a previous date to view its saved entries."}</p>
       ) : (
         <div>
           <h3>Total Load: {totalLoad.toFixed(2)} kW</h3>

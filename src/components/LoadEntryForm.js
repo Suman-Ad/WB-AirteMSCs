@@ -593,7 +593,7 @@ const LoadEntryForm = ({ userData }) => {
     // =========================
     // 👤 Technician
     // =========================
-    if (!formData.technicianName) errors.push("Technician Name");
+    // if (!formData.technicianName) errors.push("Technician Name");
 
     return errors;
   };
@@ -849,7 +849,7 @@ const LoadEntryForm = ({ userData }) => {
         alert("Data Saved");
       }
 
-      navigate("/load-dashboard");
+      navigate(`/load-dashboard?date=${formData.date}`);
     } catch (err) {
       console.error("Save error:", err);
     }
@@ -955,16 +955,7 @@ const LoadEntryForm = ({ userData }) => {
         name="date"
         value={formData.date}
         onChange={(e) => {
-          const selected = new Date(e.target.value);
-
-          const istDate = selected.toLocaleDateString("en-CA", {
-            timeZone: "Asia/Kolkata",
-          });
-
-          setFormData(prev => ({
-            ...prev,
-            date: istDate
-          }));
+          if (e.target.value) setFormData(prev => ({...prev, date:e.target.value}));
         }}
         disabled={!!editData && !isAdmin}
       />

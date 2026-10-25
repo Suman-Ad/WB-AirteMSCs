@@ -443,7 +443,7 @@ const Layout = ({ userData, children }) => {
 
     if (!canTogglePower) {
       alert("Only shift in-charge can change power source");
-      return;
+      return false;
     }
 
     const nextSource = powerSource === "EB" ? "DG" : "EB";
@@ -543,7 +543,7 @@ const Layout = ({ userData, children }) => {
           siteId: userData.siteId, siteName: userData.site, dg: activeDG, automatic,
           meterData: energyMeterDataRef.current, uid: userData.uid,
         });
-        if (!changed) return;
+        if (!changed) return false;
       } else {
         await setDoc(powerRef, updateData, { merge: true });
       }
@@ -785,6 +785,7 @@ const Layout = ({ userData, children }) => {
   });
 
   const autoPowerLabel = /blocked|failed|unavailable/i.test(autoPowerStatus) ? "Auto: blocked"
+    : /loading site settings/i.test(autoPowerStatus) ? "Auto: loading"
     : /map meters/i.test(autoPowerStatus) ? "Auto: map meters"
     : /off$/i.test(autoPowerStatus) ? "Auto off"
     : /permission/i.test(autoPowerStatus) ? "Auto: no permission" : "Auto enabled";

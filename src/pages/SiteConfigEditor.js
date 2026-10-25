@@ -212,6 +212,15 @@ const SiteConfigEdit = ({ userData }) => {
                 value={config.fuelAlertThreshold || ""}
                 onChange={handleChange}
               />
+
+              <label>PUE Threshold Limit</label>
+              <input
+                type="number"
+                step="0.01"
+                name="pueThresholdLimit"
+                value={config.pueThresholdLimit || ""}
+                onChange={handleChange}
+              />
             </div>
           )}
           {activeSection === "ccms" && (

@@ -1,19 +1,71 @@
-import React, { useEffect, useState } from "react";
-import { powerMappingEvent, readPowerMapping, resolvePowerMapping, savePowerMapping } from "../components/powerMeterMapping";
-export default function EnergyPowerMapping({ siteId, meters }) {
-  const [config, setConfig] = useState(() => readPowerMapping(siteId)), [error, setError] = useState("");
-  useEffect(() => {
-    const load = () => setConfig(readPowerMapping(siteId));
-    load(); window.addEventListener(powerMappingEvent, load); window.addEventListener("storage", load);
-    return () => { window.removeEventListener(powerMappingEvent, load); window.removeEventListener("storage", load); };
-  }, [siteId]);
-  const change = (field, value) => {
-    const next = { ...config, [field]: value }; setConfig(next);
-    try { savePowerMapping(siteId, next); setError(""); } catch { setError("Meter mappings could not be saved on this device."); }
+import React, {useEffect, useState} from 'react';
+import {collection, doc, onSnapshot, serverTimestamp, setDoc} from 'firebase/firestore';
+import {db} from '../firebase';
+import {canManageAllPowerMappings, canEditPowerMapping, normalizePowerMapping, readPowerMapping, resolvePowerMapping} from '../components/powerMeterMapping';
+import useSitePowerMapping from '../hooks/useSitePowerMapping';
+import {siteIdMap} from '../config/siteConfigs';
+import {currentEnergyMeters} from './currentEnergyMeters';
+
+export default function EnergyPowerMapping({siteId, meters, userData}) {
+  const allSites=canManageAllPowerMappings(userData);
+  const [selectedSite,setSelectedSite]=useState(siteId || Object.values(siteIdMap)[0] || '');
+  const targetSite=allSites ? selectedSite || siteId : siteId;
+  const [remote,setRemote]=useState({siteId:null,meters:[],error:''});
+  useEffect(()=>{
+    if (!allSites || !targetSite || targetSite === siteId) return;
+    let active=true;
+    const stop=onSnapshot(collection(db,'energyMonitor',targetSite,'meters'), snapshot=>{
+      if (active) setRemote({siteId:targetSite,meters:currentEnergyMeters(snapshot.docs.map(d=>({...d.data(),id:d.id}))).meters,error:''});
+    },error=>{if(active) setRemote({siteId:targetSite,meters:[],error:`Cannot read this site's meters: ${error.message || error.code}`});});
+    return ()=>{active=false;stop();};
+  },[allSites,targetSite,siteId]);
+  if (!canEditPowerMapping(userData,targetSite)) return null;
+  const sites=new Map(Object.entries(siteIdMap).map(([name,id])=>[id,name]));
+  if (siteId && !sites.has(siteId)) sites.set(siteId,userData?.site || siteId);
+  const targetMeters=targetSite === siteId ? meters : remote.siteId === targetSite ? remote.meters : [];
+  return <div>
+    {allSites && <label>Automatic switch settings site <select aria-label="Automatic switch settings site" value={targetSite} onChange={e=>setSelectedSite(e.target.value)}>
+      {[...sites.entries()].sort((a,b)=>a[1].localeCompare(b[1])).map(([id,name])=><option key={id} value={id}>{name} · {id}</option>)}
+    </select></label>}
+    {remote.siteId === targetSite && remote.error && <p role="alert">{remote.error}</p>}
+    <PowerMappingEditor key={targetSite} siteId={targetSite} meters={targetMeters} userData={userData}/>
+  </div>;
+}
+
+function PowerMappingEditor({siteId, meters, userData}) {
+  const shared=useSitePowerMapping(siteId);
+  const [draft,setDraft]=useState(null), [saving,setSaving]=useState(false), [message,setMessage]=useState('');
+  const canEdit=canEditPowerMapping(userData,siteId);
+  if (!canEdit) return null;
+  const config=draft || (shared.exists ? shared.config : normalizePowerMapping(readPowerMapping(siteId)));
+  const resolved=resolvePowerMapping(config,meters);
+  const change=(field,value)=>{setDraft({...config,[field]:value});setMessage('');};
+  const save=async()=>{
+    if (!canEdit || !shared.ready || saving) return;
+    const ids=['mainMeterId','dg1MeterId','dg2MeterId'].map(field=>resolved[field]).filter(Boolean);
+    if (config.enabled && (!resolved.mainMeterId || !resolved.dg1MeterId && !resolved.dg2MeterId || new Set(ids).size !== ids.length)) {
+      setMessage('Select a Main Incomer and at least one DG, using different meters.');return;
+    }
+    setSaving(true);
+    try {
+      await setDoc(doc(db,'energyMonitor',siteId,'config','powerSwitch'),{...normalizePowerMapping(config),updatedBy:userData.uid,updatedAt:serverTimestamp()});
+      setDraft(null);setMessage('Automatic switch settings saved for this site.');
+    } catch(error) {setMessage(`Settings could not be saved: ${error.message || error.code}`);}
+    finally {setSaving(false);}
   };
-  const resolved = resolvePowerMapping(config, meters);
-  return <section className="energy-card"><details><summary>Existing header EB/DG switch · automatic meter mapping</summary><p>The existing EB/DG slider switches to DG when Main Incomer is 0 V and a DG is above 300 V L-L, confirmed by two fresh reading pairs.</p><div className="energy-changeover-settings">
-    <label><input type="checkbox" checked={config.enabled} onChange={(event) => change("enabled", event.target.checked)} /> Enable automatic switching of the existing EB/DG slider</label>
-    {[["Main Incomer", "mainMeterId"], ["HT panel (optional)", "htMeterId"], ["DG-1", "dg1MeterId"], ["DG-2 (optional)", "dg2MeterId"]].map(([label, field]) => <label key={field}>{label}<select aria-label={`Power switch ${label} meter`} value={config[field]} onChange={(event) => change(field, event.target.value)}><option value="">Auto-detect by meter name</option>{meters.map((meter) => <option key={meter.id} value={meter.id}>{meter.name || meter.id}</option>)}</select><small>Using: {meters.find((meter) => meter.id === resolved[field])?.name || resolved[field] || "Map a meter"}</small></label>)}
-    </div><p className="energy-muted">Settings apply immediately on this device, including outside Energy Monitor. Clear names such as Main Incomer, DG-1 and DG-2 are detected only when unique. Manual switching and DG stop logging use the same slider.</p>{error && <p role="alert">{error}</p>}</details></section>;
+  return <section className="energy-card"><details><summary>Existing header EB/DG switch · automatic meter mapping</summary>
+    <p>Settings site: <strong>{siteId}</strong></p>
+    <p>The existing EB/DG slider switches to DG when Main Incomer is 0 V and a DG is above 300 V L-L, confirmed by two fresh reading pairs. Return to EB uses the existing manual switch and logging flow.</p>
+    <div className="energy-changeover-settings">
+      <label><input type="checkbox" checked={config.enabled} disabled={!shared.ready || saving} onChange={e=>change('enabled',e.target.checked)}/> Enable automatic switching of the existing EB/DG slider</label>
+      {[["Main Incomer","mainMeterId"],["HT panel (optional)","htMeterId"],["DG-1","dg1MeterId"],["DG-2 (optional)","dg2MeterId"]].map(([label,field])=><label key={field}>{label}<select aria-label={`Power switch ${label} meter`} value={config[field]} disabled={!shared.ready || saving} onChange={e=>change(field,e.target.value)}>
+        <option value="">Auto-detect by meter name</option>
+        {config[field] && !meters.some(m=>m.id===config[field]) && <option value={config[field]}>{config[field]} (unavailable)</option>}
+        {meters.map(m=><option key={m.id} value={m.id}>{m.name || m.id}</option>)}
+      </select><small>Using: {meters.find(m=>m.id===resolved[field])?.name || resolved[field] || 'Map a meter'}</small></label>)}
+    </div>
+    <button type="button" disabled={!shared.ready || saving} onClick={save}>{saving ? 'Saving…' : 'Save site switch settings'}</button>
+    <p className="energy-muted">Settings are shared with this site's users after saving. Admins can edit every site's settings; Super Users can edit only their assigned site's settings. An authorized site session must remain open for the existing automatic header switch to run.</p>
+    {shared.error && <p role="alert">{shared.error}</p>}{message && <p role="status">{message}</p>}
+  </details></section>;
 }

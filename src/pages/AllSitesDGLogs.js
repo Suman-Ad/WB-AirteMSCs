@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
-import "../assets/DailyDGLog.css"; // reuse your log CSS
+import "../assets/DailyDGLog.css";
+import "../assets/AllSitesDGLogs.css";
 import { useNavigate } from "react-router-dom";
 import { calculateFields } from '../utils/calculatedDGLogs';
 import * as XLSX from "xlsx";
@@ -715,35 +716,35 @@ const AllSitesDGLogs = ({ userData }) => {
 
 
     const getHeaderStyle = (header) => {
-        if (header.startsWith("EB")) return { backgroundColor: "#294985", color: "#fff" };
-        if (header.includes("Run Min")) return { backgroundColor: "#FFD700", color: "#000" };
-        if (header.includes("ON Load")) return { backgroundColor: "#2E7D32", color: "#fff" };
-        if (header.includes("OFF Load")) return { backgroundColor: "#F35C48", color: "#fff" };
-        if (header.startsWith("DG-1")) return { backgroundColor: "#8655ac", color: "#fff" };
-        if (header.startsWith("DG-2")) return { backgroundColor: "#5e87b9", color: "#fff" };
-        if (header.startsWith("DG-2")) return { backgroundColor: "#5e87b9", color: "#fff" };
-        if (header.startsWith("Total") || header === "PUE" || header === "Site Running kW") return { backgroundColor: "#F57C00", color: "#fff" };
-        return { backgroundColor: "#FFFFFF", color: "#000" };
+        if (header.startsWith("EB")) return { backgroundColor: "var(--dg-header-eb)", color: "var(--dg-on-status)" };
+        if (header.includes("Run Min")) return { backgroundColor: "var(--dg-header-runtime)", color: "var(--dg-on-status)" };
+        if (header.includes("ON Load")) return { backgroundColor: "var(--dg-header-onload)", color: "var(--dg-on-status)" };
+        if (header.includes("OFF Load")) return { backgroundColor: "var(--dg-header-offload)", color: "var(--dg-on-status)" };
+        if (header.startsWith("DG-1")) return { backgroundColor: "var(--dg-header-dg1)", color: "var(--dg-on-status)" };
+        if (header.startsWith("DG-2")) return { backgroundColor: "var(--dg-header-dg2)", color: "var(--dg-on-status)" };
+        if (header.startsWith("DG-2")) return { backgroundColor: "var(--dg-header-dg2)", color: "var(--dg-on-status)" };
+        if (header.startsWith("Total") || header === "PUE" || header === "Site Running kW") return { backgroundColor: "var(--dg-header-total)", color: "var(--dg-on-status)" };
+        return { backgroundColor: "var(--app-surface-muted)", color: "var(--app-text)" };
     };
 
     const fmt = (val) => (val !== undefined && val !== null ? Number(val).toFixed(2) : "0.0");
     const fmt1 = (val) => (val !== undefined && val !== null ? Number(val).toFixed(1) : "0.0");
 
     return (
-        <div className="daily-log-container">
+        <div className="daily-log-container all-sites-dg-logs">
             {[configError, error && `Daily logs: ${error}`, runError && `DG runs: ${runError}`, billError && `EB bills: ${billError}`].filter(Boolean).map((message) => <p key={message} role="alert" style={{ color: "var(--app-text)", borderLeft: "3px solid #c2410c", padding: 12 }}>{message}</p>)}
             <h2>All Sites Daily Energy Logs Monthly Summary - <strong>{monthKey}</strong> </h2>
 
-            <div
+            <div className="all-sites-dg-toolbar"
                 style={{
                     display: "flex",
                     alignItems: "center",
                     gap: "12px",
                     marginBottom: "14px",
                     padding: "10px",
-                    background: "#0f172a",
+                    background: "var(--app-surface)",
                     borderRadius: "10px",
-                    color: "#fff",
+                    color: "var(--app-text)",
                     overflowX: "auto",
                 }}
             >
@@ -759,7 +760,7 @@ const AllSitesDGLogs = ({ userData }) => {
                         type="month"
                         value={monthKey}
                         onChange={(e) => setMonthKey(e.target.value)}
-                        style={{ background: "#161a5893", width: "fit-content" }}
+                        style={{ background: "var(--app-surface)", width: "fit-content" }}
                     />
 
                     <label><strong>Select Date:</strong></label>
@@ -767,7 +768,7 @@ const AllSitesDGLogs = ({ userData }) => {
                         type="date"
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
-                        style={{ background: "#161a5893", width: "fit-content" }}
+                        style={{ background: "var(--app-surface)", width: "fit-content" }}
                     />
                 </div>
 
@@ -785,7 +786,7 @@ const AllSitesDGLogs = ({ userData }) => {
                 {showOnlyDG && (
                     <span
                         style={{
-                            background: "#7f1d1d",
+                            background: "var(--dg-danger)",
                             padding: "2px 10px",
                             borderRadius: "6px",
                             fontSize: "12px",
@@ -798,28 +799,28 @@ const AllSitesDGLogs = ({ userData }) => {
                 <div
                     style={{
                         marginLeft: "auto",
-                        background: "#020617",
+                        background: "var(--app-surface-muted)",
                         padding: "6px 14px",
                         borderRadius: "8px",
                         fontWeight: "600",
                         display: "flex",
                         alignItems: "center",
                         gap: "8px",
-                        border: "1px solid #334155",
+                        border: "1px solid var(--app-border)",
                     }}
                 >
-                    <span style={{ color: "#e5e7eb" }}>⚡ DG Sites:</span>
+                    <span style={{ color: "var(--app-border)" }}>⚡ DG Sites:</span>
 
                     <span
                         style={{
-                            color: dgSitesCount > 0 ? "#f87171" : "#22c55e",
+                            color: dgSitesCount > 0 ? "var(--dg-danger)" : "var(--dg-success)",
                             fontSize: "16px",
                         }}
                     >
                         {dgSitesCount}
                     </span>
 
-                    <span style={{ color: "#94a3b8" }}>/ {totalSites}</span>
+                    <span style={{ color: "var(--app-text-muted)" }}>/ {totalSites}</span>
                 </div>
 
             </div>
@@ -922,15 +923,15 @@ const AllSitesDGLogs = ({ userData }) => {
                 });
 
                 return (
-                    <div className="chart-container" key={site}
+                    <div className="chart-container all-sites-dg-card" data-power-source={powerSource} key={site}
                         style={{
                             border:
                                 powerSource === "DG"
                                     ? "2px solid #dc2626"
-                                    : "1px solid #e5e7eb",
+                                    : "1px solid var(--app-border)",
                             background:
                                 powerSource === "DG"
-                                    ? "#fee2e2"
+                                    ? "var(--dg-danger-surface)"
                                     : "",
                             // display: "grid",
                             // overflowX: "auto",
@@ -939,15 +940,17 @@ const AllSitesDGLogs = ({ userData }) => {
 
                         <button
                             style={{
-                                background: powerSource === "DG" && collaps[site] ? "#df5858cc" : collaps[site] ? "#6fb5ca7c" : "",
+                                background: powerSource === "DG" && collaps[site] ? "var(--dg-danger-surface)" : collaps[site] ? "var(--app-surface-muted)" : "",
                                 width: collaps[site] ? "100%" : "100%",
 
                             }}
+                            className="all-sites-dg-toggle"
+                            aria-expanded={Boolean(collaps[site])}
                             onClick={() => toggleSite(site)}
                         >
                             <strong
                                 style={{
-                                    background: collaps[site] ? "" : "#e48c7c9d",
+                                    background: collaps[site] ? "" : "var(--app-surface-muted)",
                                     padding: collaps[site] ? "" : "10px 10px",
                                     borderRadius: "5px",
                                     // height: "100%",
@@ -955,7 +958,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                 }}
                             >
                                 {collaps[site] ?
-                                    <h2 style={{ color: powerSource == "DG" ? "red" : "", fontWeight: "bold", fontSize: isUltraWide ? "" : "18px" }}>
+                                    <h2 style={{ color: powerSource == "DG" ? "var(--dg-danger)" : "", fontWeight: "bold", fontSize: isUltraWide ? "" : "18px" }}>
                                         {site} MSC ▶
                                         <span
                                             style={{
@@ -964,24 +967,24 @@ const AllSitesDGLogs = ({ userData }) => {
                                                 borderRadius: "6px",
                                                 fontSize: "12px",
                                                 fontWeight: "600",
-                                                color: "#fff",
+                                                color: "var(--dg-on-status)",
                                                 background:
                                                     powerSource === "DG"
-                                                        ? "#dc2626"
+                                                        ? "#b91c1c"
                                                         : powerSource === "EB"
-                                                            ? "#16a34a"
-                                                            : "#6b7280",
+                                                            ? "#15803d"
+                                                            : "var(--app-text-muted)",
                                             }}
                                         >
-                                            Site Live On:- <strong>{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
+                                            Site Live On:- <strong data-theme-color="preserve">{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
                                         </span>
-                                        <span style={{ marginLeft: "12px", fontSize: "12px", color: "#334155" }}>
+                                        <span style={{ marginLeft: "12px", fontSize: "12px", color: "var(--app-text-muted)" }}>
                                             ({monthKey})
                                         </span>
                                         {powerSource === "DG" && (
                                             <div style={{
-                                                background: "#7f1d1d",
-                                                color: "#fff",
+                                                background: "var(--dg-danger)",
+                                                color: "var(--app-text)",
                                                 padding: "4px 10px",
                                                 borderRadius: "6px",
                                                 fontSize: "12px",
@@ -994,8 +997,8 @@ const AllSitesDGLogs = ({ userData }) => {
                                                     <div>
                                                         | Est. Fuel Consumption:
                                                         <strong style={{
-                                                            background: "red",
-                                                            color: "wheat",
+                                                            background: "var(--dg-danger)",
+                                                            color: "var(--dg-on-status)",
                                                             borderRadius: "5px",
                                                             marginLeft: "5px",
                                                             padding: "2px 5px"
@@ -1014,8 +1017,8 @@ const AllSitesDGLogs = ({ userData }) => {
                                         {site} MSC ▼
                                         {powerSource === "DG" && (
                                             <div style={{
-                                                background: "#7f1d1d",
-                                                color: "#fff",
+                                                background: "var(--dg-danger)",
+                                                color: "var(--app-text)",
                                                 padding: "4px 10px",
                                                 borderRadius: "6px",
                                                 fontSize: "12px",
@@ -1028,8 +1031,8 @@ const AllSitesDGLogs = ({ userData }) => {
                                                     <div>
                                                         | Est. Fuel Consumption:
                                                         <strong style={{
-                                                            background: "red",
-                                                            color: "wheat",
+                                                            background: "var(--dg-danger)",
+                                                            color: "var(--dg-on-status)",
                                                             borderRadius: "5px",
                                                             marginLeft: "5px",
                                                             padding: "2px 5px"
@@ -1058,16 +1061,16 @@ const AllSitesDGLogs = ({ userData }) => {
                                             borderRadius: "6px",
                                             fontSize: "12px",
                                             fontWeight: "600",
-                                            // color: "#fff",
+                                            color: "var(--dg-on-status)",
                                             background:
                                                 powerSource === "DG"
-                                                    ? "#dc2626"
+                                                    ? "#b91c1c"
                                                     : powerSource === "EB"
-                                                        ? "#16a34a"
-                                                        : "#6b7280",
+                                                        ? "#15803d"
+                                                        : "var(--app-text-muted)",
                                         }}
                                     >
-                                        Site Live On:- <strong>{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
+                                        Site Live On:- <strong data-theme-color="preserve">{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
                                     </span>
                                     {isLargeScreen ? (
                                         <div style={{ fontSize: "13px", display: "flex" }}>
@@ -1096,14 +1099,14 @@ const AllSitesDGLogs = ({ userData }) => {
                                 {/* Fuel, load, backups */}
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                                     <div>
-                                        <h1 style={{ fontSize: isUltraWide ? "50px" : "20px", color: "green", textAlign: "left" }}>
+                                        <h1 style={{ fontSize: isUltraWide ? "50px" : "20px", color: "var(--dg-success)", textAlign: "left" }}>
                                             <strong>⛽ Present Stock – {fmt(totalFuelAvailable)} ltrs</strong>
                                         </h1>
-                                        <h1 style={((totalFuelAvailable) / summary.monthlyAvgCPH) < 18 ? { fontSize: isUltraWide ? "50px" : "20px", color: "red", textAlign: "left" } : { fontSize: isUltraWide ? "50px" : "20px", color: "green", textAlign: "left" }}> <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong></h1>
+                                        <h1 style={((totalFuelAvailable) / summary.monthlyAvgCPH) < 18 ? { fontSize: isUltraWide ? "50px" : "20px", color: "var(--dg-danger)", textAlign: "left" } : { fontSize: isUltraWide ? "50px" : "20px", color: "var(--dg-success)", textAlign: "left" }}> <strong>⏱️BackUp Hours – {(totalFuelAvailable / summary.monthlyAvgCPH).toFixed(2)} Hrs.</strong></h1>
                                     </div>
 
                                     {isUltraWide && (
-                                        <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
+                                        <div style={{ fontSize: "14px", background: "var(--app-surface-muted)", padding: "6px 10px", borderRadius: "6px" }}>
                                             {/* Average PUE */}
                                             <p className={summary.monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
                                                 <strong>Average PUE – {summary.monthlyAvgPUE}</strong>
@@ -1136,7 +1139,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                             display: "flex",
                                             width: isUltraWide ? "100%" : `${(tankCapacity) * 100}%`,
                                             height: isUltraWide ? "100px" : "22px",
-                                            background: "#eee",
+                                            background: "var(--app-border)",
                                             borderRadius: isUltraWide ? "30px" : "4px",
                                             overflow: "hidden",
                                             marginLeft: "4px",
@@ -1148,7 +1151,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                             style={{
                                                 width: `${(dayTankCapacity / tankCapacity) * 100}%`,
                                                 // height: isUltraWide ? `${(dayTankCapacity / tankCapacity) * 100}%` : "100%",
-                                                background: "#f5c6c6",
+                                                background: "var(--dg-danger-surface)",
                                                 position: "relative",
                                                 whiteSpace: "nowrap",
                                                 bottom: 0,
@@ -1176,11 +1179,11 @@ const AllSitesDGLogs = ({ userData }) => {
                                         <div
                                             style={{
                                                 width: `${(externalTankCapacity / tankCapacity) * 100}%`,
-                                                background: "#cce5ff",
+                                                background: "var(--app-surface-muted)",
                                                 position: "relative",
                                                 borderLeft: isUltraWide ? "4px solid #f30909" : "2px solid black",
                                                 whiteSpace: "nowrap",
-                                                color: (dgExternalFuel?.["DG-1"] + dgExternalFuel?.["DG-2"] + dgExternalFuel?.["DG-3"]) > 0 ? "white" : "black",
+                                                color: (dgExternalFuel?.["DG-1"] + dgExternalFuel?.["DG-2"] + dgExternalFuel?.["DG-3"]) > 0 ? "var(--dg-on-status)" : "var(--app-text)",
                                             }}
                                         >
                                             <p
@@ -1199,14 +1202,14 @@ const AllSitesDGLogs = ({ userData }) => {
                                             </p>
                                         </div>
                                     </div>
-                                    <strong style={((totalFuelAvailable / tankCapacity) * 100) < 60 ? { color: "red" } : { color: "blue" }}>{((totalFuelAvailable / tankCapacity) * 100).toFixed(0)}%</strong>
+                                    <strong style={((totalFuelAvailable / tankCapacity) * 100) < 60 ? { color: "var(--dg-danger)" } : { color: "var(--theme-link)" }}>{((totalFuelAvailable / tankCapacity) * 100).toFixed(0)}%</strong>
                                 </div>
-                                <p style={{ fontSize: "10px", textAlign: "left", color: "#5c3c6ece" }}>
+                                <p style={{ fontSize: "10px", textAlign: "left", color: "var(--app-text-muted)" }}>
                                     Total Stock Capacity: <strong>{tankCapacity} Ltrs</strong>
                                 </p>
 
                                 <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginTop: "10px", justifyContent: "space-between" }}>
-                                    <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
+                                    <div style={{ fontSize: "14px", background: "var(--app-surface-muted)", padding: "6px 10px", borderRadius: "6px" }}>
                                         <h4 style={{ textDecoration: "underline" }}>⛽ DG Wise Fuel Stock</h4>
                                         {Array.from({ length: thisConfig?.dgCount || 0 }).map((_, idx) => {
                                             const dgNo = idx + 1;
@@ -1259,7 +1262,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                             }}
                                                         >
                                                             🛢️
-                                                            <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
+                                                            <p style={{ whiteSpace: "nowrap", color: "var(--theme-link)", margin: "0 2px" }}>
                                                                 DG-{dgNo}:
                                                             </p>
 
@@ -1267,7 +1270,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                                 style={{
                                                                     display: "flex",
                                                                     width: "100%",
-                                                                    background: "#eee",
+                                                                    background: "var(--app-border)",
                                                                     borderRadius: "5px",
                                                                     border: "1px solid #093770",
                                                                     overflow: "hidden",
@@ -1277,8 +1280,8 @@ const AllSitesDGLogs = ({ userData }) => {
                                                                 <p
                                                                     style={{
                                                                         width: `${percent}%`,
-                                                                        background: percent < 50 ? "red" : "blue",
-                                                                        color: "white",
+                                                                        background: percent < 50 ? "var(--dg-danger)" : "var(--theme-link)",
+                                                                        color: "var(--dg-on-status)",
                                                                         fontSize: isUltraWide ? "16px" : "7px",
                                                                         margin: 0,
                                                                         textAlign: "center",
@@ -1286,8 +1289,8 @@ const AllSitesDGLogs = ({ userData }) => {
                                                                     }}
                                                                 >
                                                                     ⛽{fuelClosing}/{perDgCapacity.toFixed(1)}L
-                                                                    <small style={{ color: "red" }}>
-                                                                        🔻 Used Today: <b style={{ fontSize: isUltraWide ? "16px" : "9px", color: "#700d0d" }}>{dgTodayUsed.toFixed(2)}L</b>
+                                                                    <small style={{ color: "var(--dg-danger)" }}>
+                                                                        🔻 Used Today: <b style={{ fontSize: isUltraWide ? "16px" : "9px", color: "var(--dg-danger)" }}>{dgTodayUsed.toFixed(2)}L</b>
                                                                     </small>
                                                                 </p>
                                                             </div>
@@ -1295,7 +1298,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                             <strong
                                                                 style={{
                                                                     marginLeft: "4px",
-                                                                    color: percent < 60 ? "red" : "blue",
+                                                                    color: percent < 60 ? "var(--dg-danger)" : "var(--theme-link)",
                                                                 }}
                                                             >
                                                                 {percent.toFixed(0)}%
@@ -1313,7 +1316,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                                 }}
                                                             >
                                                                 🛢️
-                                                                <p style={{ whiteSpace: "nowrap", color: "blue", margin: "0 2px" }}>
+                                                                <p style={{ whiteSpace: "nowrap", color: "var(--theme-link)", margin: "0 2px" }}>
                                                                     DG-{dgNo}Ex.:
                                                                 </p>
 
@@ -1321,7 +1324,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                                     style={{
                                                                         display: "flex",
                                                                         width: "100%",
-                                                                        background: "#eee",
+                                                                        background: "var(--app-border)",
                                                                         borderRadius: "4px",
                                                                         border: "1px solid #093770",
                                                                         overflow: "hidden",
@@ -1330,8 +1333,8 @@ const AllSitesDGLogs = ({ userData }) => {
                                                                     <p
                                                                         style={{
                                                                             width: `${exPercent}%`,
-                                                                            background: exPercent < 50 ? "red" : "blue",
-                                                                            color: "white",
+                                                                            background: exPercent < 50 ? "var(--dg-danger)" : "var(--theme-link)",
+                                                                            color: "var(--dg-on-status)",
                                                                             fontSize: isUltraWide ? "16px" : "14px",
                                                                             margin: 0,
                                                                             textAlign: "center",
@@ -1345,7 +1348,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                                 <strong
                                                                     style={{
                                                                         marginLeft: "4px",
-                                                                        color: exPercent < 60 ? "red" : "blue",
+                                                                        color: exPercent < 60 ? "var(--dg-danger)" : "var(--theme-link)",
                                                                     }}
                                                                 >
                                                                     {exPercent.toFixed(0)}%
@@ -1370,11 +1373,11 @@ const AllSitesDGLogs = ({ userData }) => {
                                                             <div key={dg} style={{ display: "flex", width: "100%", justifyContent: "space-between", padding: "4px 0" }}>
                                                                 <div>
                                                                     {/* <strong>{dg}</strong> — {data.fuel.toFixed(2)} L */}
-                                                                    <div style={{ border: "1px solid #fff", padding: "6px 2px", borderRadius: "4px", background: "#e0e7ff", color: "#000", fontSize: "15px" }}>
+                                                                    <div style={{ border: "1px solid var(--app-border)", padding: "6px 2px", borderRadius: "4px", background: "var(--app-surface-muted)", color: "var(--app-text)", fontSize: "15px" }}>
                                                                         <strong>{dg} :—</strong> <b>{(data.totalDGRunHours).toFixed(1)}</b> Hrs <small>(OnLoad)</small> / <b>{(data.totalDGOffRunHours).toFixed(1)}</b> Hrs <small>(OffLoad)</small>
-                                                                        <div style={{ width: "auto", height: "50px", overflowY: "auto", border: "1px solid #500d0d", borderRadius: "5px", padding: "2px", marginLeft: "10px", background: "#fff", color: "#000", fontSize: "8px", scrollbarWidth: "thin" }}>
+                                                                        <div style={{ width: "auto", height: "50px", overflowY: "auto", border: "1px solid var(--app-border)", borderRadius: "5px", padding: "2px", marginLeft: "10px", background: "var(--app-surface)", color: "var(--app-text)", fontSize: "8px", scrollbarWidth: "thin" }}>
                                                                             {data.runs.map((r, i) => (
-                                                                                <div key={i} style={{ fontSize: "12px", color: "#062053", whiteSpace: "nowrap" }}>
+                                                                                <div key={i} style={{ fontSize: "12px", color: "var(--app-text)", whiteSpace: "nowrap" }}>
                                                                                     <p>{i + 1}: {r.startTime}–{r.stopTime} • {r.runHours.toFixed(2)}Hrs • {r.remarks}</p>
                                                                                 </div>
                                                                             ))}
@@ -1389,7 +1392,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                     )}
 
                                     {!isUltraWide && (
-                                        <div style={{ fontSize: "14px", background: "#e0e7ff", padding: "6px 10px", borderRadius: "6px" }}>
+                                        <div style={{ fontSize: "14px", background: "var(--app-surface-muted)", padding: "6px 10px", borderRadius: "6px" }}>
                                             {/* Average PUE */}
                                             <p className={summary.monthlyAvgPUE > 1.6 ? "avg-segr low" : "avg-segr high"}>
                                                 <strong>Average PUE – {summary.monthlyAvgPUE}</strong>
@@ -1422,11 +1425,11 @@ const AllSitesDGLogs = ({ userData }) => {
                                                             <div key={dg} style={{ display: "flex", fontSize: "14px", width: "100%", justifyContent: "space-between", padding: "4px 0" }}>
                                                                 <div>
                                                                     {/* <strong>{dg}</strong> — {data.fuel.toFixed(2)} L */}
-                                                                    <div style={{ border: "1px solid #fff", padding: "6px 2px", borderRadius: "4px", background: "#e0e7ff", color: "#000", fontSize: "10px" }}>
+                                                                    <div style={{ border: "1px solid var(--app-border)", padding: "6px 2px", borderRadius: "4px", background: "var(--app-surface-muted)", color: "var(--app-text)", fontSize: "10px" }}>
                                                                         <strong>{dg} :—</strong> {(data.totalDGRunHours).toFixed(1)} Hrs <small>(OnLoad)</small> / {(data.totalDGOffRunHours).toFixed(1)} Hrs (OffLoad)
-                                                                        <div style={{ width: "auto", height: "50px", overflowY: "auto", border: "1px solid #500d0d", borderRadius: "5px", padding: "2px", marginLeft: "10px", background: "#fff", color: "#000", fontSize: "8px", scrollbarWidth: "thin" }}>
+                                                                        <div style={{ width: "auto", height: "50px", overflowY: "auto", border: "1px solid var(--app-border)", borderRadius: "5px", padding: "2px", marginLeft: "10px", background: "var(--app-surface)", color: "var(--app-text)", fontSize: "8px", scrollbarWidth: "thin" }}>
                                                                             {data.runs.map((r, i) => (
-                                                                                <div key={i} style={{ fontSize: "12px", color: "#062053", whiteSpace: "nowrap" }}>
+                                                                                <div key={i} style={{ fontSize: "12px", color: "var(--app-text)", whiteSpace: "nowrap" }}>
                                                                                     <p>{i + 1}: {r.startTime}–{r.stopTime} • {r.runHours.toFixed(2)}Hrs • {r.remarks}</p>
                                                                                 </div>
                                                                             ))}
@@ -1446,7 +1449,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                 </h4>
 
                                 {/* <p style={{ borderTop: "3px solid #eee" }}>⚡ Site Running Load – <strong>{fmt(avgSiteRunningKw)} kWh</strong></p> */}
-                                <p style={{ color: "#302f74ff" }}><strong>[Total Cost (EB + DG) – ₹{fmt((summary.totalEBKWH * currentEBRate.EBRate) + (summary.totalFuel * currentFuelRate))}]</strong></p>
+                                <p style={{ color: "var(--theme-link)" }}><strong>[Total Cost (EB + DG) – ₹{fmt((summary.totalEBKWH * currentEBRate.EBRate) + (summary.totalFuel * currentFuelRate))}]</strong></p>
 
                                 {/* Summary Cards */}
                                 <div style={{ display: "flex", borderTop: "3px solid #eee" }}>
@@ -1470,14 +1473,14 @@ const AllSitesDGLogs = ({ userData }) => {
 
                                 {/* Conditional rendering based on available data */}
                                 {summary.totalEBKWH > 0 && (
-                                    <p style={{ borderTop: "1px solid #eee" }}>Total EB Unit Generation - <strong>{fmt(summary.totalEBKWH)} Units </strong>
+                                    <p style={{ borderTop: "1px solid var(--app-border)" }}>Total EB Unit Generation - <strong>{fmt(summary.totalEBKWH)} Units </strong>
                                         ₹<input
                                             type="number"
                                             step="0.01"
                                             value={currentEBRate.EBRate || ""}
                                             onChange={(e) => handleChangeEBRate(e, siteKey)}
                                             style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-                                        /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "#302f74ff" }}>Cost: ₹{fmt(summary.totalEBKWH * currentEBRate.EBRate)}</b></strong>
+                                        /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "var(--theme-link)" }}>Cost: ₹{fmt(summary.totalEBKWH * currentEBRate.EBRate)}</b></strong>
                                     </p>
                                 )}
 
@@ -1507,18 +1510,18 @@ const AllSitesDGLogs = ({ userData }) => {
                                     </strong>
 
                                     {/* TDS is calculated automatically from the state */}
-                                    <b>💰 TDS Declared Amount: <strong>₹{currentEBRate.TDSAmount || "0.00"}</strong> <span style={{ color: "#5c3c6ce8" }}>as per {thisConfig.ebTDS}% of Bill Amount</span></b>
-                                    <b>💰 After TDS Amount: <strong>₹{(currentEBRate.Amount - currentEBRate.TDSAmount) || 0}</strong> <span style={{ color: "#5c3c6ce8" }}> after {thisConfig.ebTDS}% deduction of Bill Amount</span></b>
+                                    <b>💰 TDS Declared Amount: <strong>₹{currentEBRate.TDSAmount || "0.00"}</strong> <span style={{ color: "var(--app-text-muted)" }}>as per {thisConfig.ebTDS}% of Bill Amount</span></b>
+                                    <b>💰 After TDS Amount: <strong>₹{(currentEBRate.Amount - currentEBRate.TDSAmount) || 0}</strong> <span style={{ color: "var(--app-text-muted)" }}> after {thisConfig.ebTDS}% deduction of Bill Amount</span></b>
 
                                 </div>
 
                                 {/* If solar data exists, show solar generation summary */}
                                 {summary.totalSolarKWH > 0 && (
-                                    <p style={{ borderTop: "1px solid #eee" }}><strong>Total Solar Unit Generation - {fmt(summary.totalSolarKWH)} Units</strong></p>
+                                    <p style={{ borderTop: "1px solid var(--app-border)" }}><strong>Total Solar Unit Generation - {fmt(summary.totalSolarKWH)} Units</strong></p>
                                 )}
 
                                 {/* Per DG KW */}
-                                <p style={{ borderTop: "1px solid #eee" }}><strong>⚡ Total DG KW Generation – {fmt(summary.totalKwh)} kW</strong> <b style={{ fontSize: "10px", color: "#302f74ff" }}>(Cost: ₹{fmt((summary.totalFuel * currentFuelRate) / summary.totalKwh)}/Unit.)</b></p>
+                                <p style={{ borderTop: "1px solid var(--app-border)" }}><strong>⚡ Total DG KW Generation – {fmt(summary.totalKwh)} kW</strong> <b style={{ fontSize: "10px", color: "var(--theme-link)" }}>(Cost: ₹{fmt((summary.totalFuel * currentFuelRate) / summary.totalKwh)}/Unit.)</b></p>
                                 <div style={{ display: "flex", flexWrap: "wrap" }}>
                                     {dgSummary.map(dg => (
                                         <p key={dg.dg} style={{ marginLeft: "20px" }}>
@@ -1528,7 +1531,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                 </div>
 
                                 {/* Total Fuel Filling & Consumption */}
-                                <p style={{ borderTop: "1px solid #eee" }}>
+                                <p style={{ borderTop: "1px solid var(--app-border)" }}>
                                     <strong>⛽ Total Fuel Filling – {fmt(summary.totalFilling)}Ltrs. x </strong>
                                     ₹<input
                                         type="number"
@@ -1536,7 +1539,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                         value={currentFuelRate}
                                         onChange={handleChangeFuelRate}
                                         style={{ width: "70px", marginLeft: "4px", height: "20px" }}
-                                    /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "#302f74ff" }}>Cost: ₹{fmt(summary.totalFilling * currentFuelRate)}</b></strong>
+                                    /><strong style={{ fontSize: "10px" }}>/Ltr. = <b style={{ color: "var(--theme-link)" }}>Cost: ₹{fmt(summary.totalFilling * currentFuelRate)}</b></strong>
                                 </p>
 
                                 <div style={{ display: "flex", flexWrap: "wrap" }}>
@@ -1548,7 +1551,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                 </div>
 
                                 {/* Total Fuel Consumption */}
-                                <p style={{ borderTop: "1px solid #eee" }}><strong>⛽ Total Fuel Consumption – {fmt(summary.totalFuel)}Ltrs.</strong> <b style={{ fontSize: "10px", color: "#302f74ff" }}>(Cost: ₹{fmt(summary.totalFuel * currentFuelRate)})</b></p>
+                                <p style={{ borderTop: "1px solid var(--app-border)" }}><strong>⛽ Total Fuel Consumption – {fmt(summary.totalFuel)}Ltrs.</strong> <b style={{ fontSize: "10px", color: "var(--theme-link)" }}>(Cost: ₹{fmt(summary.totalFuel * currentFuelRate)})</b></p>
 
                                 {dgSummary.map(dg => (
                                     <div key={dg.dg} style={{ display: "flex" }}>
@@ -1565,7 +1568,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                 ))}
 
                                 {/* Total DG Run Hours */}
-                                <p style={{ borderTop: "1px solid #eee" }}><strong>⏱️ Total DG Run Hours – {fmt1(summary.totalHrs)} Hour</strong> ({totalHrsMin} min)</p>
+                                <p style={{ borderTop: "1px solid var(--app-border)" }}><strong>⏱️ Total DG Run Hours – {fmt1(summary.totalHrs)} Hour</strong> ({totalHrsMin} min)</p>
 
                                 {dgSummary.map(dg => (
                                     <div key={dg.dg} style={{ display: "flex" }}>
@@ -1582,7 +1585,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                 ))}
                                 {/* Add more breakdowns, load, filling, DG-1/2 metrics, etc. from your summary if desired */}
                                 <div>
-                                    <p style={{ textAlign: "right", color: "gray", textSizeAdjust: "10px", cursor: "pointer" }} onClick={() => setPopupSite(siteKey)}>View Day-wise Details 📄</p>
+                                    <p style={{ textAlign: "right", color: "var(--app-text-muted)", textSizeAdjust: "10px", cursor: "pointer" }} onClick={() => setPopupSite(siteKey)}>View Day-wise Details 📄</p>
                                 </div>
                             </div>
                         )}
@@ -1709,7 +1712,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                         </td>
                                                     </>
                                                 )}
-                                                <td className="sticky-col" style={{ left: 0, zIndex: 2, background: "linear-gradient(to right, lightgray)" }}>{log.Date}</td>
+                                                <td className="sticky-col" style={{ left: 0, zIndex: 2, background: "var(--app-surface-muted)" }}>{log.Date}</td>
                                                 {/* DG columns */}
                                                 {[...Array(Number(thisConfig.dgCount) || 0)].map((_, i) => (
                                                     <React.Fragment key={`dg-kwh-${i + 1}`}>
@@ -1793,7 +1796,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                     })}
                                 </tbody>
                             </table>
-                            <p style={{ fontSize: "12px" }}><strong>ℹ️</strong> <strong>🔴</strong>Check <strong>"CPH"</strong> | <strong>⚠️</strong>Check <strong>"SEGR"</strong> | <strong style={{ background: "red" }}>"ROW"</strong> For Test Run</p>
+                            <p style={{ fontSize: "12px" }}><strong>ℹ️</strong> <strong>🔴</strong>Check <strong>"CPH"</strong> | <strong>⚠️</strong>Check <strong>"SEGR"</strong> | <strong style={{ background: "var(--dg-danger)" }}>"ROW"</strong> For Test Run</p>
                         </div>
                     </div>
                 );

@@ -18,6 +18,10 @@ async function call(path, uid, method = "GET", body) {
 async function seed(path, data) { const response = await call("/" + path, "owner", "PATCH", { fields: fields(data) }); assert.equal(response.status, 200, await response.text()); }
 const sldWrite = (siteId, extra = {}) => ({ writes: [{ update: { name: `projects/${project}/databases/(default)/documents/energyMonitor/${siteId}/config/sld`, fields: fields({ version: 1, payloadJson: "{}", ...extra }) }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }] }] });
 const meterWrite = (siteId, meterId) => ({ fields: { ...fields({ siteId, meterId, status: "OK", powerUnits: "base" }), observedAt: { timestampValue: new Date().toISOString() } } });
+const powerSwitchWrite = (siteId, uid, extra = {}) => ({ writes: [{ update: {
+  name: `projects/${project}/databases/(default)/documents/energyMonitor/${siteId}/config/powerSwitch`,
+  fields: fields({ enabled:true, mainMeterId:'meter-2', htMeterId:'', dg1MeterId:'meter-26', dg2MeterId:'meter-27', updatedBy:uid, ...extra })
+}, updateTransforms:[{fieldPath:'updatedAt',setToServerValue:'REQUEST_TIME'}] }] });
 async function main() {
   await seed("users/human", { isActive: true, siteId: "N19106A", role: "User" });
   await seed("users/admin", { isActive: true, siteId: "N19106A", role: "Admin" });
@@ -29,6 +33,8 @@ async function main() {
   await seed("ebBillDetails/Asansol/MonthlyBills/2026-10", { Amount: 100 });
   await seed("energyMonitor/N19106A/meters/meter-1", { active_power: 100 });
   await seed("energyMonitor/OTHER/meters/meter-1", { active_power: 200 });
+  await seed("users/site-superuser", {isActive:true,siteId:"N19106A",role:"Super User"});
+  await seed("users/inactive-admin", {isActive:false,siteId:"N19106A",role:"Admin"});
   let passed = 0;
   async function check(name, promise, expected) {
     const response = await promise;
@@ -66,6 +72,22 @@ async function main() {
   await check("cross-site changeover history write denied", call("/energyChangeovers/N19106A/runs/new", "other", "PATCH", { fields: fields({ siteId: "N19106A", status: "Running" }) }), 403);
   const runPath = `projects/${project}/databases/(default)/documents/energyChangeovers/N19106A/runs/valid`;
   const initialRun = fields({ siteId: "N19106A", siteName: "Asansol", dgNumber: "DG-1", meterId: "meter-2", mainMeterId: "meter-1", status: "Running", startAtMs: 100000, endAtMs: null, date: "2026-10-22", opening: { kwh: 10 }, latest: { kwh: 10 }, closing: null, ebFailure: null, ebRestoration: null, generationKwh: null, trigger: "Automatic", createdBy: "human", updatedBy: "human" });
+  await check("Admin can save shared automatic switch settings", call(":commit", "admin", "POST", powerSwitchWrite("N19106A","admin")), 200);
+  await check("same-site Super User can save switch settings", call(":commit", "site-superuser", "POST", powerSwitchWrite("N19106A","site-superuser")), 200);
+  await check("site users can read shared switch settings", call("/energyMonitor/N19106A/config/powerSwitch", "human"), 200);
+  await check("ordinary users cannot edit switch settings", call(":commit", "human", "POST", powerSwitchWrite("N19106A","human")), 403);
+  await check("Admin can edit another site's switch settings", call(":commit", "admin", "POST", powerSwitchWrite("OTHER","admin")), 200);
+  await check("Super Admin can edit another site's switch settings", call(":commit", "superadmin", "POST", powerSwitchWrite("OTHER","superadmin")), 200);
+  await check("Admin can read another site's switch settings", call("/energyMonitor/OTHER/config/powerSwitch", "admin"), 200);
+  await check("Admin can read another site's meters for mapping", call("/energyMonitor/OTHER/meters/meter-1", "admin"), 200);
+  await check("inactive Admin cannot edit switch settings", call(":commit", "inactive-admin", "POST", powerSwitchWrite("OTHER","inactive-admin")), 403);
+  await check("inactive Admin cannot read other site meters", call("/energyMonitor/OTHER/meters/meter-1", "inactive-admin"), 403);
+  await check("cross-site Super User cannot edit switch settings", call(":commit", "site-superuser", "POST", powerSwitchWrite("OTHER","site-superuser")), 403);
+  await check("cross-site users cannot read switch settings", call("/energyMonitor/N19106A/config/powerSwitch", "other"), 403);
+  await check("inactive users cannot edit switch settings", call(":commit", "inactive", "POST", powerSwitchWrite("N19106A","inactive")), 403);
+  await check("switch settings reject duplicate meter IDs", call(":commit", "admin", "POST", powerSwitchWrite("N19106A","admin",{dg1MeterId:'meter-2'})), 403);
+  await check("switch settings reject extra fields", call(":commit", "admin", "POST", powerSwitchWrite("N19106A","admin",{extra:'bad'})), 403);
+  await check("switch settings reject spoofed editor", call(":commit", "admin", "POST", powerSwitchWrite("N19106A","human")), 403);
   await check("site user can create changeover run", call(":commit", "human", "POST", { writes: [{ update: { name: runPath, fields: initialRun }, updateTransforms: [{ fieldPath: "createdAt", setToServerValue: "REQUEST_TIME" }, { fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }] }] }), 200);
   const savedRun = (await (await call("/energyChangeovers/N19106A/runs/valid", "human")).json()).fields;
   const commitRun = (patch) => call(":commit", "human", "POST", { writes: [{ update: { name: runPath, fields: { ...savedRun, ...fields(patch) } }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }] }] });

@@ -103,3 +103,18 @@ test("default follows Main Incomer / running DG and site totals exclude branch m
   expect(screen.getByRole("combobox", { name: "Selected meter" })).toHaveValue("meter-1");
   view.unmount();
 });
+
+test("changing a collector meter ID replaces its Site Overview card and selected meter", () => {
+  let receive;
+  onSnapshot.mockImplementation((ref, options, next) => { receive = next; return jest.fn(); });
+  render(<EnergyMonitor userData={{siteId: "site-a"}} />);
+  const old = reading("meter-24", {name:"LT Panel - 01", observedAt:{toMillis:()=>capturedAt - 60000}});
+  act(() => receive({docs:[old],metadata:{fromCache:false}}));
+  fireEvent.change(screen.getByRole("combobox", {name:"Selected meter"}), {target:{value:"meter-24"}});
+  act(() => receive({docs:[old, reading("meter-40",{name:"LT Panel - 01"})],metadata:{fromCache:false}}));
+  expect(screen.getByRole("combobox",{name:"Selected meter"})).toHaveValue("meter-40");
+  expect(screen.queryByRole("option",{name:"meter-24"})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("tab",{name:"Site Overview"}));
+  expect(screen.getAllByRole("heading",{name:"LT Panel - 01"})).toHaveLength(1);
+  expect(screen.getByText(/1 monitored meters/)).toBeInTheDocument();
+});

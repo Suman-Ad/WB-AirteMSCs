@@ -1,0 +1,108 @@
+.all-sites-dg-logs {
+  --dg-page-bg: var(--app-page-bg);
+  --dg-surface: var(--app-surface);
+  --dg-surface-muted: var(--app-surface-muted);
+  --dg-text: var(--app-text);
+  --dg-muted: var(--app-text-muted);
+  --dg-border: var(--app-border);
+  --dg-danger: #b91c1c;
+  --dg-danger-surface: #fee2e2;
+  --dg-success: #15803d;
+  --dg-on-status: #fff;
+  --dg-header-eb: #294985;
+  --dg-header-runtime: #a16207;
+  --dg-header-onload: #166534;
+  --dg-header-offload: #b93826;
+  --dg-header-dg1: #754397;
+  --dg-header-dg2: #386294;
+  --dg-header-total: #a94d00;
+  min-width: 0;
+}
+
+:root[data-theme="dark"] .all-sites-dg-logs {
+  --dg-page-bg: var(--app-page-bg);
+  --dg-danger: #fca5a5;
+  --dg-danger-surface: #45232c;
+  --dg-success: #86efac;
+}
+
+.all-sites-dg-logs .all-sites-dg-card {
+  padding: 16px;
+  margin-block: 16px;
+  border-radius: 12px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  box-shadow: var(--theme-shadow);
+}
+
+.all-sites-dg-logs .all-sites-dg-toolbar {
+  flex-wrap: wrap;
+  border: 1px solid var(--app-border);
+}
+
+.all-sites-dg-logs label {
+  flex-direction: row;
+}
+
+.all-sites-dg-logs input {
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  color: var(--app-text);
+  background: var(--app-surface);
+  accent-color: var(--theme-primary);
+}
+
+.all-sites-dg-logs input[type="checkbox"] {
+  width: auto;
+}
+
+.all-sites-dg-logs .all-sites-dg-toggle {
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.all-sites-dg-logs :is(button, input):focus-visible {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 3px;
+}
+
+.all-sites-dg-logs .popup-modal {
+  box-sizing: border-box;
+  max-width: 96vw;
+  background: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+}
+
+.all-sites-dg-logs .popup-modal :is(th, td) {
+  border-color: var(--app-border);
+}
+
+.all-sites-dg-logs .popup-modal td {
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+
+.all-sites-dg-logs .popup-modal .row-inefficient td,
+.all-sites-dg-logs .popup-modal .row-offload td {
+  background: var(--dg-danger-surface);
+}
+
+.all-sites-dg-logs .popup-modal .row-warning td {
+  background: var(--app-surface-muted);
+  color: var(--dg-danger);
+}
+
+@media (max-width: 600px) {
+  .all-sites-dg-logs { padding: 12px; }
+  .all-sites-dg-logs .all-sites-dg-card { padding: 10px; }
+  .all-sites-dg-logs .all-sites-dg-toolbar { gap: 10px; }
+}

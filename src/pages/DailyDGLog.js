@@ -27,6 +27,27 @@ import { calculateFields } from "../utils/calculatedDGLogs";
 import { siteIdMap } from "../config/siteConfigs";
 
 
+// Derive Office Consumption from the current form, then reuse existing calculations.
+// The existing field stores daily kWh, despite its historical "kW" name.
+const recalculateOfficeConsumption = (currentForm, config) => {
+  const calculated = calculateFields(currentForm, config);
+  const totalUnits = Number(calculated["Total Unit Consumption"]);
+  const itLoadKW = Number(calculated["Total IT Load KWH"]);
+  if (!currentForm.Date || !Number.isFinite(totalUnits) || totalUnits <= 0 ||
+      !Number.isFinite(itLoadKW) || itLoadKW <= 0) return currentForm;
+
+  const officeUnits = Math.max(totalUnits - ((config.pueThresholdLimit || 1.55) * 24 * itLoadKW), 0).toFixed(2);
+  const updated = calculateFields({ ...currentForm, "Office kW Consumption": officeUnits }, config);
+  if (currentForm["Office kW Consumption"] === officeUnits && currentForm["PUE"] === updated["PUE"] &&
+      currentForm["Cooling kW Consumption"] === updated["Cooling kW Consumption"]) return currentForm;
+  return {
+    ...currentForm,
+    "Office kW Consumption": officeUnits,
+    "PUE": updated["PUE"],
+    "Cooling kW Consumption": updated["Cooling kW Consumption"],
+  };
+};
+
 const getFormattedDate = (d = new Date()) => {
   return d.toLocaleDateString("en-CA", {
     timeZone: "Asia/Kolkata",
@@ -1997,6 +2018,15 @@ const DailyDGLog = ({ userData }) => {
     }
   }, [logs, allValues])
 
+  // Recalculate Office Consumption after manual or automatic source updates.
+  // Watch derived source values, not Office/PUE, to avoid an update loop.
+  const officeSourceFields = calculateFields(form, siteConfig);
+  const officeTotalUnits = officeSourceFields["Total Unit Consumption"];
+  const officeITLoad = officeSourceFields["Total IT Load KWH"];
+  useEffect(() => {
+    setForm(current => recalculateOfficeConsumption(current, siteConfig));
+  }, [form.Date, officeTotalUnits, officeITLoad, siteConfig]);
+
   // 🔹 Handle input
   // const handleChange = (e) => {
   //   const { name, value } = e.target;
@@ -2972,8 +3002,6 @@ const DailyDGLog = ({ userData }) => {
       (snapshot) => {
         const smpsMap = {}; // {equipmentId: [currents]}
         const upsMap = {};  // {equipmentId: [loads]}
-        let eb1ClosingKwh = 0;
-        let eb2ClosingKwh = 0;
 
         snapshot.forEach((doc) => {
           const d = doc.data();
@@ -2996,14 +3024,6 @@ const DailyDGLog = ({ userData }) => {
 
             if (!upsMap[id]) upsMap[id] = [];
             upsMap[id].push(load);
-          }
-
-          // 🔹 LT (EB)
-          else if (d.equipmentId === "LT Panel-1") {
-            eb1ClosingKwh = Math.max(eb1ClosingKwh, Number(d.kwh || 0));
-          }
-          else if (d.equipmentId === "LT Panel-2") {
-            eb2ClosingKwh = Math.max(eb2ClosingKwh, Number(d.kwh || 0));
           }
         });
 
@@ -3041,44 +3061,11 @@ const DailyDGLog = ({ userData }) => {
           ...updatedEB,
         }));
 
-        // 🔹 EB Units (dynamic based on count later)
-        const ebUnits =
-          (eb1ClosingKwh - parseFloat(form["EB-1 KWH Opening"] || 0)) +
-          (eb2ClosingKwh - parseFloat(form["EB-2 KWH Opening"] || 0));
-
-        // ✅ DG Units (use form OR ensure already updated before)
-        const dgUnits =
-          (parseFloat(form["DG-1 KWH Closing"] || 0) - parseFloat(form["DG-1 KWH Opening"] || 0)) +
-          (parseFloat(form["DG-2 KWH Closing"] || 0) - parseFloat(form["DG-2 KWH Opening"] || 0));
-
-        const totalUnits = ebUnits + dgUnits;
-
-        // 🔹 IT Load (kW)
-        const itLoadKW =
-          ((Number(totalSMPSAmp) * 54.2) / 1000) + Number(totalUPSLoad);
-
-        // 🔹 Random target PUE (1.54–1.57)
-        const targetPUE = 1.54 + Math.random() * (1.57 - 1.54);
-
-        // 🔹 Office Units derived from PUE
-        let officeUnits =
-          totalUnits - (targetPUE * 24 * itLoadKW);
-
-        // 🔹 Safety clamp
-        officeUnits = Math.max(officeUnits, 0);
-
-        // 🔹 Convert to kW
-        const officeKW =
-          totalUnits > 0
-            ? officeUnits
-            : 0;
         // ✅ Update form
         setForm((prev) => ({
           ...prev,
           "DCPS Load Amps": prev["DCPS Load Amps"] || totalSMPSAmp.toFixed(2),  // 🔥 changed unit
           "UPS Load KWH": prev["UPS Load KWH"] || totalUPSLoad.toFixed(2),
-          // "Office kW Consumption": prev["Office kW Consumption"] || (((Number(prev["EB-1 KWH Closing"] || 0) - Number(prev["EB-1 KWH Opening"] || 0)) + (Number(prev["EB-2 KWH Closing"] || 0) - Number(prev["EB-2 KWH Opening"] || 0))) + ((Number(prev["DG-1 KWH Closing"] || 0) - Number(prev["DG-1 KWH Opening"] || 0)) + (Number(prev["DG-2 KWH Closing"] || 0) - Number(prev["DG-2 KWH Opening"] || 0)))) - (targetPUE * 24 * itLoadKW) , // only show if EB opening exists
-          "Office kW Consumption": prev["Office kW Consumption"] || officeKW.toFixed(2), // only show if EB opening exists
         }));
       },
       (error) => {

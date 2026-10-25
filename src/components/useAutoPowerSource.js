@@ -4,15 +4,13 @@ import { db } from "../firebase";
 import { advanceChangeover, initialChangeoverState } from "../pages/energyChangeoverTrigger";
 import { captureMeter } from "../services/energyChangeoverHistory";
 import { assessHeaderPower } from "./headerPowerTrigger";
-import { powerMappingEvent, readPowerMapping, resolvePowerMapping } from "./powerMeterMapping";
+import { resolvePowerMapping } from "./powerMeterMapping";
+
+import useSitePowerMapping from "../hooks/useSitePowerMapping";
 
 export default function useAutoPowerSource({ siteId, canToggle, powerSource, onTrigger, onMeterData }) {
-  const [savedConfig, setSavedConfig] = useState(() => readPowerMapping(siteId));
-  useEffect(() => {
-    const load = () => setSavedConfig(readPowerMapping(siteId));
-    load(); window.addEventListener("storage", load); window.addEventListener(powerMappingEvent, load); window.addEventListener("focus", load);
-    return () => { window.removeEventListener("storage", load); window.removeEventListener(powerMappingEvent, load); window.removeEventListener("focus", load); };
-  }, [siteId]);
+  const sharedMapping = useSitePowerMapping(siteId);
+  const savedConfig = sharedMapping.config;
   const [readings, setReadings] = useState({ siteId, meters: [], fromCache: true });
   const meters = useMemo(() => readings.siteId === siteId ? readings.meters : [], [readings, siteId]);
   const fromCache = readings.siteId !== siteId || readings.fromCache;
@@ -45,8 +43,9 @@ export default function useAutoPowerSource({ siteId, canToggle, powerSource, onT
     return () => { active = false; stop(); };
   }, [siteId]);
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
-  useEffect(() => { detector.current = initialChangeoverState(); setError(""); }, [configKey]);
+  useEffect(() => { detector.current = initialChangeoverState(); setError(""); }, [siteId, configKey]);
   useEffect(() => {
+    if (!sharedMapping.ready) { detector.current = initialChangeoverState(); return; }
     if (!canToggle || busy.current) return;
     const assessment = assessHeaderPower(config, meters, now, fromCache);
     const next = advanceChangeover(detector.current, assessment, 2);
@@ -60,7 +59,7 @@ export default function useAutoPowerSource({ siteId, canToggle, powerSource, onT
       detector.current = initialChangeoverState();
       setError(failure?.code === "permission-denied" ? "Auto switch blocked: publish the updated Firestore rules for changeover history." : "Auto EB → DG save failed. Check connection and site permissions.");
     }).finally(() => { busy.current = false; });
-  }, [config, meters, now, fromCache, canToggle, powerSource]);
+  }, [config, meters, now, fromCache, canToggle, powerSource, sharedMapping.ready]);
   const assessment = assessHeaderPower(config, meters, now, fromCache);
-  return { config, status: error || connectionError || (!canToggle ? "Automatic switch: awaiting power-change permission" : assessment.message) };
+  return { config, status: sharedMapping.error || error || connectionError || (!sharedMapping.ready ? "Automatic switch: loading site settings" : !canToggle ? "Automatic switch: awaiting power-change permission" : assessment.message) };
 }

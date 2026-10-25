@@ -47,5 +47,15 @@
       "enabled": false
     },
     "singleProjectMode": true
-  }
+  },
+  "functions": [
+    {
+      "source": "functions/load-book",
+      "codebase": "load-book",
+      "ignore": [
+        "node_modules",
+        "*.test.cjs"
+      ]
+    }
+  ]
 }
