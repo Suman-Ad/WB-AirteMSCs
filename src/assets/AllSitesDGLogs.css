@@ -106,3 +106,41 @@
   .all-sites-dg-logs .all-sites-dg-card { padding: 10px; }
   .all-sites-dg-logs .all-sites-dg-toolbar { gap: 10px; }
 }
+
+.all-sites-live-meters {
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+.all-sites-live-meters .live-meter-note { color: var(--app-text-muted); font-size: 0.9rem; }
+.all-sites-live-meters .live-meter-site { margin-top: 12px; }
+.all-sites-live-meters .live-meter-site-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+  text-align: left;
+  cursor: pointer;
+}
+.all-sites-live-meters .live-meter-table-wrap { overflow-x: auto; margin-top: 12px; }
+.all-sites-live-meters .live-meter-table { width: 100%; min-width: 1050px; border-collapse: collapse; font-size: 0.85rem; }
+.all-sites-live-meters .live-meter-table :is(th,td) { padding: 10px; border: 1px solid var(--app-border); text-align: left; }
+.all-sites-live-meters .live-meter-table th { background: var(--app-surface-muted); color: var(--app-text); white-space: nowrap; }
+.all-sites-live-meters .live-meter-table td { background: var(--app-surface); color: var(--app-text); }
+.all-sites-live-meters .live-meter-phases { display: grid; gap: 3px; white-space: nowrap; }
+.all-sites-live-meters .live-meter-id { display: block; color: var(--app-text-muted); margin-top: 4px; }
+@media (max-width: 600px) { .all-sites-live-meters { padding: 10px; } }
+
+.all-sites-live-meters .live-meter-summary { display: inline-flex; flex-wrap: wrap; gap: 12px; font-weight: 600; }
+.all-sites-live-meters .live-meter-count-live { color: var(--dg-success); }
+.all-sites-live-meters .live-meter-count-offline { color: var(--dg-danger); }

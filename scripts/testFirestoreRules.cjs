@@ -48,8 +48,15 @@ async function main() {
   await check("unscoped monthly group remains denied", call(":runQuery", "human", "POST", query("2026-10", true)), 403);
   await check("anonymous reports denied", call("/dailyDGLogs/Asansol/2026-10/day1"), 403);
   await check("collector cannot read DG logs", call("/dailyDGLogs/Asansol/2026-10/day1", collector), 403);
+  await check("active User can read another site's live meter", call("/energyMonitor/OTHER/meters/meter-1", "human"), 200);
+  await check("active Super User can read another site's live meter", call("/energyMonitor/OTHER/meters/meter-1", "site-superuser"), 200);
+  await check("active User can list another site's live meters", call("/energyMonitor/OTHER/meters", "human"), 200);
+  await check("cross-site meter write stays denied", call("/energyMonitor/OTHER/meters/meter-1", "human", "PATCH", meterWrite("OTHER","meter-1")), 403);
+  await check("cross-site automatic settings remain private", call("/energyMonitor/OTHER/config/powerSwitch", "human"), 403);
+  await check("inactive users cannot view another site's meters", call("/energyMonitor/OTHER/meters/meter-1", "inactive"), 403);
+  await check("anonymous users cannot view live meters", call("/energyMonitor/OTHER/meters/meter-1", null), 403);
   await check("same-site meter read allowed", call("/energyMonitor/N19106A/meters/meter-1", "human"), 200);
-  await check("cross-site meter read denied", call("/energyMonitor/OTHER/meters/meter-1", "human"), 403);
+  await check("unrecognized cross-site role cannot read meters", call("/energyMonitor/N19106A/meters/meter-1", "other"), 403);
   await check("inactive meter read denied", call("/energyMonitor/N19106A/meters/meter-1", "inactive"), 403);
   await check("collector valid meter upload", call("/energyMonitor/N19106A/meters/meter-2", collector, "PATCH", meterWrite("N19106A", "meter-2")), 200);
   await check("collector cross-site upload denied", call("/energyMonitor/OTHER/meters/meter-2", collector, "PATCH", meterWrite("OTHER", "meter-2")), 403);

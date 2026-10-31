@@ -1,3 +1,4 @@
+import AllSitesLiveMeters from "../components/AllSitesLiveMeters";
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
@@ -712,7 +713,6 @@ const AllSitesDGLogs = ({ userData }) => {
             (rows) => setEbRate(Object.fromEntries(rows.map((row) => [row.site, row]))), setBillError);
     }, [configsReady, sitePathsKey, monthKey]);
 
-    if (loading) return <div>⏳Loading all site logs…</div>;
 
 
     const getHeaderStyle = (header) => {
@@ -733,6 +733,8 @@ const AllSitesDGLogs = ({ userData }) => {
     return (
         <div className="daily-log-container all-sites-dg-logs">
             {[configError, error && `Daily logs: ${error}`, runError && `DG runs: ${runError}`, billError && `EB bills: ${billError}`].filter(Boolean).map((message) => <p key={message} role="alert" style={{ color: "var(--app-text)", borderLeft: "3px solid #c2410c", padding: 12 }}>{message}</p>)}
+            <AllSitesLiveMeters siteConfigs={siteConfigs} userSiteId={userData?.siteId} loading={!configsReady} />
+            {loading ? <p role="status">⏳Loading all site logs…</p> : <>
             <h2>All Sites Daily Energy Logs Monthly Summary - <strong>{monthKey}</strong> </h2>
 
             <div className="all-sites-dg-toolbar"
@@ -1802,6 +1804,7 @@ const AllSitesDGLogs = ({ userData }) => {
                 );
             })()}
 
+            </>}
         </div>
     );
 

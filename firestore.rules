@@ -15,6 +15,12 @@ service cloud.firestore {
       return isActiveSiteUser(siteId)
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin'];
     }
+    function canViewAllLiveMeters() {
+      return isAppUser()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Super Admin', 'Admin', 'Super User', 'User'];
+    }
     function isActiveAdmin() {
       return isAppUser()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
@@ -27,7 +33,7 @@ service cloud.firestore {
       allow read, write: if isAppUser() && !(collection in ['energyMonitor', 'energyChangeovers']);
     }
     match /energyMonitor/{siteId}/meters/{meterId} {
-      allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
+      allow read: if isActiveSiteUser(siteId) || isActiveAdmin() || canViewAllLiveMeters();
       allow create, update: if request.auth != null
         && request.auth.uid == 'n89Dopqa4ybdE8VX6B5zUwJYMcx1'
         && siteId == 'N19106A'
