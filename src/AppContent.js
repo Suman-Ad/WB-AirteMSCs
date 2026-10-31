@@ -1,3 +1,4 @@
+import { disableDeviceNotifications } from "./services/deviceNotifications";
 import EnergyMonitor from "./pages/EnergyMonitor";
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
@@ -6,7 +7,7 @@ import { signOut } from "firebase/auth";
 import { db, auth } from "./firebase";
 import { useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { getMessaging, getToken } from "firebase/messaging";
+
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -91,6 +92,7 @@ export default function AppContent() {
     const forceLogout = async (message) => {
         alert(message);
         localStorage.removeItem("userData");
+        await disableDeviceNotifications();
         await signOut(auth);
         navigate("/login", { replace: true });
     };
@@ -148,51 +150,6 @@ export default function AppContent() {
 
         return () => clearInterval(interval);
     }, [userData]);
-
-    useEffect(() => {
-        if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("/firebase-messaging-sw.js")
-                .then((reg) => console.log("✅ FCM SW registered", reg))
-                .catch((err) => console.error("❌ SW failed", err));
-        }
-    }, []);
-
-    const messaging = getMessaging();
-
-    const saveFCMToken = async (user) => {
-        try {
-            const permission = await Notification.requestPermission();
-
-            if (permission !== "granted") {
-                console.log("❌ Notification permission denied");
-                return;
-            }
-
-            const token = await getToken(messaging, {
-                vapidKey: "iYzTMgOHEazhn4CoRqnQDceaV2bMGcRigXHyf9LuBP0", // 🔥 replace this
-            });
-
-            console.log("✅ FCM Token:", token);
-
-            if (!token) return;
-
-            // 🔥 Save token in Firestore
-            await updateDoc(doc(db, "users", user.uid), {
-                fcmToken: token,
-            });
-
-        } catch (err) {
-            console.error("❌ FCM Error:", err);
-        }
-    };
-
-    useEffect(() => {
-        if (!userData?.uid) return;
-
-        saveFCMToken(userData); // 🔥 AUTO REGISTER DEVICE
-
-    }, [userData]);
-
 
     if (loading) return <div>Loading...</div>;
 

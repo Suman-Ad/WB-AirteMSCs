@@ -6,6 +6,7 @@ import { canManageAllPowerMappings } from "../components/powerMeterMapping";
 import { currentEnergyMeters } from "./currentEnergyMeters";
 import EnergyPowerMapping from "./EnergyPowerMapping";
 import EnergyAsansolBridge from "./EnergyAsansolBridge";
+import SiteMeterCleanup from "./SiteMeterCleanup";
 import "../assets/EnergyMonitor.css";
 
 export default function SiteEnergySettings({ userData, siteId }) {
@@ -23,7 +24,7 @@ export default function SiteEnergySettings({ userData, siteId }) {
     setData({ siteId: targetSite, meters: [], fromCache: true, error: "", loading: true });
     const stop = onSnapshot(collection(db, "energyMonitor", targetSite, "meters"), { includeMetadataChanges: true }, (snapshot) => {
       if (!active) return;
-      const meters = currentEnergyMeters(snapshot.docs.map((d) => ({ ...d.data(), id: d.id }))).meters;
+      const meters = snapshot.docs.map((d) => ({ ...d.data(), id: d.id }));
       setData({ siteId: targetSite, meters, fromCache: Boolean(snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites), error: "", loading: false });
     }, () => {
       if (active) setData({ siteId: targetSite, meters: [], fromCache: true, error: "Cannot read this site's meters. Check your connection and site access.", loading: false });
@@ -41,7 +42,8 @@ export default function SiteEnergySettings({ userData, siteId }) {
     {!targetSite && <p role="alert">Assign a site ID before configuring energy automation.</p>}
     {current.loading && targetSite && <p role="status">Loading site meters…</p>}
     {current.error && <p role="alert">{current.error}</p>}
-    {targetSite && <><EnergyPowerMapping key={targetSite} fixedSite siteId={targetSite} meters={current.meters} userData={userData} />
-      <EnergyAsansolBridge key={`simulator:${targetSite}`} siteId={targetSite} siteName={siteName} meters={current.meters} now={now} fromCache={current.fromCache} /></>}
+    {targetSite && <><SiteMeterCleanup key={`cleanup:${targetSite}`} siteId={targetSite} meters={current.meters} userData={userData} now={now} fromCache={current.fromCache} loading={current.loading} error={current.error} />
+      <EnergyPowerMapping key={targetSite} fixedSite siteId={targetSite} meters={currentEnergyMeters(current.meters).meters} userData={userData} />
+      <EnergyAsansolBridge key={`simulator:${targetSite}`} siteId={targetSite} siteName={siteName} meters={currentEnergyMeters(current.meters).meters} now={now} fromCache={current.fromCache} /></>}
   </section>;
 }

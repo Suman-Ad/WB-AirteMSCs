@@ -1,3 +1,4 @@
+import { disableDeviceNotifications } from "../services/deviceNotifications";
 // src/components/Sidebar.js
 import React, { useEffect, useState } from "react";
 import { NavLink as Link, useNavigate } from "react-router-dom";
@@ -37,6 +38,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
   }, []);
 
   const handleLogout = async () => {
+    await disableDeviceNotifications();
     await auth.signOut();
     localStorage.removeItem("userData");
     localStorage.removeItem("summary");
@@ -241,9 +243,9 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
           <Link to="/acdc-rack-details" className="sidepanel-manage-btn" title={collapsed ? "Rack Dashboard" : ""} onClick={() => setCollapsed(true)}>🗄️ <span className="label">AC DC Rack Details</span></Link>
         )}
 
-        {/* {(role === "Admin" || role === "Super Admin") && (
+        {(role === "Admin" || role === "Super Admin") && (
         <Link to="/dhr-dashboard" className="sidepanel-manage-btn" title={collapsed ? "DHR Dashboard" : ""} onClick={() => setCollapsed(true)}>⚡<span className="label">DHR Dashboard</span></Link>
-          )} */}
+          )}
 
         {(role === "Admin" || role === "Super Admin" || role === "Super User") && (
           <Link to="/duty-tracker" className="sidepanel-manage-btn" title={collapsed ? "Daily Activity Dashboard" : ""} onClick={() => setCollapsed(true)}>☀️ <span className="label">Duty Tracker</span></Link>

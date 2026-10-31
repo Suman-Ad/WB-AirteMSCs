@@ -1,3 +1,4 @@
+import { disableDeviceNotifications } from "../services/deviceNotifications";
 // src/components/AutoLogout.js
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -65,6 +66,7 @@ export default function AutoLogout({ timeoutMs = 12 * 60 * 60 * 1000 }) {
         if (timeLeft <= 0) {
           console.log("🚪 Session expired — logging out...");
           try {
+            await disableDeviceNotifications();
             await signOut(auth);
           } catch (e) {
             console.warn("signOut error (ignored):", e);

@@ -1,3 +1,4 @@
+import NotificationSettings from "./NotificationSettings";
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where, orderBy, updateDoc, doc, namedQuery, addDoc, getDocs, collectionGroup, serverTimestamp, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
@@ -380,11 +381,12 @@ export default function NotificationBell({ user }) {
             </button>
 
             {/* Dropdown */}
-            {open && (
+            {(
                 <div style={{
                     position: 'absolute',
                     right: '-1rem',
                     marginTop: '0.5rem',
+                    display: open ? 'block' : 'none',
                     width: '18rem',
                     backgroundColor: 'white',
                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
@@ -467,6 +469,7 @@ export default function NotificationBell({ user }) {
                         </div>
                     </div>
 
+                    <NotificationSettings uid={user.uid} />
                     {items.length === 0 && (
                         <div style={{
                             padding: '0.75rem',

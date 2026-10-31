@@ -1,13 +1,16 @@
 // src/pages/ExcelLiveEditPage.js
 import React, { useEffect, useState } from "react";
+import FinalSummary from "../components/FinalSummary";
 import { Tabs, Tab } from "@mui/material";
-import ExcelSheetEditor, { sheetTemplates, fetchLatestDailyDGLog  }  from "../components/ExcelSheetEditor";
+import ExcelSheetEditor, { sheetTemplates, siteWiseDefaults }  from "../components/ExcelSheetEditor";
 import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import "../assets/ExcelLiveEditPage.css";
+import useDailyDashboardAutofill from "../hooks/useDailyDashboardAutofill";
+import { getISTDate, mergeDailyAutofill } from "../utils/dailyDashboardAutofill";
 
 const sheetKeys = {
-  // "Final Summary": "Final_Summary",
+  "Final Summary": "Final_Summary",
   "Diesel Back Up": "Diesel_Back_Up",
   "DG-EB Backup": "DG_EB_Backup",
   "Infra Update": "Infra_Update",
@@ -25,12 +28,29 @@ const ExcelLiveEditPage = ({ userData }) => {
   const [selectedTab, setSelectedTab] = useState("Diesel Back Up");
   const [sheetData, setSheetData] = useState({});
   const [loading, setLoading] = useState(true);
-  const today = new Date().toISOString().split("T")[0];
+  const today = getISTDate();
   const [selectedDate, setSelectedDate] = useState(today);
   const dateId = selectedDate;
   const siteId = userData?.site;
 
+  const { patches, error: autofillError } = useDailyDashboardAutofill(siteId ? [siteId] : [], selectedDate, Boolean(userData?.role) && userData.role !== "User");
+  const [autofillSaveError, setAutofillSaveError] = useState("");
+
   useEffect(() => {
+    if (loading || !patches[siteId] || !siteId) return;
+    const next = mergeDailyAutofill(sheetData, patches[siteId]);
+    const changed = Object.keys(patches[siteId]).filter(key => JSON.stringify(next[key]) !== JSON.stringify(sheetData[key]));
+    if (!changed.length) return;
+    let active = true;
+    const fields = Object.fromEntries(changed.map(key => [key, next[key]]));
+    setDoc(doc(db, "excel_data_by_date", dateId, "sites", siteId), fields, { merge: true })
+      .then(() => { if (active) { setSheetData(previous => ({ ...previous, ...fields })); setAutofillSaveError(""); } })
+      .catch(error => { if (active) setAutofillSaveError(`Autofill could not be saved: ${error.message}`); });
+    return () => { active = false; };
+  }, [patches, siteId, dateId, loading, sheetData]);
+
+  useEffect(() => {
+    let active = true;
     const fetchSheet = async () => {
       if (!siteId) {
         console.error("Missing site ID in userData!");
@@ -42,6 +62,7 @@ const ExcelLiveEditPage = ({ userData }) => {
       const ref = doc(db, "excel_data_by_date", dateId, "sites", siteId);
       const snap = await getDoc(ref);
 
+      if (!active) return;
       if (snap.exists()) {
         setSheetData(snap.data());
       } else {
@@ -52,6 +73,10 @@ const ExcelLiveEditPage = ({ userData }) => {
           defaultData[key] = template ? template.map(row => ({ ...row })) : [];
         });
 
+        Object.entries(siteWiseDefaults.Diesel_Back_Up || {}).forEach(([key, values]) => {
+          if (values[siteId] !== undefined) defaultData.Diesel_Back_Up[0][key] = values[siteId];
+        });
+
         // ensure parent date doc exists
         await setDoc(doc(db, "excel_data_by_date", dateId), {
           createdAt: new Date().toISOString(),
@@ -60,17 +85,19 @@ const ExcelLiveEditPage = ({ userData }) => {
         // set site doc with default data
         await setDoc(ref, {
           site: siteId,
-          date: today,
+          date: dateId,
           ...defaultData,
         }, { merge: true });
 
-        setSheetData({ site: siteId, date: today, ...defaultData });
+        if (!active) return;
+        setSheetData({ site: siteId, date: dateId, ...defaultData });
       }
 
       setLoading(false);
     };
 
-    fetchSheet();
+    fetchSheet().catch(error => { if (active) { setAutofillSaveError(error.message); setLoading(false); } });
+    return () => { active = false; };
   }, [siteId, dateId]);
   
 
@@ -93,7 +120,7 @@ const ExcelLiveEditPage = ({ userData }) => {
 
   const getSheetStatus = (rows) => {
     if (!Array.isArray(rows) || rows.length === 0) return { status: "Empty", color: "red", filled: 0, total: 0 };
-    const keys = Object.keys(rows[0]);
+    const keys = Object.keys(rows[0]).filter(key => !key.startsWith("__"));
     const total = rows.length * keys.length;
     let filled = 0;
     rows.forEach(row => {
@@ -114,6 +141,8 @@ const ExcelLiveEditPage = ({ userData }) => {
     <div className="dhr-dashboard-container">
       <h2 className="dashboard-header">📘 Daily Details Dashboard Of WB Circle Location: {siteId || "Unknown Site"}</h2>
 
+      <p>Reporting period: previous day 4 PM to selected date 4 PM (IST). DG closing stock and hours autofill after 4 PM. Activities without start times use their scheduled date.</p>
+      {(autofillError || autofillSaveError) && <p role="alert">{autofillError || autofillSaveError}</p>}
       <div style={{ marginBottom: "1rem" }}>
         <label>Select Date: </label>
         <input
@@ -131,6 +160,7 @@ const ExcelLiveEditPage = ({ userData }) => {
           variant="scrollable"
         >
           {Object.entries(sheetKeys).map(([label, key]) => {
+            const isSummary = key === "Final_Summary";
             const rows = sheetData[key] || [];
             const { status, color, filled, total } = getSheetStatus(rows);
             const percentage = total ? Math.round((filled / total) * 100) : 0;
@@ -138,9 +168,9 @@ const ExcelLiveEditPage = ({ userData }) => {
               <Tab
                 key={label}
                 label={
-                  <span className={`sheet-tab ${status.toLowerCase()}`}>
+                  <span className={`sheet-tab ${isSummary ? "complete" : status.toLowerCase()}`}>
                     {label} <br />
-                    <small style={{ color }}>{status} ({percentage}%)</small>
+                    <small style={isSummary ? undefined : { color }}>{isSummary ? "Calculated" : `${status} (${percentage}%)`}</small>
                   </span>
                 }
                 value={label}
@@ -153,15 +183,20 @@ const ExcelLiveEditPage = ({ userData }) => {
           <p>Loading...</p>
         ) : (
           <div className="sheet-editor-scroll chart-container">
-            <ExcelSheetEditor
-              sheetKey={sheetKeys[selectedTab]}
-              rows={sheetData[sheetKeys[selectedTab]] || []}
-              lastUpdated={sheetData[`lastUpdated_${sheetKeys[selectedTab]}`]}
-              onSave={(rows) => handleSheetUpdate(sheetKeys[selectedTab], rows)}
-              userData={userData}
-              selectedDate={selectedDate}
-              allSheetsData={sheetData}
-            />
+            {selectedTab === "Final Summary" ? (
+              <FinalSummary siteData={{ [siteId]: sheetData }} selectedDate={selectedDate} title={`Final Summary — ${siteId}`} />
+            ) : (
+              <ExcelSheetEditor
+                key={`${siteId}-${selectedDate}-${selectedTab}`}
+                sheetKey={sheetKeys[selectedTab]}
+                rows={sheetData[sheetKeys[selectedTab]] || []}
+                lastUpdated={sheetData[`lastUpdated_${sheetKeys[selectedTab]}`]}
+                onSave={(rows) => handleSheetUpdate(sheetKeys[selectedTab], rows)}
+                userData={userData}
+                selectedDate={selectedDate}
+                allSheetsData={sheetData}
+              />
+            )}
           </div>
         )}
       </div>

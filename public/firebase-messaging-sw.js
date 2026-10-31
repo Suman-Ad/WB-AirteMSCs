@@ -11,22 +11,26 @@ firebase.initializeApp({
   appId: "1:747029201509:web:980d35fa5dc71e13927c8c",
 });
 
+// Register before Firebase's click handler.
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || "/", self.location.origin);
+  if (target.origin !== self.location.origin) return;
+  event.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(async windows => {
+    for (const client of windows) {
+      if (new URL(client.url).origin === target.origin) {
+        await client.navigate(target.href);
+        return client.focus();
+      }
+    }
+    return clients.openWindow(target.href);
+  }));
+});
 const messaging = firebase.messaging();
-
-// This handles the message when the app is in the background or closed
-messaging.onBackgroundMessage((payload) => {
-  console.log("Received background message ", payload);
-
-  const notificationTitle = payload.data.title || "CRQ Alert";
-  const notificationOptions = {
-    body: payload.data.body || "You have a pending CRQ task.",
-    icon: "/vertiv192.png",
-    data: payload.data, // Important for the click handler
-    actions: [
-      { action: "call", title: "📞 Call Now" },
-      { action: "open", title: "📊 Open Dashboard" },
-    ],
-  };
-
-  return self.registration.showNotification(notificationTitle, notificationOptions);
+messaging.onBackgroundMessage(payload => {
+  const data = payload.data || {};
+  return self.registration.showNotification(data.title || "WB Airtel MSC", {
+    body: data.body || "You have a new notification", icon: "/logo192.png",
+    tag: data.notificationId, data: { url: data.url || "/" }
+  });
 });

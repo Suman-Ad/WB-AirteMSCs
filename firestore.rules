@@ -30,7 +30,21 @@ service cloud.firestore {
     // Retain the supplied legacy access for non-energyMonitor collections.
     // All-sites reports use explicit paths so they do not query energyMonitor.
     match /{collection}/{document=**} {
-      allow read, write: if isAppUser() && !(collection in ['energyMonitor', 'energyChangeovers']);
+      allow read, write: if isAppUser() && !(collection in ['energyMonitor', 'energyChangeovers', 'notificationDevices', 'notificationPreferences', 'notificationDeliveries', 'telegramLinks', 'telegramChats']);
+    }
+    match /notificationDevices/{token} {
+      allow read, delete: if isAppUser() && resource.data.uid == request.auth.uid;
+      allow create, update: if isAppUser()
+        && request.resource.data.keys().hasOnly(['uid', 'token', 'updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.token == token
+        && request.resource.data.updatedAt == request.time
+        && (resource == null || resource.data.uid == request.auth.uid);
+    }
+    match /notificationPreferences/{uid} {
+      allow read: if isAppUser() && request.auth.uid == uid;
+      // Telegram linking and opt-out are handled by authenticated server functions.
+      allow write: if false;
     }
     match /energyMonitor/{siteId}/meters/{meterId} {
       allow read: if isActiveSiteUser(siteId) || isActiveAdmin() || canViewAllLiveMeters();
@@ -43,7 +57,7 @@ service cloud.firestore {
         && request.resource.data.observedAt is timestamp
         && request.resource.data.status in ['OK', 'ERROR']
         && request.resource.data.powerUnits in ['raw', 'base', 'kilo'];
-      allow delete: if false;
+      allow delete: if isActiveAdmin();
     }
     match /energyMonitor/{siteId}/config/powerSwitch {
       allow read: if isActiveSiteUser(siteId) || isActiveAdmin();

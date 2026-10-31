@@ -1,89 +1,150 @@
-/* Container for the full sheet block section */
-.sheet-blocks-wrapper {
-  overflow-x: auto;
-  white-space: nowrap;
-  padding: 1rem 0;
-  border-top: 2px solid #ccc;
+/* Scoped to the Daily Details page; colors follow the app theme picker. */
+.daily-details-dashboard {
+  --daily-success: #16703c;
+  --daily-warning: #895500;
+  --daily-danger: #b42318;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: clamp(12px, 2vw, 24px);
+  background: var(--app-page-bg, #eaf2f8);
+  color: var(--app-text, #17324d);
+  border: 1px solid var(--app-border, #c9dce8);
 }
 
-/* Each sheet block card */
-.sheet-block-card {
-  display: inline-block;
-  vertical-align: top;
-  width: 700px;
-  margin-right: 20px;
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #fafafa;
+:root[data-theme="dark"] .daily-details-dashboard {
+  --daily-success: #86efac;
+  --daily-warning: #fcd34d;
+  --daily-danger: #fca5a5;
 }
 
-/* Table styling inside each sheet */
-.sheet-block-card table {
+.daily-details-dashboard .dashboard-header,
+.daily-details-dashboard .noticeboard-header {
+  background: var(--app-surface-muted);
+  color: var(--theme-heading, var(--app-text));
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.daily-details-dashboard .instruction-tab,
+.daily-details-dashboard .sheet-block-card {
+  background: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--theme-shadow);
+}
+
+.daily-details-dashboard .instruction-tab { margin: 20px 0; }
+.daily-details-dashboard .daily-dashboard-signature { text-align: right; font-size: .8rem; }
+.daily-details-dashboard .daily-dashboard-site { margin-top: 20px; border-top: 1px solid var(--app-border); padding-top: 12px; }
+
+.daily-details-dashboard .sheet-blocks-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  overflow: auto;
+  max-height: 1170px;
+  padding: 12px 0;
+}
+
+.daily-details-dashboard .sheet-block-card {
+  flex: 0 0 min(700px, 100%);
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  white-space: normal;
+}
+
+.daily-details-dashboard table {
   width: 100%;
   border-collapse: collapse;
+  background: var(--app-surface);
+  color: var(--app-text);
+  box-shadow: none;
 }
 
-.sheet-block-card th,
-.sheet-block-card td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.sheet-block-card th {
-  background-color: #f0f0f0;
-}
-
-.status-table {
-  border-collapse: collapse;
-  width: 100%;
-  margin-bottom: 2rem;
-  font-size: 0.95rem;
-  background-color: #fff;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
-}
-
-.status-table th,
-.status-table td {
-  border: 1px solid #ccc;
+.daily-details-dashboard :is(th, td) {
+  border: 1px solid var(--app-border);
   padding: 10px 12px;
   text-align: left;
+  white-space: nowrap;
 }
 
-.status-table th {
-  background-color: #f7f7f7;
-  font-weight: bold;
-}
+.daily-details-dashboard th { background: var(--app-surface-muted); color: var(--app-text); }
+.daily-details-dashboard td { background: var(--app-surface); }
+.daily-details-dashboard tbody tr:hover td { background: var(--theme-row-hover, var(--app-surface-muted)); }
+.daily-details-dashboard :is(.status-complete, .daily-sheet-status-complete) { color: var(--daily-success); font-weight: 700; }
+.daily-details-dashboard :is(.status-pending, .daily-sheet-status-empty) { color: var(--daily-danger); font-weight: 700; }
+.daily-details-dashboard .daily-sheet-status-partial { color: var(--daily-warning); font-weight: 700; }
 
-.status-complete {
-  color: green;
-  font-weight: bold;
-}
-
-.status-pending {
-  color: red;
-  font-weight: bold;
-}
-
-
-.dashboard-instruction-panel {
-  width: 97%;
-  padding: 0.75rem;
-  margin: 0.5rem 0;
+.daily-details-dashboard :is(input, select, textarea) {
+  box-sizing: border-box;
+  background: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
   border-radius: 6px;
-  border: 1px solid #ccc;
-  font-family: "Segoe UI", sans-serif;
-  font-size: 1rem;
-  background: #fff;
+  padding: 8px 10px;
+  font: inherit;
 }
 
-.dashboard-subinfo span {
-  padding: 4px 8px;
-  background-color: #f1f5f9;
+.daily-details-dashboard input { min-width: 140px; width: 100%; }
+.daily-details-dashboard input:disabled {
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+  opacity: 1;
+  cursor: default;
+}
+
+.daily-details-dashboard .dashboard-instruction-panel {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
   border-radius: 6px;
-  margin-right: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.daily-details-dashboard .daily-dashboard-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.daily-details-dashboard :is(button, .pm-manage-btn) {
   display: inline-block;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 9px 14px;
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
 }
 
+.daily-details-dashboard :is(.btn-success, .daily-dashboard-primary) {
+  background: var(--theme-primary, #0f766e);
+  color: var(--app-page-bg, #fff);
+  border-color: var(--theme-primary, #0f766e);
+}
+
+/* Keep action labels readable against each theme's accent color. */
+:root:not([data-theme="dark"]) .daily-details-dashboard :is(.btn-success, .daily-dashboard-primary) { color: #fff; }
+.daily-details-dashboard :is(button, .pm-manage-btn):hover { filter: brightness(.94); }
+.daily-details-dashboard :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 3px; }
+.daily-details-dashboard [role="alert"] { border-left: 3px solid var(--daily-danger); padding: 12px; background: var(--app-surface); }
+
+@media (max-width: 600px) {
+  .daily-details-dashboard .daily-dashboard-toolbar > :is(select, button) { width: 100%; }
+  .daily-details-dashboard .sheet-block-card { padding: 12px; }
+}

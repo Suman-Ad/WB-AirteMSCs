@@ -6,6 +6,7 @@ The page has five tabs: Energy Dashboard, Site Overview, Electrical SLD, Analysi
 
 Live subscription: `energyMonitor/{siteId}/meters`.
 
+
 - `active_power`, `apparent_power`, `reactive_power`: displayed as kW, kVA, kvar. `powerUnits: "base"` means W/VA/var (divide by 1000); `powerUnits: "kilo"` means already scaled. Unknown source scales show unavailable values.
 - Per phase: `R_current`, `Y_current`, `B_current` (A), `R_voltage_ln` / Y/B (V), and `R_voltage_ll` / Y/B (V). L-L columns correspond to R-Y, Y-B, B-R. Aggregate current/voltage remains available in the collector data.
 - EnergyBook reader fields `fwd_Wh`, `fwd_VAh`, `fwd_VARh`, `fwd_VARh_capacitive` are base counters, displayed after division by 1000 as kWh/kVAh/kvarh. Explicit `energyUnits: "kWh"` or `"kilo"` means already scaled and prevents another division. `fwd_runsec` remains seconds.
@@ -111,3 +112,7 @@ The Energy Monitor consolidates retained collector documents before rendering it
 Each site shows the latest retained meter identity, kW/kVA/kvar/kWh, R/Y/B L-L and L-N voltages, currents, power factor, frequency and observation time in IST. Values display two decimal places. Unit conversion and meter-health checks reuse Energy Monitor helpers. Non-live records remain visible with Offline or Reconnecting status and last-known-reading labels; failed/missing values are not displayed as zero. No mapping, power-switch or meter-write controls are present.
 
 The new rule permits active Admin, Super Admin, Super User and User profiles to read meter documents across sites. Meter writes remain collector-only, and site configuration/changeover permissions are unchanged. Read-only UI and rule checks cover cross-site reads, denied writes, denied private settings access, inactive/anonymous accounts, deduplication, subscription cleanup and loading/error behavior. Publishing this access expansion requires separate production approval.
+
+## Meter cleanup in Site Config
+
+Energy Monitor shows all meter documents, including offline and duplicate records. In Site Config, open Energy Automation and Manage energy meters to review IDs, point IDs, health and last-reading times. Admin and Super Admin users can check extra meters, review the selected records, and confirm removal. Removal deletes only current meter documents, leaving saved history intact. Active collectors can recreate records; update collector configuration to stop unwanted uploads. Review power-switch and SLD mappings after removal. Firestore rules must be deployed to enable admin deletion.

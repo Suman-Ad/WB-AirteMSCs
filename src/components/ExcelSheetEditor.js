@@ -6,7 +6,7 @@ import structuredClone from '@ungap/structured-clone';
 import { formulasConfig } from "../config/formulasConfig";
 import * as XLSX from "xlsx";
 import { db } from "../firebase";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 
 // 🔹 Fetch latest DailyDGLog entry for a site + date
 export const fetchLatestDailyDGLog = async (site, selectedDate) => {
@@ -47,33 +47,33 @@ const numericKeyPattern = /(qty|rating|kva|tr|count|uptime|amount|number|SlNo|re
 
 
 export const sheetTemplates = {
-  // Final_Summary: [
-  //   { Edge_Data_Centres_Count: "Category Checks", WB: "" },
-  //   { Edge_Data_Centres_Count: "Sites Less Than 12 Hrs Diesel Back Up", WB: "" },
-  //   { Edge_Data_Centres_Count: "Sites More Than 12 Hrs Diesel Back Up", WB: "" },
-  //   { Edge_Data_Centres_Count: "MSC more than 2500 Litres excluding Day Tanks", WB: "" },
-  //   { Edge_Data_Centres_Count: "MSC more than 2500 Litres Including Day Tanks", WB: "" },
-  //   { Edge_Data_Centres_Count: "DG Running Hrs.", WB: "" },
-  //   { Edge_Data_Centres_Count: "EB Availability Hrs.", WB: "" },
-  //   { Edge_Data_Centres_Count: "Infra Uptime", WB: "" },
-  //   { Edge_Data_Centres_Count: "Infra Uptime with Redundancy", WB: "" },
-  //   { Edge_Data_Centres_Count: "Minor Fault Details (If any)", WB: "" },
-  //   { Edge_Data_Centres_Count: "Major Fault Details (If any)", WB: "" },
-  //   { Edge_Data_Centres_Count: "Planned Activity Details", WB: "" },
-  //   { Edge_Data_Centres_Count: "Category Checks", WB: "" }, 
-  //   { Edge_Data_Centres_Count: "O&M Manpower Availability as Per LOI", WB: "" },
-  //   { Edge_Data_Centres_Count: "In House PM Planned (Jul'25 Month)", WB: "" },
-  //   { Edge_Data_Centres_Count: "In House PM Completed (Jul'25 Month)", WB: "" },
-  //   { Edge_Data_Centres_Count: "Inhouse PM Completion %", WB: "" },
-  //   { Edge_Data_Centres_Count: "OEM PM Planned (Jul'25 Month)", WB: "" },
-  //   { Edge_Data_Centres_Count: "OEM PM Completed (Jul'25 Month)", WB: "" },
-  //   { Edge_Data_Centres_Count: "OEM PM Completion %", WB: "" },
-  //   { Edge_Data_Centres_Count: "Incidents / Accidents Reported", WB: "" },
-  //   { Edge_Data_Centres_Count: "EOL Replacement Planned", WB: "" },
-  //   { Edge_Data_Centres_Count: "EOL Replacement Completed", WB: "" },
-  //   { Edge_Data_Centres_Count: "Operational Governance Call Planned", WB: "" },
-  //   { Edge_Data_Centres_Count: "Operational Governance Call Executed", WB: "" },
-  // ],
+  Final_Summary: [
+    { Edge_Data_Centres_Count: "Category Checks", WB: "" },
+    { Edge_Data_Centres_Count: "Sites Less Than 12 Hrs Diesel Back Up", WB: "" },
+    { Edge_Data_Centres_Count: "Sites More Than 12 Hrs Diesel Back Up", WB: "" },
+    { Edge_Data_Centres_Count: "MSC more than 2500 Litres excluding Day Tanks", WB: "" },
+    { Edge_Data_Centres_Count: "MSC more than 2500 Litres Including Day Tanks", WB: "" },
+    { Edge_Data_Centres_Count: "DG Running Hrs.", WB: "" },
+    { Edge_Data_Centres_Count: "EB Availability Hrs.", WB: "" },
+    { Edge_Data_Centres_Count: "Infra Uptime", WB: "" },
+    { Edge_Data_Centres_Count: "Infra Uptime with Redundancy", WB: "" },
+    { Edge_Data_Centres_Count: "Minor Fault Details (If any)", WB: "" },
+    { Edge_Data_Centres_Count: "Major Fault Details (If any)", WB: "" },
+    { Edge_Data_Centres_Count: "Planned Activity Details", WB: "" },
+    { Edge_Data_Centres_Count: "Category Checks", WB: "" }, 
+    { Edge_Data_Centres_Count: "O&M Manpower Availability as Per LOI", WB: "" },
+    { Edge_Data_Centres_Count: "In House PM Planned (Jul'25 Month)", WB: "" },
+    { Edge_Data_Centres_Count: "In House PM Completed (Jul'25 Month)", WB: "" },
+    { Edge_Data_Centres_Count: "Inhouse PM Completion %", WB: "" },
+    { Edge_Data_Centres_Count: "OEM PM Planned (Jul'25 Month)", WB: "" },
+    { Edge_Data_Centres_Count: "OEM PM Completed (Jul'25 Month)", WB: "" },
+    { Edge_Data_Centres_Count: "OEM PM Completion %", WB: "" },
+    { Edge_Data_Centres_Count: "Incidents / Accidents Reported", WB: "" },
+    { Edge_Data_Centres_Count: "EOL Replacement Planned", WB: "" },
+    { Edge_Data_Centres_Count: "EOL Replacement Completed", WB: "" },
+    { Edge_Data_Centres_Count: "Operational Governance Call Planned", WB: "" },
+    { Edge_Data_Centres_Count: "Operational Governance Call Executed", WB: "" },
+  ],
   Diesel_Back_Up: [
     {
       Circle: "", Site_Name: "", DG_fuel_tank_capacity: "",
@@ -140,7 +140,7 @@ export const sheetTemplates = {
 
 // const snap = await getDoc(doc(db, "siteConfigs", userData.site.toUpperCase()));
 
-const siteWiseDefaults = {
+export const siteWiseDefaults = {
   Diesel_Back_Up: {
     DG_fuel_tank_capacity: {
       "Andaman": 1060.00,
@@ -526,64 +526,6 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
     setRawData(init);
   }, [rows, sheetKey, userData, selectedDate]); // re-init on these changes
 
-
-  useEffect(() => {
-    if (
-      sheetKey !== "Diesel_Back_Up" ||
-      !userData?.site ||
-      !selectedDate ||
-      rawData.length === 0
-    ) return;
-
-    const autoFillDieselBackup = async () => {
-      const site = userData.site;
-
-      // 1️⃣ Fetch latest daily DG log
-      const dailyLog = await fetchLatestDailyDGLog(site, selectedDate);
-
-      // 2️⃣ Fetch siteConfig (Firestore, NOT static)
-      let siteConfig = {};
-      try {
-        const snap = await getDoc(doc(db, "siteConfigs", site.toUpperCase()));
-        if (snap.exists()) siteConfig = snap.data();
-      } catch (e) {
-        console.error("SiteConfig fetch failed", e);
-      }
-
-      setRawData(prev =>
-        prev.map((row, idx) => {
-          if (idx !== 0) return row; // 🔒 only first row
-
-          // 🟢 DG Tank Stock = live dailyDGLogs
-          const dgTankStock =
-            dailyLog
-              ? (Number(dailyLog["DG-1 Fuel Closing"] || 0) +
-                Number(dailyLog["DG-2 Fuel Closing"] || 0))
-              : row.Present_Diesel_Stock_in_DG_tank_Ltr;
-
-          // 🟢 External stock priority
-          const externalStock =
-            dailyLog?.External_Stock_availiabl_at_MSC_Ltr ??
-            siteConfig.External_Stock_availiabl_at_MSC_Ltr ??
-            siteConfig.External_Stock_capacity_Barrel_UG_Buffer_Ltr ??
-            row.External_Stock_availiabl_at_MSC_Ltr;
-
-
-          return {
-            ...row,
-            Present_Diesel_Stock_in_DG_tank_Ltr: dgTankStock,
-            External_Stock_availiabl_at_MSC_Ltr: externalStock,
-            __lockedFields: {
-              Present_Diesel_Stock_in_DG_tank_Ltr: true,
-              External_Stock_availiabl_at_MSC_Ltr: true,
-            },
-          };
-        })
-      );
-    };
-
-    autoFillDieselBackup();
-  }, [sheetKey, selectedDate, userData?.site]);
 
   // Debounced save of rawData (saves formulas + inputs)
   const scheduleSave = (updatedRaw) => {

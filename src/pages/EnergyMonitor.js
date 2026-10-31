@@ -1,4 +1,3 @@
-import { currentEnergyMeters } from "./currentEnergyMeters";
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
@@ -24,7 +23,7 @@ export default function EnergyMonitor({ userData }) {
   const [tab, setTab] = useState("dashboard");
   const [openedTabs, setOpenedTabs] = useState({});
   const activateTab = (id) => { setTab(id); setOpenedTabs((opened) => opened[id] ? opened : { ...opened, [id]: true }); };
-  const [meters, setMeters] = useState([]);
+  const [allMeters, setMeters] = useState([]);
   const [selected, setSelected] = useState("");
   const {config: supplyMapping} = useSitePowerMapping(siteId);
   const [error, setError] = useState("");
@@ -41,9 +40,7 @@ export default function EnergyMonitor({ userData }) {
       { includeMetadataChanges: true }, (snapshot) => {
         if (!active) return;
         const incoming = snapshot.docs.map((d) => ({ ...d.data(), id: d.id }));
-        const {meters: current, aliases} = currentEnergyMeters(incoming);
-        setMeters(current);
-        setSelected(previous => aliases[previous] || previous);
+        setMeters(incoming);
         setFromCache(snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites);
         setLoading(false); setError("");
       }, () => {
@@ -59,8 +56,9 @@ export default function EnergyMonitor({ userData }) {
     return () => clearInterval(timer);
   }, []);
 
-  const supply = energySupplyMeter(meters, supplyMapping, now, fromCache || Boolean(error));
-  const meter = meters.find((m) => m.id === selected) || supply.defaultMeter;
+  const meters = allMeters;
+  const supply = energySupplyMeter(allMeters, supplyMapping, now, fromCache || Boolean(error));
+  const meter = meters.find((m) => m.id === selected) || meters.find(m => m.id === supply.defaultMeter?.id) || meters[0];
   const meterId = meter?.id;
   const observed = meter?.observedAt?.toMillis?.();
   const readingPower = meter?.status === "OK" ? power(meter) : null;
@@ -87,7 +85,10 @@ export default function EnergyMonitor({ userData }) {
     return list;
   });
   const tabs = [["dashboard", "Energy Dashboard"], ["overview", "Site Overview"], ["sld", "Electrical SLD"], ["analysis", "Analysis Report"], ["alarms", `Alarms (${alarms.length})`]];
-  const openMeter = (id) => { setSelected(id); setTab("dashboard"); };
+  const openMeter = (id) => {
+    if (!meters.some(m => m.id === id)) return;
+    setSelected(id); setTab("dashboard");
+  };
   const card = (label, value, unit = "", note = "") => <article className="energy-card" key={label}><span className="energy-muted">{label}</span><div className="energy-number">{format(value)} <small>{unit}</small></div>{note && <small className="energy-muted">{note}</small>}</article>;
 
   return <main className={`energy-monitor ${tab === "overview" ? "energy-site-view" : ""}`}>

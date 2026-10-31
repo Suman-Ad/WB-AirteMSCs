@@ -7,6 +7,7 @@ jest.mock("../firebase", () => ({ db: {} }));
 jest.mock("firebase/firestore", () => ({ collection: jest.fn(), onSnapshot: jest.fn() }));
 jest.mock("./EnergyPowerMapping", () => ({siteId, meters, fixedSite}) => <div data-testid="mapping">{siteId}:{meters.length}:{String(fixedSite)}</div>);
 jest.mock("./EnergyAsansolBridge", () => ({siteId, siteName, fromCache}) => <div data-testid="simulator">{siteName}:{siteId}:{String(fromCache)}</div>);
+jest.mock("./SiteMeterCleanup", () => ({meters}) => <div data-testid="cleanup">{meters.length}</div>);
 beforeEach(() => {
   jest.clearAllMocks();
   onSnapshot.mockImplementation((ref, options, next) => {

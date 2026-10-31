@@ -33,6 +33,7 @@ function harness(existing=false) {
   if(name==='firebase-admin/firestore') return {getFirestore:()=>db,FieldValue:{serverTimestamp:()=> 'server-time'}};
   if(name==='./readings.cjs') return {buildEntry};
   if(name==='./meter-history-functions.cjs') return {};
+  if(name==='./notification-functions.cjs' || name==='./telegram-functions.cjs') return {};
   throw Error(name);
  }});
  return {writes,run:exports.autoSaveLTLoadBook};

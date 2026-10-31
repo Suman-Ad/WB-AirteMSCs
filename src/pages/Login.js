@@ -1,3 +1,4 @@
+import { disableDeviceNotifications } from "../services/deviceNotifications";
 import React, { useState } from "react";
 import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth"; // <-- CHANGE: import sendPasswordResetEmail
@@ -38,6 +39,7 @@ const Login = ({ setUserData }) => {
         const data = userDoc.data();
         if (data.isActive === false) {
           setError("🚫 Your account is inactive. Please contact with Admin.");
+          await disableDeviceNotifications();
           await auth.signOut();
           return;
         }

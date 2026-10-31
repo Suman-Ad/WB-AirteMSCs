@@ -1,0 +1,15 @@
+.daily-final-summary {
+  margin: 20px 0;
+  padding: 16px;
+  min-width: 0;
+  border: 1px solid var(--app-border, #c9dce8);
+  border-radius: 10px;
+  color: var(--app-text, #17324d);
+  background: var(--app-surface, #fff);
+}
+.daily-final-summary-scroll { overflow-x: auto; }
+.daily-final-summary table { width: 100%; border-collapse: collapse; }
+.daily-final-summary :is(th, td) { padding: 10px 12px; border: 1px solid var(--app-border, #c9dce8); text-align: left; color: var(--app-text, #17324d); }
+.daily-final-summary thead th { background: var(--app-surface-muted, #edf6f8); }
+.daily-final-summary tbody th { background: var(--app-surface, #fff); font-weight: 400; white-space: normal; }
+.daily-final-summary tbody td { background: var(--app-surface, #fff); font-variant-numeric: tabular-nums; }

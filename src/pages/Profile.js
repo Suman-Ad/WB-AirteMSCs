@@ -1,3 +1,4 @@
+import { disableDeviceNotifications } from "../services/deviceNotifications";
 import React, { useState, useEffect } from "react";
 import { db, storage, auth } from "../firebase";
 import {
@@ -56,6 +57,7 @@ const ProfilePage = ({ userData }) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    await disableDeviceNotifications();
     await auth.signOut();
     localStorage.removeItem("userData");
     navigate("/login");

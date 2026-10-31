@@ -29,3 +29,7 @@ exports.autoSaveLTLoadBook = onDocumentWritten({document:'energyMonitor/{siteId}
 
 // Persistent daily kWh registers and sampled history; no browser session required.
 Object.assign(exports, require('./meter-history-functions.cjs'));
+
+const {pushBellNotification} = require("./notification-functions.cjs");
+Object.assign(exports, {pushBellNotification});
+Object.assign(exports, require("./telegram-functions.cjs"));

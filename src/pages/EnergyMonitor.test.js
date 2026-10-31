@@ -106,7 +106,7 @@ test("default follows Main Incomer / running DG and site totals exclude branch m
   view.unmount();
 });
 
-test("changing a collector meter ID replaces its Site Overview card and selected meter", () => {
+test("all collector records remain visible until explicitly removed", () => {
   let receive;
   onSnapshot.mockImplementation((ref, options, next) => { receive = next; return jest.fn(); });
   render(<EnergyMonitor userData={{siteId: "site-a"}} />);
@@ -114,9 +114,9 @@ test("changing a collector meter ID replaces its Site Overview card and selected
   act(() => receive({docs:[old],metadata:{fromCache:false}}));
   fireEvent.change(screen.getByRole("combobox", {name:"Selected meter"}), {target:{value:"meter-24"}});
   act(() => receive({docs:[old, reading("meter-40",{name:"LT Panel - 01"})],metadata:{fromCache:false}}));
-  expect(screen.getByRole("combobox",{name:"Selected meter"})).toHaveValue("meter-40");
-  expect(screen.queryByRole("option",{name:"meter-24"})).not.toBeInTheDocument();
+  expect(screen.getByRole("combobox",{name:"Selected meter"})).toHaveValue("meter-24");
+  expect(screen.getAllByRole("option")).toHaveLength(2);
   fireEvent.click(screen.getByRole("tab",{name:"Site Overview"}));
-  expect(screen.getAllByRole("heading",{name:"LT Panel - 01"})).toHaveLength(1);
-  expect(screen.getByText(/1 monitored meters/)).toBeInTheDocument();
+  expect(screen.getAllByRole("heading",{name:"LT Panel - 01"})).toHaveLength(2);
+  expect(screen.getByText(/2 monitored meters/)).toBeInTheDocument();
 });
