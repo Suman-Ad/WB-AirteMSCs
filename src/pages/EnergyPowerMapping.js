@@ -6,8 +6,8 @@ import useSitePowerMapping from '../hooks/useSitePowerMapping';
 import {siteIdMap} from '../config/siteConfigs';
 import {currentEnergyMeters} from './currentEnergyMeters';
 
-export default function EnergyPowerMapping({siteId, meters, userData}) {
-  const allSites=canManageAllPowerMappings(userData);
+export default function EnergyPowerMapping({siteId, meters, userData, fixedSite = false}) {
+  const allSites=canManageAllPowerMappings(userData) && !fixedSite;
   const [selectedSite,setSelectedSite]=useState(siteId || Object.values(siteIdMap)[0] || '');
   const targetSite=allSites ? selectedSite || siteId : siteId;
   const [remote,setRemote]=useState({siteId:null,meters:[],error:''});
@@ -55,7 +55,7 @@ function PowerMappingEditor({siteId, meters, userData}) {
   };
   return <section className="energy-card"><details><summary>Existing header EB/DG switch · automatic meter mapping</summary>
     <p>Settings site: <strong>{siteId}</strong></p>
-    <p>The existing EB/DG slider switches to DG when Main Incomer is 0 V and a DG is above 300 V L-L, confirmed by two fresh reading pairs. Return to EB uses the existing manual switch and logging flow.</p>
+    <p>Automatic mode disables the manual EB/DG slider for every role. EB → DG requires incomer 0 V and 0 A (or an offline incomer) plus a live DG above 300 V L-L carrying positive current. DG → EB requires live incomer above 300 V L-L carrying positive current and every mapped DG below 50 A. Each direction requires two distinct live reading pairs. Positive current means load is present; a continuously rising current is not required.</p>
     <div className="energy-changeover-settings">
       <label><input type="checkbox" checked={config.enabled} disabled={!shared.ready || saving} onChange={e=>change('enabled',e.target.checked)}/> Enable automatic switching of the existing EB/DG slider</label>
       {[["Main Incomer","mainMeterId"],["HT panel (optional)","htMeterId"],["DG-1","dg1MeterId"],["DG-2 (optional)","dg2MeterId"]].map(([label,field])=><label key={field}>{label}<select aria-label={`Power switch ${label} meter`} value={config[field]} disabled={!shared.ready || saving} onChange={e=>change(field,e.target.value)}>

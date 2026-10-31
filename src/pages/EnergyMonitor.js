@@ -4,14 +4,12 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import EnergyMeterDetails from "./EnergyMeterDetails";
-import { displayReading, phases } from "./energyMeterData";
-import EnergyAsansolBridge from "./EnergyAsansolBridge";
+import { displayReading } from "./energyMeterData";
 import EnergySLD from "./EnergySLD";
 import useSitePowerMapping from "../hooks/useSitePowerMapping";
-import {canManageAllPowerMappings, canEditPowerMapping} from "../components/powerMeterMapping";
 import { energySupplyMeter } from "./energySupplyMeter";
-import EnergyPowerMapping from "./EnergyPowerMapping";
 import MeterStatus from "./MeterStatus";
+import EnergyOverviewMeter from "./EnergyOverviewMeter";
 import { meterHealth } from "./meterHealth";
 import EnergyAnalysisReport from "./EnergyAnalysisReport";
 import "../assets/EnergyMonitor.css";
@@ -77,7 +75,6 @@ export default function EnergyMonitor({ userData }) {
   const age = observed ? Math.max(0, Math.floor((now - observed) / 1000)) : null;
   const state = meterHealth(meter, now, fromCache, Boolean(error));
   const statusOf = (m) => meterHealth(m, now, fromCache, Boolean(error));
-  const reading = (m, key) => { const r = displayReading(m, key); return `${format(r.value)}${r.unit ? ` ${r.unit}` : ""}`; };
   const live = meters.filter((m) => statusOf(m) === "Live");
   const powerKeys = [["Active power", "active_power", "kW"], ["Apparent power", "apparent_power", "kVA"], ["Reactive power", "reactive_power", "kvar"]];
   const total = (key) => supply.source ? displayReading(supply.source, key).value : null;
@@ -113,12 +110,10 @@ export default function EnergyMonitor({ userData }) {
           <section className="energy-card"><h2>Active power trend · kW</h2><p>Latest 60 readings received while this page is open. Changing meter resets the trend; cached or stale readings may be included.</p>{trend.filter((p) => numeric(p.value)).length < 2 ? <div className="energy-empty">Waiting for two valid readings.</div> : <div className="energy-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={trend}><XAxis dataKey="time" tickFormatter={(t) => new Date(t).toLocaleTimeString()} minTickGap={40} /><YAxis /><Tooltip contentStyle={{ background: "var(--app-surface)", borderColor: "var(--app-border)", color: "var(--app-text)" }} labelFormatter={(t) => new Date(t).toLocaleTimeString()} /><Line dataKey="value" name="Active power" unit=" kW" stroke="var(--theme-primary)" dot={false} connectNulls={false} isAnimationActive={false} /></LineChart></ResponsiveContainer></div>}</section>
         </>}
       </>}
-      {tab === "overview" && <div className="energy-overview"><div className="energy-section-title"><h2>Site Overview</h2><span className="energy-muted">{meters.length} monitored meters · {live.length} live · {alarms.length} alarms</span></div><div className="energy-metrics">{powerKeys.map(([label, key, unit]) => card(`Monitored ${label.toLowerCase()}`, total(key), unit))}</div><p className="energy-muted">{supply.source ? `Supply: ${supply.sourceType} · ${supply.source.name || supply.source.id}. Values use this supply meter only.` : "Supply reading unavailable. Map Main Incomer / HT panel and DG meters; waiting for a fresh energized supply reading."}</p><div className="energy-network">{meters.map((m) => <article key={m.id} className="energy-card energy-site-meter"><div className="energy-section-title"><h3>{m.name || m.id}</h3><MeterStatus state={statusOf(m)} /></div><div className="energy-site-power">{powerKeys.map(([label, key]) => <span key={key}><small className="energy-muted">{label}</small><b>{reading(m, key)}</b></span>)}</div><div className="energy-table-wrap"><table><thead><tr><th>RMS</th>{phases.map((p) => <th key={p}>{p}</th>)}</tr></thead><tbody>{[["Current (A)", "current"], ["Voltage L-N (V)", "voltage_ln"], ["Voltage L-L (V)", "voltage_ll"]].map(([label, key]) => <tr key={key}><td>{label}</td>{phases.map((phase) => <td key={phase}>{format(displayReading(m, `${phase}_${key}`).value)}</td>)}</tr>)}</tbody></table></div><div className="energy-mini-readings"><span>FWD energy<b>{reading(m, "fwd_Wh")}</b></span><span>FWD apparent / reactive<b>{reading(m, "fwd_VAh")} / {reading(m, "fwd_VARh")}</b></span></div><div className="energy-card-footer"><small className="energy-muted">{m.observedAt?.toMillis?.() ? new Date(m.observedAt.toMillis()).toLocaleString() : "No timestamp"}</small><button onClick={() => openMeter(m.id)}>Open readings & vector →</button></div></article>)}</div></div>}
+      {tab === "overview" && <div className="energy-overview"><div className="energy-section-title"><h2>Site Overview</h2><span className="energy-muted">{meters.length} monitored meters · {live.length} live · {alarms.length} alarms</span></div><div className="energy-metrics">{powerKeys.map(([label, key, unit]) => card(`Monitored ${label.toLowerCase()}`, total(key), unit))}</div><p className="energy-muted">{supply.source ? `Supply: ${supply.sourceType} · ${supply.source.name || supply.source.id}. Values use this supply meter only.` : "Supply reading unavailable. Map Main Incomer / HT panel and DG meters; waiting for a fresh energized supply reading."}</p><div className="energy-network">{meters.map((m) => <EnergyOverviewMeter key={m.id} meter={m} state={statusOf(m)} now={now} onOpen={openMeter} />)}</div></div>}
       {openedTabs.sld && <div hidden={tab !== "sld"}><EnergySLD canEdit={["Super Admin", "Admin"].includes(userData?.role)} key={siteId || "unassigned"} siteId={siteId} meters={meters} statusOf={statusOf} onSelect={openMeter} /></div>}
-      {openedTabs.analysis && <div hidden={tab !== "analysis"}><EnergyAnalysisReport key={userData?.site || "unassigned"} siteId={siteId} siteName={userData?.site} /></div>}
+      {openedTabs.analysis && <div hidden={tab !== "analysis"}><EnergyAnalysisReport key={`${siteId}/${userData?.site || "unassigned"}`} siteId={siteId} siteName={userData?.site} meters={meters} userData={userData} now={now} fromCache={fromCache || Boolean(error)} /></div>}
       {tab === "alarms" && <><div className="energy-section-title"><h2>Alarms</h2><span className="energy-muted">Current meter health and collector diagnostics</span></div>{alarms.length ? <section className="energy-card"><div className="energy-table-wrap"><table><thead><tr><th>Meter</th><th>Type</th><th>Message</th><th>Action</th></tr></thead><tbody>{alarms.map((alarm, i) => <tr key={`${alarm.meter.id}-${i}`}><td>{alarm.meter.name || alarm.meter.id}</td><td>{alarm.type}</td><td className="energy-raw-value">{alarm.message}</td><td><button onClick={() => openMeter(alarm.meter.id)}>Inspect meter</button></td></tr>)}</tbody></table></div></section> : <div className="energy-empty">{error ? "Alarm status is unavailable while the meter connection has an error." : !meters.length ? "Waiting for meter data to evaluate alarms." : "No active meter health or collector alarms."}</div>}<p className="energy-muted">Alarms reflect connection freshness, meter status and collector-provided warnings. This view does not acknowledge or clear device alarms.</p></>}
     </section>
-    {(canManageAllPowerMappings(userData) || canEditPowerMapping(userData, siteId)) && <EnergyPowerMapping key={siteId} siteId={siteId} meters={meters} userData={userData} />}
-    <EnergyAsansolBridge siteId={siteId} siteName={userData?.site} meters={meters} now={now} fromCache={fromCache} />
   </main>;
 }

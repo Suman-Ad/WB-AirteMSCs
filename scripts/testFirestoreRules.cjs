@@ -102,6 +102,28 @@ async function main() {
   await check("restoration completes recorded run", commitRun({ status: "Completed", closing: { kwh: 15 }, endAtMs: 160000, generationKwh: 5 }), 200);
   await check("completed meter history cannot be rewritten", commitRun({ status: "Completed", closing: { kwh: 99 } }), 403);
   await check("changeover history delete denied", call("/energyChangeovers/N19106A/runs/valid", "human", "DELETE"), 403);
+  await seed("energyMonitor/N19106A/dailyReadings/2026-10-31__meter", { date: "2026-10-31", openingKwh: 100, closingKwh: 120 });
+  await seed("energyMonitor/N19106A/historyMeters/meter/samples/2026-10-31_0", { date: "2026-10-31", observedAtMs: 1000, kwh: 120 });
+  const historySettingsWrite = (uid, extra = {}) => ({ writes: [{ update: {
+    name: `projects/${project}/databases/(default)/documents/energyMonitor/N19106A/config/meterHistory`,
+    fields: fields({ enabled: true, retentionDays: 7, updatedBy: uid, ...extra })
+  }, updateTransforms: [{ fieldPath: "updatedAt", setToServerValue: "REQUEST_TIME" }] }] });
+  await check("site user reads daily meter registers", call("/energyMonitor/N19106A/dailyReadings/2026-10-31__meter", "human"), 200);
+  await check("site user queries daily meter history", call("/energyMonitor/N19106A:runQuery", "human", "POST", query("dailyReadings")), 200);
+  await check("site user reads retained samples", call("/energyMonitor/N19106A/historyMeters/meter/samples/2026-10-31_0", "human"), 200);
+  await check("Admin saves meter backup retention", call(":commit", "admin", "POST", historySettingsWrite("admin")), 200);
+  await check("site user reads backup settings", call("/energyMonitor/N19106A/config/meterHistory", "human"), 200);
+  await check("ordinary user cannot change retention", call(":commit", "human", "POST", historySettingsWrite("human")), 403);
+  await check("Super User cannot change retention", call(":commit", "site-superuser", "POST", historySettingsWrite("site-superuser")), 403);
+  await check("retention cannot be shorter than seven days", call(":commit", "admin", "POST", historySettingsWrite("admin", { retentionDays: 6 })), 403);
+  await check("retention cannot exceed 365 days", call(":commit", "admin", "POST", historySettingsWrite("admin", { retentionDays: 366 })), 403);
+  await check("retention settings reject unexpected fields", call(":commit", "admin", "POST", historySettingsWrite("admin", { unexpected: true })), 403);
+  await check("retention settings reject a forged author", call(":commit", "admin", "POST", historySettingsWrite("human")), 403);
+  await check("cross-site user cannot read meter history", call("/energyMonitor/N19106A/dailyReadings/2026-10-31__meter", "other"), 403);
+  await check("inactive user cannot read meter samples", call("/energyMonitor/N19106A/historyMeters/meter/samples/2026-10-31_0", "inactive"), 403);
+  await check("browser cannot fabricate daily meter history", call("/energyMonitor/N19106A/dailyReadings/fake", "admin", "PATCH", { fields: fields({ date: "2026-10-31", closingKwh: 999 }) }), 403);
+  await check("collector cannot fabricate meter samples", call("/energyMonitor/N19106A/historyMeters/meter/samples/fake", collector, "PATCH", { fields: fields({ kwh: 999 }) }), 403);
+  await check("browser cannot delete saved meter history", call("/energyMonitor/N19106A/dailyReadings/2026-10-31__meter", "admin", "DELETE"), 403);
   console.log(`${passed} Firestore rules integration checks passed.`);
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

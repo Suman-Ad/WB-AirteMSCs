@@ -4,6 +4,8 @@ import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "../assets/SiteConfigEdit.css"
+import SiteEnergySettings from "./SiteEnergySettings";
+import { siteIdMap } from "../config/siteConfigs";
 
 const SiteConfigEdit = ({ userData }) => {
   const siteKey = userData?.site?.toUpperCase();
@@ -75,6 +77,7 @@ const SiteConfigEdit = ({ userData }) => {
     { key: "ccms", label: "CCMS / HSD Details" },
     { key: "equipment", label: "Site Equipment Details" },
     { key: "oem", label: "Quarterly OEM CPH" },
+    { key: "energy", label: "Energy Automation" },
   ];
 
   // ADD NEW SECURITY ENTRY
@@ -126,7 +129,7 @@ const SiteConfigEdit = ({ userData }) => {
     <div className="daily-log-container">
       <div style={{ display: "flex" }}>
         <h2 style={{ textAlign: "center" }}>⚙️ Site Settlings – {siteKey}</h2>
-        <button onClick={saveConfig} className="config-btn">{saving ? "Saving...." : "Save Config"}</button>
+        {activeSection !== "energy" && <button onClick={saveConfig} className="config-btn">{saving ? "Saving...." : "Save Config"}</button>}
       </div>
       <div className="config-layout">
 
@@ -145,6 +148,7 @@ const SiteConfigEdit = ({ userData }) => {
 
         {/* RIGHT SIDE CONTENT */}
         <div className="config-content">
+          {activeSection === "energy" && <SiteEnergySettings userData={userData} siteId={userData?.siteId || config.siteId || Object.entries(siteIdMap).find(([name]) => name.toUpperCase() === siteKey)?.[1]} />}
           {activeSection === "overview" && (
             <div className="chart-container">
               <h1>Site Details</h1>

@@ -19,7 +19,7 @@ export function vectors(meter) {
     const reference = measured ? voltageAngle : [0, -120, 120][i];
     return { phase, voltage, current, phi, reference, measured,
       voltageAngle, currentAngle, color: phaseColors[i],
-      source: measured ? "Measured" : phi !== null ? "Estimated from P/Q" : "Unavailable" };
+      source: measured ? meter?.voltageAnglesNominal ? "Nominal voltage reference / reported current angle" : "Measured" : phi !== null ? "Estimated from P/Q" : "Unavailable" };
   });
 }
 
@@ -34,5 +34,7 @@ export function displayReading(meter, key) {
   const units = { voltage_ll: "V", voltage_ln: "V", current: "A", frequency: "Hz", power_factor: "",
     voltage_phase_angle: "°", current_phase_angle: "°", fwd_Wh: "Wh", fwd_VAh: "VAh",
     fwd_VARh: "varh", fwd_VARh_capacitive: "varh", fwd_runsec: "s" };
-  return { value: isNumber(v) ? v : null, unit: units[base] || "" };
+  const customUnit = /_thd$|_percent$/.test(key) ? "%" : /interruptions$/.test(key) ? "count" :
+    key === "custom_neutral_current" ? "A" : key === "custom_neutral_voltage" ? "V" : key === "custom_rpm" ? "rpm" : "";
+  return { value: isNumber(v) ? v : null, unit: units[base] ?? meter?.fieldDefinitions?.[key]?.unit ?? customUnit };
 }

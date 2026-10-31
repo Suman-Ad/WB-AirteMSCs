@@ -26,3 +26,6 @@ exports.autoSaveLTLoadBook = onDocumentWritten({document:'energyMonitor/{siteId}
       uploadedBy:{uid:'',name:'Automatic meter reading',designation:'System',empId:''}});
   });
 });
+
+// Persistent daily kWh registers and sampled history; no browser session required.
+Object.assign(exports, require('./meter-history-functions.cjs'));

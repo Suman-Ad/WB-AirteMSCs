@@ -4,12 +4,12 @@ import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
 import useAutoPowerSource from "./useAutoPowerSource";
 import EnergyPowerMapping from "../pages/EnergyPowerMapping";
 function ExistingSwitch(props) {
-  const { status } = useAutoPowerSource(props);
-  return <div role="switch" aria-label="Existing EB/DG slider" aria-checked={props.powerSource === "DG"} title={status} />;
+  const { status, manualDisabled } = useAutoPowerSource(props);
+  return <div role="switch" aria-label="Existing EB/DG slider" aria-disabled={manualDisabled} aria-checked={props.powerSource === "DG"} title={status} />;
 }
 jest.mock("firebase/firestore", () => ({ collection: jest.fn(), doc:jest.fn(), onSnapshot: jest.fn(),setDoc:jest.fn(),serverTimestamp:jest.fn() }));
 jest.mock("../firebase", () => ({ db: {} }));
-const meter = (id, voltage, time) => ({ id, data: () => ({ status: "OK", voltage_ll: voltage, observedAt: { toMillis: () => time } }) });
+const meter = (id, voltage, time) => ({ id, data: () => ({ status: "OK", voltage_ll: voltage, current: voltage > 300 ? 100 : 0, observedAt: { toMillis: () => time } }) });
 let publish, stop, sharedConfig, configListeners;
 beforeEach(() => {
   jest.useFakeTimers(); jest.setSystemTime(100000); localStorage.clear();
@@ -87,9 +87,11 @@ test('missing shared configuration does not switch from private device settings'
 test('a site-wide disable reaches the active header without remounting',async()=>{
  const onTrigger=jest.fn();render(<ExistingSwitch siteId="ASL" canToggle powerSource="EB" onTrigger={onTrigger}/>);
  reading(100000);
+ expect(screen.getByRole('switch')).toHaveAttribute('aria-disabled','true');
  act(()=>{sharedConfig={...sharedConfig,enabled:false};configListeners.forEach(next=>next({exists:()=>true,data:()=>sharedConfig,metadata:{fromCache:false}}));});
  act(()=>jest.advanceTimersByTime(10000));reading(110000);await act(async()=>{});
  expect(onTrigger).not.toHaveBeenCalled();
+ expect(screen.getByRole('switch')).toHaveAttribute('aria-disabled','false');
 });
 
 test.each(['Admin','Super Admin'])('%s can select and save another site without changing the header site',async role=>{
@@ -103,3 +105,12 @@ test('Super User has no cross-site selector',()=>{
  render(<EnergyPowerMapping siteId="ASL" userData={{uid:'u',siteId:'ASL',role:'Super User'}} meters={[]}/>);
  expect(screen.queryByRole('combobox',{name:'Automatic switch settings site'})).not.toBeInTheDocument();
 });
+
+ test("automatic restoration confirms two loaded incomer / unloaded DG readings", async () => {
+  const onTrigger=jest.fn().mockResolvedValue(true);
+  render(<ExistingSwitch siteId="ASL" canToggle powerSource="DG" onTrigger={onTrigger} />);
+  const restored=(time)=>({docs:[meter("main",415,time),{id:"dg2",data:()=>({status:"OK",voltage_ll:415,current:49,observedAt:{toMillis:()=>time}})}],metadata:{fromCache:false}});
+  act(()=>publish(restored(100000)));expect(onTrigger).not.toHaveBeenCalled();
+  await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(110000));});
+  expect(onTrigger).toHaveBeenCalledWith("EB");
+ });

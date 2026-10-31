@@ -5,7 +5,7 @@ const format = (v) => isNumber(v) ? v.toLocaleString(undefined, { maximumFractio
 const panel = { background: "var(--app-surface)", border: "1px solid var(--app-border)", borderRadius: 10, padding: 16 };
 const cell = { padding: "10px 12px", borderBottom: "1px solid var(--app-border)", textAlign: "left" };
 
-export default function EnergyMeterDetails({ meter, state }) {
+export default function EnergyMeterDetails({ meter, state, vectorOnly = false, omitVectors = false }) {
   const rows = vectors(meter);
   const vmax = Math.max(1, ...rows.map((r) => r.voltage || 0));
   const imax = Math.max(1, ...rows.map((r) => r.current || 0));
@@ -27,17 +27,14 @@ export default function EnergyMeterDetails({ meter, state }) {
     ["Current", "current"], ["Active power", "active_power"], ["Apparent power", "apparent_power"],
     ["Reactive power", "reactive_power"], ["Power factor", "power_factor"], ["Frequency", "frequency"],
     ["Voltage phase angle", "voltage_phase_angle"], ["Current phase angle", "current_phase_angle"]];
-  return <>
-    <section style={{ ...panel, overflowX: "auto" }}>
-      <h2>Each phase · selected meter</h2>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead><tr>{["Measurement", "R phase", "Y phase", "B phase"].map((s) => <th key={s} style={cell}>{s}</th>)}</tr></thead>
-        <tbody>{phaseMetrics.map(([title, key]) => <tr key={key}>
-          <th style={cell}>{title}</th>{phases.map((p) => <td key={p} style={cell}>{reading(`${p}_${key}`)}</td>)}
-        </tr>)}</tbody>
-      </table>
-      <p>— means unavailable or a failed reading. Displayed values retain the selected meter's timestamp and status.</p>
-    </section>
+  const qualityMetrics = [["Voltage THD", "voltage_thd"], ["Current THD", "current_thd"], ["Phase load", "load_percent"], ["Interruptions", "interruptions"]];
+  const qualityKeys = qualityMetrics.flatMap(([, key]) => phases.map((p) => `custom_${p.toLowerCase()}_${key}`));
+  const additional = Object.keys(meter).filter((key) => key.startsWith("custom_") && !qualityKeys.includes(key));
+  const metadata = [["Meter ID", meter.meterId || meter.id], ["Profile", meter.profileName || meter.profileId],
+    ["Equipment", meter.equipmentType], ["Bus", meter.busId], ["Modbus address", meter.modbusId ?? meter.slaveId],
+    ["Communication", meter.communicationState], ["Successful scans", meter.successfulScans], ["Failed scans", meter.failedScans],
+    ["Consecutive failures", meter.consecutiveFailures], ["Read duration (s)", meter.readSeconds], ["Collector sequence", meter.collectorSequence]];
+  const vectorPanel = (
     <section style={panel}>
       <h2>Phase vectors · {state}</h2>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "center" }}>
@@ -54,11 +51,26 @@ export default function EnergyMeterDetails({ meter, state }) {
           {rows.map((r) => <p key={r.phase} style={{ color: r.color }}>
             <strong>{r.phase}</strong>: {format(r.voltage)} V · {format(r.current)} A · φ {format(r.phi)}° · {r.source}
           </p>)}
-          <p>Measured angles are used when both angle registers are available. Otherwise, phase displacement is estimated from P/Q using nominal R/Y/B references of 0° / −120° / +120°.</p>
+          <p>{meter.voltageAnglesNominal ? "Voltage angles are fixed nominal references supplied by the collector, not measured voltage angles. Current angles are shown as reported." : "Measured angles are used when both angle registers are available."} Otherwise, phase displacement is estimated from P/Q using nominal R/Y/B references of 0° / −120° / +120°.</p>
           <p>No power-factor-only or zero-value angle substitutions are made.</p>
         </div>
       </div>
     </section>
+  );
+  if (vectorOnly) return vectorPanel;
+  return <>
+    <section className="energy-card"><h2>Meter & collector</h2><dl className="energy-meter-metadata">{metadata.filter(([, value]) => value !== undefined && value !== null && value !== "").map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{typeof value === "number" ? format(value) : String(value)}</dd></div>)}</dl>{meter.error && <p className="energy-notice" role="alert">{String(meter.error)}</p>}</section>
+    <section style={{ ...panel, overflowX: "auto" }}>
+      <h2>Each phase · selected meter</h2>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead><tr>{["Measurement", "R phase", "Y phase", "B phase"].map((s) => <th key={s} style={cell}>{s}</th>)}</tr></thead>
+        <tbody>{phaseMetrics.map(([title, key]) => <tr key={key}>
+          <th style={cell}>{title}</th>{phases.map((p) => <td key={p} style={cell}>{reading(`${p}_${key}`)}</td>)}
+        </tr>)}</tbody>
+      </table>
+      <p>— means unavailable or a failed reading. Displayed values retain the selected meter's timestamp and status.</p>
+    </section>
+    {!omitVectors && vectorPanel}
     <section style={{ ...panel, overflowX: "auto" }}>
       <h2>Energy counters and runtime</h2>
       <table style={{ width: "100%", borderCollapse: "collapse" }}><tbody>
@@ -68,9 +80,10 @@ export default function EnergyMeterDetails({ meter, state }) {
       </tbody></table>
       <p>Energy counters are displayed in kWh / kVAh / kvarh; forward runtime is in seconds. Wh-based reader counters are divided by 1,000 unless the collector explicitly marks them as kilo units.</p>
     </section>
-    {Object.keys(meter).some((key) => key.startsWith("custom_")) && <section style={panel}>
+    {qualityKeys.some((key) => key in meter) && <section className="energy-card"><h2>Power quality & phase loading</h2><div className="energy-table-wrap"><table><thead><tr><th>Measurement</th>{phases.map((p) => <th key={p}>{p} phase</th>)}</tr></thead><tbody>{qualityMetrics.map(([label, key]) => <tr key={key}><th>{label}</th>{phases.map((p) => <td key={p}>{reading(`custom_${p.toLowerCase()}_${key}`)}</td>)}</tr>)}</tbody></table></div><p className="energy-muted">THD and loading are collector-reported percentages. Interruption registers are cumulative counts.</p></section>}
+    {additional.length > 0 && <section style={panel}>
       <h2>Additional meter readings</h2>
-      {Object.keys(meter).filter((key) => key.startsWith("custom_")).map((key) => <p key={key}>{key.replace(/^custom_/, "").replace(/_/g, " ")}: {reading(key)}</p>)}
+      <dl className="energy-meter-metadata">{additional.map((key) => <div key={key}><dt>{meter.fieldDefinitions?.[key]?.label || key.replace(/^custom_/, "").replace(/_/g, " ")}</dt><dd>{reading(key)}</dd></div>)}</dl>
     </section>}
     {Array.isArray(meter.warnings) && meter.warnings.length > 0 && <section style={panel}><h2>Meter diagnostics</h2>{meter.warnings.map((w, i) => <p key={i}>{w}</p>)}</section>}
   </>;

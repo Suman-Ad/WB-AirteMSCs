@@ -1,0 +1,74 @@
+.pdf-editor { --pde-bg: #fff; --pde-text: #172033; --pde-muted: #64748b; --pde-border: #dce3ed; --pde-stage: #e8edf4; color: var(--pde-text); padding: 24px 16px; max-width: 1680px; margin: auto; }
+.pde-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+.pde-eyebrow { font-size: 11px; letter-spacing: .16em; color: #2563eb; font-weight: 800; }
+.pde-header h1 { font-size: clamp(24px, 3vw, 34px); margin: 8px 0; letter-spacing: -.04em; }
+.pde-header p { color: var(--pde-muted); margin: 8px 0; }
+.pdf-editor button, .pde-button { font: inherit; font-size: 13px; border: 1px solid var(--pde-border); border-radius: 7px; padding: 9px 12px; background: var(--pde-bg); color: var(--pde-text); cursor: pointer; }
+.pdf-editor button:hover { border-color: #2563eb; }
+.pdf-editor button:disabled, .pde-button:has(input:disabled) { opacity: .5; cursor: wait; }
+.pdf-editor button:focus-visible, .pde-button:focus-within, .pde-object:focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
+.pde-upload, .pde-toolbar, .pde-toolbar > div, .pde-format { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pde-upload .pde-button, .pdf-editor .pde-primary { background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 600; }
+.pde-button { display: inline-block; position: relative; overflow: hidden; }
+.pde-button input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.pde-status { font-size: 13px; color: var(--pde-muted); min-height: 24px; padding-bottom: 8px; }
+.pde-error { padding: 12px; border-radius: 7px; background: #fee2e2; color: #991b1b; }
+.pde-notice { border: 1px solid #d97706; border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-size: 13px; }
+.pde-notice summary { cursor: pointer; font-weight: 600; }
+.pde-empty { border: 1px dashed var(--pde-border); background: var(--pde-bg); border-radius: 16px; text-align: center; padding: 70px 24px; }
+.pde-empty > span { display: inline-block; color: #2563eb; background: #dbeafe; border-radius: 8px; padding: 14px 20px; font-weight: 700; }
+.pde-empty p { max-width: 680px; margin: 16px auto; line-height: 1.7; color: var(--pde-muted); }
+.pde-toolbar { justify-content: space-between; background: var(--pde-bg); border: 1px solid var(--pde-border); border-radius: 10px 10px 0 0; padding: 12px; }
+.pde-toolbar label { font-size: 12px; }
+.pdf-editor select, .pdf-editor input:not([type=file]), .pdf-editor textarea { box-sizing: border-box; font: inherit; font-size: 13px; background: var(--pde-bg); color: var(--pde-text); border: 1px solid var(--pde-border); border-radius: 6px; padding: 7px; min-width: 0; }
+.pde-workspace { display: grid; grid-template-columns: 130px minmax(0, 1fr) 260px; border: 1px solid var(--pde-border); border-top: 0; min-height: 650px; max-height: 900px; height: 76vh; }
+.pde-pages, .pde-inspector { background: var(--pde-bg); padding: 16px 12px; overflow-y: auto; }
+.pde-pages { border-right: 1px solid var(--pde-border); }
+.pde-pages h2, .pde-inspector h2 { font-size: 13px; margin: 0 0 16px; }
+.pde-pages h2 span { color: var(--pde-muted); float: right; }
+.pde-pages > button { width: 100%; margin-bottom: 10px; }
+.pde-page-tab small { display: block; color: var(--pde-muted); font-size: 10px; margin-top: 4px; }
+.pde-mini-page { display: grid; place-items: center; width: 58px; height: 78px; margin: 0 auto 8px; background: white; color: #172033; box-shadow: 0 1px 4px #0002; overflow: hidden; }
+.pde-mini-page img { width: 100%; height: 100%; object-fit: contain; }
+.pdf-editor .is-active { border-color: #2563eb; background: #eff6ff; color: #1d4ed8; }
+.pde-canvas-area { background: var(--pde-stage); overflow: auto; padding: 18px 24px 40px; position: relative; }
+.pde-canvas-caption { font-size: 11px; color: var(--pde-muted); margin-bottom: 20px; white-space: nowrap; }
+.pde-paper-space { position: relative; margin: auto; box-shadow: 0 5px 24px #152a4526; }
+.pde-paper { position: absolute; left: 0; top: 0; transform-origin: top left; background: white; color: black; overflow: hidden; }
+.pde-original { width: 100%; height: 100%; display: block; }
+.pde-object { position: absolute; box-sizing: border-box; cursor: move; outline: 1px solid transparent; touch-action: none; transform-origin: center; }
+.pde-object:hover { outline-color: #60a5fa; }
+.pde-object.is-selected { outline: 1.5px solid #2563eb; z-index: 10000; }
+.pde-object > img, .pde-rectangle { width: 100%; height: 100%; display: block; box-sizing: border-box; user-select: none; }
+.pde-text-render { white-space: pre-wrap; overflow-wrap: break-word; width: 100%; height: 100%; overflow: hidden; line-height: 1.15; user-select: none; }
+.pde-move-handle { position: absolute; top: -22px; left: -1px; font: 11px Arial; background: #2563eb; color: #fff; padding: 4px 7px; border-radius: 4px 4px 0 0; white-space: nowrap; }
+.pdf-editor .pde-resize-handle { position: absolute; width: 10px; height: 10px; right: -5px; bottom: -5px; padding: 0; border: 1px solid white; border-radius: 1px; background: #2563eb; cursor: nwse-resize; touch-action: none; }
+.pde-inspector { border-left: 1px solid var(--pde-border); }
+.pde-inspector fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.pde-inspector label { font-size: 11px; display: block; margin-bottom: 10px; color: var(--pde-muted); }
+.pde-inspector label > input, .pde-inspector label > select, .pde-inspector textarea { display: block; width: 100%; margin-top: 5px; }
+.pde-inspector textarea { min-height: 110px; resize: vertical; }
+.pde-inspector input[type=color] { height: 32px; padding: 3px; }
+.pde-inspector h3 { font-size: 12px; margin: 22px 0 12px; }
+.pde-selection-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #2563eb; margin-bottom: 16px; }
+.pde-property-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.pde-format { gap: 4px; }
+.pde-format button { padding: 6px 10px; }
+.pde-format select { width: 80px; }
+.pde-object-actions { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pde-object-actions button { font-size: 11px; padding: 8px; }
+.pde-danger { color: #dc2626 !important; }
+.pde-hint { font-size: 12px; line-height: 1.7; color: var(--pde-muted); }
+.pde-layers { max-height: 350px; overflow-y: auto; }
+.pde-layer { display: flex; border: 1px solid transparent; border-radius: 5px; margin-bottom: 3px; }
+.pde-layer button { border: 0; background: transparent; font-size: 11px; padding: 7px; }
+.pde-layer button:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.pde-export { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px; border: 1px solid var(--pde-border); background: var(--pde-bg); border-top: 0; border-radius: 0 0 10px 10px; }
+.pde-export label { font-size: 11px; color: var(--pde-muted); }
+.pde-export label input { display: block; max-width: 220px; margin-top: 4px; }
+.pde-export p { flex: 1; font-size: 11px; color: var(--pde-muted); line-height: 1.6; min-width: 170px; }
+.pde-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+[data-theme="dark"] .pdf-editor { --pde-bg: #182334; --pde-text: #e2e8f0; --pde-muted: #a1b0c5; --pde-border: #354358; --pde-stage: #101827; }
+@media (max-width: 1050px) { .pde-workspace { grid-template-columns: 90px minmax(0, 1fr) 220px; } .pde-pages { padding: 12px 6px; } .pde-canvas-area { padding: 16px; } }
+@media (max-width: 760px) { .pdf-editor { padding: 16px 8px; } .pde-workspace { grid-template-columns: 1fr; height: auto; max-height: none; } .pde-pages { display: flex; gap: 8px; overflow-x: auto; border-right: 0; padding: 12px; align-items: center; } .pde-pages h2 { display: none; } .pde-pages > button { width: auto; flex: 0 0 82px; margin: 0; } .pde-mini-page { width: 32px; height: 42px; } .pde-canvas-area { height: 65vh; min-height: 420px; } .pde-inspector { border-left: 0; border-top: 1px solid var(--pde-border); } .pde-inspector textarea { min-height: 80px; } .pde-export { align-items: stretch; } .pde-export p { flex-basis: 100%; } }
+.pdf-editor .pde-inline-text { width: 100%; height: 100%; resize: none; background: transparent; color: inherit; font: inherit; text-align: inherit; text-decoration: inherit; border: 0; border-radius: 0; outline: none; padding: 0; line-height: inherit; display: block; }

@@ -123,3 +123,134 @@
 .energy-status-light.is-online { background: #16a34a; box-shadow: 0 0 0 3px #16a34a22; }
 .energy-status-light.is-offline { background: #dc2626; }
 .energy-status-light.is-waiting { background: #d97706; }
+
+.energy-meter-metadata { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 16px 0; }
+.energy-meter-metadata > div { min-width: 0; }
+.energy-meter-metadata dt { color: var(--app-text-muted); font-size: 12px; margin-bottom: 5px; }
+.energy-meter-metadata dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+/* Site Overview instruments */
+.energy-site-view .energy-network { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px; }
+.energy-site-view .energy-instrument { padding: 20px; border-radius: 18px; }
+.energy-instrument { --dial-accent: var(--app-text-muted); position: relative; border-top: 1px solid var(--app-border); transition: border-color .4s, box-shadow .4s; background: radial-gradient(ellipse at 50% 25%, var(--app-surface-muted), transparent 65%), var(--app-surface); }
+.energy-instrument.is-online { --dial-accent: #16a34a; border-color: #16a34a66; box-shadow: 0 0 0 1px #16a34a18, 0 5px 28px #16a34a16, inset 0 1px 0 #16a34a33; }
+.energy-instrument.is-online .energy-status-light { box-shadow: 0 0 10px #16a34aaa, 0 0 0 3px #16a34a22; }
+.energy-instrument-id { display: block; font-size: 10px; letter-spacing: 1px; color: var(--app-text-muted); margin-bottom: 6px; overflow-wrap: anywhere; }
+.energy-site-view .energy-instrument h3 { font-size: 16px; }
+.energy-dial { width: 100%; max-width: 360px; margin: 0 auto; }
+.energy-dial svg { display: block; width: 100%; overflow: visible; }
+.energy-dial-track, .energy-dial-fill { fill: none; stroke-width: 7; stroke-linecap: round; }
+.energy-dial-track { stroke: var(--app-border); }
+.energy-dial-fill { stroke: var(--dial-accent); transition: stroke-dasharray .65s ease; }
+.is-online .energy-dial-fill { filter: drop-shadow(0 0 4px #16a34a66); }
+.energy-dial-tick { stroke: var(--app-text-muted); stroke-width: 1; opacity: .5; }
+.energy-dial-tick.major { stroke-width: 2; opacity: .9; }
+.energy-dial text { fill: var(--app-text); text-anchor: middle; dominant-baseline: middle; font-variant-numeric: tabular-nums; }
+.energy-dial .energy-dial-scale { font-size: 9px; fill: var(--app-text-muted); }
+.energy-dial .energy-dial-caption { font-size: 9px; letter-spacing: 1.7px; fill: var(--app-text-muted); }
+.energy-dial .energy-dial-value { font-size: 31px; font-weight: 750; letter-spacing: -1px; }
+.energy-dial .energy-dial-unit { font-size: 10px; letter-spacing: 1.3px; fill: var(--app-text-muted); }
+.energy-dial-needle { transform-origin: 0 0; fill: var(--dial-accent); transition: transform .65s ease; }
+.energy-dial-hub { fill: var(--app-surface); stroke: var(--dial-accent); stroke-width: 3; }
+.energy-dial-note { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; margin-top: -12px; font-size: 10px; color: var(--app-text-muted); }
+.energy-instrument.is-online .energy-dial-note span { color: #16a34a; }
+.energy-instrument-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.energy-instrument-stats > span { display: grid; gap: 4px; font-size: 10px; color: var(--app-text-muted); }
+.energy-instrument-stats b { color: var(--app-text); font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.energy-instrument-details summary { cursor: pointer; color: var(--app-text-muted); font-size: 11px; padding: 7px 0; }
+.energy-instrument-details .energy-mini-readings { margin-top: 8px; }
+.energy-instrument th.energy-phase-r { color: #dc2626; }
+.energy-instrument th.energy-phase-y { color: #a87800; }
+.energy-instrument th.energy-phase-b { color: #3b82f6; }
+@media (prefers-reduced-motion: reduce) { .energy-instrument, .energy-dial-fill, .energy-dial-needle { transition: none; } }
+.energy-sld-node.is-online > rect, .energy-sld-node.is-online > ellipse { stroke: #16a34a; filter: drop-shadow(0 0 4px #16a34a55); }
+.energy-sld-connection.is-online .energy-sld-wire { filter: drop-shadow(0 0 4px #16a34a99); }
+.energy-sld-mini-dial { color: var(--app-text-muted); pointer-events: none; }
+.energy-sld-mini-dial.is-online { color: #16a34a; }
+.energy-sld-mini-needle { transform-origin: 0 0; transition: transform .65s ease; }
+.energy-sld-inspector { display: grid; gap: 20px; padding-top: 20px; border-top: 1px solid var(--app-border); }
+.energy-sld-inspector-grid { display: grid; grid-template-columns: minmax(280px, .85fr) minmax(320px, 1.5fr); gap: 20px; align-items: start; }
+.energy-sld-charts { display: grid; gap: 16px; min-width: 0; }
+.energy-sld-charts p { font-size: 12px; }
+.energy-sld-charts .energy-chart { height: 230px; }
+@media (max-width: 900px) { .energy-sld-inspector-grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .energy-sld-mini-needle { transition: none; } }
+/* Electrical control console */
+.energy-monitor .energy-sld-console { padding: 20px; border-radius: 16px; }
+.energy-sld-console > .energy-section-title h2 { margin-bottom: 3px; }
+.energy-sld-console > .energy-section-title p { font-size: 12px; margin: 0; }
+.energy-sld-tools { position: relative; font-size: 12px; }
+.energy-sld-tools summary, .energy-sld-help summary, .energy-sld-registers summary { cursor: pointer; color: var(--app-text-muted); padding: 10px 0; font-weight: 600; font-size: 12px; }
+.energy-sld-tools .energy-detail-actions { margin-top: 8px; }
+.energy-sld-tools button, .energy-sld-console .energy-detail-actions button { font-size: 11px; padding: 7px 10px; }
+.energy-sld-health-strip { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; padding: 11px 15px; margin: 14px 0 10px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface-muted); font-size: 12px; }
+.energy-sld-health-strip > span { display: inline-flex; align-items: center; }
+.energy-sld-health-strip > span:last-child { margin-left: auto; font-size: 11px; }
+.energy-sld-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 12px; align-items: stretch; }
+.energy-sld-console .energy-sld-scroll { margin: 0; height: clamp(400px, 58vh, 720px); max-height: none; border-radius: 12px; background-color: var(--app-surface); background-image: radial-gradient(var(--app-border) 1px, transparent 1px); background-size: 20px 20px; }
+.energy-sld-console .energy-sld-scroll > svg { min-width: 680px; min-height: 100%; }
+.energy-sld-console .energy-sld-edge-label { font-size: 9px; paint-order: stroke; stroke: var(--app-surface); stroke-width: 4px; }
+.energy-sld-meter-rail { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--app-border); border-radius: 12px; min-width: 0; max-height: 720px; background: var(--app-surface-muted); }
+.energy-sld-meter-rail h3 { font-size: 12px; margin: 0; }
+.energy-monitor .energy-sld-meter-rail input { margin: 0; width: 100%; font-size: 11px; }
+.energy-sld-rail-list { display: grid; align-content: start; gap: 10px; overflow-y: auto; min-height: 0; padding: 2px; }
+.energy-monitor .energy-sld-rail-meter { display: block; padding: 12px; text-align: left; border-radius: 10px; width: 100%; }
+.energy-monitor .energy-sld-rail-meter.is-online { border-color: #16a34a55; box-shadow: inset 3px 0 #16a34a, 0 0 12px #16a34a0c; }
+.energy-monitor .energy-sld-rail-meter.is-selected { outline: 2px solid var(--theme-primary); outline-offset: 0; }
+.energy-sld-rail-title { display: block; font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
+.energy-sld-rail-title small { display: block; font-size: 9px; font-weight: 400; color: var(--app-text-muted); margin-top: 4px; }
+.energy-sld-rail-meter > svg { width: 100%; display: block; margin: 7px 0; }
+.energy-sld-rail-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; border-top: 1px solid var(--app-border); padding-top: 7px; }
+.energy-sld-rail-values > span { display: grid; gap: 3px; color: var(--app-text-muted); font-size: 8px; }
+.energy-sld-rail-values b { font-size: 10px; font-weight: 600; color: var(--app-text); overflow-wrap: anywhere; }
+.energy-sld-selection { margin-top: 12px; padding: 12px 16px; }
+.energy-sld-selection p { margin-bottom: 8px; font-size: 11px; }
+.energy-sld-selection .energy-detail-actions { align-items: end; }
+.energy-sld-selection label, .energy-sld-selection select { font-size: 11px; }
+.energy-sld-selection > small { display: block; margin-top: 6px; font-size: 10px; }
+.energy-sld-compact-summary { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 18px; align-items: center; border: 1px solid var(--app-border); border-radius: 12px; padding: 10px 20px; background: var(--app-surface); }
+.energy-sld-main-dial { background: transparent; border: 0; box-shadow: none !important; }
+.energy-sld-main-dial .energy-dial-note { font-size: 9px; }
+.energy-sld-parameter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.energy-sld-parameter-grid > div { padding: 10px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-muted); min-width: 0; }
+.energy-sld-parameter-grid span { display: block; font-size: 10px; color: var(--app-text-muted); margin-bottom: 6px; }
+.energy-sld-parameter-grid strong { font-size: 17px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.energy-sld-parameter-grid small { font-size: 10px; font-weight: 400; color: var(--app-text-muted); }
+.energy-sld-inspector-grid { grid-template-columns: minmax(250px, .9fr) minmax(320px, 1.5fr); gap: 12px; }
+.energy-sld-compact-vector > section { height: 100%; }
+.energy-sld-compact-vector h2 { font-size: 14px; }
+.energy-sld-compact-vector > section > div { gap: 8px !important; }
+.energy-sld-compact-vector svg { max-width: 280px !important; margin: 0 auto; }
+.energy-sld-compact-vector p { font-size: 10px; margin: 3px 0; }
+.energy-sld-charts { gap: 12px; }
+.energy-sld-charts .energy-card { padding: 14px; }
+.energy-sld-charts h3 { font-size: 13px; }
+.energy-sld-charts p { font-size: 10px; margin-bottom: 6px; }
+.energy-sld-charts .energy-chart { height: 160px; margin-top: 8px; font-size: 10px; }
+.energy-sld-charts .energy-empty { padding: 24px 12px; font-size: 11px; }
+.energy-sld-registers { border: 1px solid var(--app-border); border-radius: 10px; padding: 0 14px; }
+.energy-sld-registers > div { display: grid; gap: 12px; padding-bottom: 14px; }
+.energy-sld-help { border-top: 1px solid var(--app-border); margin-top: 16px; }
+.energy-sld-help p { font-size: 10px; }
+@media (max-width: 1100px) { .energy-sld-parameter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .energy-sld-workspace { grid-template-columns: minmax(0, 1fr) 220px; } }
+@media (max-width: 800px) { .energy-sld-workspace, .energy-sld-inspector-grid { grid-template-columns: 1fr; } .energy-sld-rail-list { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); max-height: 270px; } .energy-sld-meter-rail { max-height: none; } .energy-sld-compact-summary { grid-template-columns: 1fr; padding: 12px; } .energy-sld-main-dial { width: 240px; margin: auto; } .energy-sld-health-strip { gap: 10px; } }
+
+.energy-sld-console .energy-sld-zoom { gap: 4px; flex-wrap: nowrap; }
+.energy-sld-console .energy-sld-zoom button { min-width: 26px; height: 26px; padding: 2px 7px; border-radius: 5px; font-size: 11px; line-height: 1; }
+.energy-sld-console .energy-sld-zoom span { min-width: 34px; text-align: center; font-size: 10px; font-variant-numeric: tabular-nums; }
+
+/* Per-meter daily registers, sampled history and retention controls. */
+.energy-meter-history { display: grid; gap: 20px; }
+.energy-history-cell-note { display: block; font-size: 11px; line-height: 1.5; color: var(--app-text-muted); margin-top: 4px; }
+.energy-history-badge { display: block; width: max-content; font-size: 10px; padding: 2px 6px; margin-top: 4px; border: 1px solid var(--app-border); border-radius: 6px; color: var(--theme-primary); }
+.energy-history-meter { padding: 14px 0; border-top: 1px solid var(--app-border); }
+.energy-history-meter > summary { cursor: pointer; font-weight: 650; }
+.energy-history-meter > .energy-table-wrap { margin-top: 12px; }
+.energy-history-samples { max-height: 520px; overflow: auto; margin-top: 16px; }
+.energy-history-samples thead th { position: sticky; top: 0; z-index: 1; background: var(--app-surface-muted); }
+.energy-history-field { display: flex; justify-content: space-between; gap: 20px; padding: 5px 0; border-bottom: 1px solid var(--app-border); font-size: 12px; }
+.energy-history-field dd { margin: 0; white-space: nowrap; }
+.energy-history-settings fieldset { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; border: 0; margin: 16px 0; padding: 0; min-width: 0; }
+.energy-history-settings label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.energy-history-settings label.energy-history-checkbox { flex-direction: row; align-items: center; align-self: center; }
+.energy-history-checkbox input { width: auto; margin: 0; accent-color: var(--theme-primary); }
+.energy-history-settings input[type="number"] { width: 150px; padding: 8px 10px; border: 1px solid var(--app-border); border-radius: 8px; color: var(--app-text); background: var(--app-surface); }

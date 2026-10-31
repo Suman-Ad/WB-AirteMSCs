@@ -1,12 +1,19 @@
 import EnergyChangeoverReport from "./EnergyChangeoverReport";
-import React, { useEffect, useState } from "react";
+import EnergyMeterHistoryReport from "./EnergyMeterHistoryReport";
+import React, { useEffect, useRef, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { dailyEnergyRows, consumption, dgMonth, downloadFile, istDate, numberValue, runHours } from "./energyReportData";
 const fmt = (v) => typeof v === "number" && Number.isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: 3 }) : "—";
 const csv = (value) => `"${String(typeof value === "string" && /^[=+@-]/.test(value) ? "'" + value : value ?? "").replace(/"/g, '""')}"`;
-export default function EnergyAnalysisReport({ siteName, siteId }) {
+export default function EnergyAnalysisReport({ siteName, siteId, meters, userData, now, fromCache }) {
   const [date, setDate] = useState(istDate), [dailyState, setDaily] = useState(null), [runState, setRuns] = useState(null);
+  const today = istDate(), previousToday = useRef(today);
+  useEffect(() => {
+    const previous = previousToday.current;
+    if (previous !== today) setDate(selected => selected === previous ? today : selected);
+    previousToday.current = today;
+  }, [today]);
   const scope = `${siteName}/${date}`;
   useEffect(() => {
     if (!siteName || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return undefined;
@@ -32,9 +39,10 @@ export default function EnergyAnalysisReport({ siteName, siteId }) {
     {[daily?.error, runs?.error].filter(Boolean).map((error) => <p className="energy-notice" role="alert" key={error}>{error}</p>)}
     {(daily?.cached || runs?.cached) && <p className="energy-notice">Showing cached report records; reconnect to confirm the latest saved data.</p>}
     <div className="energy-metrics"><article className="energy-card"><span className="energy-muted">Daily energy registers</span><div className="energy-number">{energy.length}</div></article><article className="energy-card"><span className="energy-muted">Recorded DG runs</span><div className="energy-number">{completedRuns.length}</div></article><article className="energy-card"><span className="energy-muted">Recorded DG equipment-hours</span><div className="energy-number">{fmt(hours.length ? hours.reduce((a, b) => a + b, 0) : null)} <small>h</small></div><small className="energy-muted">Sum across DGs; simultaneous runs overlap. {completedRuns.length - hours.length} runs have no valid duration.</small></article></div>
+    {siteId && date && <EnergyMeterHistoryReport key={siteId} siteId={siteId} date={date} meters={meters} userData={userData} now={now} fromCache={fromCache} />}
     <EnergyChangeoverReport siteId={siteId} date={date} />
     <section className="energy-card"><h2>Daily opening / closing · kWh</h2><p>Recorded EB, DG and other energy registers from the site's Daily DG Log.</p><div className="energy-table-wrap"><table><thead><tr><th>Energy register</th><th>Opening (kWh)</th><th>Closing (kWh)</th><th>Consumption / generation (kWh)</th><th>Quality</th></tr></thead><tbody>{energy.map((r) => <tr key={r.id}><td>{r.label}</td><td>{fmt(r.opening)}</td><td>{fmt(r.closing)}</td><td>{fmt(r.usage)}</td><td>{r.reset ? "Counter decreased / reset" : r.usage === null ? "Incomplete readings" : "Recorded"}</td></tr>)}</tbody></table></div>{daily && !daily.error && !energy.length && <div className="energy-empty">No saved daily opening/closing kWh records for this date. Enter them in Daily DG Log; a current live counter cannot reconstruct midnight readings.</div>}</section>
     <section className="energy-card"><h2>DG run analysis</h2><div className="energy-table-wrap"><table><thead><tr>{["DG", "Start", "Stop", "Run hours", "Opening kWh", "Closing kWh", "Generation kWh", "Fuel (L)", "Remarks"].map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{completedRuns.map((r) => <tr key={r.id}><td>{r.dgNumber || "—"}</td><td>{r.startTime || "—"}</td><td>{r.stopTime || r.endTime || "—"}</td><td>{fmt(r.hours)}</td><td>{fmt(r.opening)}</td><td>{fmt(r.closing)}</td><td>{fmt(consumption(r.opening, r.closing))}</td><td>{fmt(numberValue(r.fuelConsumption))}</td><td>{r.remarks || "—"}</td></tr>)}</tbody></table></div>{runs && !runs.error && !completedRuns.length && <div className="energy-empty">No recorded DG runs for this date.</div>}</section>
-    <p className="energy-muted">Daily register totals and DG run energy describe different records and are not added together. Meter-level daily history requires saved collector readings; this report does not substitute browser-session values.</p>
+    <p className="energy-muted">Daily DG Log registers, per-meter daily history, and DG run energy are separate records and are not added together. Saved meter history is captured on the server; browser-session trends are not used to reconstruct past days.</p>
   </div>;
 }

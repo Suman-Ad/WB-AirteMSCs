@@ -66,6 +66,7 @@ import VendorEscalation from "./components/VendorEscalation";
 import LoadEntryForm from "./components/LoadEntryForm";
 import LoadDashboard from "./pages/LoadDashboard";
 import MOPPreview from "./pages/MOPPreview";
+import PdfToWord from "./pages/PdfToWord";
 
 export default function AppContent() {
     const [userData, setUserData] = useState(null);
@@ -203,6 +204,11 @@ export default function AppContent() {
             <Toaster position="top-right" />
 
             <Routes>
+                <Route path="/pdf-to-word" element={
+                    <RoleProtectedRoute userData={userData} allowedRoles={["User", "Super User", "Admin", "Super Admin"]}>
+                        <Layout userData={userData}><PdfToWord /></Layout>
+                    </RoleProtectedRoute>
+                } />
                 {/* Public Routes */}
                 <Route path="/login" element={<Login setUserData={setUserData} />} />
                 <Route path="/register" element={<Register />} />

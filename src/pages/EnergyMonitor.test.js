@@ -4,7 +4,7 @@ import EnergyMonitor from "./EnergyMonitor";
 import { doc, onSnapshot, query } from "firebase/firestore";
 
 jest.mock("../firebase", () => ({ db: {} }));
-jest.mock("firebase/firestore", () => ({ collection: jest.fn(), query: jest.fn(), where: jest.fn(), doc: jest.fn(), onSnapshot: jest.fn(), setDoc: jest.fn(), serverTimestamp: jest.fn() }));
+jest.mock("firebase/firestore", () => ({ collection: jest.fn(), query: jest.fn(), where: jest.fn(), orderBy: jest.fn(), limit: jest.fn(), doc: jest.fn(), onSnapshot: jest.fn(), setDoc: jest.fn(), serverTimestamp: jest.fn() }));
 jest.mock("recharts", () => {
   const React = require("react");
   const Box = ({ children }) => React.createElement("div", null, children);
@@ -27,6 +27,8 @@ beforeEach(() => {
 test("five requested tabs preserve meter selection and compact phase readings", () => {
   render(<EnergyMonitor userData={{ siteId: "site-a" }} />);
   expect(screen.getAllByRole("tab")).toHaveLength(5);
+  expect(screen.queryByLabelText("Automatic switch settings site")).not.toBeInTheDocument();
+  expect(screen.queryByText("Existing header EB/DG switch · automatic meter mapping")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("tab", { name: "Site Overview" }));
   expect(screen.getByText("Monitored active power")).toBeInTheDocument();
   const load = screen.getAllByRole("article")[0];
@@ -76,10 +78,10 @@ test("report listeners are kept while switching tabs and removed when the page e
   const view = render(<EnergyMonitor userData={{ siteId: "site-a", site: "DLF" }} />);
   const initialListeners = onSnapshot.mock.calls.length;
   fireEvent.click(screen.getByRole("tab", { name: "Analysis Report" }));
-  expect(onSnapshot.mock.calls.length).toBe(initialListeners + 3);
+  expect(onSnapshot.mock.calls.length).toBe(initialListeners + 6);
   fireEvent.click(screen.getByRole("tab", { name: "Energy Dashboard" }));
   fireEvent.click(screen.getByRole("tab", { name: "Analysis Report" }));
-  expect(onSnapshot.mock.calls.length).toBe(initialListeners + 3);
+  expect(onSnapshot.mock.calls.length).toBe(initialListeners + 6);
   const stops = onSnapshot.mock.results.map((result) => result.value).filter((value) => typeof value === "function");
   view.unmount();
   stops.forEach((stop) => expect(stop).toHaveBeenCalledTimes(1));

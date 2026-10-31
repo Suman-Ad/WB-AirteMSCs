@@ -212,6 +212,7 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
       {/* Navigation Links */}
       <nav aria-label="Main navigation">
         <span className="sidebar-nav-title">Workspace</span>
+        
         {(role === "Admin" || role === "Super Admin" || role === "Super User" || role === "User") && (
           <Link to="/daily-dg-log-editor" className="sidepanel-manage-btn" title={collapsed ? "DG Log Book" : ""} onClick={() => setCollapsed(true)}>☣️ <span className="label">Daily DG Log Book</span></Link>
         )}
@@ -300,6 +301,10 @@ const Sidebar = ({ userData, collapsed, setCollapsed, powerSource }) => {
             onClick={() => setCollapsed(true)}
           >📐 <span className="label">SLD Editor</span>
           </Link>
+        )}
+
+        {["User", "Super User", "Admin", "Super Admin"].includes(role) && (
+          <Link to="/pdf-to-word" className="sidepanel-manage-btn" title="PDF to Word" onClick={() => setCollapsed(true)}>📄 <span className="label">PDF to Word</span></Link>
         )}
 
         {/* <Link to="/profile" className="sidepanel-manage-btn" title={collapsed ? "Profile":""}>👷 <span className="label">Profile</span></Link> */}

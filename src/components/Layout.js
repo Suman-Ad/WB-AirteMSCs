@@ -438,7 +438,8 @@ const Layout = ({ userData, children }) => {
   // Update Power Source
   const updatePowerSource = async (options) => {
     const automatic = options?.automatic === true;
-    const activeDG = automatic ? options.dg : selectedDG;
+    const activeDG = automatic && options.source !== "EB" ? options.dg : selectedDG;
+    if (!automatic && manualPowerDisabled) return false;
     if (powerLockRef.current) return false;
 
     if (!canTogglePower) {
@@ -446,7 +447,8 @@ const Layout = ({ userData, children }) => {
       return false;
     }
 
-    const nextSource = powerSource === "EB" ? "DG" : "EB";
+    const nextSource = automatic ? options.source : powerSource === "EB" ? "DG" : "EB";
+    if (!["EB", "DG"].includes(nextSource) || nextSource === powerSource) return false;
     const confirmMsg =
       nextSource === "DG"
         ? `⚠️ Confirm Power Change\n\nEB → DG\n\n• ${activeDG} will start running\n• DG log entry will be created\n\nDo you want to continue?`
@@ -462,7 +464,8 @@ const Layout = ({ userData, children }) => {
       const snap = await getDoc(powerRef);
 
       const prev = snap.exists() ? snap.data() : {};
-      const newSource = automatic ? "DG" : powerSource === "EB" ? "DG" : "EB";
+      const newSource = nextSource;
+      if (automatic && prev.powerSource === newSource) return false;
 
       let updateData = {
         powerSource: newSource,
@@ -770,9 +773,9 @@ const Layout = ({ userData, children }) => {
   }, [userData?.site]);
 
 
-  const { status: autoPowerStatus } = useAutoPowerSource({
+  const { status: autoPowerStatus, manualDisabled: manualPowerDisabled } = useAutoPowerSource({
     siteId: userData?.siteId, canToggle: canTogglePower, powerSource,
-    onTrigger: (dg) => updatePowerSource({ automatic: true, dg }),
+    onTrigger: (dg) => updatePowerSource({ automatic: true, dg, source: dg === "EB" ? "EB" : "DG" }),
     onMeterData: (data) => {
       energyMeterDataRef.current = data;
       if (!data || data.fromCache || powerSource !== "DG" || !canTogglePower) return;
@@ -985,10 +988,11 @@ const Layout = ({ userData, children }) => {
                           aria-label="EB/DG power source"
                           aria-checked={powerSource === "DG"}
                           aria-describedby="header-power-auto-desktop"
-                          title={autoPowerStatus}
-                          tabIndex={canTogglePower ? 0 : -1}
-                          onKeyDown={(event) => { if (["Enter", " "].includes(event.key) && canTogglePower && !powerLockRef.current) { event.preventDefault(); updatePowerSource(); } }}
-                          onClick={powerLockRef.current || !canTogglePower ? undefined : updatePowerSource}
+                          title={manualPowerDisabled ? `${autoPowerStatus} · Manual switch disabled in automatic mode` : autoPowerStatus}
+                          aria-disabled={manualPowerDisabled || !canTogglePower}
+                          tabIndex={canTogglePower && !manualPowerDisabled ? 0 : -1}
+                          onKeyDown={(event) => { if (["Enter", " "].includes(event.key) && canTogglePower && !manualPowerDisabled && !powerLockRef.current) { event.preventDefault(); updatePowerSource(); } }}
+                          onClick={powerLockRef.current || !canTogglePower || manualPowerDisabled ? undefined : updatePowerSource}
                           style={{
                             width: "42px",
                             height: "22px",
@@ -996,7 +1000,7 @@ const Layout = ({ userData, children }) => {
                             borderRadius: "12px",
                             position: "relative",
                             cursor:
-                              !canTogglePower
+                              (!canTogglePower || manualPowerDisabled)
                                 ? "not-allowed"
                                 : "pointer",
                             pointerEvents: powerLockRef.current ? "none" : "auto",
@@ -1018,7 +1022,7 @@ const Layout = ({ userData, children }) => {
                         </div>
 
                         <span style={{ opacity: powerSource === "DG" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "DG" ? "#ffffffff" : "#ffffffaa" }}>
-                          <strong>⛽DG</strong><small id="header-power-auto-desktop" className="power-auto-status" role="status" title={autoPowerStatus} aria-label={autoPowerStatus}>{autoPowerLabel}</small>
+                          <strong>⛽DG</strong><small id="header-power-auto-desktop" className="power-auto-status" role="status" title={manualPowerDisabled ? `${autoPowerStatus} · Manual switch disabled in automatic mode` : autoPowerStatus} aria-label={autoPowerStatus}>{autoPowerLabel}</small>
                         </span>
                       </div>
                       <div style={{ marginTop: "4px", fontSize: "10px", color: "#fff" }}>
@@ -1223,10 +1227,11 @@ const Layout = ({ userData, children }) => {
                           aria-label="EB/DG power source"
                           aria-checked={powerSource === "DG"}
                           aria-describedby="header-power-auto-mobile"
-                          title={autoPowerStatus}
-                          tabIndex={canTogglePower ? 0 : -1}
-                          onKeyDown={(event) => { if (["Enter", " "].includes(event.key) && canTogglePower && !powerLockRef.current) { event.preventDefault(); updatePowerSource(); } }}
-                          onClick={powerLockRef.current || !canTogglePower ? undefined : updatePowerSource}
+                          title={manualPowerDisabled ? `${autoPowerStatus} · Manual switch disabled in automatic mode` : autoPowerStatus}
+                          aria-disabled={manualPowerDisabled || !canTogglePower}
+                          tabIndex={canTogglePower && !manualPowerDisabled ? 0 : -1}
+                          onKeyDown={(event) => { if (["Enter", " "].includes(event.key) && canTogglePower && !manualPowerDisabled && !powerLockRef.current) { event.preventDefault(); updatePowerSource(); } }}
+                          onClick={powerLockRef.current || !canTogglePower || manualPowerDisabled ? undefined : updatePowerSource}
                           style={{
                             width: "42px",
                             height: "22px",
@@ -1234,7 +1239,7 @@ const Layout = ({ userData, children }) => {
                             borderRadius: "12px",
                             position: "relative",
                             cursor:
-                              !canTogglePower
+                              (!canTogglePower || manualPowerDisabled)
                                 ? "not-allowed"
                                 : "pointer",
                             pointerEvents: powerLockRef.current ? "none" : "auto",
@@ -1257,7 +1262,7 @@ const Layout = ({ userData, children }) => {
                         </div>
 
                         <span style={{ opacity: powerSource === "DG" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "DG" ? "#ffffffff" : "#ffffffaa" }}>
-                          <strong>⛽DG</strong><small id="header-power-auto-mobile" className="power-auto-status" role="status" title={autoPowerStatus} aria-label={autoPowerStatus}>{autoPowerLabel}</small>
+                          <strong>⛽DG</strong><small id="header-power-auto-mobile" className="power-auto-status" role="status" title={manualPowerDisabled ? `${autoPowerStatus} · Manual switch disabled in automatic mode` : autoPowerStatus} aria-label={autoPowerStatus}>{autoPowerLabel}</small>
                         </span>
                         {powerSource === "DG" && (
                           <div style={{
@@ -1493,7 +1498,7 @@ const Layout = ({ userData, children }) => {
           )} */}
           {children}
         </div>
-        <div style={{ background: "#55b3ab" }}>
+        <footer className="layout-footer">
           {/* {todayDuty && (
             <div
               className="mobile-duty-bar"
@@ -1541,7 +1546,9 @@ const Layout = ({ userData, children }) => {
                   bottom: 0,
                   left: 0,
                   width: "100%",
-                  background: "#ffffff",
+                  background: "var(--app-surface, #fdfefe)",
+                  color: "var(--app-text, #17324d)",
+                  borderTop: "1px solid var(--app-border, #c9dce8)",
                   borderTopLeftRadius: "16px",
                   borderTopRightRadius: "16px",
                   padding: "16px",
@@ -1554,7 +1561,7 @@ const Layout = ({ userData, children }) => {
                   style={{
                     width: "40px",
                     height: "4px",
-                    background: "#cbd5f5",
+                    background: "var(--app-border, #c9dce8)",
                     borderRadius: "2px",
                     margin: "0 auto 10px",
                   }}
@@ -1579,12 +1586,12 @@ const Layout = ({ userData, children }) => {
                         key={i}
                         style={{
                           padding: "12px",
-                          borderBottom: "1px solid #e5e7eb",
+                          borderBottom: "1px solid var(--app-border, #c9dce8)",
                           fontSize: "15px",
                         }}
                       >
                         👷 <strong>{u.name}</strong>
-                        <div style={{ fontSize: "13px", color: "#475569" }}>
+                        <div style={{ fontSize: "13px", color: "var(--app-text-muted, #587086)" }}>
                           {u.mobile !== "N/A" && (
                             <b
                               onClick={() => callUser(u.mobile)}
@@ -1597,7 +1604,7 @@ const Layout = ({ userData, children }) => {
                       </li>
                     ))
                   ) : (
-                    <li style={{ padding: "12px", color: "#64748b" }}>
+                    <li style={{ padding: "12px", color: "var(--app-text-muted, #587086)" }}>
                       No manpower assigned
                     </li>
                   )}
@@ -1614,8 +1621,8 @@ const Layout = ({ userData, children }) => {
                     padding: "10px",
                     borderRadius: "8px",
                     border: "none",
-                    background: "#0f172a",
-                    color: "#fff",
+                    background: "var(--theme-primary, #0f766e)",
+                    color: "var(--app-surface, #fdfefe)",
                     fontSize: "15px",
                   }}
                 >
@@ -1624,11 +1631,11 @@ const Layout = ({ userData, children }) => {
               </div>
             </>
           )}
-          <h4>© 2025 Crash Algo. All rights reserved. Version: <span onClick={() => userData && userData.email === ("crash.algo@gmail.com" || "admin@crashalgo.com") && handleEditVersion()} style={{ textDecoration: "underline", cursor: "pointer" }}>{lastHandledVersion}</span></h4>
-          <h4 onClick={() => navigate("/vendor-dashboard")} style={{ textDecoration: "underline", cursor: "pointer" }}>
+          <p className="layout-footer-copy">© 2025 Crash Algo. All rights reserved. Version: <button type="button" className="layout-footer-link" onClick={() => userData && userData.email === ("crash.algo@gmail.com" || "admin@crashalgo.com" || "sumanadhikari0@gmail.com" || "asansol.airtelmsc@geniusconsultants.in") && handleEditVersion()}>{lastHandledVersion}</button></p>
+          <button type="button" className="layout-footer-link" onClick={() => navigate("/vendor-dashboard")}>
             Vendor Escalation Matrix
-          </h4>
-        </div>
+          </button>
+        </footer>
       </div>
     </div>
   );

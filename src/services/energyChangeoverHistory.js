@@ -25,7 +25,7 @@ export async function commitEnergyChangeover(db, powerRef, updateData, context) 
     const status = await transaction.get(powerRef);
     const prev = status.exists() ? status.data() : {};
     const previousSource = prev.powerSource || "EB";
-    if (previousSource === updateData.powerSource || (automatic && previousSource !== "EB")) return false;
+    if (previousSource === updateData.powerSource) return false;
     const starting = updateData.powerSource === "DG";
     const runRef = !starting && prev.activeEnergyRunId ? doc(db, "energyChangeovers", siteId, "runs", prev.activeEnergyRunId) : newRunRef;
     const oldRun = !starting && prev.activeEnergyRunId ? await transaction.get(runRef) : null;

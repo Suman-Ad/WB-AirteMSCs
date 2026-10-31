@@ -42,6 +42,16 @@ test("counter reset is labelled and cannot produce negative generation", async (
   await commitEnergyChangeover({}, "status", source("EB"), context(data(1)));
   expect(run().counterReset).toBe(true); expect(run().generationKwh).toBeNull();
 });
+
+test("automatic restoration closes the same run once and records EB restoration", async () => {
+  await commitEnergyChangeover({}, "status", source("DG"), {...context(data(100)),automatic:true});
+  jest.setSystemTime(now + 10000);
+  expect(await commitEnergyChangeover({}, "status", source("EB"), {...context(data(102,now+10000)),automatic:true})).toBe(true);
+  expect(records.get("status").powerSource).toBe("EB");
+  expect(run()).toMatchObject({status:"Completed",generationKwh:2});
+  expect(await commitEnergyChangeover({}, "status", source("EB"), {...context(data(103)),automatic:true})).toBe(false);
+  expect([...records.keys()].filter((path) => path.startsWith("energyChangeovers/"))).toHaveLength(1);
+});
 test("restoration without an opening retains incomplete history rather than inventing energy", async () => {
   records.set("status", { powerSource: "DG", dgNumber: "DG-1", dgStartTime: { toMillis: () => now - 60000 } });
   await commitEnergyChangeover({}, "status", source("EB"), context(data(20)));

@@ -17,7 +17,7 @@ let publish, source, statusListeners;
 const start = 1792663200000;
 const user = { uid: "human", siteId: "ASL", site: "Asansol", role: "Admin", name: "Operator", empId: "E1", designation: "Engineer" };
 const status = () => ({ powerSource: source, selectedDG: "DG-1", ...(source === "DG" ? { dgStartTime: { toDate: () => new Date(start), toMillis: () => start } } : {}) });
-const meters = (time) => ({ docs: [["main", "Main Incomer", 0], ["dg1", "DG-1 Meter", 415]].map(([id, name, volts]) => ({ id, data: () => ({ name, status: "OK", voltage_ll: volts, fwd_Wh: 100000, observedAt: { toMillis: () => time } }) })), metadata: { fromCache: false, hasPendingWrites: false } });
+const meters = (time) => ({ docs: [["main", "Main Incomer", 0], ["dg1", "DG-1 Meter", 415]].map(([id, name, volts]) => ({ id, data: () => ({ name, status: "OK", voltage_ll: volts, current: volts > 300 ? 100 : 0, fwd_Wh: 100000, observedAt: { toMillis: () => time } }) })), metadata: { fromCache: false, hasPendingWrites: false } });
 beforeEach(() => {
   jest.clearAllMocks(); localStorage.clear(); jest.useFakeTimers(); jest.setSystemTime(start); source = "EB";statusListeners=[];
   doc.mockImplementation((db, ...path) => path.join("/")); collection.mockImplementation((db, ...path) => path.join("/")); query.mockImplementation((ref) => ref);
@@ -38,7 +38,7 @@ afterEach(() => { jest.useRealTimers(); jest.restoreAllMocks(); });
 async function trigger() {
   await act(async () => { jest.advanceTimersByTime(10000); publish(meters(start + 10000)); });
 }
-test.each([1024, 375])("live readings switch the existing slider at width %i and manual restoration keeps run logging", async (width) => {
+test.each([1024, 375])("live readings switch the existing slider at width %i and automatic restoration keeps run logging", async (width) => {
   Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
   await act(async () => { render(<Layout userData={user}><div>Page</div></Layout>); });
   const slider = screen.getByRole("switch", { name: "EB/DG power source" });
@@ -48,8 +48,14 @@ test.each([1024, 375])("live readings switch the existing slider at width %i and
   expect(commitEnergyChangeover).toHaveBeenCalledWith({}, "sitePowerStatus/Asansol", expect.objectContaining({ powerSource: "DG" }), expect.objectContaining({ automatic: true, dg: "DG-1" }));
   expect(slider).toHaveAttribute("aria-checked", "true");
   expect(window.confirm).not.toHaveBeenCalled();
+  expect(slider).toHaveAttribute("aria-disabled", "true");
   await act(async () => fireEvent.click(slider));
-  expect(window.confirm).toHaveBeenCalledTimes(1);
+  expect(commitEnergyChangeover).toHaveBeenCalledTimes(1);
+  const restored=(time)=>({docs:[["main",415,100],["dg1",415,49]].map(([id,voltage_ll,current])=>({id,data:()=>({status:"OK",voltage_ll,current,observedAt:{toMillis:()=>time}})})),metadata:{fromCache:false}});
+  await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(start+20000));});
+  await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(start+30000));});
+  expect(window.confirm).not.toHaveBeenCalled();
+  expect(commitEnergyChangeover).toHaveBeenLastCalledWith({}, "sitePowerStatus/Asansol", expect.objectContaining({powerSource:"EB"}), expect.objectContaining({automatic:true}));
   expect(addDoc).toHaveBeenCalledWith("dgRunLogs/Asansol/entries", expect.objectContaining({ dgNumber: "DG-1", dgLogAdded: false }));
   expect(mockNavigate).toHaveBeenCalledWith("/dg-log-entry", expect.objectContaining({ state: expect.objectContaining({ autoFromDgStop: true }) }));
   expect(slider).toHaveAttribute("aria-checked", "false");

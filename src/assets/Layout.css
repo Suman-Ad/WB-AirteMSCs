@@ -1,3 +1,40 @@
+/* Footer follows the same palette as the rest of the app. */
+.layout-footer {
+  padding: 14px 20px;
+  color: var(--app-text, #17324d);
+  background: var(--app-surface-muted, #edf6f8);
+  border-top: 1px solid var(--app-border, #c9dce8);
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.layout-footer-copy {
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+
+.layout-footer .layout-footer-link {
+  padding: 2px 0;
+  color: var(--theme-link, #0b6f83);
+  background: transparent;
+  border: 0;
+  border-radius: 2px;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.layout-footer-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+.layout-footer-link:focus-visible {
+  outline: 2px solid var(--theme-link, #0b6f83);
+  outline-offset: 3px;
+}
+
 /* ===== GENERAL RESET & BASE STYLES ===== */
 :root {
   --sidebar-bg: linear-gradient(135deg, #4b502cf3 0%, #4cafa7 100%);

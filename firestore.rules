@@ -72,6 +72,31 @@ service cloud.firestore {
         && request.resource.data.siteName is string
         && request.resource.data.updatedAt == request.time;
     }
+    match /energyMonitor/{siteId}/config/meterHistory {
+      allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
+      allow create, update: if isActiveAdmin()
+        && request.resource.data.keys().hasOnly(['enabled', 'retentionDays', 'updatedBy', 'updatedAt'])
+        && request.resource.data.enabled is bool
+        && request.resource.data.retentionDays is int
+        && request.resource.data.retentionDays >= 7
+        && request.resource.data.retentionDays <= 365
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+    match /energyMonitor/{siteId}/dailyReadings/{dayId} {
+      allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
+      // Only the Admin SDK capture function creates or changes saved history.
+      allow write: if false;
+    }
+    match /energyMonitor/{siteId}/historyMeters/{meterKey} {
+      allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
+      allow write: if false;
+      match /samples/{sampleId} {
+        allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
+        allow write: if false;
+      }
+    }
     match /energyMonitor/{siteId}/config/sld {
       allow read: if isActiveSiteUser(siteId);
       allow create, update: if isSiteAdmin(siteId)

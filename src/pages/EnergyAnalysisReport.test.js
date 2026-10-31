@@ -30,3 +30,20 @@ test("missing site does not read records", () => {
   expect(screen.getByRole("alert")).toHaveTextContent("Assign a site name");
   expect(onSnapshot).not.toHaveBeenCalled();
 });
+
+test('today follows IST midnight while a deliberately selected older date remains selected', () => {
+  jest.useFakeTimers();
+  try {
+    jest.setSystemTime(new Date('2026-10-31T18:29:00Z'));
+    const view = render(<EnergyAnalysisReport siteName="DLF" now={Date.now()} />);
+    expect(screen.getByLabelText('Report date')).toHaveValue('2026-10-31');
+    jest.setSystemTime(new Date('2026-10-31T18:31:00Z'));
+    view.rerender(<EnergyAnalysisReport siteName="DLF" now={Date.now()} />);
+    expect(screen.getByLabelText('Report date')).toHaveValue('2026-11-01');
+    fireEvent.change(screen.getByLabelText('Report date'), {target:{value:'2026-10-20'}});
+    jest.setSystemTime(new Date('2026-11-01T18:31:00Z'));
+    view.rerender(<EnergyAnalysisReport siteName="DLF" now={Date.now()} />);
+    expect(screen.getByLabelText('Report date')).toHaveValue('2026-10-20');
+    view.unmount();
+  } finally { jest.useRealTimers(); }
+});

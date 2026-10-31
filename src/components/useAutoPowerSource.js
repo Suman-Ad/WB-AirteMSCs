@@ -43,23 +43,23 @@ export default function useAutoPowerSource({ siteId, canToggle, powerSource, onT
     return () => { active = false; stop(); };
   }, [siteId]);
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
-  useEffect(() => { detector.current = initialChangeoverState(); setError(""); }, [siteId, configKey]);
+  useEffect(() => { detector.current = initialChangeoverState(); setError(""); }, [siteId, configKey, powerSource]);
   useEffect(() => {
     if (!sharedMapping.ready) { detector.current = initialChangeoverState(); return; }
     if (!canToggle || busy.current) return;
-    const assessment = assessHeaderPower(config, meters, now, fromCache);
+    const assessment = assessHeaderPower(config, meters, now, fromCache, powerSource);
     const next = advanceChangeover(detector.current, assessment, 2);
     detector.current = next;
-    if (!next.fired || powerSource !== "EB") return;
+    if (!next.fired) return;
     busy.current = true;
     Promise.resolve().then(() => trigger.current(next.dg)).then((result) => {
       if (result === false) detector.current = initialChangeoverState();
       else setError("");
     }).catch((failure) => {
       detector.current = initialChangeoverState();
-      setError(failure?.code === "permission-denied" ? "Auto switch blocked: publish the updated Firestore rules for changeover history." : "Auto EB → DG save failed. Check connection and site permissions.");
+      setError(failure?.code === "permission-denied" ? "Auto switch blocked: publish the updated Firestore rules for changeover history." : "Automatic source change save failed. Check connection and site permissions.");
     }).finally(() => { busy.current = false; });
   }, [config, meters, now, fromCache, canToggle, powerSource, sharedMapping.ready]);
-  const assessment = assessHeaderPower(config, meters, now, fromCache);
-  return { config, status: sharedMapping.error || error || connectionError || (!sharedMapping.ready ? "Automatic switch: loading site settings" : !canToggle ? "Automatic switch: awaiting power-change permission" : assessment.message) };
+  const assessment = assessHeaderPower(config, meters, now, fromCache, powerSource);
+  return { config, manualDisabled: savedConfig.enabled !== false, status: sharedMapping.error || error || connectionError || (!sharedMapping.ready ? "Automatic switch: loading site settings" : !canToggle ? "Automatic switch: awaiting power-change permission" : assessment.message) };
 }
