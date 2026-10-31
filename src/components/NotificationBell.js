@@ -1,5 +1,5 @@
 import NotificationSettings from "./NotificationSettings";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { collection, onSnapshot, query, where, orderBy, updateDoc, doc, namedQuery, addDoc, getDocs, collectionGroup, serverTimestamp, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +12,18 @@ export default function NotificationBell({ user }) {
     const navigate = useNavigate();
 
     const soundRef = React.useRef(null);
+    const setupPrompted = React.useRef(new Set());
+    const showNotificationSetup = useCallback(() => {
+        if (!user?.uid || setupPrompted.current.has(user.uid)) return;
+        setupPrompted.current.add(user.uid);
+        // Layout remounts between pages; show setup once per signed-in browser session.
+        try {
+            const key = `notificationSetupShown:${user.uid}`;
+            if (sessionStorage.getItem(key)) return;
+            sessionStorage.setItem(key, "1");
+        } catch (_) { /* The in-memory guard also works when storage is blocked. */ }
+        setOpen(true);
+    }, [user?.uid]);
 
     useEffect(() => {
         soundRef.current = new Audio("/notify.mp3");
@@ -469,7 +481,7 @@ export default function NotificationBell({ user }) {
                         </div>
                     </div>
 
-                    <NotificationSettings uid={user.uid} />
+                    <NotificationSettings uid={user.uid} onSetupRequired={showNotificationSetup} />
                     {items.length === 0 && (
                         <div style={{
                             padding: '0.75rem',

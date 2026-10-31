@@ -5,6 +5,8 @@ const fs = require('node:fs');
 const crypto = require('node:crypto');
 
 function harness() {
+  let now = Date.now();
+  class TestDate extends Date {static now() {return now;}}
   const records = new Map([['users/user', {isActive: true}], ['users/other', {isActive: true}]]);
   const requests = [];
   const deletedField = Symbol('delete');
@@ -21,19 +23,20 @@ function harness() {
     delete: r => records.delete(r.path)
   })};
   let apiError;
+  let apiDescription;
   class HttpsError extends Error {constructor(code, text) {super(text); this.code = code;}}
   const exports = {};
   vm.runInNewContext(fs.readFileSync(__dirname + '/telegram-functions.cjs', 'utf8'), {
-    exports, console, Buffer, AbortSignal,
+    exports, console, Buffer, AbortSignal, Date: TestDate,
     fetch: async (url, options) => {
       requests.push({url, body: JSON.parse(options.body)});
-      return {ok: !apiError, status: apiError || 200, json: async () => apiError ? {ok: false, error_code: apiError} : {ok: true, result: {message_id: 123}}};
+      return {ok: !apiError, status: apiError || 200, json: async () => apiError ? {ok: false, error_code: apiError, description: apiDescription} : {ok: true, result: {message_id: 123}}};
     },
     require: name => ({
       'firebase-functions/v2/https': {onCall: handler => handler, onRequest: (_options, handler) => handler, HttpsError},
       'firebase-functions/v2/firestore': {onDocumentCreated: (_options, handler) => handler},
       'firebase-functions/params': {defineSecret: name => ({value: () => name === 'TELEGRAM_BOT_TOKEN' ? 'private-token' : 'webhook-secret'}), defineString: () => ({value: () => 'msc_test_bot'})},
-      'firebase-admin/firestore': {getFirestore: () => db, FieldValue: {delete: () => deletedField, serverTimestamp: () => ({toMillis: () => Date.now()})}, Timestamp: {fromMillis: value => ({toMillis: () => value})}},
+      'firebase-admin/firestore': {getFirestore: () => db, FieldValue: {delete: () => deletedField, serverTimestamp: () => {const saved = now; return {toMillis: () => saved};}}, Timestamp: {fromMillis: value => ({toMillis: () => value})}},
       'node:crypto': crypto,
       './notification-functions.cjs': {notificationData: n => ({title: n.title || 'Alert', body: n.message || 'Update'})}
     })[name]
@@ -50,7 +53,7 @@ function harness() {
     await webhook(`/start ${token}`, {chatId});
     return token;
   }
-  return {exports, records, requests, webhook, event, link, fail: code => {apiError = code;}};
+  return {exports, records, requests, webhook, event, link, advance: milliseconds => {now += milliseconds;}, fail: (code, description = 'Forbidden: bot was blocked by the user') => {apiError = code; apiDescription = description;}};
 }
 
 test('link creation requires authenticated active account and hides raw token in storage', async () => {
@@ -127,4 +130,29 @@ test('read notifications, inactive accounts and mismatched bindings never send',
   app.records.set('telegramChats/42', {uid: 'other'});
   await app.exports.telegramBellNotification(app.event('mismatch'));
   assert.equal(app.requests.length, count);
+});
+
+test('connected accounts survive ten minutes and expiration of an unused reconnect link', async () => {
+  const app = harness();
+  await app.link();
+  app.advance(11 * 60 * 1000);
+  await app.webhook('/status');
+  assert.equal(app.requests.at(-1).body.text, 'Connected. Notification updates are enabled.');
+  const {url} = await app.exports.createTelegramLink({auth: {uid: 'user'}});
+  app.advance(11 * 60 * 1000);
+  await app.webhook(`/start ${new URL(url).searchParams.get('start')}`);
+  assert.equal(app.records.get('notificationPreferences/user').telegramEnabled, true);
+  assert.equal(app.records.get('notificationPreferences/user').telegramChatId, '42');
+  await app.exports.telegramBellNotification(app.event());
+  assert.equal(app.records.get('notificationDeliveries/user/telegramItems/notice').status, 'sent');
+});
+
+test('generic Telegram 403 failures do not delete a saved connection', async () => {
+  const app = harness();
+  await app.link();
+  app.fail(403, 'Forbidden');
+  await app.exports.telegramBellNotification(app.event());
+  assert.equal(app.records.get('notificationPreferences/user').telegramEnabled, true);
+  assert.equal(app.records.get('telegramChats/42').uid, 'user');
+  assert.equal(app.records.get('notificationDeliveries/user/telegramItems/notice').status, 'failed');
 });

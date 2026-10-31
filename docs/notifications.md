@@ -9,6 +9,18 @@ Each newly created `notifications/{uid}/items/{id}` document is forwarded by a s
 3. Sign in on each device, open the bell, and choose **Enable device notifications**. Allow the browser permission prompt. HTTPS is required outside localhost. iPhone/iPad users must install the app on their Home Screen and enable notifications there.
 4. Create a new bell notification for that user and verify delivery with the app open, backgrounded, and closed. The browser/OS must permit push and notifications; force-stopping the browser or OS restrictions can prevent delivery.
 
+### Troubleshooting device activation
+
+If the app says **Device notifications are awaiting the Firebase web-push key configuration** (or **Setup required**), the build has no `REACT_APP_FIREBASE_VAPID_KEY`. This is separate from Telegram's bot token and webhook secret.
+
+Open Firebase Console → project `wb-airtelmscs` → Project settings → Cloud Messaging → Web configuration → Web Push certificates. Generate a key pair if none exists, then copy its **public** key. Create `.env.local` in the repository root with:
+
+```dotenv
+REACT_APP_FIREBASE_VAPID_KEY=YOUR_FIREBASE_PUBLIC_WEB_PUSH_KEY
+```
+
+Restart `npm start` for local development. For hosting, rebuild with the key present and deploy only after the build succeeds; editing `.env.local` alone does not update a hosted app. Enable the FCM Registration API if Firebase reports token subscription errors. The app now keeps device setup errors separate from Telegram messages and reports service-worker/registration timeouts instead of leaving the enable button waiting indefinitely.
+
 ## Activate MSC Bot on Telegram
 
 WhatsApp has been replaced by Telegram. The app forwards new bell notifications to each user's linked private chat. There are no group broadcasts or unauthenticated chat-ID entry fields. The bot supports `/start`, `/help`, `/status` and `/stop`; approvals remain in the app.
@@ -64,6 +76,8 @@ Deploy hosting only after the build succeeds. The previous production build was 
 
 ### 6. Link each account and test
 
+For every signed-in user, the notification setup opens automatically once per browser session if device permission/registration or Telegram linking is incomplete. Already granted device permissions are registered automatically. Users still must approve the browser prompt and press Start through their private Telegram linking URL; accounts cannot be silently subscribed. The setup can be dismissed and reopened with the bell.
+
 1. Sign in, open the notification bell, and choose **Connect Telegram**.
 2. Choose **Open Telegram and press Start**. Keep this private, one-time link to yourself; it expires in 10 minutes. Creating another link invalidates the previous pending one.
 3. Press **Start** in Telegram. The bot confirms connection and the app shows **Connected**.
@@ -75,7 +89,9 @@ Both the bot and device notification path process newly created bell documents; 
 
 ### Delivery and operations
 
-`notificationDeliveries/{uid}/telegramItems/{notificationId}` stores `sending`, `sent` or `failed`. `sent` means Telegram's API accepted the message, not that the user read it. Claims prevent duplicate trigger deliveries; failed/ambiguous sends are not retried automatically because a timeout can happen after Telegram accepted a message. Review failures operationally, particularly Telegram rate-limit errors during bursts. Bot blocking (403) disconnects the matching chat. Telegram and push are separate triggers, so one does not block the other.
+An established Telegram connection has no ten-minute expiry. Only unused connection links expire. The app shows **Checking connection…** until preferences load, rather than displaying a temporary false disconnection.
+
+`notificationDeliveries/{uid}/telegramItems/{notificationId}` stores `sending`, `sent` or `failed`. `sent` means Telegram's API accepted the message, not that the user read it. Claims prevent duplicate trigger deliveries; failed/ambiguous sends are not retried automatically because a timeout can happen after Telegram accepted a message. Review failures operationally, particularly Telegram rate-limit errors during bursts. Only a Telegram 403 response explicitly identifying a blocked bot or deactivated account disconnects the matching chat; generic API failures preserve the saved connection. Preferences record `telegramDisconnectReason` for app disconnect, `/stop`, or Telegram revocation. Telegram and push are separate triggers, so one does not block the other.
 
 Link records contain only hashed tokens and server timestamps. Superseded, consumed and disconnected pending links are deleted; abandoned expired link records can be removed using a Firestore TTL policy on `telegramLinks.expiresAt`. Expiration is enforced in the handler even without TTL. Preferences and bindings are not exposed to other app users.
 

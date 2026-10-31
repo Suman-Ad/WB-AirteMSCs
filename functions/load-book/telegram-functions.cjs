@@ -22,6 +22,7 @@ async function telegram(method, body) {
     if (!response.ok || !result.ok) {
       const error = new Error(`Telegram API error ${result.error_code || response.status}`);
       error.code = result.error_code || response.status;
+      error.connectionRevoked = error.code === 403 && /bot was blocked by the user|user is deactivated/i.test(result.description || '');
       throw error;
     }
     return result.result;
@@ -68,7 +69,7 @@ exports.disconnectTelegram = onCall(async request => {
     const data = pref.data() || {};
     if (data.telegramChatId) tx.delete(db.doc(`telegramChats/${data.telegramChatId}`));
     if (data.pendingLinkHash) tx.delete(db.doc(`telegramLinks/${data.pendingLinkHash}`));
-    tx.set(prefRef(db, uid), {telegramEnabled: false, telegramChatId: FieldValue.delete(),
+    tx.set(prefRef(db, uid), {telegramEnabled: false, telegramDisconnectReason: 'app_disconnect', telegramChatId: FieldValue.delete(),
       pendingLinkHash: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp()}, {merge: true});
   });
   return {success: true};
@@ -88,22 +89,22 @@ async function connect(db, token, chatId) {
     const oldChat = pref.data()?.telegramChatId;
     if (oldChat && oldChat !== chatId) tx.delete(db.doc(`telegramChats/${oldChat}`));
     tx.set(db.doc(`telegramChats/${chatId}`), {uid: link.uid});
-    tx.set(ref, {telegramEnabled: true, telegramChatId: chatId, pendingLinkHash: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp()}, {merge: true});
+    tx.set(ref, {telegramEnabled: true, telegramChatId: chatId, telegramDisconnectReason: FieldValue.delete(), pendingLinkHash: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp()}, {merge: true});
     tx.delete(linkRef);
     return true;
   });
 }
 
-async function stopUpdates(db, chatId) {
+async function stopUpdates(db, chatId, reason = 'bot_stop', expectedUid) {
   await db.runTransaction(async tx => {
     const chatRef = db.doc(`telegramChats/${chatId}`);
     const chat = (await tx.get(chatRef)).data();
-    if (!chat) return;
+    if (!chat || (expectedUid && chat.uid !== expectedUid)) return;
     const ref = prefRef(db, chat.uid);
     const pref = (await tx.get(ref)).data();
     if (pref?.telegramChatId === chatId) {
       if (pref.pendingLinkHash) tx.delete(db.doc(`telegramLinks/${pref.pendingLinkHash}`));
-      tx.set(ref, {telegramEnabled: false, telegramChatId: FieldValue.delete(), pendingLinkHash: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp()}, {merge: true});
+      tx.set(ref, {telegramEnabled: false, telegramDisconnectReason: reason, telegramChatId: FieldValue.delete(), pendingLinkHash: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp()}, {merge: true});
     }
     tx.delete(chatRef);
   });
@@ -170,8 +171,8 @@ exports.telegramBellNotification = onDocumentCreated({document: 'notifications/{
     await delivery.update({status: 'sent', messageId: result.message_id, updatedAt: FieldValue.serverTimestamp()});
   } catch (error) {
     await delivery.update({status: 'failed', error: error.message, updatedAt: FieldValue.serverTimestamp()});
-    // Blocking the bot is an opt-out. Never clear a newer replacement connection.
-    if (error.code === 403) await stopUpdates(db, pref.telegramChatId);
-    console.warn('Telegram notification failed', {uid, id});
+    // Only an explicit block/deactivated account revokes the connection; generic failures do not.
+    if (error.connectionRevoked) await stopUpdates(db, pref.telegramChatId, 'telegram_blocked_or_deactivated', uid);
+    console.warn('Telegram notification failed', {uid, id, code: error.code || 'network', connectionRevoked: !!error.connectionRevoked});
   }
 });
