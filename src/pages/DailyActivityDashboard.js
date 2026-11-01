@@ -1,6 +1,6 @@
 import React, { act, useEffect, useMemo, useRef, useState } from "react";
 import { db } from "../firebase";
-import { collection, getDocs, getDoc, updateDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, onSnapshot, getDoc, updateDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import * as XLSX from "xlsx";
 import { Link, useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto"; // auto-registers needed controllers
@@ -115,10 +115,30 @@ const isAdminAssignmentValid = (userData) => {
 };
 
 
+const crqWindow = (row) => {
+  const isCRQ = /CRQ/i.test(row.crqType || "") || /^CRQ/i.test(row.crqNo || "");
+  if (!isCRQ || ["completed", "cancelled", "canceled"].includes((row.pmStatus || "").toLowerCase())) return null;
+  const parse = time => /^([01]\d|2[0-3]):[0-5]\d$/.test(time || "") ? Date.parse(`${row.date}T${time}:00+05:30`) : NaN;
+  const start = parse(row.activityStartTime);
+  let end = parse(row.activityEndTime);
+  if (Number.isFinite(start) && end <= start) end += 86400000;
+  const now = Date.now();
+  const dateIST = ms => new Date(ms + 330 * 60000).toISOString().slice(0, 10);
+  if (row.date !== dateIST(now) && !(row.date === dateIST(now - 86400000) && end > parse("23:59") && now <= end)) return null;
+  return {start, end, now};
+};
+const isCRQOverdue = row => {
+  const sample = crqWindow(row);
+  return Boolean(sample && (row.pmStatus || "Pending").toLowerCase() === "pending" && sample.now >= sample.start);
+};
+const isCRQClosingSoon = row => {
+  const sample = crqWindow(row);
+  return Boolean(sample && sample.now >= sample.end - 30 * 60000);
+};
+
 export default function DailyActivityDashboard({ userData }) {
   const [editingRow, setEditingRow] = useState(null);
   const [draftRow, setDraftRow] = useState({});
-  const [crqAlertShown, setCrqAlertShown] = useState(false);
   const [crqWarning, setCrqWarning] = useState([]);
   function startEdit(rowObj) {
     setEditingRow({
@@ -222,66 +242,63 @@ export default function DailyActivityDashboard({ userData }) {
 
   /** load all daily sheets */
   useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const snap = await getDocs(collection(db, "daily_activity_sheets"));
-        const out = [];
-        snap.forEach((docSnap) => {
-          const sheet = docSnap.data();
-          const sheetId = docSnap.id;
-          const siteId = sheet.siteId || "";
-          const region = sheet.region || "";
-          const circle = sheet.circle || "";
-          const siteName = sheet.siteName || "";
-          const date = sheet.date
-            ? sheet.date.toDate ? sheet.date.toDate().toISOString().slice(0, 10) : sheet.date
-            : "";
+    setLoading(true);
+    const stop = onSnapshot(collection(db, "daily_activity_sheets"), (snap) => {
+      const out = [];
+      snap.forEach((docSnap) => {
+        const sheet = docSnap.data();
+        const sheetId = docSnap.id;
+        const siteId = sheet.siteId || "";
+        const region = sheet.region || "";
+        const circle = sheet.circle || "";
+        const siteName = sheet.siteName || "";
+        const date = sheet.date
+          ? sheet.date.toDate ? new Date(sheet.date.toDate().getTime() + 330 * 60000).toISOString().slice(0, 10) : sheet.date
+          : "";
 
-          (sheet.rows || []).forEach((r, idx) => {
-            out.push({
-              _sheetId: sheetId,
-              _rowIndex: idx,
-              // _rowId: r.rowId || `${sheetId}_${idx}`,  // ✅ ADD THIS
-              siteId,
-              date,
-              region,                     // ✅ added
-              circle,                     // ✅ added
-              siteName,
-              siteCategory: r.siteCategory || "",
-              nodeName: r.nodeName || "",
-              quantity: r.quantity || "",                 // ✅ added
-              activityDetails: r.activityDetails || "",
-              notes: r.notes || "",                             // ✅ added
-              activityCategory: r.activityCategory || "",   // ✅ added
-              activityType: r.activityType || "",
-              performBy: r.performBy || "",                 // ✅ added
-              mopRequired: r.mopRequired || "",                 // ✅ added
-              activityCode: r.activityCode || "",          // ✅ added
-              approvalRequire: r.approvalRequire || "",
-              approvers: r.approvers || "",                // ✅ added
-              crRequired: r.crRequired || "",               // ✅ added
-              crqType: r.crqType || "",                     // ✅ added
-              crqNo: r.crqNo || "",
-              doneDate: r.doneDate || "",
-              activityStartTime: r.activityStartTime || "",
-              activityEndTime: r.activityEndTime || "",
-              vendor: r.vendor || "",
-              // ✅ ADD THIS
-              approvalStatusByLevel: r.approvalStatusByLevel || {},
-              pmStatus: r.pmStatus || "Pending", // ✅ NEW
-              activityTime: r.activityTime || "", // ✅ NEW
-              floor: r.floor || "", // ✅ NEW
-            });
+        (sheet.rows || []).forEach((r, idx) => {
+          out.push({
+            _sheetId: sheetId,
+            _rowIndex: idx,
+            _rowId: r.rowId || "",
+            siteId,
+            date,
+            region,                     // ✅ added
+            circle,                     // ✅ added
+            siteName,
+            siteCategory: r.siteCategory || "",
+            nodeName: r.nodeName || "",
+            quantity: r.quantity || "",                 // ✅ added
+            activityDetails: r.activityDetails || "",
+            notes: r.notes || "",                             // ✅ added
+            activityCategory: r.activityCategory || "",   // ✅ added
+            activityType: r.activityType || "",
+            performBy: r.performBy || "",                 // ✅ added
+            mopRequired: r.mopRequired || "",                 // ✅ added
+            activityCode: r.activityCode || "",          // ✅ added
+            approvalRequire: r.approvalRequire || "",
+            approvers: r.approvers || "",                // ✅ added
+            crRequired: r.crRequired || "",               // ✅ added
+            crqType: r.crqType || "",                     // ✅ added
+            crqNo: r.crqNo || "",
+            doneDate: r.doneDate || "",
+            activityStartTime: r.activityStartTime || "",
+            activityEndTime: r.activityEndTime || "",
+            vendor: r.vendor || "",
+            // ✅ ADD THIS
+            approvalStatusByLevel: r.approvalStatusByLevel || {},
+            pmStatus: r.pmStatus || "Pending", // ✅ NEW
+            activityTime: r.activityTime || "", // ✅ NEW
+            floor: r.floor || "", // ✅ NEW
           });
         });
-        setRows(out);
-      } catch (e) {
-        console.error("Failed to load Daily Activity data", e);
-      } finally {
-        setLoading(false);
-      }
-    })();
+      });
+      setRows(out);
+      setLoading(false);
+    }, (e) => {
+      console.error("Failed to load Daily Activity data", e);
+      setLoading(false);
+    });
     if (
       userData?.isAdminAssigned &&
       !isAdminAssignmentValid(userData)
@@ -290,6 +307,7 @@ export default function DailyActivityDashboard({ userData }) {
         isAdminAssigned: false
       });
     }
+    return stop;
   }, [userData]);
 
   const [instructionText, setInstructionText] = useState("");
@@ -1120,216 +1138,23 @@ export default function DailyActivityDashboard({ userData }) {
   }, [filteredRows]);
 
 
-  // useEffect(() => {
-  //   if ("Notification" in window) {
-  //     Notification.requestPermission();
-  //   }
-  // }, []);
-
-  const sendBrowserNotification = async ({
-    title,
-    body,
-    crqList = [],
-  }) => {
-    if (!("Notification" in window)) return;
-
-    if (Notification.permission !== "granted") return;
-
-    const registration = await navigator.serviceWorker.getRegistration();
-
-    if (!registration) {
-      console.warn("No SW registered");
-      return;
-    }
-
-    registration.showNotification(title, {
-      body,
-      icon: "/vertiv192.png",
-      badge: "/vertiv192.png",
-      tag: "crq-alert",
-      renotify: true,
-      requireInteraction: true,
-
-      data: {
-        crqList,
-        phone: "18001039090",
-      },
-
-      // 🔥 REAL BUTTONS HERE
-      actions: [
-        {
-          action: "call",
-          title: "📞 Call Now",
-        },
-        {
-          action: "open",
-          title: "📊 Open Dashboard",
-        },
-      ],
-    });
-  };
-
-  const isCRQCloseTime = (row) => {
-    if (row.date !== getTodayISO()) return false;
-
-    const isCRQ =
-      (row.crqType || "").toUpperCase().includes("CRQ") ||
-      (row.crqNo || "").toUpperCase().startsWith("CRQ");
-
-    if (!isCRQ) return false;
-    if (row.pmStatus === "Completed") return false;
-    if (!row.activityEndTime) return false;
-
-    const [hh, mm] = row.activityEndTime.split(":");
-
-    const endTime = new Date();
-    endTime.setHours(hh, mm, 0, 0);
-
-    const alertTime = new Date(endTime.getTime() - 30 * 60000); // minus 30 min
-
-    return new Date() >= alertTime;
-  };
-
-  // ✅ CRQ Alert on load if any pending CRQ activity is overdue
+  // Server reminders deliver OS notifications through the shared bell flow.
+  // Page warnings do not send duplicate browser notifications.
+  const crqToastShown = useRef(new Set());
   useEffect(() => {
-    if (!filteredRows.length || crqAlertShown) return;
-
-    const now = new Date();
-
-    const overdueCRQs = filteredRows.filter((r) => {
-      if (r.date !== getTodayISO()) return false;
-
-      const isCRQ =
-        (r.crqType || "").toUpperCase().includes("CRQ") ||
-        (r.crqNo || "").toUpperCase().startsWith("CRQ");
-
-      if (!isCRQ) return false;
-      if ((r.pmStatus || "Pending") !== "Pending") return false;
-      if (!r.activityStartTime) return false;
-
-      const [hh, mm] = r.activityStartTime.split(":");
-      const startTime = new Date();
-      startTime.setHours(hh, mm, 0, 0);
-
-      return now > startTime;
-    });
-
-    if (overdueCRQs.length > 0) {
-      const crqList = overdueCRQs.map(r => r.crqNo).filter(Boolean).join(", ");
-
-      // alert(
-      //   `⚠️ CRQ Pending Alert!\n\nPlease call 1800101644308 for Open/Implement CRQ.\nCRQ No: ${crqList}`
-      // );
-
-      sendBrowserNotification({
-        title: "⚠️ CRQ Pending Alert",
-        body: `CRQ Pending: ${crqList}\nTap to Call Support`,
-        crqList: overdueCRQs.map(r => r.crqNo),
-      });
-
-
-      if (overdueCRQs.length > 0) {
-        const crqList = overdueCRQs.map(r => r.crqNo).filter(Boolean).join(", ");
-
-        setCrqWarning(overdueCRQs);
-        playAlertSound();
-
-        sendBrowserNotification({
-          title: "⚠️ CRQ Pending!",
-          body: `CRQ No: ${crqList}\nCall 18001039090`,
-          crqList: overdueCRQs.map(r => r.crqNo),
-        });
-
-        setCrqAlertShown(true);
-      }
-
-      setCrqAlertShown(true);
-      playAlertSound();
-    }
-  }, [filteredRows, crqAlertShown]);
-
-  const alertedCRQs = useRef(new Set());
-
-  useEffect(() => {
-    const overdueCRQs = filteredRows.filter(isCRQOverdue);
-
-    overdueCRQs.forEach((r) => {
-      if (!alertedCRQs.current.has(r.crqNo)) {
-        alertedCRQs.current.add(r.crqNo);
-
-        toast.error(`⚠️ CRQ Pending: ${r.crqNo}`);
-        sendBrowserNotification({
-          title: "⚠️ CRQ Pending",
-          body: `CRQ: ${r.crqNo}\nTap to Call`,
-          crqList: [r.crqNo],
-        });
-        playAlertSound();
-      }
+    const warnings = filteredRows.filter(row => isCRQOverdue(row) || isCRQClosingSoon(row));
+    setCrqWarning(warnings);
+    warnings.forEach(row => {
+      const kind = isCRQClosingSoon(row) ? "Close" : "Open";
+      const key = `${row._sheetId}:${row._rowId || row._rowIndex}:${row.crqNo}:${kind}`;
+      if (crqToastShown.current.has(key)) return;
+      crqToastShown.current.add(key);
+      toast.error(`CRQ Pending ${kind}: ${row.crqNo}`);
     });
   }, [filteredRows]);
 
-  const playAlertSound = () => {
-    const audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
-    audio.play();
-  };
-
-  const isCRQOverdue = (row) => {
-    if (row.date !== getTodayISO()) return false;
-
-    const isCRQ =
-      (row.crqType || "").toUpperCase().includes("CRQ") ||
-      (row.crqNo || "").toUpperCase().startsWith("CRQ");
-
-    if (!isCRQ) return false;
-    if ((row.pmStatus || "Pending") !== "Pending") return false;
-    if (!row.activityStartTime) return false;
-
-    const [hh, mm] = row.activityStartTime.split(":");
-    const startTime = new Date();
-    startTime.setHours(hh, mm, 0, 0);
-
-    return new Date() > startTime;
-  };
-
-  const isCRQClosingSoon = (row) => isCRQCloseTime(row);
-
-  const [closeAlertShown, setCloseAlertShown] = useState(false);
-
-
   useEffect(() => {
-    if (!filteredRows.length || closeAlertShown) return;
-
-    const closingCRQs = filteredRows.filter((r) => isCRQClosingSoon(r));
-
-    if (closingCRQs.length > 0) {
-      const crqListArr = closingCRQs.map(r => r.crqNo).filter(Boolean);
-      const crqList = crqListArr.join(", ");
-
-      // 🔴 UI TOAST
-      toast.error(
-        `⚠️ CRQ CLOSURE ALERT!\nClose before end time\nCRQ: ${crqList}`
-      );
-
-      // 🔔 BROWSER NOTIFICATION (NEW)
-      sendBrowserNotification({
-        title: "⚠️ CRQ Closing Soon!",
-        body: `Close before end time\nCRQ: ${crqList}\nTap to Call`,
-        crqList: crqListArr,
-      });
-      setCrqWarning(closingCRQs);
-
-      // 🔊 SOUND
-      playAlertSound();
-
-      setCloseAlertShown(true);
-    }
-  }, [filteredRows, closeAlertShown]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRows(prev => [...prev]); // force re-check
-    }, 60000); // every 1 min
-
+    const interval = setInterval(() => setRows(prev => [...prev]), 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -1398,7 +1223,7 @@ export default function DailyActivityDashboard({ userData }) {
         >
           {/* LEFT SIDE TEXT */}
           <div style={{ lineHeight: "1.5" }}>
-            ⚠️ <b>{crqAlertShown ? "CRQ Pending Open!" : "CRQ Pending Close!"}</b> Please call support
+            ⚠️ <b>CRQ Open/Close Reminder!</b> Please call support
             <br />
             CRQ No: {crqWarning.map(r => r.crqNo).join(", ")}
           </div>

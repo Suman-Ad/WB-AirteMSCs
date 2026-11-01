@@ -18,7 +18,7 @@ const mappedMeter = (config, dg) => dg === "DG-2" ? config?.dg2MeterId : dg === 
 
 // Commit status and meter history together. A second client cannot claim the same transition.
 export async function commitEnergyChangeover(db, powerRef, updateData, context) {
-  const { siteId, siteName, dg, automatic, meterData, uid } = context;
+  const { siteId, siteName, dg, automatic, meterData, uid, loadTransferAtMs } = context;
   const now = Date.now();
   const newRunRef = doc(collection(db, "energyChangeovers", siteId, "runs"));
   return runTransaction(db, async (transaction) => {
@@ -49,9 +49,12 @@ export async function commitEnergyChangeover(db, powerRef, updateData, context) 
       const startAtMs = existing?.startAtMs ?? prev.dgStartTime?.toMillis?.() ?? null;
       const opening = existing?.opening || null;
       const generation = opening?.kwh != null && sample.kwh != null && sample.kwh >= opening.kwh ? sample.kwh - opening.kwh : null;
+      const confirmedTransfer = automatic && typeof loadTransferAtMs === "number" && Number.isFinite(loadTransferAtMs) && loadTransferAtMs <= now + 5000 && loadTransferAtMs >= (startAtMs || 0);
+      const transfer = confirmedTransfer ? loadTransferAtMs : null;
       const record = { siteId, siteName, dgNumber, meterId, mainMeterId, status: "Completed", startAtMs, endAtMs: now,
         date: existing?.date || new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(startAtMs || now)),
         opening, closing: sample, ebRestoration: main, generationKwh: generation,
+        loadTransferAtMs: transfer, cooldownStartAtMs: transfer, cooldownEndAtMs: null, cooldownSeconds: null, cooldownStatus: confirmedTransfer ? "Cooling" : "Unavailable",
         runSeconds: startAtMs === null ? null : Math.max(0, Math.floor((now - startAtMs) / 1000)),
         counterReset: opening?.kwh != null && sample.kwh != null && sample.kwh < opening.kwh, updatedBy: uid, updatedAt: timestamp };
       if (!existing) Object.assign(record, { createdBy: uid, createdAt: timestamp, trigger: "Restoration only", ebFailure: null });

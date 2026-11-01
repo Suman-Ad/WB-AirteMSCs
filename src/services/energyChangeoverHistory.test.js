@@ -62,3 +62,16 @@ test("stale and cached samples are not captured as current registers; kilo count
   expect(captureMeter(data(2, now - 60000), "dg", now).kwh).toBeNull();
   expect(captureMeter({ ...data(2), meters: [{ ...meter(2), energyUnits: "kilo", fwd_Wh: 2 }] }, "dg", now).kwh).toBe(2);
 });
+
+test("restoration stores transfer observation separately from confirmation for cooldown",async()=>{
+ await commitEnergyChangeover({},"status",source("DG"),context(data(100)));
+ jest.setSystemTime(now+20000);
+ await commitEnergyChangeover({},"status",source("EB"),{...context(data(105,now+20000)),automatic:true,loadTransferAtMs:now+10000});
+ expect(run()).toMatchObject({status:"Completed",endAtMs:now+20000,loadTransferAtMs:now+10000,cooldownStartAtMs:now+10000,cooldownEndAtMs:null,cooldownSeconds:null,cooldownStatus:"Cooling"});
+});
+
+test("manual restoration without confirmed transfer time does not fabricate cooldown start",async()=>{
+ await commitEnergyChangeover({},"status",source("DG"),context(data(100)));
+ jest.setSystemTime(now+10000);await commitEnergyChangeover({},"status",source("EB"),context(data(101,now+10000)));
+ expect(run().cooldownStatus).toBe("Unavailable");expect(run().cooldownStartAtMs).toBeNull();
+});

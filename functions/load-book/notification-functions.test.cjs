@@ -52,3 +52,14 @@ test('unsafe deep links fall back to app root', () => {
     assert.equal(notificationData({url}, 'u', 'n').url, '/');
   }
 });
+
+const {dueReminders, notification} = require('./crq-reminders.cjs');
+test('CRQ open and close reminders produce device messages with dashboard links', async () => {
+ const messages=[];
+ const app=load({devices:['device'],send:async message=>{messages.push(message);return {failureCount:0,responses:[{success:true}]};}});
+ const sheet={date:'2026-11-01',siteId:'ASL',rows:[{crqNo:'CRQ123',activityStartTime:'10:00',activityEndTime:'11:00'}]};
+ for(const reminder of dueReminders(sheet,Date.parse('2026-11-01T10:30:00+05:30'))) await app.exports.pushBellNotification(event(notification(sheet,reminder)));
+ assert.equal(messages.length,2);
+ assert.equal(messages[0].data.title,'CRQ Pending Open');assert.equal(messages[1].data.title,'CRQ Pending Close');
+ assert.ok(messages.every(message=>message.data.url==='/daily-activity-dashboard'&&message.data.body.includes('CRQ123')));
+});

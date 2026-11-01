@@ -156,3 +156,17 @@ test('generic Telegram 403 failures do not delete a saved connection', async () 
   assert.equal(app.records.get('telegramChats/42').uid, 'user');
   assert.equal(app.records.get('notificationDeliveries/user/telegramItems/notice').status, 'failed');
 });
+
+test('CRQ open and close notifications reach a linked Telegram account',async()=>{
+ const {dueReminders,notification}=require('./crq-reminders.cjs');
+ const app=harness();await app.link();
+ const sheet={date:'2026-11-01',siteId:'ASL',rows:[{crqNo:'CRQ123',activityStartTime:'10:00',activityEndTime:'11:00'}]};
+ for(const reminder of dueReminders(sheet,Date.parse('2026-11-01T10:30:00+05:30'))) {
+  const n=notification(sheet,reminder);
+  await app.exports.telegramBellNotification({params:{uid:'user',id:reminder.type},data:{data:()=>n}});
+  assert.ok(app.requests.at(-1).body.text.includes(n.title));
+  assert.ok(app.requests.at(-1).body.text.includes('CRQ123'));
+ }
+ assert.equal(app.records.get('notificationDeliveries/user/telegramItems/open').status,'sent');
+ assert.equal(app.records.get('notificationDeliveries/user/telegramItems/close').status,'sent');
+});

@@ -3,7 +3,8 @@ const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {getMessaging} = require('firebase-admin/messaging');
 function notificationData(n, uid, id) {
   const routes = {backup_request: '/backup-approvals', registration_request: '/admin',
-    change_power_source: '/daily-dashboard', change_dg_select: '/daily-dashboard'};
+    change_power_source: '/daily-dashboard', change_dg_select: '/daily-dashboard',
+    crq_open_reminder: '/daily-activity-dashboard', crq_close_reminder: '/daily-activity-dashboard'};
   const url = typeof n.url === 'string' && n.url.startsWith('/') && !n.url.startsWith('//') && !n.url.includes('\\') ? n.url : routes[n.actionType] || '/';
   return {title: String(n.title || 'WB Airtel MSC').slice(0, 200),
     body: String(n.message || n.body || 'You have a new notification').slice(0, 1000),

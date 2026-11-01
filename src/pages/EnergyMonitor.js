@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { sendEnergyTestNotification } from "../services/energyTestNotification";
 import EnergyMeterDetails from "./EnergyMeterDetails";
 import { displayReading } from "./energyMeterData";
 import EnergySLD from "./EnergySLD";
@@ -20,6 +21,18 @@ const staleAfter = (m) => Math.max(30, (Number(m?.uploadIntervalSeconds) || 10) 
 
 export default function EnergyMonitor({ userData }) {
   const siteId = userData?.siteId;
+  const canSendTest = userData?.isActive === true && ["Admin", "Super Admin"].includes(userData?.role);
+  const [testBusy, setTestBusy] = useState(false);
+  const [testMessage, setTestMessage] = useState("");
+  const sendTest = async () => {
+    if (!canSendTest || testBusy || !siteId) return;
+    setTestBusy(true); setTestMessage("");
+    try {
+      const count = await sendEnergyTestNotification(siteId);
+      setTestMessage(`${count} test meter notifications added to your bell. Enabled device alerts and connected Telegram will receive them through the usual delivery flow.`);
+    } catch (error) {setTestMessage(error.message || "Unable to send test notifications. Please retry.");}
+    finally {setTestBusy(false);}
+  };
   const [tab, setTab] = useState("dashboard");
   const [openedTabs, setOpenedTabs] = useState({});
   const activateTab = (id) => { setTab(id); setOpenedTabs((opened) => opened[id] ? opened : { ...opened, [id]: true }); };
@@ -93,6 +106,11 @@ export default function EnergyMonitor({ userData }) {
 
   return <main className={`energy-monitor ${tab === "overview" ? "energy-site-view" : ""}`}>
     <header className="energy-header"><div><span className="energy-eyebrow">WB-AIRTEL MSC · ENERGYBOOK</span><h1>Energy Monitor</h1><p>Live electrical readings, distribution and daily energy analysis.</p></div><div className="energy-site"><span className="energy-muted">CURRENT SITE</span><strong>{userData?.site || siteId || "Unassigned"}</strong><MeterStatus state={state} /></div></header>
+    {canSendTest && <div className="energy-test-notification">
+      <button disabled={!siteId || testBusy} onClick={sendTest}>{testBusy ? "Sending test…" : "Send test notification now"}</button>
+      <small className="energy-muted">Current condition of every meter · only to your account</small>
+      {testMessage && <p role="status">{testMessage}</p>}
+    </div>}
     <div className="energy-tabs" role="tablist" aria-label="Energy Monitor pages">{tabs.map(([id, label], index) => <button key={id} id={`energy-tab-${id}`} role="tab" aria-selected={tab === id} aria-controls={`energy-panel-${id}`} tabIndex={tab === id ? 0 : -1} onClick={() => activateTab(id)} onKeyDown={(e) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
       e.preventDefault(); const next = e.key === "Home" ? 0 : e.key === "End" ? tabs.length - 1 : (index + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;

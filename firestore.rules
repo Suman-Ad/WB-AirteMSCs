@@ -75,6 +75,19 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow delete: if false;
     }
+    match /energyMonitor/{siteId}/config/notifications {
+      allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
+      allow create, update: if (isActiveAdmin() || (isActiveSiteUser(siteId)
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Super User'))
+        && request.resource.data.keys().hasOnly(['enabled', 'dailyEnabled', 'changeoverEnabled', 'intervalMinutes', 'updatedBy', 'updatedAt'])
+        && request.resource.data.enabled is bool
+        && (!('dailyEnabled' in request.resource.data) || request.resource.data.dailyEnabled is bool)
+        && (!('changeoverEnabled' in request.resource.data) || request.resource.data.changeoverEnabled is bool)
+        && request.resource.data.intervalMinutes in [30, 60, 120, 240, 360, 720, 1440]
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
     match /energyMonitor/{siteId}/config/loadBook {
       allow read: if isActiveSiteUser(siteId);
       allow create, update: if isSiteAdmin(siteId)
@@ -124,7 +137,7 @@ service cloud.firestore {
     match /energyChangeovers/{siteId}/runs/{runId} {
       allow read: if isActiveSiteUser(siteId);
       function validRun() {
-        return request.resource.data.keys().hasOnly(['siteId', 'siteName', 'dgNumber', 'meterId', 'mainMeterId', 'status', 'startAtMs', 'endAtMs', 'date', 'opening', 'latest', 'closing', 'ebFailure', 'ebRestoration', 'generationKwh', 'trigger', 'createdBy', 'updatedBy', 'createdAt', 'updatedAt', 'runSeconds', 'counterReset'])
+        return request.resource.data.keys().hasOnly(['siteId', 'siteName', 'dgNumber', 'meterId', 'mainMeterId', 'status', 'startAtMs', 'endAtMs', 'date', 'opening', 'latest', 'closing', 'ebFailure', 'ebRestoration', 'generationKwh', 'trigger', 'createdBy', 'updatedBy', 'createdAt', 'updatedAt', 'runSeconds', 'counterReset', 'loadTransferAtMs', 'cooldownStartAtMs', 'cooldownEndAtMs', 'cooldownSeconds', 'cooldownStatus'])
           && request.resource.data.siteId == siteId
           && request.resource.data.status in ['Running', 'Completed']
           && request.resource.data.dgNumber is string

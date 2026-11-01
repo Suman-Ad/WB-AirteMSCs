@@ -32,8 +32,8 @@ function harness(existing=false) {
   if(name==='firebase-admin/app') return {initializeApp(){}};
   if(name==='firebase-admin/firestore') return {getFirestore:()=>db,FieldValue:{serverTimestamp:()=> 'server-time'}};
   if(name==='./readings.cjs') return {buildEntry};
-  if(name==='./meter-history-functions.cjs') return {};
-  if(name==='./notification-functions.cjs' || name==='./telegram-functions.cjs') return {};
+  if(name==='./meter-history-functions.cjs' || name==='./crq-reminder-functions.cjs') return {};
+  if(name==='./energy-cooldown-functions.cjs' || name==='./energy-changeover-functions.cjs' || name==='./energy-notification-functions.cjs' || name==='./notification-functions.cjs' || name==='./telegram-functions.cjs') return {};
   throw Error(name);
  }});
  return {writes,run:exports.autoSaveLTLoadBook};

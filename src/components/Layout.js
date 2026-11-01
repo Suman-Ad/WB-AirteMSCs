@@ -140,6 +140,7 @@ const Layout = ({ userData, children }) => {
   const [drawerShift, setDrawerShift] = useState(null);
   // Power Source Change
   const [powerSource, setPowerSource] = useState("EB");
+  const [runningDG, setRunningDG] = useState(null);
   const [updatedByName, setUpdatedByName] = useState("");
   const [updatedAt, setUpdatedAt] = useState(null);
   const [loadingPower, setLoadingPower] = useState(true);
@@ -362,6 +363,7 @@ const Layout = ({ userData, children }) => {
       if (!snap.exists()) return;
 
       const data = snap.data();
+      setRunningDG(data.powerSource === "DG" ? data.dgNumber || data.selectedDG || null : null);
       setPowerSource(data.powerSource);
       setUpdatedByName(data.updatedByName || "");
       setUpdatedAt(data.updatedAt ? data.updatedAt.toDate() : null);
@@ -544,13 +546,14 @@ const Layout = ({ userData, children }) => {
       if (userData.siteId) {
         const changed = await commitEnergyChangeover(db, powerRef, updateData, {
           siteId: userData.siteId, siteName: userData.site, dg: activeDG, automatic,
-          meterData: energyMeterDataRef.current, uid: userData.uid,
+          meterData: energyMeterDataRef.current, uid: userData.uid, loadTransferAtMs: options?.loadTransferAtMs,
         });
         if (!changed) return false;
       } else {
         await setDoc(powerRef, updateData, { merge: true });
       }
 
+      setRunningDG(newSource === "DG" ? activeDG : null);
       setPowerSource(newSource);
       if (automatic) setSelectedDG(activeDG);
 
@@ -774,8 +777,8 @@ const Layout = ({ userData, children }) => {
 
 
   const { status: autoPowerStatus, manualDisabled: manualPowerDisabled } = useAutoPowerSource({
-    siteId: userData?.siteId, canToggle: canTogglePower, powerSource,
-    onTrigger: (dg) => updatePowerSource({ automatic: true, dg, source: dg === "EB" ? "EB" : "DG" }),
+    siteId: userData?.siteId, canToggle: canTogglePower, powerSource, activeDG: runningDG,
+    onTrigger: (dg, details) => updatePowerSource({ automatic: true, dg, loadTransferAtMs: details?.loadTransferAtMs, source: dg === "EB" ? "EB" : "DG" }),
     onMeterData: (data) => {
       energyMeterDataRef.current = data;
       if (!data || data.fromCache || powerSource !== "DG" || !canTogglePower) return;
@@ -791,7 +794,9 @@ const Layout = ({ userData, children }) => {
     : /loading site settings/i.test(autoPowerStatus) ? "Auto: loading"
     : /map meters/i.test(autoPowerStatus) ? "Auto: map meters"
     : /off$/i.test(autoPowerStatus) ? "Auto off"
-    : /permission/i.test(autoPowerStatus) ? "Auto: no permission" : "Auto enabled";
+    : /permission/i.test(autoPowerStatus) ? "Auto: no permission"
+    : /confirming/i.test(autoPowerStatus) ? "Auto: confirming"
+    : /Auto switch:|waiting/i.test(autoPowerStatus) ? "Auto: waiting" : "Auto enabled";
 
   return (
     <div className="layout" data-power-source={powerSource || "unknown"}>
@@ -1022,7 +1027,7 @@ const Layout = ({ userData, children }) => {
                         </div>
 
                         <span style={{ opacity: powerSource === "DG" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "DG" ? "#ffffffff" : "#ffffffaa" }}>
-                          <strong>⛽DG</strong><small id="header-power-auto-desktop" className="power-auto-status" role="status" title={manualPowerDisabled ? `${autoPowerStatus} · Manual switch disabled in automatic mode` : autoPowerStatus} aria-label={autoPowerStatus}>{autoPowerLabel}</small>
+                          <strong>⛽DG</strong><button type="button" id="header-power-auto-desktop" className="power-auto-status" onClick={event => { event.stopPropagation(); window.alert(autoPowerStatus); }} title={manualPowerDisabled ? `${autoPowerStatus} · Manual switch disabled in automatic mode` : autoPowerStatus} aria-label={autoPowerStatus}>{autoPowerLabel}</button>
                         </span>
                       </div>
                       <div style={{ marginTop: "4px", fontSize: "10px", color: "#fff" }}>
@@ -1262,7 +1267,7 @@ const Layout = ({ userData, children }) => {
                         </div>
 
                         <span style={{ opacity: powerSource === "DG" ? 1 : 0.5, backgroundColor: "transparent", color: powerSource === "DG" ? "#ffffffff" : "#ffffffaa" }}>
-                          <strong>⛽DG</strong><small id="header-power-auto-mobile" className="power-auto-status" role="status" title={manualPowerDisabled ? `${autoPowerStatus} · Manual switch disabled in automatic mode` : autoPowerStatus} aria-label={autoPowerStatus}>{autoPowerLabel}</small>
+                          <strong>⛽DG</strong><button type="button" id="header-power-auto-mobile" className="power-auto-status" onClick={event => { event.stopPropagation(); window.alert(autoPowerStatus); }} title={manualPowerDisabled ? `${autoPowerStatus} · Manual switch disabled in automatic mode` : autoPowerStatus} aria-label={autoPowerStatus}>{autoPowerLabel}</button>
                         </span>
                         {powerSource === "DG" && (
                           <div style={{

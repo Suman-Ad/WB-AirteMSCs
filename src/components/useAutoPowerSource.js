@@ -8,7 +8,7 @@ import { resolvePowerMapping } from "./powerMeterMapping";
 
 import useSitePowerMapping from "../hooks/useSitePowerMapping";
 
-export default function useAutoPowerSource({ siteId, canToggle, powerSource, onTrigger, onMeterData }) {
+export default function useAutoPowerSource({ siteId, canToggle, powerSource, activeDG, onTrigger, onMeterData }) {
   const sharedMapping = useSitePowerMapping(siteId);
   const savedConfig = sharedMapping.config;
   const [readings, setReadings] = useState({ siteId, meters: [], fromCache: true });
@@ -43,23 +43,23 @@ export default function useAutoPowerSource({ siteId, canToggle, powerSource, onT
     return () => { active = false; stop(); };
   }, [siteId]);
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
-  useEffect(() => { detector.current = initialChangeoverState(); setError(""); }, [siteId, configKey, powerSource]);
+  useEffect(() => { detector.current = initialChangeoverState(); setError(""); }, [siteId, configKey, powerSource, activeDG]);
   useEffect(() => {
     if (!sharedMapping.ready) { detector.current = initialChangeoverState(); return; }
     if (!canToggle || busy.current) return;
-    const assessment = assessHeaderPower(config, meters, now, fromCache, powerSource);
+    const assessment = assessHeaderPower(config, meters, now, fromCache, powerSource, activeDG);
     const next = advanceChangeover(detector.current, assessment, 2);
     detector.current = next;
     if (!next.fired) return;
     busy.current = true;
-    Promise.resolve().then(() => trigger.current(next.dg)).then((result) => {
+    Promise.resolve().then(() => next.dg === "EB" ? trigger.current(next.dg, {loadTransferAtMs: next.transferAtMs}) : trigger.current(next.dg)).then((result) => {
       if (result === false) detector.current = initialChangeoverState();
       else setError("");
     }).catch((failure) => {
       detector.current = initialChangeoverState();
       setError(failure?.code === "permission-denied" ? "Auto switch blocked: publish the updated Firestore rules for changeover history." : "Automatic source change save failed. Check connection and site permissions.");
     }).finally(() => { busy.current = false; });
-  }, [config, meters, now, fromCache, canToggle, powerSource, sharedMapping.ready]);
-  const assessment = assessHeaderPower(config, meters, now, fromCache, powerSource);
+  }, [config, meters, now, fromCache, canToggle, powerSource, activeDG, sharedMapping.ready]);
+  const assessment = assessHeaderPower(config, meters, now, fromCache, powerSource, activeDG);
   return { config, manualDisabled: savedConfig.enabled !== false, status: sharedMapping.error || error || connectionError || (!sharedMapping.ready ? "Automatic switch: loading site settings" : !canToggle ? "Automatic switch: awaiting power-change permission" : assessment.message) };
 }

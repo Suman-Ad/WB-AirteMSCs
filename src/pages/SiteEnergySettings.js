@@ -6,6 +6,7 @@ import { canManageAllPowerMappings } from "../components/powerMeterMapping";
 import { currentEnergyMeters } from "./currentEnergyMeters";
 import EnergyPowerMapping from "./EnergyPowerMapping";
 import EnergyAsansolBridge from "./EnergyAsansolBridge";
+import EnergyNotificationSettings from "./EnergyNotificationSettings";
 import SiteMeterCleanup from "./SiteMeterCleanup";
 import "../assets/EnergyMonitor.css";
 
@@ -42,7 +43,7 @@ export default function SiteEnergySettings({ userData, siteId }) {
     {!targetSite && <p role="alert">Assign a site ID before configuring energy automation.</p>}
     {current.loading && targetSite && <p role="status">Loading site meters…</p>}
     {current.error && <p role="alert">{current.error}</p>}
-    {targetSite && <><SiteMeterCleanup key={`cleanup:${targetSite}`} siteId={targetSite} meters={current.meters} userData={userData} now={now} fromCache={current.fromCache} loading={current.loading} error={current.error} />
+    {targetSite && <><EnergyNotificationSettings key={`notifications:${targetSite}`} siteId={targetSite} userData={userData} /><SiteMeterCleanup key={`cleanup:${targetSite}`} siteId={targetSite} meters={current.meters} userData={userData} now={now} fromCache={current.fromCache} loading={current.loading} error={current.error} />
       <EnergyPowerMapping key={targetSite} fixedSite siteId={targetSite} meters={currentEnergyMeters(current.meters).meters} userData={userData} />
       <EnergyAsansolBridge key={`simulator:${targetSite}`} siteId={targetSite} siteName={siteName} meters={currentEnergyMeters(current.meters).meters} now={now} fromCache={current.fromCache} /></>}
   </section>;

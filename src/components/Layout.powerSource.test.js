@@ -13,19 +13,19 @@ jest.mock("./Modal", () => () => null);
 jest.mock("./SOP/AsansolOperationSimulator", () => () => null);
 const mockNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({ useNavigate: () => mockNavigate }), { virtual: true });
-let publish, source, statusListeners;
+let publish, source, statusListeners, runningDG, powerMapping;
 const start = 1792663200000;
 const user = { uid: "human", siteId: "ASL", site: "Asansol", role: "Admin", name: "Operator", empId: "E1", designation: "Engineer" };
-const status = () => ({ powerSource: source, selectedDG: "DG-1", ...(source === "DG" ? { dgStartTime: { toDate: () => new Date(start), toMillis: () => start } } : {}) });
+const status = () => ({ powerSource: source, selectedDG: runningDG, dgNumber: runningDG, ...(source === "DG" ? { dgStartTime: { toDate: () => new Date(start), toMillis: () => start } } : {}) });
 const meters = (time) => ({ docs: [["main", "Main Incomer", 0], ["dg1", "DG-1 Meter", 415]].map(([id, name, volts]) => ({ id, data: () => ({ name, status: "OK", voltage_ll: volts, current: volts > 300 ? 100 : 0, fwd_Wh: 100000, observedAt: { toMillis: () => time } }) })), metadata: { fromCache: false, hasPendingWrites: false } });
 beforeEach(() => {
-  jest.clearAllMocks(); localStorage.clear(); jest.useFakeTimers(); jest.setSystemTime(start); source = "EB";statusListeners=[];
+  jest.clearAllMocks(); localStorage.clear(); jest.useFakeTimers(); jest.setSystemTime(start); source = "EB";statusListeners=[];runningDG="DG-1";powerMapping={enabled:true,mainMeterId:"main",dg1MeterId:"dg1",dg2MeterId:""};
   doc.mockImplementation((db, ...path) => path.join("/")); collection.mockImplementation((db, ...path) => path.join("/")); query.mockImplementation((ref) => ref);
   getDoc.mockImplementation(async (ref) => ref.startsWith("sitePowerStatus/") ? { exists: () => true, data: status } : ref.startsWith("siteConfigs/") ? { exists: () => true, data: () => ({ dgCount: 2 }) } : { exists: () => false });
   getDocs.mockResolvedValue({ docs: [] }); addDoc.mockResolvedValue({ id: "legacy-run" }); serverTimestamp.mockReturnValue("server-time"); checkpointEnergyRun.mockResolvedValue();
   onSnapshot.mockImplementation((ref, options, next) => {
     const callback = typeof options === "function" ? options : next;
-    if (ref.endsWith('/config/powerSwitch')) callback({exists:()=>true,data:()=>({enabled:true,mainMeterId:'main',dg1MeterId:'dg1',dg2MeterId:''}),metadata:{fromCache:false,hasPendingWrites:false}});
+    if (ref.endsWith('/config/powerSwitch')) callback({exists:()=>true,data:()=>powerMapping,metadata:{fromCache:false,hasPendingWrites:false}});
     else if (ref.startsWith("energyMonitor/")) { publish = callback; callback(meters(start)); }
     else if (ref.startsWith("sitePowerStatus/")) {statusListeners.push(callback);callback({ exists: () => true, data: status });}
     else callback({ size: 0, docs: [] });
@@ -51,7 +51,7 @@ test.each([1024, 375])("live readings switch the existing slider at width %i and
   expect(slider).toHaveAttribute("aria-disabled", "true");
   await act(async () => fireEvent.click(slider));
   expect(commitEnergyChangeover).toHaveBeenCalledTimes(1);
-  const restored=(time)=>({docs:[["main",415,100],["dg1",415,49]].map(([id,voltage_ll,current])=>({id,data:()=>({status:"OK",voltage_ll,current,observedAt:{toMillis:()=>time}})})),metadata:{fromCache:false}});
+  const restored=(time)=>({docs:[["main",415,100],["dg1",0,0]].map(([id,voltage_ll,current])=>({id,data:()=>({status:"OK",voltage_ll,current,observedAt:{toMillis:()=>time}})})),metadata:{fromCache:false}});
   await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(start+20000));});
   await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(start+30000));});
   expect(window.confirm).not.toHaveBeenCalled();
@@ -77,4 +77,14 @@ test('ordinary site users see shared power changes without editing mappings or r
  expect(slider).toHaveAttribute('aria-checked','true');
  expect(commitEnergyChangeover).not.toHaveBeenCalled();
  expect(addDoc).not.toHaveBeenCalled();
+});
+
+test("DG-2 energized cooldown transfers the header after two zero-load readings with DG-1 offline",async()=>{
+ source="DG";runningDG="DG-2";powerMapping={enabled:true,mainMeterId:"main",dg1MeterId:"dg1",dg2MeterId:"dg2"};
+ await act(async()=>{render(<Layout userData={user}/>);});
+ const restored=time=>({docs:[{id:"main",data:()=>({status:"OK",voltage_ll:415,current:100,observedAt:{toMillis:()=>start+10000}})},{id:"dg1",data:()=>({status:"ERROR",observedAt:{toMillis:()=>1}})},{id:"dg2",data:()=>({status:"OK",voltage_ll:415,current:2,active_power:0,powerUnits:"kilo",observedAt:{toMillis:()=>time},fwd_Wh:100000})}],metadata:{fromCache:false,hasPendingWrites:false}});
+ await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(start+10000));});expect(commitEnergyChangeover).not.toHaveBeenCalled();
+ await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(start+20000));});
+ expect(commitEnergyChangeover).toHaveBeenCalledWith({},"sitePowerStatus/Asansol",expect.objectContaining({powerSource:"EB"}),expect.objectContaining({automatic:true,dg:"DG-2",loadTransferAtMs:start+10000}));
+ expect(screen.getByRole("switch",{name:"EB/DG power source"})).toHaveAttribute("aria-checked","false");
 });

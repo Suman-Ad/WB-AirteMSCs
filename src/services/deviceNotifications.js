@@ -35,9 +35,13 @@ export async function disableDeviceNotifications() {
       deleteDoc(doc(db, "notificationDevices", currentToken)),
       deleteToken(getMessaging())
     ]);
-    if (results.some(result => result.status === "rejected")) console.error("Unable to fully remove device notification registration.");
+    if (results.some(result => result.status === "rejected")) {
+      console.error("Unable to fully remove device notification registration.");
+      return false;
+    }
     currentToken = null;
   }
+  return true;
 }
 
 export async function enableDeviceNotifications(uid, requestPermission = true) {

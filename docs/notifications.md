@@ -100,3 +100,60 @@ Link records contain only hashed tokens and server timestamps. Superseded, consu
 - [Firebase foreground and background message handling](https://firebase.google.com/docs/cloud-messaging/js/receive)
 - [Telegram bot creation and account linking](https://core.telegram.org/bots/features)
 - [Telegram Bot API and webhook secret header](https://core.telegram.org/bots/api)
+
+
+## CRQ Open/Close reminders
+
+`sendCRQReminders` runs every minute in Asia/Kolkata, independently of an open dashboard. It reads today's and yesterday's daily activity sheets (string and legacy Timestamp dates). Pending CRQs produce an Open reminder at the scheduled start; unfinished CRQs produce a Close reminder 30 minutes before the end, including overnight end times. Completed/cancelled rows are skipped. Previous-day overnight rows remain eligible through their scheduled end.
+
+Recipients are active users assigned to the sheet's site and active Admin/Super Admin accounts. Explicit differing site IDs never match by name. Each recipient gets one deterministic notification document per row and reminder type, created transactionally after rechecking the sheet and user. A server-only `notificationDeliveries/{uid}/crqReminders/{id}` claim is committed with each notification, so repeated runs and deleting a bell item do not replay it. Legacy rows without row IDs use a fingerprint of the CRQ, activity, node and times; edits to those fields constitute a new reminder identity. Stable row IDs are preserved by dashboard edits.
+
+The shared bell document triggers existing device push and Telegram delivery. Device registration/permission and Telegram account linking remain required. Dashboard toasts remain local and no longer generate duplicate OS alerts. Bell titles and device notification clicks open `/daily-activity-dashboard`. This is a reminder based on PM status; it does not verify the CRQ state in an external CRQ system.
+
+After building successfully, deploy the scheduler, updated push handler and hosting:
+
+```powershell
+firebase deploy --only "functions:load-book:sendCRQReminders,functions:load-book:pushBellNotification,hosting" --project wb-airtelmscs
+```
+
+Existing `telegramBellNotification` must also be deployed and configured as described above. Cloud Scheduler/API access and billing must be enabled. On first deployment, currently due reminders are created for eligible current activities. No live alerts are sent by the local test suite.
+
+
+### Periodic Energy Monitor updates (step 1)
+
+`sendEnergyMeterUpdates` runs every five minutes on the server. Each active user with a matching `users/{uid}.siteId` receives one bell item per current physical meter at the site's configured interval. Admin roles do not bypass site matching. No browser session is required. Users missing a site ID must be assigned one before they receive these updates.
+
+Site Config → Energy Automation → Meter notification updates saves `energyMonitor/{siteId}/config/notifications`: `enabled`, `intervalMinutes`, `updatedBy`, `updatedAt`. Active admins can manage any site; a Super User can manage their own site. The default is enabled every 120 minutes; available intervals are 30, 60, 120, 240, 360, 720 and 1440 minutes. Slots start at midnight IST, with delivery during the first five minutes of each slot. Disabling periodic updates does not change personal channel preferences.
+
+Each summary includes kWh, kW, phase voltages/currents, power factor, frequency, observation time and freshness status. Unverified power units and failed readings are marked unavailable; stale readings remain labeled stale. The legacy test-meter is omitted when other meter documents exist. Meter identities follow the history service, taking the latest observed record for the same point/name.
+
+Bell items use `energy_meter_update` and open `/energy-monitor`. Existing device and personal Telegram triggers deliver them to connected channels; Telegram groups are not part of this step. Transactional claims in `notificationDeliveries/{uid}/energyMeterUpdates/{id}` prevent duplicate creation across retries and after a user deletes a bell item. Site membership, active status, config and meter existence are rechecked before creation.
+
+Deployment requires the updated Firestore rules and `sendEnergyMeterUpdates` Cloud Function, in addition to the frontend. No production deployment is performed by making these source changes. Daily opening/closing kWh summaries are implemented below; mains/DG changeover alerts are implemented in step 3 below.
+
+
+### Daily opening / closing kWh (step 2)
+
+`sendDailyEnergyReadings` runs at `0 0 * * *` in `Asia/Kolkata`. At 12:00 AM it reports the previous IST calendar day using saved `dailyReadings` registers, with one bell item per meter per active site user. The same push and personal Telegram triggers deliver these messages. The scheduler's original `scheduleTime` fixes the report date across late retries.
+
+Site Config → Energy Automation has an independent daily-report checkbox (`dailyEnabled`, default true) in the notification settings document. Periodic updates may be disabled while daily reports stay enabled. The existing meter-history capture must be enabled to populate opening/closing readings. Missing registers still produce a clearly marked unavailable report for current meters; meters with registers are also included if their collector documents were removed.
+
+Messages include opening kWh, closing kWh, recorded consumption, opening source and observation times. They do not claim exact midnight readings: the daily capture carries the previous day's closing counter as opening where available, otherwise uses the first captured reading. Coverage is flagged incomplete if opening is outside five minutes of the start boundary, closing is earlier than 23:55, or values/timestamps are missing. Counter resets or a decreasing counter suppress consumption. Readings are a snapshot of the saved registers at send time; late-arriving history corrections do not resend the report.
+
+Messages use `energy_daily_kwh` and open Energy Monitor. Per-user claims in `notificationDeliveries/{uid}/energyDailyReadings/{id}` prevent duplicate sends after retries or bell deletion. Transactions recheck user activity, site membership and the daily opt-out setting. Deploy `sendDailyEnergyReadings`, updated rules and frontend to activate this feature.
+
+
+### Mains / DG changeover alerts (step 3)
+
+`notifyEnergyChangeover` listens to saved `energyChangeovers/{siteId}/runs/{runId}` documents. Creating a Running run produces `energy_dg_start`; changing Running to Completed (or creating a restoration-only Completed run) produces `energy_mains_restored`. Checkpoint updates, deletions and edits of a completed run do not alert. Event snapshots preserve the opening/restoration readings even if events arrive out of order.
+
+Start messages include the last mains register at failure and DG opening kWh. Restoration messages include mains restored kWh, DG opening and closing kWh, generation and duration. Readings include observation timestamps and capture quality. Missing values remain unavailable; mains last-known fallback and DG last-valid-before-restoration readings are explicitly labeled. Decreased counters suppress generation. Manual header changes remain labeled Manual and are not represented as meter-confirmed outages.
+
+Only active users assigned to the event's site receive messages via their existing bell, enabled device alerts and linked personal Telegram chat. No role bypasses site membership. `changeoverEnabled` is an independent site notification setting, defaulting to true; periodic and daily updates may be disabled separately. Config and active site membership are rechecked transactionally. Persistent per-user/run/phase claims under `notificationDeliveries/{uid}/energyChangeovers/{id}` prevent retry duplicates and replay after bell deletion.
+
+This step attaches notification delivery to the existing saved header changeover workflow; it does not introduce a separate server-side detector. Automatic detection still needs configured Main Incomer/DG mappings, automatic switching enabled and an authorized app session running. With no session recording a changeover, no new run/event exists to notify. Last-known mains samples are retained by the existing running session; if unavailable after a reload, notifications show unavailable rather than inventing historical registers. Once a run is saved, notification delivery runs on the server.
+
+Deploy `notifyEnergyChangeover`, updated Firestore rules and frontend to activate the feature. Existing historical runs are not replayed on deployment.
+
+
+DG → EB alerts now follow two fresh zero-load observations while mains carries load, allowing energized cooldown. Load transfer closes the DG load run immediately. The separate `captureEnergyCooldown` server function later saves voltage-zero time and cooldown duration without resending a restoration notification. See `docs/energy-monitor-readings.md` for the detection and sampling rules.

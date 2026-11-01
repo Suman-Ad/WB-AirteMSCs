@@ -106,11 +106,30 @@ test('Super User has no cross-site selector',()=>{
  expect(screen.queryByRole('combobox',{name:'Automatic switch settings site'})).not.toBeInTheDocument();
 });
 
- test("automatic restoration confirms two loaded incomer / unloaded DG readings", async () => {
+ test("automatic restoration confirms two loaded incomer / zero-voltage DG readings", async () => {
   const onTrigger=jest.fn().mockResolvedValue(true);
   render(<ExistingSwitch siteId="ASL" canToggle powerSource="DG" onTrigger={onTrigger} />);
-  const restored=(time)=>({docs:[meter("main",415,time),{id:"dg2",data:()=>({status:"OK",voltage_ll:415,current:49,observedAt:{toMillis:()=>time}})}],metadata:{fromCache:false}});
+  const restored=(time)=>({docs:[meter("main",415,time),{id:"dg2",data:()=>({status:"OK",voltage_ll:0,current:0,observedAt:{toMillis:()=>time}})}],metadata:{fromCache:false}});
   act(()=>publish(restored(100000)));expect(onTrigger).not.toHaveBeenCalled();
   await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(110000));});
-  expect(onTrigger).toHaveBeenCalledWith("EB");
+  expect(onTrigger).toHaveBeenCalledWith("EB", expect.objectContaining({loadTransferAtMs:expect.any(Number)}));
  });
+
+test("automatic restoration accepts a DG cooling down at voltage with zero load", async () => {
+ const onTrigger=jest.fn().mockResolvedValue(true);
+ render(<ExistingSwitch siteId="ASL" canToggle powerSource="DG" onTrigger={onTrigger}/>);
+ const cooldown=time=>({docs:[meter("main",415,time),{id:"dg2",data:()=>({status:"OK",voltage_ll:415,current:0,observedAt:{toMillis:()=>time}})}],metadata:{fromCache:false,hasPendingWrites:false}});
+ act(()=>publish(cooldown(100000)));expect(onTrigger).not.toHaveBeenCalled();
+ await act(async()=>{jest.advanceTimersByTime(10000);publish(cooldown(110000));});
+ expect(onTrigger).toHaveBeenCalledTimes(1);expect(onTrigger).toHaveBeenCalledWith("EB", expect.objectContaining({loadTransferAtMs:expect.any(Number)}));
+});
+
+test("DG-2 returns to EB after two zero-load readings while still energized and standby DG-1 is offline",async()=>{
+ sharedConfig={...sharedConfig,dg1MeterId:'dg1'};
+ const onTrigger=jest.fn().mockResolvedValue(true);
+ render(<ExistingSwitch siteId="ASL" canToggle powerSource="DG" activeDG="DG-2" onTrigger={onTrigger}/>);
+ const restored=time=>({docs:[meter("main",415,100000),{id:"dg1",data:()=>({status:"ERROR",observedAt:{toMillis:()=>1}})},{id:"dg2",data:()=>({status:"OK",voltage_ll:415,current:0,observedAt:{toMillis:()=>time}})}],metadata:{fromCache:false,hasPendingWrites:false}});
+ act(()=>publish(restored(100000)));expect(onTrigger).not.toHaveBeenCalled();
+ await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(110000));});
+ expect(onTrigger).toHaveBeenCalledTimes(1);expect(onTrigger).toHaveBeenCalledWith('EB',{loadTransferAtMs:100000});
+});

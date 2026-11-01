@@ -231,15 +231,15 @@ export default function NotificationBell({ user }) {
 
     function getNotificationColor(n) {
         if (n.actionType === "backup_request" || n.actionType === "change_power_source") {
-            if (n.backupStatus === "accepted") return "#dcfce7";  // light green
-            if (n.backupStatus === "rejected") return "#fee2e2";  // light red
-            if (n.siteStatus === "EB") return "#a9fcc6ff";  // light green
-            if (n.siteStatus === "DG") return "#faababff"; // light red
-            return "#e8ee9dff"; // pending - light yellow
+            if (n.backupStatus === "accepted") return "var(--notification-success-bg)";  // light green
+            if (n.backupStatus === "rejected") return "var(--notification-danger-bg)";  // light red
+            if (n.siteStatus === "EB") return "var(--notification-success-bg)";  // light green
+            if (n.siteStatus === "DG") return "var(--notification-danger-bg)"; // light red
+            return "var(--notification-warning-bg)"; // pending - light yellow
         }
 
         // default for other notifications
-        return n.read ? "white" : "#dbeafe";
+        return n.read ? "var(--app-surface)" : "var(--notification-unread-bg)";
     }
 
     function filterNotifications(list) {
@@ -370,11 +370,14 @@ export default function NotificationBell({ user }) {
             <button
                 onClick={() => setOpen(!open)}
                 className="back-button"
+                aria-label={`Notifications, ${unreadCount} unread`}
+                aria-expanded={open}
+                aria-controls="notification-panel"
             >
                 🔔
 
                 {unreadCount > 0 && (
-                    <span style={{
+                    <span className="notification-count" style={{
                         position: 'absolute',
                         top: '-0.25rem',
                         right: '-0.25rem',
@@ -394,101 +397,33 @@ export default function NotificationBell({ user }) {
 
             {/* Dropdown */}
             {(
-                <div style={{
-                    position: 'absolute',
-                    right: '-1rem',
-                    marginTop: '0.5rem',
-                    display: open ? 'block' : 'none',
-                    width: '18rem',
-                    backgroundColor: 'white',
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                    borderRadius: '0.375rem',
-                    border: '1px solid #e5e7eb',
-                    zIndex: '50',
-                    maxHeight: '24rem',
-                    overflow: 'auto'
-                }}>
-                    <div style={{
-                        padding: '0.75rem',
-                        borderBottom: '1px solid #e5e7eb',
-                        fontWeight: '600',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'column',
-                        position: 'sticky',
-                        top: '0',
-                        backgroundColor: 'white',
-                        zIndex: 10
-                    }}>
-                        {/* X close */}
-                        <div style={{ display: "flex", justifyContent: 'space-between', }}><h2>Notifications</h2>
-                            <p onClick={() => setOpen(!open)} style={{ cursor: "pointer", height: "fit-content", position: "absolute", right: "0", top: "0", fontWeight: "bold" }} onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#cc5353b7';
-                            }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '';
-                                }}>X</p>
+                <div id="notification-panel" className="notification-panel" style={{ display: open ? 'block' : 'none' }}>
+                    <div className="notification-panel-header">
+                        <div className="notification-heading">
+                            <div><h2>Notifications</h2><span>{unreadCount ? `${unreadCount} unread updates` : "You're all caught up"}</span></div>
+                            <button className="notification-close" aria-label="Close notifications" onClick={() => setOpen(false)}>×</button>
                         </div>
-                        <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-                            <p onClick={() => setFilter("today")} style={{ fontSize: '10px', borderRadius: "4px", border: "1px solid #000000ff", cursor: "pointer" }}>
-                                Today
-                            </p>
-                            <p onClick={() => setFilter("week")} style={{ fontSize: '10px', borderRadius: "4px", border: "1px solid #000000ff", cursor: "pointer" }}>
-                                This Week
-                            </p>
-                            <p onClick={() => setFilter("all")} style={{ fontSize: '10px', borderRadius: "4px", border: "1px solid #000000ff", cursor: "pointer" }}>
-                                All
-                            </p>
+                        <div className="notification-filters" aria-label="Filter notifications">
+                            {[["all", "All"], ["today", "Today"], ["week", "This week"]].map(([value, label]) =>
+                                <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>
+                            )}
                         </div>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                            {/* ✔ Mark All Read button */}
-                            <p
-                                onClick={markAllAsRead}
-                                style={{
-                                    fontSize: "8px",
-                                    background: "#16a34a",
-                                    color: "white",
-                                    padding: "4px 6px",
-                                    borderRadius: "4px",
-                                    cursor: "pointer",
-                                    height: "fit-content",
-                                    position: "absolute",
-                                    left: "0"
-                                }}
-                            >
-                                Mark All Read
-                            </p>
-
-                            {/* 🗑 Delete all button */}
-                            <p
-                                onClick={() => {
-                                    if (window.confirm("Delete all notifications?")) {
-                                        items.forEach(n => deleteNotification(n.id));
-                                    }
-                                }}
-                                style={{
-                                    fontSize: "8px",
-                                    background: "#b91c1c",
-                                    color: "white",
-                                    padding: "4px 6px",
-                                    borderRadius: "4px",
-                                    cursor: "pointer",
-                                    height: "fit-content",
-                                    position: "absolute",
-                                    right: "0"
-                                }}
-                            >
-                                Delete All
-                            </p>
+                        <div className="notification-bulk-actions">
+                            <button disabled={!unreadCount} onClick={markAllAsRead}>Mark all read</button>
+                            <NotificationSettings uid={user.uid} onSetupRequired={showNotificationSetup} />
+                            <button disabled={!items.length} onClick={() => {
+                                if (window.confirm("Delete all notifications?")) items.forEach(n => deleteNotification(n.id));
+                            }}>Clear all</button>
                         </div>
                     </div>
 
-                    <NotificationSettings uid={user.uid} onSetupRequired={showNotificationSetup} />
-                    {items.length === 0 && (
+                    {filterNotifications(items).length === 0 && (
                         <div style={{
                             padding: '0.75rem',
                             fontSize: '0.875rem',
-                            color: '#6b7280',
+                            color: 'var(--app-text-muted)',
                             textAlign: 'center',
-                        }}>No notifications
+                        }}>No notifications in this view
                         </div>
                     )}
 
@@ -497,7 +432,7 @@ export default function NotificationBell({ user }) {
                             key={n.id + (n.createdAt?.toMillis?.() ?? "")}
                             style={{
                                 padding: '0.75rem',
-                                borderBottom: '1px solid #e5e7eb',
+                                borderBottom: '1px solid var(--app-border)',
                                 cursor: 'pointer',
                                 backgroundColor: getNotificationColor(n),
                                 position: 'relative'
@@ -506,18 +441,19 @@ export default function NotificationBell({ user }) {
                         >
                             <div style={{
                                 fontWeight: '500',
-                                fontSize: '0.875rem'
+                                fontSize: '0.875rem',
+                                color: 'var(--app-text)'
                             }}
-                                onClick={() => n.title === "Backup Duty Request" ? navigate("/backup-approvals") : n.title === "New Duty Assigned" ? navigate("/my-duty") : (user.role === "Admin" || user.role === "Sumer Admin") && n.title === "New CL Request" ? navigate("/cl-approve") : (user.role === "Admin" || user.role === "Sumer Admin") && n.title === "Backup Accepted" ? navigate("/cl-approve") : null}
+                                onClick={() => ["energy_meter_update", "energy_daily_kwh", "energy_dg_start", "energy_mains_restored"].includes(n.actionType) ? navigate("/energy-monitor") : ["crq_open_reminder", "crq_close_reminder"].includes(n.actionType) ? navigate("/daily-activity-dashboard") : n.title === "Backup Duty Request" ? navigate("/backup-approvals") : n.title === "New Duty Assigned" ? navigate("/my-duty") : (user.role === "Admin" || user.role === "Sumer Admin") && n.title === "New CL Request" ? navigate("/cl-approve") : (user.role === "Admin" || user.role === "Sumer Admin") && n.title === "Backup Accepted" ? navigate("/cl-approve") : null}
                             >{n.title}</div>
                             <div style={{
                                 fontSize: '0.75rem',
-                                color: '#4b5563'
+                                color: 'var(--app-text-muted)'
                             }}
                             >{n.message}</div>
                             <div style={{
                                 fontSize: '10px',
-                                color: '#9ca3af',
+                                color: 'var(--app-text-muted)',
                                 marginTop: '0.25rem'
                             }}>{n.date}
                             </div>
@@ -546,7 +482,7 @@ export default function NotificationBell({ user }) {
 
                                 )}
                             {n.approvalStatus === "approved" && (
-                                <p style={{ color: "#16a34a", fontSize: "0.75rem", marginTop: "4px" }}>
+                                <p style={{ color: "var(--notification-success)", fontSize: "0.75rem", marginTop: "4px" }}>
                                     ✔ User Activated
                                 </p>
                             )}
@@ -610,19 +546,19 @@ export default function NotificationBell({ user }) {
 
                                             {/* STATUS LABELS */}
                                             {n.backupStatus === "accepted" && (
-                                                <p style={{ color: "#16a34a", fontSize: "0.75rem" }}>
+                                                <p style={{ color: "var(--notification-success)", fontSize: "0.75rem" }}>
                                                     ✔ Backup Accepted
                                                 </p>
                                             )}
 
                                             {n.backupStatus === "rejected" && (
-                                                <p style={{ color: "#b91c1c", fontSize: "0.75rem" }}>
+                                                <p style={{ color: "var(--notification-danger)", fontSize: "0.75rem" }}>
                                                     ✖ Backup Rejected
                                                 </p>
                                             )}
 
                                             {n.backupStatus === "cancelled" && (
-                                                <p style={{ color: "#6b7280", fontSize: "0.75rem" }}>
+                                                <p style={{ color: "var(--app-text-muted)", fontSize: "0.75rem" }}>
                                                     ⚠ Request Cancelled
                                                 </p>
                                             )}
@@ -642,7 +578,7 @@ export default function NotificationBell({ user }) {
                                     top: "8px",
                                     background: "transparent",
                                     border: "none",
-                                    color: "#b91c1c",
+                                    color: "var(--notification-danger)",
                                     cursor: "progress",
                                     fontSize: "14px"
                                 }}

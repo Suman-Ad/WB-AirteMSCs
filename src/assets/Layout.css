@@ -778,7 +778,7 @@ body {
     font-size: 12px;
   }
 
-  .back-button span {
+  .back-button span:not(.notification-count) {
     display: none; /* hide “Back” text, keep icon only */
   }
 }
@@ -1073,3 +1073,6 @@ body {
 }
 
 .power-auto-status { display: block; max-width: 170px; color: inherit; font-size: 9px; font-weight: normal; line-height: 1.2; white-space: normal; }
+
+button.power-auto-status { background:transparent; border:0; padding:0; text-align:left; cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px; }
+button.power-auto-status:focus-visible { outline:2px solid currentColor; outline-offset:3px; }
