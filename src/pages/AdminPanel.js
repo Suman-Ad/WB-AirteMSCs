@@ -46,6 +46,13 @@ const getCountdownColor = (toTime) => {
 
 const AdminPanel = ({ userData }) => {
   const [users, setUsers] = useState([]);
+  const [loadingUsers,setLoadingUsers]=useState(true);
+  const [loadError,setLoadError]=useState('');
+  const [accountFilter,setAccountFilter]=useState('');
+  const [sortBy,setSortBy]=useState('name');
+  const [page,setPage]=useState(1);
+  const [pageSize,setPageSize]=useState(20);
+
   const [userSiteFilter, setUserSiteFilter] = useState("");
   const [editingUserId, setEditingUserId] = useState(null);
   const [cardFilter, setCardFilter] = useState("");
@@ -70,6 +77,7 @@ const AdminPanel = ({ userData }) => {
 
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
   const [searchName, setSearchName] = useState("");
+  useEffect(()=>{setPage(1);},[userSiteFilter,searchName,cardFilter,accountFilter,sortBy,pageSize]);
   const [editingTempAdminId, setEditingTempAdminId] = useState(null);
   const [tempAdminDraft, setTempAdminDraft] = useState({
     from: "",
@@ -182,6 +190,8 @@ const AdminPanel = ({ userData }) => {
   ];
 
   const fetchAllUsers = async () => {
+    setLoadingUsers(true);setLoadError("");
+    try {
     const snapshot = await getDocs(collection(db, "users"));
     // const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     const data = snapshot.docs.map((docSnap) => {
@@ -212,6 +222,9 @@ const AdminPanel = ({ userData }) => {
       }
     });
 
+    } catch (_) {
+      setLoadError('Unable to load users. Check your connection and try again.');
+    } finally {setLoadingUsers(false);}
   };
 
   const updateRoleCounts = (users) => {
@@ -329,16 +342,30 @@ const AdminPanel = ({ userData }) => {
   };
 
 
-  return (
-    <div className="admin-panel">
-      <h2 className="dashboard-header">🧑‍💻👁️ Admin User Control Panel</h2>
-      {userData.role === "Super Admin" && (
-        <p className="admin-subtitle">🔐 Full access granted. Click edit button to modify user info.</p>
-      )}
+  const canManageUsers=['Admin','Super Admin'].includes(userData?.role) || isTempAdminValid(userData);
+  const filteredUsers=users.filter(user=>{
+    if(userSiteFilter && user.site !== userSiteFilter) return false;
+    const search=searchName.trim().toLowerCase();
+    if(search && ![user.name,user.email,user.empId,user.mobileNo,user.site,user.siteId].some(value=>String(value || '').toLowerCase().includes(search))) return false;
+    if(accountFilter === 'active' && !user.isActive || accountFilter === 'inactive' && user.isActive) return false;
+    if(cardFilter === 'Temp Admin' && !isTempAdminValid(user)) return false;
+    if(cardFilter === 'ONLINE' && !isUserOnline(user)) return false;
+    if(cardFilter && !['ALL','ONLINE','Temp Admin'].includes(cardFilter) && user.role !== cardFilter) return false;
+    return !showOnlineOnly || isUserOnline(user);
+  }).sort((a,b)=>String(a[sortBy] || '').localeCompare(String(b[sortBy] || ''),undefined,{numeric:true,sensitivity:'base'}) || a.id.localeCompare(b.id));
+  const directorySites=[...new Set([...siteList,...Object.keys(siteIdMap),...users.map(user=>user.site).filter(Boolean)])].sort((a,b)=>a.localeCompare(b));
+  const totalPages=Math.max(1,Math.ceil(filteredUsers.length/pageSize));
+  const currentPage=Math.min(page,totalPages);
+  const visibleUsers=filteredUsers.slice((currentPage-1)*pageSize,currentPage*pageSize);
+  const resetFilters=()=>{setUserSiteFilter('');setSearchName('');setCardFilter('');setAccountFilter('');setShowOnlineOnly(false);setPage(1);};
 
+  return (
+    <div className="admin-panel admin-workspace">
+      <header className="admin-page-header"><div><span className="admin-eyebrow">WORKSPACE / ACCESS MANAGEMENT</span><h1>Admin control center</h1><p>Manage user profiles, site assignments and access from one place.</p></div><div className="admin-access-badge"><span />{userData?.role || 'Account'}{isTempAdminValid(userData) && !['Admin','Super Admin'].includes(userData?.role) ? ' · Temporary access' : ''}</div></header>
+      {!canManageUsers && <div className="admin-feedback" role="alert">Administrator access is required to view user management.</div>}
       {(["Admin", "Super Admin"].includes(userData.role) || isTempAdminValid(userData)) && (
-        <div className="admin-table-wrapper mt-10 child-container">
-          <h3 className="admin-subtitle">👥 User Role Management</h3>
+        <div className="admin-table-wrapper">
+          <div className="admin-section-heading"><div><span className="admin-eyebrow">ACCOUNT OVERVIEW</span><h2>People & permissions</h2><p>Select a card to filter the user directory.</p></div><button className="admin-refresh" disabled={loadingUsers} onClick={fetchAllUsers}>{loadingUsers ? "Refreshing…" : "Refresh users"}</button></div>
 
           {/* User Count Statistics */}
           {/* <div className="summary-card">
@@ -348,100 +375,74 @@ const AdminPanel = ({ userData }) => {
 
 
           <div className="user-stats-container">
-            <div
+            <button type="button" aria-label="Filter by ALL" aria-pressed={cardFilter === "ALL"}
               className={`user-stat-card total ${cardFilter === "ALL" ? "active" : ""}`}
               onClick={() => handleCardFilter("ALL")}
             >
               <span className="stat-number">{roleCounts.Total}</span>
               <span className="stat-label">Total Users</span>
-            </div>
+            </button>
 
-            <div
+            <button type="button" aria-label="Filter by ONLINE" aria-pressed={cardFilter === "ONLINE"}
               className={`user-stat-card ${cardFilter === "ONLINE" ? "active" : ""}`}
               onClick={() => handleCardFilter("ONLINE")}
             >
-              <span className="stat-number">{onlineCount}</span>
+              <span className="stat-number">{users.filter(isUserOnline).length}</span>
               <span className="stat-label">🟢 Online</span>
-            </div>
+            </button>
 
-            <div
+            <button type="button" aria-label="Filter by Super Admin" aria-pressed={cardFilter === "Super Admin"}
               className={`user-stat-card super-admin ${cardFilter === "Super Admin" ? "active" : ""}`}
               onClick={() => handleCardFilter("Super Admin")}
             >
               <span className="stat-number">{roleCounts["Super Admin"]}</span>
               <span className="stat-label">Super Admins</span>
-            </div>
+            </button>
 
-            <div
+            <button type="button" aria-label="Filter by Admin" aria-pressed={cardFilter === "Admin"}
               className={`user-stat-card admin ${cardFilter === "Admin" ? "active" : ""}`}
               onClick={() => handleCardFilter("Admin")}
             >
               <span className="stat-number">{roleCounts["Admin"]}</span>
               <span className="stat-label">Admins</span>
-            </div>
+            </button>
 
-            <div
+            <button type="button" aria-label="Filter by Temp Admin" aria-pressed={cardFilter === "Temp Admin"}
               className={`user-stat-card temp-admin ${cardFilter === "Temp Admin" ? "active" : ""}`}
               onClick={() => handleCardFilter("Temp Admin")}
             >
               <span className="stat-number">{tempAdminCount}</span>
               <span className="stat-label">Temp Admin</span>
-            </div>
+            </button>
 
-            <div
+            <button type="button" aria-label="Filter by Super User" aria-pressed={cardFilter === "Super User"}
               className={`user-stat-card super-user ${cardFilter === "Super User" ? "active" : ""}`}
               onClick={() => handleCardFilter("Super User")}
             >
               <span className="stat-number">{roleCounts["Super User"]}</span>
               <span className="stat-label">Super Users</span>
-            </div>
+            </button>
 
-            <div
+            <button type="button" aria-label="Filter by User" aria-pressed={cardFilter === "User"}
               className={`user-stat-card user ${cardFilter === "User" ? "active" : ""}`}
               onClick={() => handleCardFilter("User")}
             >
               <span className="stat-number">{roleCounts["User"]}</span>
               <span className="stat-label">Users</span>
-            </div>
+            </button>
           </div>
 
-          <div className="mb-4">
-            <label>Filter by Site: </label>
-            <select
-              value={userSiteFilter}
-              onChange={(e) => setUserSiteFilter(e.target.value)}
-              className="border p-1 rounded ml-2"
-            >
-              <option value="">All Sites</option>
-              {siteList.map((site) => (
-                <option key={site} value={site}>{site}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mb-4">
-            <label>Search by Name: </label>
-            <input
-              type="text"
-              placeholder="Enter name..."
-              className="border p-1 rounded ml-2"
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
-            />
-          </div>
-
-          {/* <div className="mb-4">
-            <label>
-              <input
-                type="checkbox"
-                checked={showOnlineOnly}
-                onChange={(e) => setShowOnlineOnly(e.target.checked)}
-              />
-              Show Online Users Only 🟢
-            </label>
-          </div> */}
-
-
+          <section className="admin-directory-toolbar" aria-label="User directory filters"><div className="admin-directory-title"><h2>User directory</h2><p>{filteredUsers.length} matching users · {users.length} total</p></div>
+            <div className="admin-filter-grid"><label className="admin-search-label" htmlFor="admin-search">Search users<input id="admin-search" type="search" placeholder="Name, email, employee ID or site…" value={searchName} onChange={e=>setSearchName(e.target.value)}/></label>
+            <label htmlFor="admin-site">Site<select id="admin-site" value={userSiteFilter} onChange={e=>setUserSiteFilter(e.target.value)}><option value="">All sites</option>{directorySites.map(site=><option key={site} value={site}>{site}</option>)}</select></label>
+            <label htmlFor="admin-status">Account status<select id="admin-status" value={accountFilter} onChange={e=>setAccountFilter(e.target.value)}><option value="">All accounts</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+            <label htmlFor="admin-sort">Sort by<select id="admin-sort" value={sortBy} onChange={e=>setSortBy(e.target.value)}><option value="name">Name</option><option value="site">Site</option><option value="role">Role</option></select></label></div>
+            <div className="admin-filter-footer"><span>{cardFilter && cardFilter !== 'ALL' ? `Role / presence filter: ${cardFilter}` : 'Showing all roles'} · Presence uses activity in the last 5 minutes.</span><button onClick={resetFilters}>Clear filters</button></div>
+            {userData?.role === 'Super Admin' && <p className="admin-edit-hint">Profile changes save immediately while editing. Choose Done editing when finished.</p>}
+          </section>
+          {loadError && <p className="admin-feedback" role="alert">{loadError}</p>}
+          {loadingUsers && !users.length && <p className="admin-empty" role="status">Loading user directory…</p>}
+          {!loadingUsers && !loadError && !filteredUsers.length && <div className="admin-empty"><strong>No matching users</strong><p>Try another search or clear the filters.</p><button onClick={resetFilters}>Reset filters</button></div>}
           {/* User Table */}
           <div className="daily-activity-table-container">
             <table className="admin-table">
@@ -466,31 +467,7 @@ const AdminPanel = ({ userData }) => {
                 </tr>
               </thead>
               <tbody>
-                {users
-                  .filter((user) =>
-                    !userSiteFilter || user.site === userSiteFilter
-                  )
-                  .filter((user) =>
-                    user.name?.toLowerCase().includes(searchName.toLowerCase())
-                  )
-                  .filter((user) => {
-                    if (!cardFilter || cardFilter === "ALL") return true;
-
-                    if (cardFilter === "Temp Admin") {
-                      return isTempAdminValid(user);
-                    }
-
-                    if (cardFilter === "ONLINE") {
-                      return isUserOnline(user);
-                    }
-
-                    return user.role === cardFilter;
-                  })
-                  .filter((user) => {
-                    if (!showOnlineOnly) return true;
-                    return isUserOnline(user);
-                  })
-                  .map((user) => {
+                {visibleUsers                  .map((user) => {
 
                     const { promote, demote } = getNextRoles(user.role);
                     const canModify = canChangeRole(user.role, user.id);
@@ -500,9 +477,9 @@ const AdminPanel = ({ userData }) => {
                       <tr key={user.id}>
                         <td>
                           {isUserOnline(user) ? (
-                            <span style={{ color: "green" }}>🟢 Online</span>
+                            <span className="admin-presence is-online">Online</span>
                           ) : (
-                            <span style={{ color: "gray" }}>⚫ Offline</span>
+                            <span className="admin-presence">Offline</span>
                           )}
                         </td>
                         <td data-label="Photo">
@@ -537,10 +514,10 @@ const AdminPanel = ({ userData }) => {
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                backgroundColor: "#ccc",
+                                backgroundColor: "var(--app-surface-muted)",
                                 fontWeight: "bold",
                                 fontSize: "20px",
-                                color: "#333",
+                                color: "var(--app-text)",
                               }}>
                               {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                             </div>
@@ -621,7 +598,7 @@ const AdminPanel = ({ userData }) => {
                             user.site
                           )}
                         </td>
-                        <td data-label="Role">{user.role}</td>
+                        <td data-label="Role"><span className="admin-role-badge">{user.role}</span></td>
                         <td data-label="Status">
                           <span
                             className={`status-badge ${user.isActive ? "active" : "inactive"}`}
@@ -632,10 +609,10 @@ const AdminPanel = ({ userData }) => {
                         {(userData.role === "Admin" || userData.role === "Super Admin") && (
                           <td data-label="UID">{user.uid}</td>
                         )}
-                        <td data-label="Actions" style={{ display: "flex" }}>
+                        <td data-label="Actions" className="admin-actions-cell">
                           <div className="action-buttons">
                             {["Admin", "Super Admin"].includes(userData.role) && user.id !== userData.uid && (
-                              <div className="temp-admin-box">
+                              <details className="temp-admin-box"><summary>Temporary access</summary>
                                 {user.isAdminAssigned ? (
                                   <>
                                     <span className="temp-admin-badge">
@@ -719,7 +696,7 @@ const AdminPanel = ({ userData }) => {
                                     )}
                                   </>
                                 )}
-                              </div>
+                              </details>
                             )}
 
                             {userData.role === "Super Admin" && (
@@ -727,7 +704,7 @@ const AdminPanel = ({ userData }) => {
                                 className={`btn-edit ${editingUserId === user.id ? 'btn-cancel' : ''}`}
                                 onClick={() => toggleEditMode(user.id)}
                               >
-                                {editingUserId === user.id ? 'Cancel' : 'Edit'}
+                                {editingUserId === user.id ? 'Done editing' : 'Edit'}
                               </button>
                             )}
 
@@ -799,6 +776,7 @@ const AdminPanel = ({ userData }) => {
               </tbody>
             </table>
           </div>
+          <footer className="admin-pagination"><span>{filteredUsers.length ? `${(currentPage-1)*pageSize+1}–${Math.min(currentPage*pageSize,filteredUsers.length)} of ${filteredUsers.length} users` : '0 users'}</span><label>Rows per page<select value={pageSize} onChange={e=>setPageSize(Number(e.target.value))}>{[20,50,100].map(size=><option key={size} value={size}>{size}</option>)}</select></label><div><button disabled={currentPage<=1} onClick={()=>setPage(currentPage-1)}>Previous</button><span>Page {currentPage} of {totalPages}</span><button disabled={currentPage>=totalPages} onClick={()=>setPage(currentPage+1)}>Next</button></div></footer>
         </div>
       )}
     </div>

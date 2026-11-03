@@ -1,6 +1,6 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const {transition,reading,changeoverNotification,changeoverId}=require('./energy-changeover-notifications.cjs');
+const {transition,reading,changeoverNotification,changeoverId,eligibleChangeoverUser}=require('./energy-changeover-notifications.cjs');
 const at=Date.parse('2026-11-01T23:55:00+05:30');
 const sample=(kwh,time=at)=>({kwh,observedAtMs:time,quality:'Captured'});
 const run={siteId:'A',siteName:'Site A',dgNumber:'DG-1',meterId:'dg',status:'Running',startAtMs:at,endAtMs:at+600000,opening:sample(100),closing:sample(105,at+600000),ebFailure:{kwh:null,lastKnownKwh:500,lastKnownAtMs:at-10000,quality:'Stale'},ebRestoration:sample(501,at+600000),runSeconds:600,trigger:'Automatic'};
@@ -25,4 +25,16 @@ test('manual changes retain their source and stable IDs distinguish run, site an
  assert.match(changeoverNotification({...run,trigger:'Manual'},'start','A').message,/Manual changeover/);
  const id=changeoverId('A','run','start');assert.equal(id,changeoverId('A','run','start'));
  for(const args of [['A','run','restore'],['B','run','start'],['A','other','start']])assert.notEqual(id,changeoverId(...args));
+});
+
+
+test('changeover recipients include active global admins and retain site-only ordinary users',()=>{
+ for(const role of ['Admin','Super Admin']) {
+  assert.equal(eligibleChangeoverUser({role,isActive:true,siteId:'B'},'A'),true);
+  assert.equal(eligibleChangeoverUser({role,isActive:true},'A'),true);
+  assert.equal(eligibleChangeoverUser({role,isActive:false},'A'),false);
+ }
+ assert.equal(eligibleChangeoverUser({role:'User',isActive:true,siteId:'A'},'A'),true);
+ for(const role of ['User','Super User','Viewer'])assert.equal(eligibleChangeoverUser({role,isActive:true,siteId:'B'},'A'),false);
+ assert.equal(eligibleChangeoverUser({role:'Admin'},'A'),false);
 });

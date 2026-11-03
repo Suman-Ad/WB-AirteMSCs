@@ -1,6 +1,7 @@
 param(
     [string]$WebhookUrl = "https://us-central1-wb-airtelmscs.cloudfunctions.net/telegramWebhook",
-    [switch]$ConfigureOnly
+    [switch]$ConfigureOnly,
+    [switch]$CheckOnly
 )
 $ErrorActionPreference = "Stop"
 if (-not $WebhookUrl.StartsWith("https://")) { throw "An HTTPS webhook URL is required." }
@@ -13,6 +14,22 @@ try {
     } catch { throw "Unable to verify the bot. Check the token from BotFather." }
     if (-not $identity.ok -or -not $identity.result.is_bot -or $identity.result.username -notmatch '^[A-Za-z0-9_]{5,32}$') {
         throw "Telegram did not return a valid bot identity."
+    }
+    if ($CheckOnly) {
+        try {
+            $webhookInfo = Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/getWebhookInfo" -Method Post
+        } catch { throw "Unable to check webhook status. Verify your Internet connection and bot token." }
+        if (-not $webhookInfo.ok) { throw "Telegram could not return webhook status." }
+        $details = $webhookInfo.result
+        [PSCustomObject]@{
+            Bot = "@$($identity.result.username)"
+            WebhookUrl = $details.url
+            PendingUpdates = $details.pending_update_count
+            LastError = $details.last_error_message
+            LastErrorUTC = if ($details.last_error_date) { [DateTimeOffset]::FromUnixTimeSeconds([long]$details.last_error_date).UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'") } else { "None" }
+        } | Format-List
+        if (-not $details.url) { Write-Warning "No webhook is registered; the bot will not receive commands through this app." }
+        return
     }
     $configPath = Join-Path $PSScriptRoot "../functions/load-book/.env.wb-airtelmscs"
     $usernameLine = "TELEGRAM_BOT_USERNAME=$($identity.result.username)"
@@ -46,6 +63,13 @@ try {
         commands = @(
             @{ command = "start"; description = "Connect using the link from the MSC app" },
             @{ command = "status"; description = "Check your notification connection" },
+            @{ command = "activity"; description = "Show today's site activities, CRQs and status" },
+            @{ command = "incident"; description = "Show open incident details for your site" },
+            @{ command = "meter_data"; description = "Show every meter reading for your site" },
+            @{ command = "present_fuel"; description = "Show DG-wise saved fuel stock" },
+            @{ command = "site_running_load"; description = "Show latest daily average site load" },
+            @{ command = "pue"; description = "Show latest daily PUE" },
+            @{ command = "segr"; description = "Show latest DG-wise SEGR" },
             @{ command = "help"; description = "Show help" },
             @{ command = "stop"; description = "Disconnect notification updates" }
         )

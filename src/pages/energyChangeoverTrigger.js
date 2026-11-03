@@ -36,9 +36,9 @@ export function advanceChangeover(previous, assessment, confirmations) {
   if (assessment.kind === "restored" || assessment.kind === "disabled" || assessment.kind === "unconfigured") return { ...initialChangeoverState(), fired: false };
   if (previous.latched) return { ...previous, fired: false };
   if (assessment.kind !== "candidate") return { ...initialChangeoverState(), fired: false };
-  const sameDG = previous.dg === assessment.dg;
-  if (sameDG && previous.mainTime !== null && ((assessment.confirmMain !== false && assessment.mainTime <= previous.mainTime) || assessment.dgTime <= previous.dgTime)) return { ...previous, fired: false };
+  const sameDG = previous.dg === assessment.dg && previous.evidenceMode === assessment.evidenceMode;
+  if (sameDG && previous.mainTime !== null && ((assessment.confirmMain !== false && assessment.mainTime <= previous.mainTime) || (assessment.confirmDG !== false && assessment.dgTime <= previous.dgTime))) return { ...previous, fired: false };
   const count = sameDG ? previous.count + 1 : 1;
   const fired = count >= confirmations;
-  return { latched: fired, count, dg: assessment.dg, mainTime: assessment.mainTime, dgTime: assessment.dgTime, ...(assessment.transferAtMs != null ? {transferAtMs: sameDG && previous.count ? previous.transferAtMs ?? assessment.transferAtMs : assessment.transferAtMs} : {}), fired };
+  return { latched: fired, count, dg: assessment.dg, ...(assessment.evidenceMode ? {evidenceMode:assessment.evidenceMode} : {}), mainTime: assessment.mainTime, dgTime: assessment.dgTime, ...(assessment.transferAtMs != null ? {transferAtMs: sameDG && previous.count ? previous.transferAtMs ?? assessment.transferAtMs : assessment.transferAtMs} : {}), fired };
 }

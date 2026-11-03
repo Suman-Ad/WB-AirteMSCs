@@ -63,10 +63,10 @@ test("cooldown voltage with zero DG current restores after two distinct reading 
  };
  expect(step(100000)).toBe(false);expect(step(100000)).toBe(false);expect(step(110000)).toBe(true);
 });
-test("cooldown rejects load on any phase, incomplete current, stale data and cache",()=>{
+test("cooldown rejects load above idle limit on any phase, incomplete current, stale data and cache",()=>{
  const main=m("main",415,100),dg=m("dg",415,0);
  expect(assess(main,dg,"DG")).toMatchObject({kind:"candidate",dg:"EB"});
- for(const blocked of [{...dg,current:1},{...dg,current:undefined},{...dg,R_current:0},{...dg,R_current:0,Y_current:1,B_current:0},{...dg,communicationState:"OFFLINE"},m("dg",415,0,1)]) expect(assess(main,blocked,"DG").kind).toBe("waiting");
+ for(const blocked of [{...dg,current:6},{...dg,current:undefined},{...dg,R_current:0},{...dg,R_current:0,Y_current:6,B_current:0},{...dg,communicationState:"OFFLINE"},m("dg",415,0,1)]) expect(assess(main,blocked,"DG").kind).toBe("waiting");
  expect(assess(main,dg,"DG",true).kind).toBe("waiting");
  expect(assess({...main,current:0},dg,"DG").kind).toBe("waiting");
  expect(assess(main,{...dg,R_current:0,Y_current:0,B_current:0},"DG").kind).toBe("candidate");
@@ -80,8 +80,8 @@ test("cooldown checks every mapped DG and identifies the blocking generator",()=
 
 test("restoration status distinguishes actual DG load from unavailable readings",()=>{
  const main=m("main",415,100);
- expect(assess(main,m("dg",415,2),"DG").message).toContain("2 A");
- expect(assess(main,m("dg",415,2),"DG").message).not.toContain("unavailable");
+ expect(assess(main,m("dg",415,8),"DG").message).toContain("8 A");
+ expect(assess(main,m("dg",415,8),"DG").message).not.toContain("unavailable");
  expect(assess(main,m("dg",415,0,1),"DG").message).toContain("offline, stale or in error");
  expect(assess(main,m("dg",415,undefined),"DG").message).toContain("current readings are missing");
 });
@@ -96,14 +96,52 @@ test("DG-2 zero load switches after two fresh load readings despite offline stan
  const confirmed=step(110000);expect(confirmed.fired).toBe(true);expect(confirmed.transferAtMs).toBe(100000);
 });
 test("DG at zero voltage but nonzero or missing load cannot satisfy zero-load confirmation",()=>{
- for(const current of [1,undefined])expect(assess(m("main",415,100),m("dg",0,current),"DG").kind).toBe("waiting");
+ for(const current of [6,undefined])expect(assess(m("main",415,100),m("dg",0,current),"DG").kind).toBe("waiting");
 });
 
 test("verified zero active power is zero load despite residual current, while real DG power blocks",()=>{
- const main=m("main",415,100),dg={...m("dg",415,2),powerUnits:"kilo",active_power:0};
+ const main=m("main",415,100),dg={...m("dg",415,8),powerUnits:"kilo",active_power:0};
  expect(assess(main,dg,"DG").kind).toBe("candidate");
  expect(assess(main,{...dg,active_power:1},"DG").kind).toBe("waiting");
  expect(assess(main,{...dg,R_active_power:0,Y_active_power:1,B_active_power:0},"DG").kind).toBe("waiting");
  expect(assess(main,{...dg,R_active_power:0},"DG").kind).toBe("waiting");
  expect(assess(main,{...dg,powerUnits:"raw"},"DG").kind).toBe("waiting");
+});
+
+
+test("3.3–3.4 A residual current is idle but any phase above 5 A still blocks",()=>{
+ const main=m("main",415,100),idle={...m("dg",415,3.4),R_current:3.3333,Y_current:3.4,B_current:3.4};
+ expect(assess(main,idle,"DG")).toMatchObject({kind:"candidate",dg:"EB",evidenceMode:"live"});
+ expect(assess(main,{...idle,powerUnits:"kilo",active_power:2},"DG").kind).toBe("candidate");
+ expect(assess(main,{...idle,B_current:5.01},"DG").kind).toBe("waiting");
+ expect(assess(main,{...idle,B_current:undefined},"DG").kind).toBe("waiting");
+});
+
+test("offline after idle confirms on two distinct fresh loaded mains readings",()=>{
+ const idle={...m("dg",415,3.4),R_current:3.3333,Y_current:3.4,B_current:3.4};
+ const offline={...m("dg",415,3.4),status:"ERROR"};
+ let state=initialChangeoverState();
+ state=advanceChangeover(state,assessHeaderPower(config,[m("main",415,100),idle],100000,false,"DG","DG-1"),2);
+ const step=time=>{
+  const assessment=assessHeaderPower(config,[m("main",415,100,time),offline],time,false,"DG","DG-1",idle);
+  state=advanceChangeover(state,assessment,2);return state;
+ };
+ expect(step(110000).fired).toBe(false);
+ expect(step(110000).fired).toBe(false);
+ expect(step(120000).fired).toBe(true);
+});
+
+test("offline fallback never invents zero load or uses expired, wrong-meter or cached evidence",()=>{
+ const idle=m("dg",415,3.4),offline={...idle,status:"ERROR"};
+ const check=(evidence,now=120000,main=m("main",415,100,now),cache=false)=>assessHeaderPower(config,[main,offline],now,cache,"DG","DG-1",evidence);
+ expect(check(null).kind).toBe("waiting");
+ expect(check(idle).kind).toBe("candidate");
+ expect(check(m("dg",415,6)).kind).toBe("waiting");
+ expect(check({...idle,id:"other"}).kind).toBe("waiting");
+ expect(check({...idle,status:"ERROR"}).kind).toBe("waiting");
+ expect(check(idle,400001).kind).toBe("waiting");
+ expect(check(idle,120000,m("main",415,0,120000)).kind).toBe("waiting");
+ expect(check(idle,120000,m("main",415,100,120000),true).kind).toBe("waiting");
+ const liveLoaded=m("dg",415,10,120000);
+ expect(assessHeaderPower(config,[m("main",415,100,120000),liveLoaded],120000,false,"DG","DG-1",idle).kind).toBe("waiting");
 });

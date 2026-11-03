@@ -75,3 +75,11 @@ test("manual restoration without confirmed transfer time does not fabricate cool
  jest.setSystemTime(now+10000);await commitEnergyChangeover({},"status",source("EB"),context(data(101,now+10000)));
  expect(run().cooldownStatus).toBe("Unavailable");expect(run().cooldownStartAtMs).toBeNull();
 });
+
+test("cooldown completes from the transfer snapshot when DG voltage is already zero",async()=>{
+ await commitEnergyChangeover({},"status",source("DG"),context(data(100)));
+ jest.setSystemTime(now+20000);
+ const stopped={...data(105,now+20000),meters:[{...meter(105,now+20000),voltage_ll:0,current:0}]};
+ await commitEnergyChangeover({},"status",source("EB"),{...context(stopped),automatic:true,loadTransferAtMs:now+10000});
+ expect(run()).toMatchObject({cooldownStatus:"Completed",cooldownEndAtMs:now+20000,cooldownSeconds:10});
+});

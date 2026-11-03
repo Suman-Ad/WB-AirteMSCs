@@ -4,6 +4,7 @@ const {defineSecret, defineString} = require('firebase-functions/params');
 const {getFirestore, FieldValue, Timestamp} = require('firebase-admin/firestore');
 const {randomBytes, createHash, timingSafeEqual} = require('node:crypto');
 const {notificationData} = require('./notification-functions.cjs');
+const {help, reportCommand, siteReportCommand, reportMessages, chunks} = require('./telegram-reports.cjs');
 const botToken = defineSecret('TELEGRAM_BOT_TOKEN');
 const webhookSecret = defineSecret('TELEGRAM_WEBHOOK_SECRET');
 const botUsername = defineString('TELEGRAM_BOT_USERNAME', {default: ''});
@@ -110,7 +111,7 @@ async function stopUpdates(db, chatId, reason = 'bot_stop', expectedUid) {
   });
 }
 
-exports.telegramWebhook = onRequest({secrets: [botToken, webhookSecret], maxInstances: 5}, async (req, res) => {
+exports.telegramWebhook = onRequest({secrets: [botToken, webhookSecret], maxInstances: 5, timeoutSeconds: 120}, async (req, res) => {
   if (req.method !== 'POST') return res.status(405).send('Method not allowed');
   const supplied = Buffer.from(req.get('X-Telegram-Bot-Api-Secret-Token') || '');
   const expected = Buffer.from(webhookSecret.value());
@@ -118,11 +119,22 @@ exports.telegramWebhook = onRequest({secrets: [botToken, webhookSecret], maxInst
   const message = req.body?.message;
   if (message?.chat?.type !== 'private' || !Number.isSafeInteger(message.chat.id) || message.chat.id <= 0 || message.from?.id !== message.chat.id) return res.sendStatus(200);
   const chatId = String(message.chat.id);
-  const [command, argument] = (typeof message.text === 'string' ? message.text : '').trim().split(/\s+/);
+  const [rawCommand, ...argumentsList] = (typeof message.text === 'string' ? message.text : '').trim().split(/\s+/);
+  const command = rawCommand.split('@')[0].toLowerCase();
+  const argument = argumentsList.join(' ');
   const db = getFirestore();
   let text;
   try {
-    switch (command?.split('@')[0].toLowerCase()) {
+    const siteRequest = siteReportCommand(typeof message.text === 'string' ? message.text : '');
+    if (message.photo?.length || /^image\/(jpeg|png)$/.test(message.document?.mime_type || '')) {
+      const {importImage} = require('./telegram-crq.cjs');
+      text = await importImage(db, chatId, message, telegram, botToken.value());
+    } else if (siteRequest) {
+      text = siteRequest.kind
+        ? await reportMessages(db, chatId, siteRequest.kind, Date.now(), siteRequest.site)
+        : help;
+    } else {
+    switch (command) {
       case '/start':
         text = argument && await connect(db, argument, chatId)
           ? 'Connected! Your new WB Airtel MSC notifications will arrive here. Send /stop to disconnect.'
@@ -139,14 +151,24 @@ exports.telegramWebhook = onRequest({secrets: [botToken, webhookSecret], maxInst
         break;
       }
       default:
-        text = 'WB Airtel MSC notification bot\n/status — connection status\n/stop — stop updates\nConnect your account using the notification bell in the app.';
+        const kind = reportCommand(command, argument.toLowerCase());
+        text = kind ? await reportMessages(db, chatId, kind) : help;
+    }
     }
   } catch (_) {
     console.error('Telegram command processing failed');
     return res.sendStatus(500);
   }
-  try { await telegram('sendMessage', {chat_id: chatId, text}); }
-  catch (_) { console.warn('Telegram command reply failed'); }
+  try {
+    for (const part of chunks(Array.isArray(text) ? text : [text])) {
+      await telegram('sendMessage', {chat_id: chatId, text: part});
+    }
+  }
+  catch (error) {
+    console.warn('Telegram command reply failed', {code: error.code || 'network', connectionRevoked: !!error.connectionRevoked});
+    // Acknowledge permanent recipient revocation; retry transient failures instead of silently dropping /start.
+    if (!error.connectionRevoked) return res.sendStatus(503);
+  }
   return res.sendStatus(200);
 });
 

@@ -1,154 +1,45 @@
-/* ===== BASE STYLES ===== */
-:root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --danger: #dc2626;
-  --success: #16a34a;
-  --warning: #d97706;
-  --gray-100: #f3f4f6;
-  --gray-200: #e5e7eb;
-  --gray-400: #9ca3af;
-  --gray-600: #4b5563;
-  --gray-800: #1f2937;
-}
-
+/* Scoped incident editor styles; shared application theme remains authoritative. */
 .incident-editor {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  --incident-accent: var(--theme-primary, #0f766e);
+  max-width: 1400px; margin: 0 auto; padding: clamp(18px, 3vw, 30px);
+  background: var(--app-surface); color: var(--app-text);
+  border: 1px solid var(--app-border); border-radius: 14px; min-width: 0;
 }
-
-/* ===== FORM LAYOUT ===== */
-.form-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: var(--gray-800);
-  font-size: 0.9rem;
-}
-
-/* ===== INPUT STYLES ===== */
-.form-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--gray-200);
-  border-radius: 0.375rem;
-  font-size: 0.9rem;
-  transition: all 0.2s;
-  background-color: white;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-}
-
-.form-input[disabled] {
-  background-color: var(--gray-100);
-  color: var(--gray-600);
-  cursor: not-allowed;
-  border-color: var(--gray-200);
-}
-
-textarea.form-input {
-  min-height: 100px;
-  resize: vertical;
-}
-
-/* ===== SELECT STYLES ===== */
-select.form-input {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239ca3af' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 16px 12px;
-  padding-right: 2.5rem;
-}
-
-/* ===== BUTTON STYLES ===== */
-.submit-btn {
-  display: block;
-  width: 100%;
-  max-width: 300px;
-  margin: 2rem auto 0;
-  padding: 0.75rem 1.5rem;
-  background-color: var(--success);
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.submit-btn:hover {
-  background-color: #15803d;
-}
-
-.submit-btn:disabled {
-  background-color: var(--gray-400);
-  cursor: not-allowed;
-}
-
-/* ===== STATUS INDICATORS ===== */
-.status-indicator {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.status-open {
-  background-color: #fee2e2;
-  color: var(--danger);
-}
-
-.status-closed {
-  background-color: #dcfce7;
-  color: var(--success);
-}
-
-/* ===== RESPONSIVE ADJUSTMENTS ===== */
-@media (max-width: 768px) {
-  .form-container {
-    grid-template-columns: 1fr;
-  }
-  
-  .incident-editor {
-    padding: 1rem;
-  }
-}
-
-/* ===== READ-ONLY FIELD STYLING ===== */
-.read-only-field {
-  position: relative;
-}
-
-.read-only-field::after {
-  content: "✓";
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--success);
-  font-size: 1rem;
-}
-
-.read-only-field .form-input {
-  padding-right: 2rem;
+.incident-editor *, .incident-editor *::before, .incident-editor *::after { box-sizing: border-box; }
+.incident-editor .incident-eyebrow { display: block; font-size: 10px; letter-spacing: 1.7px; font-weight: 700; color: var(--incident-accent); margin-bottom: 9px; }
+.incident-editor .incident-form-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; padding-bottom: 24px; border-bottom: 1px solid var(--app-border); }
+.incident-editor .incident-form-heading h2 { margin: 0 0 8px; font-size: 23px; letter-spacing: -.5px; color: var(--app-text); }
+.incident-editor .incident-form-heading p { margin: 0; color: var(--app-text-muted); font-size: 12px; line-height: 1.7; }
+.incident-editor .incident-status-badge { border: 1px solid var(--app-border); background: var(--app-surface-muted); padding: 6px 12px; border-radius: 20px; font-size: 11px; color: var(--app-text); }
+.incident-editor .incident-fieldset { border: 0; border-bottom: 1px solid var(--app-border); padding: 0 0 26px; margin: 28px 0 0; min-width: 0; }
+.incident-editor .incident-fieldset legend { font-size: 15px; font-weight: 650; color: var(--app-text); padding: 0; margin-bottom: 8px; }
+.incident-editor .incident-fieldset legend span { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid var(--app-border); border-radius: 7px; background: var(--app-surface-muted); color: var(--incident-accent); font-size: 10px; margin-right: 8px; }
+.incident-editor .incident-group-description { margin: 0 0 22px; font-size: 12px; color: var(--app-text-muted); line-height: 1.7; }
+.incident-editor .incident-fields-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.incident-editor .form-group { min-width: 0; margin: 0; }
+.incident-editor .incident-field-wide { grid-column: 1 / -1; }
+.incident-editor .form-group label { display: flex; align-items: center; gap: 8px; margin: 0 0 9px; font-size: 12px; font-weight: 600; color: var(--app-text); }
+.incident-editor label small { font-size: 9px; font-weight: 400; color: var(--app-text-muted); background: var(--app-surface-muted); padding: 3px 6px; border-radius: 4px; }
+.incident-editor :is(.form-input, input[type=file]) { display: block; width: 100%; max-width: 100%; min-height: 43px; padding: 11px 13px; font: inherit; font-size: 13px; border: 1px solid var(--app-border); border-radius: 8px; color: var(--app-text); background: var(--app-page-bg); box-shadow: none; }
+.incident-editor select.form-input { appearance: auto; background-image: none; }
+.incident-editor textarea.form-input { min-height: 108px; resize: vertical; line-height: 1.7; }
+.incident-editor .form-input:disabled { color: var(--app-text-muted); background: var(--app-surface-muted); cursor: not-allowed; }
+.incident-editor :is(input, select, textarea, button, a):focus-visible { outline: 2px solid var(--incident-accent); outline-offset: 3px; }
+.incident-editor .incident-rca-upload { padding: 18px; border: 1px dashed var(--app-border); background: var(--app-page-bg); border-radius: 9px; }
+.incident-editor .incident-rca-upload p { font-size: 12px; color: var(--app-text-muted); }
+.incident-editor a { color: var(--theme-link); }
+.incident-editor input[type=file] { border-style: dashed; padding: 8px; }
+.incident-editor input::file-selector-button { padding: 7px 10px; border: 1px solid var(--app-border); background: var(--app-surface); color: var(--app-text); border-radius: 5px; margin-right: 12px; cursor: pointer; }
+.incident-editor .incident-submit-bar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 24px; }
+.incident-editor .incident-submit-bar strong { display: block; color: var(--app-text); font-size: 12px; }
+.incident-editor .incident-submit-bar p { margin: 5px 0 0; color: var(--app-text-muted); font-size: 11px; }
+.incident-editor .submit-btn { display: inline-flex; justify-content: center; align-items: center; width: auto; max-width: none; margin: 0; padding: 13px 24px; border: 1px solid var(--incident-accent); background: var(--incident-accent); border-radius: 8px; color: #fff; font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+.incident-editor .submit-btn:hover:not(:disabled) { filter: brightness(.94); }
+.incident-editor .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+.incident-editor .incident-save-status { color: var(--app-text-muted); font-size: 12px; margin: 16px 0 0; }
+@media (max-width: 1100px) { .incident-editor .incident-fields-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .incident-editor .incident-fields-grid { grid-template-columns: minmax(0, 1fr); }
+  .incident-editor .incident-submit-bar { align-items: stretch; flex-direction: column; }
+  .incident-editor .submit-btn { width: 100%; }
 }

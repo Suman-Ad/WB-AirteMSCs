@@ -1,0 +1,40 @@
+import React from 'react';
+import {render,screen,fireEvent,waitFor} from '@testing-library/react';
+import {getDoc,getDocs,setDoc} from 'firebase/firestore';
+import PMRegister from './PMRegister';
+jest.mock('react-router-dom',()=>({Link:({to,children,...props})=><a href={to} {...props}>{children}</a>}),{virtual:true});
+jest.mock('../firebase',()=>({db:{}}));
+jest.mock('firebase/firestore',()=>({collection:jest.fn(),doc:jest.fn(),getDoc:jest.fn(),getDocs:jest.fn(),setDoc:jest.fn(),deleteDoc:jest.fn(),updateDoc:jest.fn(),serverTimestamp:()=> 'server-time',query:jest.fn(),where:jest.fn()}));
+jest.mock('antd',()=>({App:{}}));
+jest.mock('file-saver',()=>({saveAs:jest.fn()}));
+jest.mock('xlsx',()=>({}));
+const user={uid:'admin',role:'Admin',region:'East',circle:'WB',site:'Asansol'};
+beforeEach(()=>{
+  window.alert=jest.fn();
+  getDoc.mockResolvedValue({exists:()=>true,data:()=>({region:'East',circle:'WB',site:'Asansol',year:2026,equipmentSchedules:{UPS:[{id:'one',pmType:'PM check',frequency:'monthly',months:[1],dayOfMonth:1,notes:'Test schedule'}]}})});
+  getDocs.mockResolvedValue({docs:[],forEach:()=>{}});
+  setDoc.mockResolvedValue();
+});
+test('scope labels and keyboard schedule expansion retain month selection and saving',async()=>{
+  render(<PMRegister userData={user}/>);
+  expect(screen.getByLabelText('Site')).toHaveValue('Asansol');
+  const equipment=await screen.findByRole('button',{name:/UPS.*1 Activity Scheduled/});
+  fireEvent.keyDown(equipment,{key:'Enter'});
+  expect(equipment).toHaveAttribute('aria-expanded','true');
+  const entry=screen.getByRole('button',{name:/Activity #1 PM check/});
+  fireEvent.keyDown(entry,{key:' '});
+  expect(entry).toHaveAttribute('aria-expanded','true');
+  expect(screen.getByRole('button',{name:'Jan'})).toHaveAttribute('aria-pressed','true');
+  fireEvent.click(screen.getByRole('button',{name:'Feb'}));
+  expect(screen.getByRole('button',{name:'Feb'})).toHaveAttribute('aria-pressed','true');
+  fireEvent.click(screen.getByRole('button',{name:'Save Template'}));
+  await waitFor(()=>expect(setDoc).toHaveBeenCalled());
+  expect(setDoc.mock.calls.at(-1)[1].equipmentSchedules.UPS[0].months).toEqual([1,2]);
+});
+test('read-only users cannot invoke add, save or delete actions',async()=>{
+  render(<PMRegister userData={{...user,role:'User'}}/>);
+  await screen.findByRole('button',{name:/UPS.*1 Activity Scheduled/});
+  expect(screen.getByRole('button',{name:'Save Template'})).toBeDisabled();
+  expect(screen.getByRole('button',{name:'Delete Template'})).toBeDisabled();
+  expect(screen.getByRole('button',{name:/Add Schedule$/})).toBeDisabled();
+});

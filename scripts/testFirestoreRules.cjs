@@ -124,6 +124,38 @@ async function main() {
   await check("browser cannot fabricate daily meter history", call("/energyMonitor/N19106A/dailyReadings/fake", "admin", "PATCH", { fields: fields({ date: "2026-10-31", closingKwh: 999 }) }), 403);
   await check("collector cannot fabricate meter samples", call("/energyMonitor/N19106A/historyMeters/meter/samples/fake", collector, "PATCH", { fields: fields({ kwh: 999 }) }), 403);
   await check("browser cannot delete saved meter history", call("/energyMonitor/N19106A/dailyReadings/2026-10-31__meter", "admin", "DELETE"), 403);
+  const serverConfig = (uid, extra = {}) => ({writes: [{update: {
+    name: `projects/${project}/databases/(default)/documents/energyMonitor/N19106A/config/serverPowerSwitch`,
+    fields: fields({enabled:true,mainMeterId:'meter-2',dg1MeterId:'meter-26',dg2MeterId:'',updatedBy:uid,...extra})
+  }, updateTransforms:[{fieldPath:'updatedAt',setToServerValue:'REQUEST_TIME'}]}]});
+  await check("admin configures isolated server detector", call(":commit", "admin", "POST", serverConfig("admin")), 200);
+  await check("ordinary user cannot enable server detector", call(":commit", "human", "POST", serverConfig("human")), 403);
+  await check("Super User cannot enable server detector", call(":commit", "site-superuser", "POST", serverConfig("site-superuser")), 403);
+  await check("server mapping cannot duplicate main and DG", call(":commit", "admin", "POST", serverConfig("admin", {dg1MeterId:'meter-2'})), 403);
+  await check("server mapping rejects unexpected fields", call(":commit", "admin", "POST", serverConfig("admin", {powerSource:'DG'})), 403);
+  await check("server mapping rejects forged author", call(":commit", "admin", "POST", serverConfig("human")), 403);
+  await seed("energyMonitor/N19106A/runtime/serverPowerSource", {powerSource:"DG"});
+  await seed("energyMonitor/N19106A/serverChangeovers/run1", {status:"Running"});
+  for (const path of ["config/serverPowerSwitch", "runtime/serverPowerSource", "serverChangeovers/run1"]) {
+    await check(`site user reads isolated ${path}`, call(`/energyMonitor/N19106A/${path}`, "human"), 200);
+    await check(`cross-site user denied isolated ${path}`, call(`/energyMonitor/N19106A/${path}`, "other"), 403);
+    await check(`inactive admin denied isolated ${path}`, call(`/energyMonitor/N19106A/${path}`, "inactive-admin"), 403);
+    await check(`anonymous denied isolated ${path}`, call(`/energyMonitor/N19106A/${path}`, null), 403);
+  }
+  for (const path of ["runtime/serverPowerSource", "serverChangeovers/run1"]) {
+    await check(`admin cannot forge isolated ${path}`, call(`/energyMonitor/N19106A/${path}`, "admin", "PATCH", {fields:fields({powerSource:"EB"})}), 403);
+    await check(`admin cannot delete isolated ${path}`, call(`/energyMonitor/N19106A/${path}`, "admin", "DELETE"), 403);
+    await check(`collector cannot forge isolated ${path}`, call(`/energyMonitor/N19106A/${path}`, collector, "PATCH", {fields:fields({powerSource:"EB"})}), 403);
+  }
+  const functionControls=(uid,extra={})=>({writes:[{update:{
+    name:`projects/${project}/databases/(default)/documents/energyMonitor/N19106A/config/notifications`,
+    fields:fields({enabled:true,dailyEnabled:true,changeoverEnabled:true,intervalMinutes:120,healthAlertsEnabled:false,recoveryAlertsEnabled:true,crqRemindersEnabled:false,telegramIncidentEnabled:false,telegramActivityEnabled:true,telegramCrqImportEnabled:false,updatedBy:uid,...extra})
+  },updateTransforms:[{fieldPath:'updatedAt',setToServerValue:'REQUEST_TIME'}]}]});
+  await check('admin saves site function controls',call(':commit','admin','POST',functionControls('admin')),200);
+  for(const uid of ['human','site-superuser','inactive-admin']) await check(`${uid} cannot change function controls`,call(':commit',uid,'POST',functionControls(uid)),403);
+  await check('function controls reject non-boolean flags',call(':commit','admin','POST',functionControls('admin',{healthAlertsEnabled:'false'})),403);
+  await check('function controls reject unknown flags',call(':commit','admin','POST',functionControls('admin',{unexpected:true})),403);
+  await check('function controls reject forged authors',call(':commit','admin','POST',functionControls('human')),403);
   console.log(`${passed} Firestore rules integration checks passed.`);
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

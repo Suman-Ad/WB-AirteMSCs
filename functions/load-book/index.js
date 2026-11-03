@@ -43,3 +43,9 @@ Object.assign(exports, require("./energy-notification-functions.cjs"));
 Object.assign(exports, require("./energy-changeover-functions.cjs"));
 
 Object.assign(exports, require("./energy-cooldown-functions.cjs"));
+
+// Independent backend detector; does not drive the existing browser/header flow.
+Object.assign(exports, require("./server-power-functions.cjs"));
+
+// Meter freshness alerts work independently of browser sessions and periodic reports.
+Object.assign(exports, require("./meter-health-alert-functions.cjs"));

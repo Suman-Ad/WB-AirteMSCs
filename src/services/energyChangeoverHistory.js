@@ -14,6 +14,14 @@ export function captureMeter(data, meterId, now) {
     readings, powerUnits: meter?.powerUnits || "unknown", energyUnits: meter?.energyUnits || "Wh", quality: live ? "Captured" : state,
     lastKnownKwh: last?.kwh ?? null, lastKnownAtMs: last?.observedAtMs ?? null };
 }
+function zeroVoltageAt(data, meterId, now) {
+  const meter=data?.meters?.find(item=>item.id===meterId);
+  if(data?.fromCache !== false || meterHealth(meter,now,false)!=="Live" || /offline|disconnected/i.test(meter?.communicationState || "")) return null;
+  const valid=value=>typeof value==="number"&&Number.isFinite(value)&&value>=0;
+  const phases=["R","Y","B"].map(phase=>meter[`${phase}_voltage_ll`]);
+  const voltage=phases.every(valid)?phases:phases.some(value=>value!=null)?null:valid(meter.voltage_ll)?[meter.voltage_ll]:null;
+  return voltage?.every(value=>value===0)?meter.observedAt.toMillis():null;
+}
 const mappedMeter = (config, dg) => dg === "DG-2" ? config?.dg2MeterId : dg === "DG-1" ? config?.dg1MeterId : "";
 
 // Commit status and meter history together. A second client cannot claim the same transition.
@@ -51,10 +59,12 @@ export async function commitEnergyChangeover(db, powerRef, updateData, context) 
       const generation = opening?.kwh != null && sample.kwh != null && sample.kwh >= opening.kwh ? sample.kwh - opening.kwh : null;
       const confirmedTransfer = automatic && typeof loadTransferAtMs === "number" && Number.isFinite(loadTransferAtMs) && loadTransferAtMs <= now + 5000 && loadTransferAtMs >= (startAtMs || 0);
       const transfer = confirmedTransfer ? loadTransferAtMs : null;
+      const voltageZero = confirmedTransfer ? zeroVoltageAt(meterData,meterId,now) : null;
+      const cooldownComplete = voltageZero !== null && voltageZero >= transfer;
       const record = { siteId, siteName, dgNumber, meterId, mainMeterId, status: "Completed", startAtMs, endAtMs: now,
         date: existing?.date || new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(startAtMs || now)),
         opening, closing: sample, ebRestoration: main, generationKwh: generation,
-        loadTransferAtMs: transfer, cooldownStartAtMs: transfer, cooldownEndAtMs: null, cooldownSeconds: null, cooldownStatus: confirmedTransfer ? "Cooling" : "Unavailable",
+        loadTransferAtMs: transfer, cooldownStartAtMs: transfer, cooldownEndAtMs: cooldownComplete ? voltageZero : null, cooldownSeconds: cooldownComplete ? Math.floor((voltageZero-transfer)/1000) : null, cooldownStatus: cooldownComplete ? "Completed" : confirmedTransfer ? "Cooling" : "Unavailable",
         runSeconds: startAtMs === null ? null : Math.max(0, Math.floor((now - startAtMs) / 1000)),
         counterReset: opening?.kwh != null && sample.kwh != null && sample.kwh < opening.kwh, updatedBy: uid, updatedAt: timestamp };
       if (!existing) Object.assign(record, { createdBy: uid, createdAt: timestamp, trigger: "Restoration only", ebFailure: null });

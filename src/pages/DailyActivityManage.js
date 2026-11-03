@@ -14,6 +14,8 @@ import {
 import { db } from "../firebase";
 import { Link, useNavigate } from "react-router-dom";
 import "../assets/daily-activity.css";
+import "../assets/ActivityWorkspace.css";
+import {ActivityFormPanel} from "../components/ActivityFormPanel";
 import { ACTIVITY_MASTER, getApproversFromLevels, getMopByActivity } from "../config/activityMaster";
 import { generateMopPDF, generateMopExcel } from "../utils/mopGenerator";
 import { siteIdMap } from "../config/siteConfigs";
@@ -1384,7 +1386,7 @@ export default function DailyActivityManage({ userData }) {
   };
 
   return (
-    <div className="dhr-dashboard-container">
+    <div className="activity-workspace activity-manage">
       {loading && (
         <div
           style={{
@@ -1427,12 +1429,7 @@ export default function DailyActivityManage({ userData }) {
           </div>
         </div>
       )}
-      <div className="daily-activity-header">
-        <h1 className="dashboard-header">
-          <strong>🚧🛠️ Daily Activity Manage (PM Register integration)</strong>
-        </h1>
-        <div className="daily-activity-subtitle">Admins / assigned users maintain PM registers. Site users add scheduled PM to daily sheet.</div>
-      </div>
+      <header className="activity-page-header"><div><span className="activity-eyebrow">OPERATIONS / ACTIVITY PLANNING</span><h1>Manage daily activities</h1><p>Maintain PM schedules, add planned work and prepare the daily activity sheet.</p></div><div className="activity-header-actions"><span className="activity-scope-badge">{site || userData?.site || 'Select a site'}</span><Link className="activity-link-button" to="/daily-activity-dashboard">View dashboard ↗</Link></div></header>
 
       {(userData?.role === "Admin" || userData?.role === "Super Admin" || isAssignedUser || userData.designation === "Vertiv CIH" || userData.designation === "Vertiv ZM" || userData.designation === "Vertiv Site Infra Engineer") && (
         <Link to="/pm-register"><span className="pm-manage-btn">📜Manage PM Register</span></Link>
@@ -1448,7 +1445,7 @@ export default function DailyActivityManage({ userData }) {
       </div>
       {/* PM doc editor */}
       {!isAllCollapsed && (
-        <div style={{ marginTop: 12, border: "1px solid #eee", padding: 12, borderRadius: 8 }}>
+        <section className="activity-panel">
           {/* selection row */}
           <div className="daily-activity-toolbar" style={{ alignItems: "center", gap: 8 }}>
             {/* <input className="daily-activity-input" placeholder="Region" value={region} onChange={(e) => setRegion(e.target.value)} style={{ width: 140 }} disabled={!isAdmin} /> */}
@@ -1749,12 +1746,12 @@ export default function DailyActivityManage({ userData }) {
               </div>
             </>
           )}
-        </div>
+        </section>
       )}
 
       {/* Add Dynamic Activity */}
-      <div className="child-container" style={{ marginBottom: 12, border: "1px dashed #ccc", padding: 10 }}>
-        <h4>➕ Add Dynamic Activity (Site User)</h4>
+      <ActivityFormPanel>
+        <h2>Add an activity</h2><p className="activity-panel-description">Choose a date, equipment and activity, then review the details before adding it to the daily sheet.</p>
 
         {/* Date Selection */}
         <label>Select Date:</label>
@@ -2542,23 +2539,23 @@ export default function DailyActivityManage({ userData }) {
         >
           {saving ? "Adding..." : "Add"}
         </button>
-      </div>
+      </ActivityFormPanel>
 
       {/* Daily sheet */}
-      <div style={{ marginTop: 12, border: "1px solid #eee", padding: 12, borderRadius: 8 }}>
-        <div style={{ fontWeight: 700 }}>Daily Sheet — {site} — {dateFrom} — {dateTo}({dailyRows.length})</div>
+      <section className="activity-panel activity-daily-sheet">
+        <div className="activity-panel-heading"><div><span className="activity-eyebrow">DAILY SHEET</span><h2>{site || "Site activities"}</h2><p>{dateFrom} to {dateTo} · {dailyRows.length} activity rows</p></div></div>
         <div style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 8, overflowX: "auto" }}>
           <div style={{ display: "grid", gap: 8, alignItems: "center" }}>
             <input
               type="date"
-              className="daily-activity-date-picker"
+              className="daily-activity-date-picker" aria-label="Daily sheet from date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
             />
 
             <input
               type="date"
-              className="daily-activity-date-picker"
+              className="daily-activity-date-picker" aria-label="Daily sheet to date"
               value={dateTo}
               min={dateFrom}
               onChange={(e) => setDateTo(e.target.value)}
@@ -2617,7 +2614,7 @@ export default function DailyActivityManage({ userData }) {
 
         {loadingDaily ? <div className="daily-activity-loading">Loading daily sheet…</div> : (
           <div className="table-container">
-            <table className="table-container">
+            <table className="daily-activity-table">
               <thead>
                 <tr>
                   <th>Sl.No</th>
@@ -2660,18 +2657,18 @@ export default function DailyActivityManage({ userData }) {
                       background: r.activitySource === "DYNAMIC" ? "#f0fbff" : "transparent"
                     }}
                   >
-                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{idx + 1}</td>
-                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", position: "sticky", left: 0 }}>{r._sheetDate || selectDate || "-"}</td>
-                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{region}</td>
-                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{circle}</td>
-                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{site}</td>
-                    <td className="daily-activity-input" style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", position: "sticky", left: 0 }} > {/* value={r.nodeName || ""} onChange={(e) => updateDailyRow(idx, "nodeName", e.target.value)}  */}
+                    <td style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{idx + 1}</td>
+                    <td style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", position: "sticky", left: 0 }}>{r._sheetDate || selectDate || "-"}</td>
+                    <td style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{region}</td>
+                    <td style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{circle}</td>
+                    <td style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{site}</td>
+                    <td className="daily-activity-input" style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", position: "sticky", left: 0 }} > {/* value={r.nodeName || ""} onChange={(e) => updateDailyRow(idx, "nodeName", e.target.value)}  */}
                       {r.nodeName || ""}
                     </td>
-                    <td className="daily-activity-input" style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} > {/* value={r.quantity || ""} onChange={(e) => updateDailyRow(idx, "quantity", e.target.value)} */}
+                    <td className="daily-activity-input" style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} > {/* value={r.quantity || ""} onChange={(e) => updateDailyRow(idx, "quantity", e.target.value)} */}
                       {r.quantity || ""}
                     </td>
-                    <td className="daily-activity-input" style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} > {/*value={r.activityDetails || ""} onChange={(e) => updateDailyRow(idx, "activityDetails", e.target.value)} */}
+                    <td className="daily-activity-input" style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} > {/*value={r.activityDetails || ""} onChange={(e) => updateDailyRow(idx, "activityDetails", e.target.value)} */}
                       {r.activityDetails || ""} - {r.notes || ""}
                     </td>
 
@@ -2683,13 +2680,13 @@ export default function DailyActivityManage({ userData }) {
                         <option value="Major">Major</option>
                       </select>
                     </td> */}
-                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} >{siteConfig?.siteCategory || r.siteCategory}</td>
+                    <td style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} >{siteConfig?.siteCategory || r.siteCategory}</td>
 
                     {/* Activity Type dropdown */}
                     <td
                       className="daily-activity-select"
                       value={r.activityCategory || "Minor"}
-                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.activityCategory || "Minor"}
@@ -2698,7 +2695,7 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-select"
                       value={r.activityCode || "*"}
-                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.activityCode || "*"}
@@ -2707,7 +2704,7 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-select"
                       value={r.activityType || ""}
-                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.activityType || ""}
@@ -2716,7 +2713,7 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-select"
                       value={r.performBy || "In-House"}
-                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.performBy || "In-House"}
@@ -2725,7 +2722,7 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-select"
                       value={r.vendor || "In-House"}
-                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.vendor || "In-House"}
@@ -2753,14 +2750,14 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-input"
                       value={r.mopRequired}
-                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.mopRequired}
                     </td>
 
                     <td
-                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                     >
                       {r.mopRequired === "Yes" ? (
                         // <button
@@ -2788,7 +2785,7 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-input"
                       value={r.approvalRequire || "No"}
-                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {r.approvalRequire || "No"}
@@ -2798,7 +2795,7 @@ export default function DailyActivityManage({ userData }) {
                       <textarea
                         className="daily-activity-input"
                         value={formatApproversFromArray(r.approvers)}
-                        style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", width: "150px", height: "150px" }}
+                        style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", width: "150px", height: "150px" }}
                         disabled
                       />
                     </td>
@@ -2812,7 +2809,7 @@ export default function DailyActivityManage({ userData }) {
                       const hasLevel = rowLevels.includes(level);
 
                       return (
-                        <td key={level} style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>
+                        <td key={level} style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>
                           {/* <select
                             className="daily-activity-select"
                             value={r.approvalStatusByLevel?.[level] || "NA"}
@@ -2841,7 +2838,7 @@ export default function DailyActivityManage({ userData }) {
                     <td
                       className="daily-activity-select"
                       value={r.crqType}
-                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       disabled
                     >
                       {/* <select
@@ -2861,7 +2858,7 @@ export default function DailyActivityManage({ userData }) {
                       list={`crq-options-${idx}`}
                       value={r.crqNo || ""}
                       placeholder={r.crqType === "CRQ" ? "CRQ Number required" : "PE Number required"}
-                      style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
+                      style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}
                       required={r.crqType === "CRQ"}
                       onChange={(e) => updateDailyRow(idx, "crqNo", e.target.value)}
                     >
@@ -2873,12 +2870,12 @@ export default function DailyActivityManage({ userData }) {
                     </td>
 
                     {/* Start/End time */}
-                    <td className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e) => updateDailyRow(idx, "activityStartTime", e.target.value)} style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r.activityStartTime || ""}</td>
-                    <td className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e) => updateDailyRow(idx, "activityEndTime", e.target.value)} style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} >{r.activityEndTime || ""}</td>
-                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r.activityTime || "Day"}</td>
-                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r.floor || "Unknown Location"}</td>
+                    <td className="daily-activity-input" type="time" value={r.activityStartTime || ""} onChange={(e) => updateDailyRow(idx, "activityStartTime", e.target.value)} style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r.activityStartTime || ""}</td>
+                    <td className="daily-activity-input" type="time" value={r.activityEndTime || ""} onChange={(e) => updateDailyRow(idx, "activityEndTime", e.target.value)} style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} >{r.activityEndTime || ""}</td>
+                    <td style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r.activityTime || "Day"}</td>
+                    <td style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }}>{r.floor || "Unknown Location"}</td>
                     {/* Delete */}
-                    <td style={{ backgroundColor: ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} >
+                    <td style={{ "--activity-tint": ACTIVITY_CODE_BG[r.activityCode] || "transparent", }} >
                       <button
                         className="daily-activity-btn daily-activity-btn-secondary"
                         onClick={() => {
@@ -3046,11 +3043,10 @@ export default function DailyActivityManage({ userData }) {
 
           </div>
         )}
-      </div>
+      </section>
 
-      <div style={{ marginTop: 12, color: "#666", fontSize: 13 }}>
-        Notes: PM register documents live in <code>pm_registers</code> collection with doc id pattern: <code>Region__Circle__Site__YYYY</code>.
-        Use Add Scheduled Items to copy schedule items for the selected date into <code>daily_activity_sheets</code>.
+      <div className="activity-footnote">
+        Select a date range to review the daily sheet. Use Add Scheduled Items to include planned PM work, or add an activity manually above.
       </div>
     </div >
   );

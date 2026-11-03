@@ -335,22 +335,20 @@ const IncidentManagement = ({ userData }) => {
   };
 
   return (
-    <div className="dhr-dashboard-container">
+    <div className="incident-management-page">
       
-      <h1 className="dashboard-header">
-        <strong>🚨 {incidentId ? "Edit Incident" : "Incident Management"}</strong>
-      </h1>
-
+      <header className="incident-page-header"><div><span className="incident-eyebrow">OPERATIONS / INCIDENTS</span><h1>{incidentId ? 'Edit incident' : 'Incident management'}</h1><p>Report issues, document the response and track resolution.</p></div><div className="incident-page-actions"><span className="incident-site-badge">{userData?.site || 'Site unassigned'}</span><button type="button" onClick={()=>navigate('/incident-dashboard')}>View dashboard ↗</button></div></header>
+      <div className="incident-tools-grid">
       {/* Notice Board */}
       <div className="instruction-tab">
-        <h2 className="noticeboard-header">📌 Notice Board </h2>
+        <span className="incident-eyebrow">GUIDANCE</span><h2 className="noticeboard-header">Notice board</h2>
         {isEditingNotice ? (
           <>
             <textarea
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
               rows={5}
-              className="dashboard-instruction-panel"
+              className="dashboard-instruction-panel" aria-label="Incident instructions"
             />
             <div className="flex gap-2">
               <button
@@ -387,14 +385,12 @@ const IncidentManagement = ({ userData }) => {
             )}
           </>
         )}
-        <h6 style={{ marginLeft: "90%" }}>Thanks & Regards @Suman Adhikari</h6>
-      </div>
-
-      <div style={{ marginBottom: "20px" }}>
 
       </div>
 
-      <div className="import-section">
+
+
+      <div className="import-section"><span className="incident-eyebrow">SPREADSHEET IMPORT</span><h2>Import multiple incidents</h2><p>Download the template, fill in your records and review the preview before importing.</p>
 
         <button
           onClick={downloadTemplate}
@@ -403,17 +399,19 @@ const IncidentManagement = ({ userData }) => {
           📥 Download Upload Template
         </button>
 
-        <h3>📤 Bulk Import</h3>
+        <label htmlFor="incident-import-file">Upload completed Excel template</label>
 
         <input
           type="file"
+          id="incident-import-file"
+          disabled={isImporting}
           accept=".xlsx, .xls"
           onChange={(e) => handlePreviewExcel(e.target.files[0])}
         />
 
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
-          <div style={{ color: "red", marginTop: "10px" }}>
+          <div className="incident-import-errors" role="alert">
             <h4>❌ Validation Errors:</h4>
             {validationErrors.map((err, i) => (
               <div key={i}>{err}</div>
@@ -423,7 +421,7 @@ const IncidentManagement = ({ userData }) => {
 
         {/* Preview Table */}
         {previewData.length > 0 && (
-          <div style={{ marginTop: "20px", maxHeight: "300px", overflow: "auto" }}>
+          <div className="incident-import-preview">
             <h4>📊 Preview Data</h4>
             <table className="preview-table">
               <thead>
@@ -461,6 +459,7 @@ const IncidentManagement = ({ userData }) => {
         {isImporting && (
           <div style={{ marginTop: "15px" }}>
             <progress
+              aria-label="Incident import progress"
               value={importProgress.processed}
               max={importProgress.total}
             />
@@ -474,6 +473,7 @@ const IncidentManagement = ({ userData }) => {
 
       </div>
 
+      </div>
       {/* Incident Editor Form */}
       <IncidentEditorPage
         formData={formData}

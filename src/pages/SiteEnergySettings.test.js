@@ -8,6 +8,7 @@ jest.mock("firebase/firestore", () => ({ collection: jest.fn(), onSnapshot: jest
 jest.mock("./EnergyPowerMapping", () => ({siteId, meters, fixedSite}) => <div data-testid="mapping">{siteId}:{meters.length}:{String(fixedSite)}</div>);
 jest.mock("./EnergyAsansolBridge", () => ({siteId, siteName, fromCache}) => <div data-testid="simulator">{siteName}:{siteId}:{String(fromCache)}</div>);
 jest.mock("./SiteMeterCleanup", () => ({meters}) => <div data-testid="cleanup">{meters.length}</div>);
+jest.mock("./EnergyNotificationSettings", () => ({siteId}) => <div data-testid="notifications">{siteId}</div>);
 beforeEach(() => {
   jest.clearAllMocks();
   onSnapshot.mockImplementation((ref, options, next) => {
@@ -24,6 +25,7 @@ test("admin site selection moves both editors and replaces the live meter subscr
   fireEvent.change(screen.getByLabelText("Automatic switch settings site"), {target:{value:other}});
   expect(stop).toHaveBeenCalledTimes(1);
   expect(screen.getByTestId("mapping")).toHaveTextContent(`${other}:1:true`);
+  expect(screen.getByTestId("notifications")).toHaveTextContent(other);
   expect(collection).toHaveBeenLastCalledWith({},"energyMonitor",other,"meters");
   view.unmount();
   expect(onSnapshot.mock.results[1].value).toHaveBeenCalledTimes(1);

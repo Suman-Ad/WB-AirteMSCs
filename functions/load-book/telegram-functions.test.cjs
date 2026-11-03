@@ -38,6 +38,7 @@ function harness() {
       'firebase-functions/params': {defineSecret: name => ({value: () => name === 'TELEGRAM_BOT_TOKEN' ? 'private-token' : 'webhook-secret'}), defineString: () => ({value: () => 'msc_test_bot'})},
       'firebase-admin/firestore': {getFirestore: () => db, FieldValue: {delete: () => deletedField, serverTimestamp: () => {const saved = now; return {toMillis: () => saved};}}, Timestamp: {fromMillis: value => ({toMillis: () => value})}},
       'node:crypto': crypto,
+      './telegram-reports.cjs': require('./telegram-reports.cjs'),
       './notification-functions.cjs': {notificationData: n => ({title: n.title || 'Alert', body: n.message || 'Update'})}
     })[name]
   });
@@ -67,6 +68,21 @@ test('link creation requires authenticated active account and hides raw token in
   assert.equal(token.length, 48);
   assert.equal([...app.records.keys()].some(key => key.includes(token)), false);
   await assert.rejects(app.exports.createTelegramLink({auth: {uid: 'user'}}), {code: 'resource-exhausted'});
+});
+
+test('report commands route spaced phrases and bot mentions through account checks', async () => {
+  const app = harness();
+  for (const command of ['/METER@msc_test_bot   DATA', '/present fuel', '/site running load', '/pue', '/segr', '/present_fuel', '/activity', '/ACTIVITY@msc_test_bot', '/incident', '/INCIDENT@msc_test_bot']) {
+    assert.equal(await app.webhook(command), 200);
+    assert.match(app.requests.at(-1).body.text, /Connect Telegram from the app/);
+  }
+  await app.webhook('/help');
+  assert.match(app.requests.at(-1).body.text, /\/meter data/);
+  await app.webhook('/Asansol: Site Status');
+  assert.match(app.requests.at(-1).body.text, /Connect Telegram from the app/);
+  await app.link();
+  await app.webhook('/Globsyn: meter data');
+  assert.match(app.requests.at(-1).body.text, /Only Admin and Super Admin/);
 });
 test('webhook refuses forged requests, groups and non-POST methods', async () => {
   const app = harness();
@@ -169,4 +185,12 @@ test('CRQ open and close notifications reach a linked Telegram account',async()=
  }
  assert.equal(app.records.get('notificationDeliveries/user/telegramItems/open').status,'sent');
  assert.equal(app.records.get('notificationDeliveries/user/telegramItems/close').status,'sent');
+});
+
+test('plain private start replies without linking and failed replies request webhook retry',async()=>{
+ const app=harness();assert.equal(await app.webhook('/start'),200);
+ assert.match(app.requests.at(-1).body.text,/To connect/);
+ app.fail(500,'Internal server error');assert.equal(await app.webhook('/start'),503);
+ app.fail(401,'Unauthorized');assert.equal(await app.webhook('/start'),503);
+ app.fail(403,'Forbidden: bot was blocked by the user');assert.equal(await app.webhook('/start'),200);
 });

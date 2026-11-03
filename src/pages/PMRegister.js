@@ -14,6 +14,9 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import "../assets/daily-activity.css";
+import "../assets/ActivityWorkspace.css";
+import "../assets/PMRegister.css";
+import {Link} from "react-router-dom";
 import { region, siteList, siteIdMap } from "../config/siteConfigs.js";
 import { ACTIVITY_MASTER, getApproversFromLevels } from "../config/activityMaster.js";
 import * as XLSX from "xlsx";
@@ -997,7 +1000,7 @@ export default function PMRegister({ userData }) {
 
 
   return (
-    <div className="dhr-dashboard-container">
+    <div className="activity-workspace pm-register-page">
       {loading && (
         <div
           style={{
@@ -1040,32 +1043,27 @@ export default function PMRegister({ userData }) {
           </div>
         </div>
       )}
-      <div className="daily-activity-header">
-        <h1 className="dashboard-header">
-          <strong>📜 PM Register Sheet (Yearly Templates)</strong>
-        </h1>
-        <div className="daily-activity-subtitle">
-          Create In-House (monthly) & Vendor (quarterly/half-year/yearly) PM schedules per site (recurring each year).
-        </div>
-      </div>
+      <header className="activity-page-header"><div><span className="activity-eyebrow">OPERATIONS / PREVENTIVE MAINTENANCE</span><h1>PM register</h1><p>Build yearly equipment schedules for in-house maintenance and vendor visits.</p></div><div className="activity-header-actions"><span className="activity-scope-badge">{canEdit ? 'Editing access' : 'Read-only access'}</span><Link className="activity-link-button" to="/daily-activity-management">Daily activities ↗</Link></div></header>
+      <div className="pm-register-summary"><div><span>Selected site</span><strong>{site || 'Not selected'}</strong><small>{region || 'Select region'} · {circle || 'Select circle'}</small></div><div><span>Planning year</span><strong>{year}</strong><small>Recurring yearly schedule</small></div><div><span>Equipment groups</span><strong>{Object.keys(pmDoc?.equipmentSchedules || {}).length}</strong><small>{Object.values(pmDoc?.equipmentSchedules || {}).reduce((sum,entries)=>sum+(Array.isArray(entries)?entries.length:0),0)} schedule entries</small></div></div>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        <select className="daily-activity-select" value={region || ""} onChange={(e) => { setRegion(e.target.value); setCircle(""); setSite(""); }} disabled={!isAdmin && !!userData?.region}>
+      <section className="pm-register-scope"><div className="pm-register-section-title"><h2>Site & planning controls</h2><p>Select your location and year, then load or save the template.</p></div><div className="pm-register-selectors">
+        <label>Region<select className="daily-activity-select" value={region || ""} onChange={(e) => { setRegion(e.target.value); setCircle(""); setSite(""); }} disabled={!isAdmin && !!userData?.region}>
           <option value="">Select Region</option>
           {regions.map(r => <option key={r} value={r}>{r}</option>)}
-        </select>
+        </select></label>
 
-        <select className="daily-activity-select" value={circle || ""} onChange={(e) => { setCircle(e.target.value); setSite(""); }} disabled={!region || (!isAdmin && !!userData?.circle)}>
+        <label>Circle<select className="daily-activity-select" value={circle || ""} onChange={(e) => { setCircle(e.target.value); setSite(""); }} disabled={!region || (!isAdmin && !!userData?.circle)}>
           <option value="">Select Circle</option>
           {circles.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        </select></label>
 
-        <select className="daily-activity-select" value={site || ""} onChange={(e) => setSite(e.target.value)} disabled={!circle || (!isAdmin && !!userData?.site)}>
+        <label>Site<select className="daily-activity-select" value={site || ""} onChange={(e) => setSite(e.target.value)} disabled={!circle || (!isAdmin && !!userData?.site)}>
           <option value="">Select Site</option>
           {sites.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </select></label>
 
-        <input className="daily-activity-input" type="number" min="2000" max="2100" value={year} onChange={(e) => setYear(parseInt(e.target.value, 10) || currentYear())} style={{ width: 110 }} />
+        <label>Planning year<input className="daily-activity-input" type="number" min="2000" max="2100" value={year} onChange={(e) => setYear(parseInt(e.target.value, 10) || currentYear())} style={{ width: 110 }} /></label>
+      </div><div className="pm-register-actions">
 
         <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => {
           // reload pmDoc for selected site/year — handled by useEffect but we allow manual
@@ -1155,15 +1153,15 @@ export default function PMRegister({ userData }) {
             </span>
           </label>
         </div>
-      </div>
+      </div></section>
 
       {/* PM Doc Editor */}
-      <div className="chart-container" style={{ border: "1px solid #eee", borderRadius: 8, padding: 12 }}>
+      <section className="activity-panel pm-register-editor">
         {pmLoading ? <div className="daily-activity-loading">Loading template…</div> : (
           <>
             <div style={{ marginBottom: 8, display: "flex", gap: 12, alignItems: "center" }}>
               <div style={{ fontWeight: 700 }}>{(pmDoc && pmDoc.site) ? `${pmDoc.region} / ${pmDoc.circle} / ${pmDoc.site} — ${pmDoc.year}` : "No template loaded"}</div>
-              <div style={{ color: "#666" }}>Edit equipment schedules below. Click Save Template to persist to Save PM Resister.</div>
+              <div style={{ color: "var(--app-text-muted)" }}>Review equipment schedules below. Save Template applies your changes.</div>
             </div>
 
             {/* equipment selection quick add */}
@@ -1204,7 +1202,7 @@ export default function PMRegister({ userData }) {
                 Object.keys(pmDoc.equipmentSchedules || {}).map(equipmentName => {
                   const entries = Array.isArray(pmDoc.equipmentSchedules[equipmentName]) ? pmDoc.equipmentSchedules[equipmentName] : [];
                   return (
-                    <div className="child-container" key={equipmentName} style={{ border: "1px solid #f0f0f0", padding: 10, borderRadius: 6 }}>
+                    <section className="pm-equipment-card" key={equipmentName}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                         <div
                           style={{
@@ -1212,11 +1210,13 @@ export default function PMRegister({ userData }) {
                             alignItems: "center",
                             justifyContent: "space-between",
                             cursor: "pointer",
-                            background: "#f0f2f5",
+                            background: "var(--app-surface-muted)",
                             padding: "8px 10px",
                             borderRadius: 6,
                             marginTop: 10,
                           }}
+                          className="pm-equipment-toggle" role="button" tabIndex={0} aria-expanded={Boolean(expandedEquipments[equipmentName])}
+                          onKeyDown={e=>{if(e.key === "Enter" || e.key === " "){e.preventDefault();toggleEquipment(equipmentName);}}}
                           onClick={() => toggleEquipment(equipmentName)}
                         >
                           <strong>{equipmentName} - {`${entries.length} Activity Scheduled`} </strong>
@@ -1228,13 +1228,13 @@ export default function PMRegister({ userData }) {
 
                         <div style={{ display: "flex", gap: 8 }}>
                           {/* <button className="daily-activity-btn daily-activity-btn-secondary" onClick={() => ensureEquipmentSlot(equipmentName)} disabled={!canEdit} style={{ padding: "2px 2px", height: "fit-content" }}>Ensure</button> */}
-                          <p
+                          <button
                             className="daily-activity-btn"
                             onClick={() => addScheduleForEquipment(equipmentName, (ACTIVITY_MASTER[equipmentName] || ACTIVITY_MASTER.Other || [])[0]?.activityDescription)}
                             disabled={!canEdit}
                           >
                             ➕ Add Schedule
-                          </p>
+                          </button>
                           <button className="daily-activity-btn daily-activity-btn-danger" onClick={() => {
                             // remove entire equipment schedules
                             if (!canEdit) return;
@@ -1252,21 +1252,23 @@ export default function PMRegister({ userData }) {
 
                       {expandedEquipments[equipmentName] && (
                         <div className="chart-container" style={{ display: "grid", gap: 12 }}>
-                          {entries.length === 0 && <div style={{ color: "#666" }}>No entries for this equipment</div>}
+                          {entries.length === 0 && <div style={{ color: "var(--app-text-muted)" }}>No entries for this equipment</div>}
                           {entries.map((entry, idx) => {
                             const entryKey = `${equipmentName}_${entry.id}`;
                             const isExpanded = expandedEntries[entryKey];
                             return (
                               (
-                                <div key={entry.id} style={{ borderTop: "1px dashed #eee", paddingTop: 8 }}>
+                                <div key={entry.id} style={{ borderTop: "1px dashed var(--app-border)", paddingTop: 8 }}>
                                   <div
+                                    className="pm-entry-toggle" role="button" tabIndex={0} aria-expanded={Boolean(isExpanded)}
+                                    onKeyDown={e=>{if(e.key === "Enter" || e.key === " "){e.preventDefault();toggleEntry(equipmentName,entry.id);}}}
                                     onClick={() => toggleEntry(equipmentName, entry.id)}
                                     style={{
                                       display: "flex",
                                       justifyContent: "space-between",
                                       alignItems: "center",
                                       cursor: "pointer",
-                                      background: "#f8fafc",
+                                      background: "var(--app-surface-muted)",
                                       padding: "8px 12px",
                                       borderRadius: 6,
                                       marginBottom: 8,
@@ -1283,7 +1285,7 @@ export default function PMRegister({ userData }) {
                                   {isExpanded && (
                                     <div>
 
-                                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                                      <div className="pm-entry-fields" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                                         <label style={{ minWidth: 110 }}>
                                           Activity Name:
                                           <select
@@ -1427,6 +1429,7 @@ export default function PMRegister({ userData }) {
                                             const checked = Array.isArray(entry.months) && entry.months.includes(m.num);
                                             return (
                                               <button key={m.num}
+                                                aria-pressed={checked}
                                                 className={`daily-activity-btn ${checked ? "daily-activity-btn-primary" : "daily-activity-btn-secondary"}`}
                                                 onClick={() => {
                                                   if (!canEdit) return;
@@ -1457,7 +1460,7 @@ export default function PMRegister({ userData }) {
                                       </div>
 
                                       <div style={{ marginTop: 8 }}>
-                                        <label style={{ fontSize: 12, color: "#666", display: "block" }}>
+                                        <label style={{ fontSize: 12, color: "var(--app-text-muted)", display: "block" }}>
                                           Approvers
                                         </label>
                                         <textarea
@@ -1469,10 +1472,10 @@ export default function PMRegister({ userData }) {
                                       </div>
 
                                       <div style={{ marginTop: 8 }}>
-                                        <label style={{ fontSize: 12, color: "#666", display: "block" }}>
+                                        <label style={{ fontSize: 12, color: "var(--app-text-muted)", display: "block" }}>
                                           Actvivity Information
                                         </label>
-                                        <p
+                                        <button
                                           className="daily-activity-input"
                                           style={{ minHeight: 60, whiteSpace: "pre-wrap" }}
                                           disabled
@@ -1488,7 +1491,7 @@ export default function PMRegister({ userData }) {
                                           {entry.crRequired ? `CR Days Before - ${entry.crDaysBefore || "N/A"}` : ""}{"\n"}
                                           Approval Level - {entry.approvalLevel || "N/A"}{"\n"}
                                           {entry.information || ""}
-                                        </p>
+                                        </button>
                                       </div>
 
                                     </div>
@@ -1501,17 +1504,17 @@ export default function PMRegister({ userData }) {
                           })}
                         </div>
                       )}
-                    </div>
+                    </section>
                   );
                 })
               )}
             </div>
           </>
         )}
-      </div>
+      </section>
 
-      <div style={{ marginTop: 12, color: "#666", fontSize: 13 }}>
-        <strong>Notes:</strong> Save Template persists the configuration in Firestore under collection <code>pm_registers</code> with id <code>siteKey__YYYY</code>. The schedule is recurring yearly; when you build daily/weekly tasks you can reference these schedules to auto-create tasks on scheduled months/days.
+      <div className="activity-footnote">
+        Schedule changes stay in the editor until you choose Save Template. Use the upload format to import multiple schedules, then review the entries before saving.
       </div>
     </div>
   );

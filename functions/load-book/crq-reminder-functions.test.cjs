@@ -44,3 +44,11 @@ test('deleting a bell item does not replay the reminder',async()=>{
  assert.equal([...app.records.keys()].filter(path=>path.startsWith('notifications/')).length,0);
  assert.equal([...app.records.keys()].filter(path=>path.includes('/crqReminders/')).length,4);
 });
+
+test('disabled site reminders suppress notifications without consuming claims',async()=>{
+ const app=setup();app.records.set('energyMonitor/ASL/config/notifications',{crqRemindersEnabled:false});
+ await app.run();
+ assert.equal([...app.records.keys()].filter(path=>path.startsWith('notifications/')).length,0);
+ app.records.set('energyMonitor/ASL/config/notifications',{crqRemindersEnabled:true});await app.run();
+ assert.equal([...app.records.keys()].filter(path=>path.startsWith('notifications/')).length,4);
+});

@@ -21,6 +21,10 @@ exports.sendCRQReminders = onSchedule({schedule: 'every 1 minutes', timeZone: 'A
         await db.runTransaction(async tx => {
           const [claimed, saved, latestSheet, latestUser] = await Promise.all([tx.get(claim), tx.get(ref), tx.get(sheet.ref), tx.get(user.ref)]);
           if (claimed.exists || !latestSheet.exists || !latestUser.exists || !eligibleUser(latestUser.data(), latestSheet.data())) return;
+          const siteId = latestSheet.data().siteId;
+          if (typeof siteId !== 'string' || !siteId || siteId.includes('/')) return;
+          const config = await tx.get(db.doc(`energyMonitor/${siteId}/config/notifications`));
+          if (config.data()?.crqRemindersEnabled === false) return;
           const due = dueReminders(latestSheet.data(), now).find(item => reminderId(sheet.id, item) === id);
           if (due) {
             if (!saved.exists) tx.create(ref, {...notification(latestSheet.data(), due), createdAt: FieldValue.serverTimestamp()});

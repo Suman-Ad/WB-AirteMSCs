@@ -133,3 +133,31 @@ test("DG-2 returns to EB after two zero-load readings while still energized and 
  await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(110000));});
  expect(onTrigger).toHaveBeenCalledTimes(1);expect(onTrigger).toHaveBeenCalledWith('EB',{loadTransferAtMs:100000});
 });
+
+
+test("retains residual idle load when DG goes offline and confirms two new mains readings",async()=>{
+ const onTrigger=jest.fn().mockResolvedValue(true);
+ render(<ExistingSwitch siteId="ASL" canToggle powerSource="DG" activeDG="DG-2" onTrigger={onTrigger}/>);
+ const sample=(time,offline=false)=>({docs:[meter("main",415,time),{id:"dg2",data:()=>({status:offline?"ERROR":"OK",voltage_ll:415,R_current:3.3333,Y_current:3.4,B_current:3.4,observedAt:{toMillis:()=>offline?100000:time}})}],metadata:{fromCache:false}});
+ await act(async()=>publish(sample(100000)));
+ expect(onTrigger).not.toHaveBeenCalled();
+ await act(async()=>{jest.advanceTimersByTime(10000);publish(sample(110000,true));});
+ expect(onTrigger).not.toHaveBeenCalled();
+ await act(async()=>publish(sample(110000,true)));
+ expect(onTrigger).not.toHaveBeenCalled();
+ await act(async()=>{jest.advanceTimersByTime(10000);publish(sample(120000,true));});
+ expect(onTrigger).toHaveBeenCalledTimes(1);
+ expect(onTrigger).toHaveBeenCalledWith("EB",expect.objectContaining({loadTransferAtMs:100000}));
+});
+
+
+test.each(["mains loss","DG reload"])("offline restoration discards idle evidence after %s",async reason=>{
+ const onTrigger=jest.fn().mockResolvedValue(true);
+ render(<ExistingSwitch siteId="ASL" canToggle powerSource="DG" activeDG="DG-2" onTrigger={onTrigger}/>);
+ const sample=(time,mainVoltage,current,offline=false)=>({docs:[meter("main",mainVoltage,time),{id:"dg2",data:()=>({status:offline?"ERROR":"OK",voltage_ll:415,R_current:current,Y_current:current,B_current:current,observedAt:{toMillis:()=>time}})}],metadata:{fromCache:false}});
+ await act(async()=>publish(sample(100000,415,3.4)));
+ await act(async()=>{jest.advanceTimersByTime(10000);publish(sample(110000,reason==="mains loss"?0:415,reason==="DG reload"?10:3.4));});
+ await act(async()=>{jest.advanceTimersByTime(10000);publish(sample(120000,415,3.4,true));});
+ await act(async()=>{jest.advanceTimersByTime(10000);publish(sample(130000,415,3.4,true));});
+ expect(onTrigger).not.toHaveBeenCalled();
+});

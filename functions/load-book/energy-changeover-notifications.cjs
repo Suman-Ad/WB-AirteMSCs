@@ -3,6 +3,8 @@ const {istDate} = require('./meter-history.cjs');
 const number = v => typeof v === 'number' && Number.isFinite(v) && v >= 0;
 const fmt = v => number(v) ? v.toLocaleString('en-IN',{maximumFractionDigits:2}) : 'Unavailable';
 const time = v => number(v) && v > 0 ? new Date(v).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}) + ' IST' : 'Unavailable';
+const eligibleChangeoverUser = (user, siteId) => user?.isActive === true &&
+  (user.siteId === siteId || ['Admin', 'Super Admin'].includes(user.role));
 function transition(before, after) {
   if (!after) return null;
   if (!before && after.status === 'Running') return 'start';
@@ -23,12 +25,19 @@ function changeoverNotification(run, phase, siteId) {
   const generated = phase === 'restore' && !reset && number(run.opening?.kwh) && number(run.closing?.kwh) ? run.closing.kwh - run.opening.kwh : null;
   const lines = [`${String(run.siteName || siteId).slice(0,100)} · ${run.dgNumber || 'DG'} · ${time(at)}`,
     `Source: ${run.trigger || 'Unknown'} changeover`];
+  const fuel=run.fuelSnapshot;
+  lines.push(`Fuel stock: latest saved Daily DG Log ${fuel?.stockDate || 'unavailable'} (not a live tank reading)`);
+  for (const dg of fuel?.generators || []) {
+    lines.push(`${dg.dg}: Day tank ${fmt(dg.dayLitres)} L | External tank ${fmt(dg.externalLitres)} L | Est. backup ${fmt(dg.backupHours)} h`,
+      `  Rate: ${fmt(dg.litresPerHour)} L/h (${dg.rateSource || 'Unavailable'}); backup includes both tanks`);
+  }
+  if (fuel?.unavailableReason) lines.push(fuel.unavailableReason);
   if (phase === 'start') lines.push(reading('Last mains register at failure',run.ebFailure,boundary),reading('DG start register',run.opening,boundary));
   else lines.push(reading('Mains restored register',run.ebRestoration,boundary),reading('DG start register',run.opening,boundary),reading('DG closing register',run.closing,boundary),
     `DG generation: ${fmt(generated)} kWh${reset ? ' (counter reset / decrease)' : ''}`,`Run duration: ${number(run.runSeconds) ? fmt(run.runSeconds / 60) + ' minutes' : 'Unavailable'}`);
-  return {title:phase === 'start' ? `EB → ${run.dgNumber || 'DG'} · DG started` : `${run.dgNumber || 'DG'} → EB · Mains restored`,
+  return {title:phase === 'start' ? 'EB-DG: DG Start' : 'DG-EB: Mains Restore',
     message:lines.join('\n'),actionType:phase === 'start' ? 'energy_dg_start' : 'energy_mains_restored',url:'/energy-monitor',read:false,
     date:number(at) && at > 0 ? istDate(at) : run.date || '',siteId,meterId:run.meterId || '',counterReset:reset};
 }
 const changeoverId=(siteId,runId,phase)=>'energy-changeover-'+createHash('sha256').update(JSON.stringify([siteId,runId,phase])).digest('hex');
-module.exports={transition,reading,changeoverNotification,changeoverId};
+module.exports={transition,reading,changeoverNotification,changeoverId,eligibleChangeoverUser};

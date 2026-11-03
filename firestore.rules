@@ -59,6 +59,32 @@ service cloud.firestore {
         && request.resource.data.powerUnits in ['raw', 'base', 'kilo'];
       allow delete: if isActiveAdmin();
     }
+    // Independent server detector. Client access never grants runtime/history writes.
+    match /energyMonitor/{siteId}/config/serverPowerSwitch {
+      allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
+      allow create, update: if isActiveAdmin()
+        && request.resource.data.keys().hasOnly(['enabled', 'mainMeterId', 'dg1MeterId', 'dg2MeterId', 'updatedBy', 'updatedAt'])
+        && request.resource.data.enabled is bool
+        && request.resource.data.mainMeterId is string
+        && request.resource.data.dg1MeterId is string
+        && request.resource.data.dg2MeterId is string
+        && request.resource.data.mainMeterId != ''
+        && (request.resource.data.dg1MeterId != '' || request.resource.data.dg2MeterId != '')
+        && request.resource.data.mainMeterId != request.resource.data.dg1MeterId
+        && request.resource.data.mainMeterId != request.resource.data.dg2MeterId
+        && (request.resource.data.dg1MeterId == '' || request.resource.data.dg1MeterId != request.resource.data.dg2MeterId)
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+    match /energyMonitor/{siteId}/runtime/serverPowerSource {
+      allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
+      allow write: if false;
+    }
+    match /energyMonitor/{siteId}/serverChangeovers/{runId} {
+      allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
+      allow write: if false;
+    }
     match /energyMonitor/{siteId}/config/powerSwitch {
       allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
       allow create, update: if (isActiveAdmin() || (isActiveSiteUser(siteId)
@@ -77,12 +103,23 @@ service cloud.firestore {
     }
     match /energyMonitor/{siteId}/config/notifications {
       allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
-      allow create, update: if (isActiveAdmin() || (isActiveSiteUser(siteId)
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Super User'))
-        && request.resource.data.keys().hasOnly(['enabled', 'dailyEnabled', 'changeoverEnabled', 'intervalMinutes', 'updatedBy', 'updatedAt'])
+      allow create, update: if isActiveAdmin()
+        && request.resource.data.keys().hasOnly(['enabled', 'dailyEnabled', 'changeoverEnabled', 'healthAlertsEnabled', 'recoveryAlertsEnabled', 'crqRemindersEnabled', 'telegramMetersEnabled', 'telegramFuelEnabled', 'telegramLoadEnabled', 'telegramPueEnabled', 'telegramSegrEnabled', 'telegramSiteStatusEnabled', 'telegramActivityEnabled', 'telegramIncidentEnabled', 'telegramCrqImportEnabled', 'intervalMinutes', 'updatedBy', 'updatedAt'])
         && request.resource.data.enabled is bool
         && (!('dailyEnabled' in request.resource.data) || request.resource.data.dailyEnabled is bool)
         && (!('changeoverEnabled' in request.resource.data) || request.resource.data.changeoverEnabled is bool)
+        && (!('healthAlertsEnabled' in request.resource.data) || request.resource.data.healthAlertsEnabled is bool)
+        && (!('recoveryAlertsEnabled' in request.resource.data) || request.resource.data.recoveryAlertsEnabled is bool)
+        && (!('crqRemindersEnabled' in request.resource.data) || request.resource.data.crqRemindersEnabled is bool)
+        && (!('telegramMetersEnabled' in request.resource.data) || request.resource.data.telegramMetersEnabled is bool)
+        && (!('telegramFuelEnabled' in request.resource.data) || request.resource.data.telegramFuelEnabled is bool)
+        && (!('telegramLoadEnabled' in request.resource.data) || request.resource.data.telegramLoadEnabled is bool)
+        && (!('telegramPueEnabled' in request.resource.data) || request.resource.data.telegramPueEnabled is bool)
+        && (!('telegramSegrEnabled' in request.resource.data) || request.resource.data.telegramSegrEnabled is bool)
+        && (!('telegramSiteStatusEnabled' in request.resource.data) || request.resource.data.telegramSiteStatusEnabled is bool)
+        && (!('telegramActivityEnabled' in request.resource.data) || request.resource.data.telegramActivityEnabled is bool)
+        && (!('telegramIncidentEnabled' in request.resource.data) || request.resource.data.telegramIncidentEnabled is bool)
+        && (!('telegramCrqImportEnabled' in request.resource.data) || request.resource.data.telegramCrqImportEnabled is bool)
         && request.resource.data.intervalMinutes in [30, 60, 120, 240, 360, 720, 1440]
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.updatedAt == request.time;

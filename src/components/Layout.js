@@ -440,7 +440,7 @@ const Layout = ({ userData, children }) => {
   // Update Power Source
   const updatePowerSource = async (options) => {
     const automatic = options?.automatic === true;
-    const activeDG = automatic && options.source !== "EB" ? options.dg : selectedDG;
+    const activeDG = automatic ? options.source === "EB" ? runningDG || selectedDG : options.dg : selectedDG;
     if (!automatic && manualPowerDisabled) return false;
     if (powerLockRef.current) return false;
 
@@ -478,6 +478,8 @@ const Layout = ({ userData, children }) => {
         updatedAt: serverTimestamp(),
       };
 
+      let saveDgStop = null;
+
       // ▶️ DG START
       if (newSource === "DG") {
         updateData.dgStartTime = now;
@@ -505,6 +507,8 @@ const Layout = ({ userData, children }) => {
         updateData.dgTotalSeconds =
           (prev.dgTotalSeconds || 0) + runSeconds;
 
+        // Log and navigate only after the source/history transaction succeeds.
+        saveDgStop = async () => {
         // 🔥 SAVE DG RUN LOG ENTRY
         const historyRef = await addDoc(
           collection(db, "dgRunLogs", userData.site, "entries"),
@@ -535,6 +539,7 @@ const Layout = ({ userData, children }) => {
             date: format(new Date(), "yyyy-MM-dd"),
           },
         });
+        };
         // optional: keep cumulative seconds
         updateData.dgStartTime = null;
         updateData.dgTotalSeconds =
@@ -556,6 +561,11 @@ const Layout = ({ userData, children }) => {
       setRunningDG(newSource === "DG" ? activeDG : null);
       setPowerSource(newSource);
       if (automatic) setSelectedDG(activeDG);
+
+      if (saveDgStop) {
+        try { await saveDgStop(); }
+        catch (error) { console.warn("Source restored; secondary DG log could not be saved", {code:error.code || "unknown"}); }
+      }
 
       // Notify All Site User
       const allUserQuery = query(

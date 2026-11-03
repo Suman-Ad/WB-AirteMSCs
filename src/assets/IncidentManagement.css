@@ -1,63 +1,35 @@
-.incident-management {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+.incident-management-page {
+  --incident-accent: var(--theme-primary, #0f766e);
+  max-width: 1500px; margin: 0 auto; padding: clamp(16px, 3vw, 36px);
+  background: var(--app-page-bg); color: var(--app-text); min-width: 0;
 }
-
-.incident-form {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.form-section {
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.form-section h3 {
-  color: #2c3e50;
-  margin-bottom: 15px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-  color: #555;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-group textarea {
-  min-height: 80px;
-  resize: vertical;
-}
-
-
-@media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-}
+.incident-management-page *, .incident-management-page *::before, .incident-management-page *::after { box-sizing: border-box; }
+.incident-management-page .incident-eyebrow { display: block; margin-bottom: 10px; color: var(--incident-accent); font-size: 10px; font-weight: 700; letter-spacing: 1.7px; }
+.incident-management-page .incident-page-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding-bottom: 26px; margin-bottom: 26px; border-bottom: 1px solid var(--app-border); }
+.incident-management-page .incident-page-header h1 { margin: 0 0 9px; padding: 0; font-size: clamp(27px, 3vw, 36px); color: var(--app-text); background: none; letter-spacing: -1px; text-align: left; }
+.incident-management-page .incident-page-header p { margin: 0; font-size: 13px; color: var(--app-text-muted); line-height: 1.7; }
+.incident-management-page .incident-page-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.incident-management-page .incident-site-badge { border: 1px solid var(--app-border); background: var(--app-surface); color: var(--app-text); padding: 9px 13px; border-radius: 24px; font-size: 11px; }
+.incident-management-page .incident-tools-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: start; gap: 22px; margin-bottom: 26px; }
+.incident-management-page :is(.instruction-tab, .import-section) { margin: 0; padding: 24px; background: var(--app-surface); border: 1px solid var(--app-border); border-radius: 12px; box-shadow: none; min-width: 0; }
+.incident-management-page :is(.instruction-tab, .import-section) h2 { margin: 0 0 14px; font-size: 18px; letter-spacing: -.3px; color: var(--app-text); background: none; border: 0; padding: 0; text-align: left; }
+.incident-management-page :is(.instruction-tab, .import-section) p { color: var(--app-text-muted); font-size: 12px; line-height: 1.8; margin: 0 0 16px; }
+.incident-management-page .dashboard-instruction-panel { padding: 0; margin: 0 0 16px; background: transparent; color: var(--app-text-muted); white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: none; border: 0; }
+.incident-management-page textarea.dashboard-instruction-panel { width: 100%; padding: 12px; background: var(--app-page-bg); color: var(--app-text); border: 1px solid var(--app-border); border-radius: 8px; font: inherit; resize: vertical; }
+.incident-management-page button:not(.submit-btn) { padding: 10px 14px; height: auto; width: auto; margin: 0 8px 8px 0; font: inherit; font-size: 12px; font-weight: 600; background: var(--app-surface-muted); color: var(--app-text); border: 1px solid var(--app-border); border-radius: 7px; cursor: pointer; box-shadow: none; }
+.incident-management-page button:not(.submit-btn):hover:not(:disabled) { border-color: var(--incident-accent); }
+.incident-management-page button:disabled { cursor: not-allowed; opacity: .5; }
+.incident-management-page :is(button, input, textarea, a):focus-visible { outline: 2px solid var(--incident-accent); outline-offset: 3px; }
+.incident-management-page .import-section > label { display: block; color: var(--app-text); font-size: 11px; font-weight: 600; margin: 14px 0 8px; }
+.incident-management-page .import-section input[type=file] { max-width: 100%; width: 100%; color: var(--app-text-muted); padding: 12px; border: 1px dashed var(--app-border); background: var(--app-page-bg); border-radius: 8px; font-size: 11px; }
+.incident-management-page .import-section input::file-selector-button { background: var(--app-surface); color: var(--app-text); padding: 7px 10px; border: 1px solid var(--app-border); border-radius: 5px; margin-right: 10px; cursor: pointer; }
+.incident-management-page .incident-import-errors { border: 1px solid var(--app-border); border-left: 3px solid #dc2626; padding: 12px; margin-top: 14px; font-size: 12px; color: var(--app-text); background: var(--app-surface-muted); border-radius: 7px; overflow-wrap: anywhere; }
+.incident-management-page .incident-import-preview { margin: 16px 0; max-height: 300px; overflow: auto; border: 1px solid var(--app-border); border-radius: 8px; }
+.incident-management-page .incident-import-preview h4 { margin: 12px; font-size: 12px; }
+.incident-management-page .preview-table { width: 100%; border-collapse: collapse; color: var(--app-text); font-size: 11px; }
+.incident-management-page .preview-table :is(th, td) { padding: 10px 12px; border-bottom: 1px solid var(--app-border); text-align: left; color: var(--app-text); }
+.incident-management-page .preview-table th { background: var(--app-surface-muted); position: sticky; top: 0; white-space: nowrap; }
+.incident-management-page .preview-table :is(tr, td) { background: var(--app-surface); transform: none; box-shadow: none; }
+.incident-management-page progress { width: 100%; accent-color: var(--incident-accent); }
+@media (max-width: 900px) { .incident-management-page .incident-tools-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .incident-management-page { padding: 14px; } .incident-management-page :is(.instruction-tab, .import-section) { padding: 18px; } }

@@ -7,6 +7,20 @@ import "../assets/SiteConfigEdit.css"
 import SiteEnergySettings from "./SiteEnergySettings";
 import { siteIdMap } from "../config/siteConfigs";
 
+function SettingsForm({children}) {
+  const items = React.Children.toArray(children);
+  const fields = [];
+  for (let index = 0; index < items.length; index++) {
+    const item = items[index], next = items[index + 1];
+    if (item?.type === 'label' && ['input','select','textarea'].includes(next?.type)) {
+      const id = next.props.id || `site-config-field-${index}`;
+      fields.push(<div className="config-field" key={id}>{React.cloneElement(item,{htmlFor:id})}{React.cloneElement(next,{id})}</div>);
+      index++;
+    } else fields.push(<div className="config-form-block" key={index}>{item}</div>);
+  }
+  return <div className="chart-container config-form-grid">{fields}</div>;
+}
+
 const SiteConfigEdit = ({ userData }) => {
   const siteKey = userData?.site?.toUpperCase();
   const [config, setConfig] = useState({
@@ -15,6 +29,8 @@ const SiteConfigEdit = ({ userData }) => {
   const storage = getStorage();
   const [activeSection, setActiveSection] = useState("overview");
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+  useEffect(() => { setSaveMessage(""); }, [config]);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -58,7 +74,9 @@ const SiteConfigEdit = ({ userData }) => {
   };
 
   const saveConfig = async () => {
+    if (saving || !siteKey) return;
     setSaving(true);
+    setSaveMessage("");
 
     // Auto-insert siteName into config before saving
     const updatedConfig = {
@@ -66,18 +84,20 @@ const SiteConfigEdit = ({ userData }) => {
       siteName: config.siteName || userData?.site?.toUpperCase()
     };
 
-    await setDoc(doc(db, "siteConfigs", siteKey), updatedConfig, { merge: true });
-    alert("Config updated!");
-    setSaving(false);
-    window.location.reload(); // Reload to reflect changes
+    try {
+      await setDoc(doc(db, "siteConfigs", siteKey), updatedConfig, { merge: true });
+      setSaveMessage("Site configuration saved successfully.");
+    } catch (_) {
+      setSaveMessage("Unable to save. Your changes are still here; please retry.");
+    } finally { setSaving(false); }
   };
 
   const sections = [
-    { key: "overview", label: "Overview" },
-    { key: "ccms", label: "CCMS / HSD Details" },
-    { key: "equipment", label: "Site Equipment Details" },
-    { key: "oem", label: "Quarterly OEM CPH" },
-    { key: "energy", label: "Energy Automation" },
+    { key: "overview", label: "Overview", detail: "Site profile and operating limits" },
+    { key: "ccms", label: "CCMS / HSD Details", detail: "Billing, vendors and signatures" },
+    { key: "equipment", label: "Site Equipment Details", detail: "Capacity and equipment inventory" },
+    { key: "oem", label: "Quarterly OEM CPH", detail: "Generator fuel benchmarks" },
+    { key: "energy", label: "Energy Automation", detail: "Alerts, Telegram and meter controls" },
   ];
 
   // ADD NEW SECURITY ENTRY
@@ -126,31 +146,38 @@ const SiteConfigEdit = ({ userData }) => {
 
 
   return (
-    <div className="daily-log-container">
-      <div style={{ display: "flex" }}>
-        <h2 style={{ textAlign: "center" }}>⚙️ Site Settlings – {siteKey}</h2>
-        {activeSection !== "energy" && <button onClick={saveConfig} className="config-btn">{saving ? "Saving...." : "Save Config"}</button>}
-      </div>
+    <div className="site-settings-page">
+      <header className="site-settings-header">
+        <div><span className="settings-eyebrow">WORKSPACE CONFIGURATION</span><h1>Site settings</h1><p>Keep site details, equipment and automation in one place.</p></div>
+        <div className="settings-header-actions"><span className="settings-site-badge"><span className="settings-site-dot" />{userData?.site || 'No site assigned'}</span>
+        {activeSection !== "energy" && <button disabled={saving || !siteKey} onClick={saveConfig} className="config-btn">{saving ? "Saving…" : "Save Config"}<span aria-hidden="true"> ↗</span></button>}</div>
+      </header>
+      {saveMessage && <p className="settings-feedback" role="status">{saveMessage}</p>}
       <div className="config-layout">
 
         {/* LEFT SIDE MENU */}
-        <div className="side-menu">
-          {sections.map((s) => (
+        <nav className="side-menu" aria-label="Site settings sections">
+          <span className="settings-nav-caption">CONFIGURATION</span>
+          {sections.map((s,index) => (
             <button
               key={s.key}
               className={`menu-item ${activeSection === s.key ? "active" : ""}`}
+              aria-label={s.label}
+              aria-current={activeSection === s.key ? "page" : undefined}
               onClick={() => setActiveSection(s.key)}
             >
-              {s.label}
+              <span className="settings-nav-number" aria-hidden="true">{String(index+1).padStart(2,'0')}</span><span><strong>{s.label}</strong><small>{s.detail}</small></span><span className="settings-nav-arrow" aria-hidden="true">›</span>
             </button>
           ))}
-        </div>
+          <div className="settings-nav-note"><strong>{userData?.role || 'Site account'}</strong><p>Changes apply to the selected site. Each automation panel has its own save control.</p></div>
+        </nav>
 
         {/* RIGHT SIDE CONTENT */}
-        <div className="config-content">
+        <main className="config-content" aria-label={sections.find(s=>s.key===activeSection)?.label}>
+          <div className="settings-section-heading"><span className="settings-eyebrow">SITE CONFIGURATION</span><h2>{sections.find(s=>s.key===activeSection)?.label}</h2><p>{sections.find(s=>s.key===activeSection)?.detail}</p></div>
           {activeSection === "energy" && <SiteEnergySettings userData={userData} siteId={userData?.siteId || config.siteId || Object.entries(siteIdMap).find(([name]) => name.toUpperCase() === siteKey)?.[1]} />}
           {activeSection === "overview" && (
-            <div className="chart-container">
+            <SettingsForm className="chart-container">
               <h1>Site Details</h1>
               <label>Site Address</label>
               <input
@@ -225,10 +252,10 @@ const SiteConfigEdit = ({ userData }) => {
                 value={config.pueThresholdLimit || ""}
                 onChange={handleChange}
               />
-            </div>
+            </SettingsForm>
           )}
           {activeSection === "ccms" && (
-            <div className="chart-container">
+            <SettingsForm className="chart-container">
               <h1>CCMS/HSD Details</h1>
               <label>Circle Name</label>
               <input
@@ -444,11 +471,11 @@ const SiteConfigEdit = ({ userData }) => {
                 <div
                   key={sec.id}
                   style={{
-                    border: "1px solid #ddd",
+                    border: "1px solid var(--app-border)",
                     padding: "15px",
                     borderRadius: "8px",
                     marginBottom: "15px",
-                    background: "#fafafa"
+                    background: "var(--app-surface-muted)"
                   }}
                 >
                   <label>Security Name</label>
@@ -499,11 +526,11 @@ const SiteConfigEdit = ({ userData }) => {
                   </div>
                 </div>
               ))}
-            </div>
+            </SettingsForm>
           )}
 
           {activeSection === "equipment" && (
-            <div className="chart-container">
+            <SettingsForm className="chart-container">
               <h1>Site Equipment Details</h1>
 
               <h2>DG Count</h2>
@@ -557,9 +584,9 @@ const SiteConfigEdit = ({ userData }) => {
                     style={{
                       marginTop: "15px",
                       padding: "12px",
-                      border: "1px solid #ddd",
+                      border: "1px solid var(--app-border)",
                       borderRadius: "8px",
-                      background: "#fafafa11"
+                      background: "var(--app-surface-muted)"
                     }}
                   >
                     <h4>{dgKey} Details</h4>
@@ -721,9 +748,9 @@ const SiteConfigEdit = ({ userData }) => {
                     style={{
                       marginTop: "15px",
                       padding: "12px",
-                      border: "1px solid #ddd",
+                      border: "1px solid var(--app-border)",
                       borderRadius: "8px",
-                      background: "#fafafa11"
+                      background: "var(--app-surface-muted)"
                     }}
                   >
                     <h4>{smpsKey} Details</h4>
@@ -856,9 +883,9 @@ const SiteConfigEdit = ({ userData }) => {
                     style={{
                       marginTop: "15px",
                       padding: "12px",
-                      border: "1px solid #ddd",
+                      border: "1px solid var(--app-border)",
                       borderRadius: "8px",
-                      background: "#fafafa11"
+                      background: "var(--app-surface-muted)"
                     }}
                   >
                     <h4>{upsKey} Details</h4>
@@ -955,11 +982,11 @@ const SiteConfigEdit = ({ userData }) => {
                 value={config.solarCount || 0}
                 onChange={handleChange}
               />
-            </div>
+            </SettingsForm>
           )}
 
           {activeSection === "oem" && (
-            <div className="chart-container">
+            <SettingsForm className="chart-container">
               <h1>Quarterly OEM CPH</h1>
               <label>DG-1 CPH</label>
               <input
@@ -986,9 +1013,9 @@ const SiteConfigEdit = ({ userData }) => {
                   }))
                 }
               />
-            </div>
+            </SettingsForm>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );

@@ -246,7 +246,7 @@ const IncidentDashboard = ({ userData }) => {
   };
 
   return (
-    <div className="dhr-dashboard-container">
+    <div className="dhr-dashboard-container incident-dashboard">
       <h1 style={{ textAlign: "center", paddingBottom: "20px" }}>
         <strong>🚨 Incident Dashboard</strong>
       </h1>
@@ -301,7 +301,7 @@ const IncidentDashboard = ({ userData }) => {
       {/* Universal Search */}
       <input
         type="text"
-        placeholder="🔍Search incidents..."
+        placeholder="🔍Search incidents..." aria-label="Search incidents"
         value={filters.search}
         onChange={(e) => setFilters({ ...filters, search: e.target.value })}
       />
@@ -309,7 +309,7 @@ const IncidentDashboard = ({ userData }) => {
       {/* 🔹 Summary Chart */}
       <div className="summary-chart-container">
         <h2 className="noticeboard-header">📊 Incident Status & RCA</h2>
-        <div className="summary-chart-container">
+        <div className="incident-summary-body">
           <p><strong>Total Incidents:</strong> {textSummary.total}</p>
           <ul>
             {Object.keys(textSummary.sites).map(site => (
@@ -336,7 +336,7 @@ const IncidentDashboard = ({ userData }) => {
                   />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip contentStyle={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', color: 'var(--app-text)' }} itemStyle={{ color: 'var(--app-text)' }} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -483,7 +483,7 @@ const IncidentDashboard = ({ userData }) => {
             </thead>
             <tbody>
               {incidents.map((incident, index) => (
-                <tr key={incident.id} className={`status-${incident.status.toLowerCase()}`} onClick={() => setSelectedIncident(incident)}>
+                <tr key={incident.id} className={`status-${(incident.status || '').toLowerCase()}`} onClick={() => setSelectedIncident(incident)}>
                   <td>{index + 1}</td>
                   <td>{incident.siteId}</td>
                   <td>{incident.siteName}</td>

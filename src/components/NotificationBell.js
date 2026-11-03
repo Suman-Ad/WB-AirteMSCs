@@ -444,7 +444,7 @@ export default function NotificationBell({ user }) {
                                 fontSize: '0.875rem',
                                 color: 'var(--app-text)'
                             }}
-                                onClick={() => ["energy_meter_update", "energy_daily_kwh", "energy_dg_start", "energy_mains_restored"].includes(n.actionType) ? navigate("/energy-monitor") : ["crq_open_reminder", "crq_close_reminder"].includes(n.actionType) ? navigate("/daily-activity-dashboard") : n.title === "Backup Duty Request" ? navigate("/backup-approvals") : n.title === "New Duty Assigned" ? navigate("/my-duty") : (user.role === "Admin" || user.role === "Sumer Admin") && n.title === "New CL Request" ? navigate("/cl-approve") : (user.role === "Admin" || user.role === "Sumer Admin") && n.title === "Backup Accepted" ? navigate("/cl-approve") : null}
+                                onClick={() => ["energy_meter_update", "energy_daily_kwh", "energy_dg_start", "energy_mains_restored", "energy_meter_offline", "energy_meter_recovered"].includes(n.actionType) ? navigate("/energy-monitor") : ["crq_open_reminder", "crq_close_reminder"].includes(n.actionType) ? navigate("/daily-activity-dashboard") : n.title === "Backup Duty Request" ? navigate("/backup-approvals") : n.title === "New Duty Assigned" ? navigate("/my-duty") : (user.role === "Admin" || user.role === "Sumer Admin") && n.title === "New CL Request" ? navigate("/cl-approve") : (user.role === "Admin" || user.role === "Sumer Admin") && n.title === "Backup Accepted" ? navigate("/cl-approve") : null}
                             >{n.title}</div>
                             <div style={{
                                 fontSize: '0.75rem',

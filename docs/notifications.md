@@ -149,7 +149,7 @@ Messages use `energy_daily_kwh` and open Energy Monitor. Per-user claims in `not
 
 Start messages include the last mains register at failure and DG opening kWh. Restoration messages include mains restored kWh, DG opening and closing kWh, generation and duration. Readings include observation timestamps and capture quality. Missing values remain unavailable; mains last-known fallback and DG last-valid-before-restoration readings are explicitly labeled. Decreased counters suppress generation. Manual header changes remain labeled Manual and are not represented as meter-confirmed outages.
 
-Only active users assigned to the event's site receive messages via their existing bell, enabled device alerts and linked personal Telegram chat. No role bypasses site membership. `changeoverEnabled` is an independent site notification setting, defaulting to true; periodic and daily updates may be disabled separately. Config and active site membership are rechecked transactionally. Persistent per-user/run/phase claims under `notificationDeliveries/{uid}/energyChangeovers/{id}` prevent retry duplicates and replay after bell deletion.
+Active users assigned to the event's site plus every active Admin and Super Admin receive messages via their existing bell, enabled device alerts and linked personal Telegram chat. Ordinary users (including Super Users) remain limited to their own site. An admin assigned to the event's site still receives only one notification per phase. `changeoverEnabled` is an independent site notification setting, defaulting to true; periodic and daily updates may be disabled separately. Config and active site membership are rechecked transactionally. Persistent per-user/run/phase claims under `notificationDeliveries/{uid}/energyChangeovers/{id}` prevent retry duplicates and replay after bell deletion.
 
 This step attaches notification delivery to the existing saved header changeover workflow; it does not introduce a separate server-side detector. Automatic detection still needs configured Main Incomer/DG mappings, automatic switching enabled and an authorized app session running. With no session recording a changeover, no new run/event exists to notify. Last-known mains samples are retained by the existing running session; if unavailable after a reload, notifications show unavailable rather than inventing historical registers. Once a run is saved, notification delivery runs on the server.
 
@@ -157,3 +157,69 @@ Deploy `notifyEnergyChangeover`, updated Firestore rules and frontend to activat
 
 
 DG → EB alerts now follow two fresh zero-load observations while mains carries load, allowing energized cooldown. Load transfer closes the DG load run immediately. The separate `captureEnergyCooldown` server function later saves voltage-zero time and cooldown duration without resending a restoration notification. See `docs/energy-monitor-readings.md` for the detection and sampling rules.
+
+
+### Bot does not reply to /start
+
+A plain `/start` in the bot's private chat must return setup instructions, even before linking an app account. Groups are intentionally ignored. If there is no private-chat response, inspect webhook delivery before reconnecting accounts:
+
+```powershell
+.\scripts\registerTelegramWebhook.ps1 -CheckOnly
+```
+
+Enter the bot token only in the script's hidden local prompt; never paste it into chat. This read-only check reports verified bot username, registered URL, pending updates and Telegram's last delivery error. It does not change the webhook, command menu or environment files. Empty URL means registration is missing; 404 indicates a wrong/missing endpoint, 401/403 requires checking invocation access and the matching webhook secret, and 5xx requires function logs.
+
+Read server logs after refreshing Firebase authentication if needed:
+
+```powershell
+firebase login --reauth
+firebase functions:log --only telegramWebhook --lines 25 --project wb-airtelmscs
+```
+
+The handler now returns HTTP 503 if its command reply fails (except known blocked/deactivated recipients), allowing Telegram to retry instead of silently acknowledging a command that received no reply. Logs include only safe error codes, never tokens or request URLs. Deploy the updated `telegramWebhook` function to enable this behavior.
+
+
+If deployed webhook logs say `The request failed because billing is disabled for this project`, Google Cloud is rejecting the function before the command handler runs. Restore an active billing account for `wb-airtelmscs` in Google Cloud Billing and then test `/start` again; rebuilding hosting or registering the webhook cannot resolve disabled billing. This also affects other billing-dependent Cloud Functions, including scheduled meter notifications and cooldown capture.
+
+
+### Editing changeover notification recipients and text
+
+- `functions/load-book/energy-changeover-notifications.cjs`: `eligibleChangeoverUser` controls the site-user plus all-admin audience. `changeoverNotification` controls titles (`EB-DG: DG Start`, `DG-EB: Mains Restore`), captured reading labels and message text.
+- `functions/load-book/energy-changeover-functions.cjs`: `notifyEnergyChangeover` selects recipients, rechecks membership/role and writes the shared bell items. Deploy this function after changing either backend file: `firebase deploy --only "functions:load-book:notifyEnergyChangeover" --project wb-airtelmscs`.
+- Site Config → Energy Automation → notification settings: **Send mains / DG changeover alerts** enables or disables captured-reading alerts for that site (`energyMonitor/{siteId}/config/notifications.changeoverEnabled`).
+- `src/components/Layout.js`: the separate legacy **MSC Site Status** message and recipient queries remain here. The captured-reading recipient change does not change periodic/daily meter notification recipients. The bell items continue through the existing push and Telegram handlers.
+
+
+### Telegram site report commands
+
+Linked, active users can request data for their assigned site in a private bot chat:
+
+| Typed command | Menu command | Reply |
+| --- | --- | --- |
+| `/meter data` | `/meter_data` | Every current meter: kWh, kW, phase voltage/current, PF, frequency, health and IST observation time |
+| `/present fuel` | `/present_fuel` | Each DG's saved day-tank closing and external stock in litres |
+| `/site running load` | `/site_running_load` | Latest saved daily energy / 24, in kW |
+| `/pue` | `/pue` | Latest daily energy excluding office consumption / 24 / IT load |
+| `/segr` | `/segr` | Latest DG generation / on-load fuel, DG-wise and overall, in kWh/L |
+
+`/help` lists commands. `/meters`, `/fuel`, and `/load` also work. Bot mentions and case-insensitive commands are supported. Long replies split across messages. Requests recheck the chat binding, preference and active user before reading site data.
+
+**Admin and Super Admin only:** prefix a request with a site name to access any site, for example `/Asansol: Site Status`, `/Globsyn: meter data`, `/Kharagpur: present fuel`, `/Mira Tower: site running load`, `/Asansol: pue`, or `/Asansol: segr`. Site names are case-insensitive and resolved against `functions/load-book/telegram-sites.cjs` (keep this in sync with `src/config/siteConfigs.js`). Site Status reads the last saved `sitePowerStatus/{siteName}` source, running DG and IST update time. Missing status is explicitly unavailable. The stored role is checked on each request; User and Super User accounts cannot use site-prefixed reports. Regular commands still use the linked user's assigned site. These phrases are typed in chat; the Telegram menu continues to show the regular commands.
+
+Fuel, load, PUE and SEGR use the newest saved Daily DG Log in the current or previous IST month, excluding future dates, and show its date. These are saved daily figures; they do not estimate unsaved tank consumption or instantaneous site load. Missing required readings and counter resets return Unavailable. Meter commands reuse the existing unit normalization, equipment deduplication and stale/error labels.
+
+Deploy the handler with `firebase deploy --only "functions:load-book:telegramWebhook" --project wb-airtelmscs`. Run `scripts/registerTelegramWebhook.ps1` afterward to refresh the Telegram command menu. Typed commands work after deployment even before the menu refresh.
+
+### Fuel and backup hours in changeover alerts
+
+Both DG Start and Mains Restore include every configured DG's day-tank litres, external-tank litres, estimated backup hours and consumption rate. The message labels stock as the latest **saved Daily DG Log**, with its date, rather than a live tank measurement. Data is loaded from `dailyDGLogs/{siteName}/{YYYY-MM}/{date}` for the event month and previous month, excluding dates after the event's IST date. Stock fields are `DG-n Fuel Closing` and `DG-n External Fuel Stock`. Unsaved consumption, filling and current runs are not inferred or deducted from these saved balances.
+
+Per-DG backup hours = (day-tank litres + external-tank litres) / litres per hour. The rate is weighted recorded on-load consumption divided by on-load hours across the fetched daily logs, using the same opening/closing, filling and off-load adjustments as the Daily DG Log calculation. If unavailable, `siteConfigs/{UPPERCASE_SITE_NAME}.designCph.DG-n` is used and labeled **Design**. Missing/invalid balances or rates produce **Unavailable**; a missing external stock is treated as zero only when that DG is explicitly configured with zero external-tank capacity. This estimate assumes that DG can use both its recorded tanks; it is not a prediction of simultaneous multi-DG operation.
+
+Fuel is frozen once per run/phase in server-only `notificationDeliveries/energyChangeoverFuel/snapshots/{changeoverId}`, keeping recipients and retries consistent. Mains restoration captures a separate latest-saved snapshot. Failure to load fuel is labeled without suppressing the original meter-reading alert. The shared device/Telegram formatter allows up to 2,500 UTF-8 bytes for captured changeover messages so the per-DG section is retained within the device data payload budget.
+
+Edit `energy-changeover-fuel.cjs` for stock sources and backup calculations; edit `energy-changeover-notifications.cjs` for the displayed fuel lines. Fuel entries are maintained through **Daily DG Log**; design CPH is maintained in **Site Config**. Deploy both affected functions after this update:
+
+```powershell
+firebase deploy --only "functions:load-book:notifyEnergyChangeover,functions:load-book:pushBellNotification,functions:load-book:telegramBellNotification" --project wb-airtelmscs
+```

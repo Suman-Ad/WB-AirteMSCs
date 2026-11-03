@@ -16,7 +16,7 @@ function load({devices = [], enabled = true, send, preference} = {}) {
   };
   const exports = {};
   vm.runInNewContext(fs.readFileSync(__dirname + '/notification-functions.cjs', 'utf8'), {
-    exports, console, AbortSignal,
+    exports, console, AbortSignal, Buffer,
     fetch: async () => { writes.push('fetch'); return {ok: true, json: async () => ({messages: [{id: 'accepted'}]})}; },
     require: name => ({
       'firebase-functions/v2/firestore': {onDocumentCreated: (_options, handler) => handler},
@@ -62,4 +62,14 @@ test('CRQ open and close reminders produce device messages with dashboard links'
  assert.equal(messages.length,2);
  assert.equal(messages[0].data.title,'CRQ Pending Open');assert.equal(messages[1].data.title,'CRQ Pending Close');
  assert.ok(messages.every(message=>message.data.url==='/daily-activity-dashboard'&&message.data.body.includes('CRQ123')));
+});
+
+test('fuel details for all four DGs survive push/Telegram formatting within the byte budget',()=>{
+ const {notificationData}=load().exports;
+ const message='DG fuel details '.repeat(90)+'DG-4 backup: 12 h';
+ const data=notificationData({actionType:'energy_dg_start',message},'u','n');
+ assert.equal(data.body,message);
+ const unicode=notificationData({actionType:'energy_mains_restored',message:'⛽'.repeat(2000)},'u','n');
+ assert.ok(Buffer.byteLength(unicode.body,'utf8')<=2500);
+ assert.ok(!unicode.body.includes('\uFFFD'));
 });

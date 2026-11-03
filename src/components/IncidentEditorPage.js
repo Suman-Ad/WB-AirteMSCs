@@ -60,62 +60,10 @@ const IncidentEditorPage = ({ formData, onFormChange, isSubmitting, onSubmit, us
   ];
 
   const renderInput = (name, value, type = 'text', options = [], disabled = false) => {
-    const commonProps = {
-      value,
-      onChange: (e) => onFormChange(name, e.target.value),
-      className: "form-input",
-      disabled
-    };
-    switch (type) {
-      case 'textarea':
-        return (
-          <textarea
-            value={value}
-            onChange={(e) => onFormChange(name, e.target.value)}
-            className="form-input"
-          />
-        );
-      case 'select':
-        return (
-          <select
-            value={value}
-            onChange={(e) => onFormChange(name, e.target.value)}
-            className="form-input"
-          >
-            <option value="">Select</option>
-            {options.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        );
-      case 'date':
-        return (
-          <input
-            type="date"
-            value={value}
-            onChange={(e) => onFormChange(name, e.target.value)}
-            className="form-input"
-          />
-        );
-      case 'time':
-        return (
-          <input
-            type="time"
-            value={value}
-            onChange={(e) => onFormChange(name, e.target.value)}
-            className="form-input"
-          />
-        );
-      default:
-        return (
-          <input
-            type={type}
-            value={value}
-            onChange={(e) => onFormChange(name, e.target.value)}
-            className="form-input"
-          />
-        );
-    }
+    const props = {id:`incident-${name}`,name,value,onChange:e=>onFormChange(name,e.target.value),className:'form-input',disabled:disabled || isSubmitting};
+    if (type === 'textarea') return <textarea {...props} rows={4} />;
+    if (type === 'select') return <select {...props}><option value="">Select</option>{options.map(option=><option key={option} value={option}>{option}</option>)}</select>;
+    return <input {...props} type={type} />;
   };
 
   const fields = [
@@ -149,99 +97,35 @@ const IncidentEditorPage = ({ formData, onFormChange, isSubmitting, onSubmit, us
     { label: 'Closure Remarks', name: 'closureRemarks', type: 'textarea' },
   ];
 
-  return (
-    <div className="incident-editor">
-      {isSubmitting && (
-                <div
-                    style={{
-                        position: "fixed",
-                        inset: 0,
-                        background: "rgba(0,0,0,0.6)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 9999,
-                    }}
-                >
-                    <div
-                        style={{
-                            background: "#0f172a",
-                            padding: "30px 40px",
-                            borderRadius: "12px",
-                            textAlign: "center",
-                            color: "white",
-                            boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: "40px",
-                                height: "40px",
-                                border: "4px solid #334155",
-                                borderTop: "4px solid #38bdf8",
-                                borderRadius: "50%",
-                                margin: "0 auto 15px",
-                                animation: "spin 1s linear infinite",
-                            }}
-                        />
-                        <div style={{ fontSize: "15px", fontWeight: "bold" }}>
-                            {incidentId ? "Update Incident..." : "Submit New Incident...."}
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "4px" }}>
-                            Please wait
-                        </div>
-                    </div>
-                </div>
-            )}
-      <h2 className='noticeboard-header'>
-        <strong>
-          {incidentId 
-            ? `Edit Incident Report (${formData.siteName || userData?.site})` 
-            : `${userData?.site} New Incident Report Form`}
-        </strong>
-      </h2>
-
-      <div className="form-container child-container">
-        {fields.map((field) => (
-          <div key={field.name} className={`form-group ${field.disabled ? 'read-only-field' : ''}`}>
-            <label><strong>{field.label}</strong></label>
-            {field.name === "mttr"
-              ? <input type="text" value={calculatedMttr} className="form-input" disabled />
-              : renderInput(
-              field.name, 
-              formData[field.name] || '', 
-              field.type, 
-              field.options,
-              field.disabled
-            )}
-          </div>
-        ))}
-
-        {/* 🔹 RCA File Upload (only if RCA Status = Y) */}
-        {formData.rcaStatus === "Y" && (
-          <div className="form-group">
-            <label>Upload RCA File (PDF/Excel)</label>
-            <input 
-              type="file" 
-              accept=".pdf,.xls,.xlsx"
-              onChange={handleFileUpload}
-              disabled={uploading}
-            />
-            {uploading && <p>Uploading...</p>}
-            {rcaFileUrl && (
-              <p>
-                ✅ File uploaded: <a href={rcaFileUrl} target="_blank" rel="noopener noreferrer">View RCA File</a>
-              </p>
-            )}
-          </div>
-        )}
+  const groups = [
+    {title:'Site & ownership',description:'Identify the location and partner responsible for this report.',names:['ttDocketNo','region','circle','siteId','siteName','ompPartner']},
+    {title:'Incident details',description:'Record what happened, when it occurred and the affected equipment.',names:['incidentTitle','dateOfIncident','timeOfIncident','equipmentCategory','type','saNsa','incidentDescription']},
+    {title:'Impact & response',description:'Capture service impact, immediate actions and the investigation.',names:['effect','impactType','effectedEquipmentDetails','actionsTaken','ownership','reasonCategory','realReason','remarks']},
+    {title:'Resolution & RCA',description:'Track the current status, closure and shared learnings.',names:['status','rcaStatus','closureDate','closureTime','mttr','learningShared','closureRemarks']},
+  ];
+  return <div className="incident-editor" aria-busy={isSubmitting}>
+    <header className="incident-form-heading"><div><span className="incident-eyebrow">{incidentId ? 'UPDATE REPORT' : 'CREATE REPORT'}</span><h2>{incidentId ? 'Edit incident report' : 'New incident report'}</h2><p>Complete the report below. Site details are prefilled from your account.</p></div><span className="incident-status-badge">{formData.status || 'Open'}</span></header>
+    {groups.map((group,index)=><fieldset className="incident-fieldset" key={group.title} disabled={isSubmitting}>
+      <legend><span aria-hidden="true">{String(index+1).padStart(2,'0')}</span> {group.title}</legend><p className="incident-group-description">{group.description}</p>
+      <div className="incident-fields-grid">{group.names.map(name=>{
+        const field=fields.find(item=>item.name===name);
+        return <div key={name} className={`form-group ${field.type === 'textarea' || name === 'incidentTitle' ? 'incident-field-wide' : ''}`}>
+          <label htmlFor={`incident-${name}`}>{field.label}{field.disabled && <small>Calculated</small>}</label>
+          {renderInput(name,name === 'mttr' ? calculatedMttr : formData[name] || '',field.type,field.options,field.disabled)}
+        </div>;
+      })}
+      {group.title === 'Resolution & RCA' && formData.rcaStatus === 'Y' && <div className="form-group incident-field-wide incident-rca-upload">
+        <label htmlFor="incident-rca-file">Upload RCA File (PDF/Excel)</label><input id="incident-rca-file" type="file" accept=".pdf,.xls,.xlsx" onChange={handleFileUpload} disabled={uploading || isSubmitting}/>
+        {uploading && <p role="status">Uploading RCA file…</p>}
+        {rcaFileUrl && <p><a href={rcaFileUrl} target="_blank" rel="noopener noreferrer">View uploaded RCA file ↗</a></p>}
+      </div>}
       </div>
-
-      <button onClick={onSubmit} className="submit-btn pm-manage-btn secondary" disabled={isSubmitting}>
-        {incidentId ? (isSubmitting ? "Updating..." : "Update Incident") : (isSubmitting ? "Submitting..." : "Submit Incident")}
-      </button>
-    </div>
-  );
+    </fieldset>)}
+    <footer className="incident-submit-bar"><div><strong>{incidentId ? 'Ready to update this incident?' : 'Ready to submit your report?'}</strong><p>Review the details before saving.</p></div><button type="button" onClick={onSubmit} className="submit-btn" disabled={isSubmitting || uploading}>
+      {incidentId ? (isSubmitting ? 'Updating…' : 'Update Incident') : (isSubmitting ? 'Submitting…' : 'Submit Incident')}
+    </button></footer>
+    {isSubmitting && <p className="incident-save-status" role="status">Saving your incident. Please wait…</p>}
+  </div>;
 };
 
 export default IncidentEditorPage;

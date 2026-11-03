@@ -5,6 +5,8 @@ import * as XLSX from "xlsx";
 import { Link, useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto"; // auto-registers needed controllers
 import "../assets/daily-activity.css";
+import "../assets/ActivityWorkspace.css";
+import {applyActivityChartTheme} from "./activityChartTheme";
 import toast from "react-hot-toast";
 
 /** Column headers in the exact ordered structure you requested */
@@ -1159,8 +1161,23 @@ export default function DailyActivityDashboard({ userData }) {
   }, []);
 
 
+  useEffect(() => {
+    const updateCharts = () => {
+      const styles=getComputedStyle(document.documentElement);
+      const colors={text:styles.getPropertyValue('--app-text').trim(),muted:styles.getPropertyValue('--app-text-muted').trim(),border:styles.getPropertyValue('--app-border').trim()};
+      document.querySelectorAll('.activity-dashboard canvas').forEach(canvas=>{
+        const chart=Chart.getChart(canvas);
+        if(chart) applyActivityChartTheme(chart,colors);
+      });
+    };
+    updateCharts();
+    const observer=new MutationObserver(updateCharts);
+    observer.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','style','class']});
+    return ()=>observer.disconnect();
+  });
+
   return (
-    <div className="dhr-dashboard-container">
+    <div className="activity-workspace activity-dashboard">
       {loading && (
         <div
           style={{
@@ -1235,7 +1252,7 @@ export default function DailyActivityDashboard({ userData }) {
             <a
               href="tel:18001039090"
               style={{
-                background: "#fff",
+                background: "var(--app-surface)",
                 color: "#991b1b",
                 padding: "8px 12px",
                 borderRadius: "6px",
@@ -1267,19 +1284,8 @@ export default function DailyActivityDashboard({ userData }) {
         </div>
       )}
 
-      <div className="daily-activity-header">
-        <h1 className="dashboard-header">
-          <strong>🏗️ Daily Activity Dashboard</strong>
-        </h1>
-
-        <div className="daily-activity-subtitle">
-          {isAdmin ? "Admin view: all sites" : "User view: your site only"}
-        </div>
-        <p onClick={() => navigate("/activity-dashboard")} style={{ cursor: "pointer" }}>Activity Matrix</p>
-        {(userData?.role === "Super User" || userData?.role === "Admin" || userData?.role === "Super Admin") && (
-          <Link to="/daily-activity-management"><span className="pm-manage-btn">🚧🛠️ Manage Daily {userData?.site} Activity</span></Link>
-        )}
-      </div>
+      <header className="activity-page-header"><div><span className="activity-eyebrow">OPERATIONS / DAILY ACTIVITIES</span><h1>Daily activity dashboard</h1><p>Track planned work, approvals and CRQs across {isAdmin ? 'all sites' : 'your site'}.</p></div><div className="activity-header-actions"><span className="activity-scope-badge">{isAdmin ? 'All sites' : userData?.site || 'Assigned site'}</span><Link to="/activity-dashboard" className="activity-link-button">Activity matrix ↗</Link>
+        {['Super User','Admin','Super Admin'].includes(userData?.role) && <Link to="/daily-activity-management" className="activity-link-button activity-primary">Manage activities ↗</Link>}</div></header>
 
       <div
         style={{
@@ -1322,40 +1328,32 @@ export default function DailyActivityDashboard({ userData }) {
       </div>
 
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-          gap: 16,
-          marginBottom: 20,
-          height: "300px",
-          width: "100%",
-          overflowX: "auto",
-        }}
-        className="chart-container"
+
+        className="chart-container activity-chart-grid"
       >
-        <canvas
+        <figure className="activity-chart-card"><figcaption>Region performance</figcaption><canvas
           className="child-container"
           ref={regionPMCanvasRef}
           onClick={() =>
             openChartModal(regionPMChartRef, "Region-wise PM Status")
           }
-        />
+        /></figure>
 
-        <canvas
+        <figure className="activity-chart-card"><figcaption>Circle performance</figcaption><canvas
           className="child-container"
           ref={circlePMCanvasRef}
           onClick={() =>
             openChartModal(circlePMChartRef, "Circle-wise PM Status")
           }
-        />
+        /></figure>
 
-        <canvas
+        <figure className="activity-chart-card"><figcaption>Site performance</figcaption><canvas
           className="child-container"
           ref={sitePMCanvasRef}
           onClick={() =>
             openChartModal(sitePMChartRef, "Site-wise PM Status")
           }
-        />
+        /></figure>
 
       </div>
 
@@ -1418,7 +1416,7 @@ export default function DailyActivityDashboard({ userData }) {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "#fff",
+              background: "var(--app-surface)",
               width: "90%",
               height: "85%",
               borderRadius: 12,
@@ -1450,14 +1448,14 @@ export default function DailyActivityDashboard({ userData }) {
       )}
 
       {/* Charts */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }} className="chart-container">
-        <div style={{ flex: 1, minWidth: 320 }}>
+      <div  className="chart-container activity-chart-grid">
+        <div className="activity-chart-card"><div className="activity-chart-caption">Approval overview</div>
           <canvas ref={approvalCanvasRef} />
         </div>
-        <div style={{ flex: 1, minWidth: 320 }}>
+        <div className="activity-chart-card"><div className="activity-chart-caption">Activity trend</div>
           <canvas ref={dailyTrendCanvasRef} />
         </div>
-        <div style={{ width: 360, minWidth: 280 }}>
+        <div className="activity-chart-card"><div className="activity-chart-caption">CRQ overview</div>
           <canvas ref={crqCanvasRef} />
         </div>
       </div>
@@ -1508,11 +1506,11 @@ export default function DailyActivityDashboard({ userData }) {
             )}
           </>
         )}
-        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @{instructionEditor || "Unknown User"}</h6>
+        <small className="activity-notice-author">Updated by {instructionEditor || "Unknown User"}</small>
       </div>
 
       {/* Toolbar */}
-      <div className="daily-activity-toolbar">
+      <div className="daily-activity-toolbar activity-results-toolbar"><div className="activity-results-title"><h2>Activity register</h2><span>{filteredRows.length} matching activities</span></div>
         <button
           onClick={() => setFiltersOpen(true)}
           className="daily-activity-btn daily-activity-btn-secondary"
@@ -1532,19 +1530,19 @@ export default function DailyActivityDashboard({ userData }) {
       {loading ? (
         <div className="daily-activity-loading">Loading…</div>
       ) : filteredRows.length === 0 ? (
-        <div className="daily-activity-empty">No data found.</div>
+        <div className="daily-activity-empty"><strong>No matching activities</strong><p>Adjust the filters or add activities from the management page.</p></div>
       ) : (
         <div className="daily-activity-table-container">
           <table className="daily-activity-table">
             <thead>
               <tr>
                 {LABELS.map((label) => (
-                  <th key={label} style={{ border: "1px solid #6b6868", }}>{label}</th>
+                  <th key={label} style={{ border: "1px solid var(--app-border)", }}>{label}</th>
                 ))}
 
                 {/* 🔹 Dynamic approval level headers */}
                 {headerLevels.map((level) => (
-                  <th key={level} style={{ border: "1px solid #6b6868", }}>{level}</th>
+                  <th key={level} style={{ border: "1px solid var(--app-border)", }}>{level}</th>
                 ))}
 
                 {(isAdmin || (userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor")) && <th>Actions</th>}
@@ -1552,12 +1550,12 @@ export default function DailyActivityDashboard({ userData }) {
             </thead>
             <tbody>
               {filteredRows.map((rowObj, idx) => (
-                <tr key={`${rowObj._sheetId}-${rowObj._rowIndex}`}
+                <tr className={isCRQClosingSoon(rowObj) ? "activity-closing-soon" : isCRQOverdue(rowObj) || isPMOverdue(rowObj) ? "activity-overdue" : ""} key={`${rowObj._sheetId}-${rowObj._rowIndex}`}
                   style={{
                     backgroundColor: isCRQClosingSoon(rowObj)
-                      ? "#fff7ed"   // ORANGE (closing warning)
+                      ? "var(--activity-warning-bg)"   // ORANGE (closing warning)
                       : isCRQOverdue(rowObj)
-                        ? "#fff1f2"   // RED (start overdue)
+                        ? "var(--activity-danger-bg)"   // RED (start overdue)
                         : "",
                     borderLeft:
                       isCRQClosingSoon(rowObj)
@@ -1571,8 +1569,8 @@ export default function DailyActivityDashboard({ userData }) {
                 >
                   <td
                     style={{
-                      backgroundColor: ACTIVITY_CODE_BG[rowObj.activityCode] || "transparent",
-                      borderRight: "1px solid #6b6868",
+                      "--activity-tint": ACTIVITY_CODE_BG[rowObj.activityCode] || "transparent",
+                      borderRight: "1px solid var(--app-border)",
                     }}
                   >{idx + 1}</td>
                   {KEYS.map((k) => {
@@ -1595,9 +1593,8 @@ export default function DailyActivityDashboard({ userData }) {
                           whiteSpace: isApprovers ? "pre" : "pre-line",
                           maxWidth: isApprovers ? "200px" : "auto",
                           scrollbarsWidth: "thin",
-                          borderRight: "1px solid #6b6868",
-                          backgroundColor:
-                            ACTIVITY_CODE_BG[rowObj.activityCode] || "transparent",
+                          borderRight: "1px solid var(--app-border)",
+                          "--activity-tint": ACTIVITY_CODE_BG[rowObj.activityCode] || "transparent",
                           ...(k === "pmStatus" && {
                             backgroundColor: PM_STATUS_BG[rowObj.pmStatus],
                           })
@@ -1699,8 +1696,8 @@ export default function DailyActivityDashboard({ userData }) {
                       <td key={level}
                         style={{
                           // maxHeight: isApprovers ? "10px" : "10px",
-                          backgroundColor: ACTIVITY_CODE_BG[rowObj.activityCode] || "transparent",
-                          borderRight: "1px solid #6b6868",
+                          "--activity-tint": ACTIVITY_CODE_BG[rowObj.activityCode] || "transparent",
+                          borderRight: "1px solid var(--app-border)",
                           // verticalAlign: "top",
                         }}
                       >
@@ -1713,7 +1710,7 @@ export default function DailyActivityDashboard({ userData }) {
 
                   {(isAdmin || (rowObj.siteName === userData?.site ? (userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor") : false)) && (
                     <td
-                      style={{ backgroundColor: ACTIVITY_CODE_BG[rowObj.activityCode] || "transparent", }}
+                      style={{ "--activity-tint": ACTIVITY_CODE_BG[rowObj.activityCode] || "transparent", }}
                     >
                       {editingRow &&
                         editingRow.sheetId === rowObj._sheetId &&
@@ -1774,9 +1771,9 @@ export default function DailyActivityDashboard({ userData }) {
           }}
           onClick={() => setFiltersOpen(false)}
         >
-          <div
+          <div className="activity-dialog"
             style={{
-              background: "#fff",
+              background: "var(--app-surface)",
               borderRadius: 8,
               width: "100%",
               maxWidth: 720,

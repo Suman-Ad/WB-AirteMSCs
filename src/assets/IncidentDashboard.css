@@ -1,118 +1,48 @@
-.incident-dashboard {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+.dhr-dashboard-container.incident-dashboard {
+  width: 100%; box-sizing: border-box; margin: 0 auto;
+  padding: clamp(12px, 3vw, 24px); min-width: 0;
+  color: var(--app-text); background: var(--app-page-bg);
 }
-
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 20px;
-  align-items: center;
+.incident-dashboard :is(h1, h2, h3, p, label, strong, li) { color: inherit; }
+.incident-dashboard .noticeboard-header { color: var(--app-text); background: none; }
+.incident-dashboard a { color: var(--theme-link); }
+.incident-dashboard .filters { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; align-items: center; }
+.incident-dashboard :is(input, select, textarea) {
+  padding: 10px 12px; box-sizing: border-box; max-width: 100%; font: inherit;
+  color: var(--app-text); background: var(--app-surface);
+  border: 1px solid var(--app-border); border-radius: 8px;
 }
-
-.filters select,
-.filters input {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+.incident-dashboard > input { width: 100%; }
+.incident-dashboard input::placeholder { color: var(--app-text-muted); opacity: 1; }
+.incident-dashboard option { color: var(--app-text); background: var(--app-surface); }
+.incident-dashboard :is(button, a.pm-manage-btn) {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 9px 14px; height: auto; width: auto; font: inherit; text-decoration: none;
+  color: var(--app-text); background: var(--app-surface);
+  border: 1px solid var(--app-border); border-radius: 8px; cursor: pointer;
 }
-
-.filters button {
-  padding: 8px 16px;
-  background-color: #2196F3;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.table-container {
-  overflow-x: auto;
-  overflow-Y: auto;
-  max-height: 400px;
-  height: inherit;
-  position: relative;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table-container button {
-  height: 10px;
-  width: 20px;
-  margin-right: 8px;
-  border-color: #dbdbda;
-}
-
-.table-container button:hover {
-  background: #be1717d0;
-}
-
-th,
-td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-tr {
-  background: linear-gradient(135deg, #dbdbda 0%, #8b6c1500 100%);
-}
-
-tr:hover {
-  background: linear-gradient(135deg, #6ec7a3cb 0%, #8b6c1500 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-
-}
-
-th {
-  background-color: #32b17eec;
-  position: sticky;
-  top: 0;
-}
-
-.status-open {
-  background-color: #fff8e1;
-}
-
-.status-closed {
-  background-color: #e8f5e9;
-}
-
-.summary-chart-container {
-  margin: 20px 0;
-  padding: 15px;
-  background: linear-gradient(135deg, #6ec7c294 0%, #8b6c1593 100%);
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
+.incident-dashboard :is(button, a.pm-manage-btn):hover { background: var(--app-surface-muted); border-color: var(--theme-primary); }
+.incident-dashboard :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 3px; }
+.incident-dashboard .summary-chart-container { margin: 20px 0; padding: 18px; background: var(--app-surface); border: 1px solid var(--app-border); border-radius: 12px; color: var(--app-text); }
+.incident-dashboard .incident-summary-body { background: none; color: var(--app-text); }
+.incident-dashboard .recharts-pie-label-text { fill: var(--app-text); }
+.incident-dashboard .recharts-legend-item-text { color: var(--app-text) !important; }
+.incident-dashboard .table-container { overflow: auto; max-height: 500px; position: relative; margin-top: 18px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface); }
+.incident-dashboard table { width: 100%; border-collapse: collapse; color: var(--app-text); }
+.incident-dashboard :is(th, td) { padding: 12px; text-align: left; border-bottom: 1px solid var(--app-border); color: var(--app-text); }
+.incident-dashboard th { position: sticky; top: 0; z-index: 1; background: var(--app-surface-muted); white-space: nowrap; }
+.incident-dashboard :is(tr, td) { background: var(--app-surface); }
+.incident-dashboard tr { transform: none; box-shadow: none; cursor: pointer; }
+.incident-dashboard tbody tr:hover td { background: var(--app-surface-muted); }
+.incident-dashboard .status-open td:first-child { border-left: 4px solid #d97706; }
+.incident-dashboard .status-closed td:first-child { border-left: 4px solid #16a34a; }
+.incident-dashboard .modal-overlay { position: fixed; inset: 0; z-index: 1100; display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; background: rgb(0 0 0 / 65%); }
+.incident-dashboard .modal-content { width: min(760px, 100%); max-height: calc(100dvh - 32px); overflow: auto; box-sizing: border-box; padding: 24px; background: var(--app-surface); color: var(--app-text); border: 1px solid var(--app-border); border-radius: 12px; }
+.incident-dashboard .modal-content select { display: block; width: 100%; margin: 10px 0; }
+.incident-dashboard .child-container { padding: 16px; margin: 16px 0; background: var(--app-surface-muted); color: var(--app-text); border: 1px solid var(--app-border); border-radius: 10px; overflow-wrap: anywhere; }
+.incident-dashboard .child-container p { line-height: 1.6; }
 @media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .table-container {
-    overflow-x: auto;
-    overflow-Y: auto;
-    max-height: 450px;
-    height: inherit;
-  }
-
-  .table-container button {
-    height: 10px;
-    width: 20px;
-    margin-right: 8px;
-    border-color: #dbdbda;
-  }
-
-  .table-container button:hover {
-    background: #695d5dc4;
-  }
+  .incident-dashboard .filters { flex-direction: column; align-items: stretch; }
+  .incident-dashboard .modal-content { padding: 16px; }
+  .incident-dashboard .table-container { max-height: 450px; }
 }

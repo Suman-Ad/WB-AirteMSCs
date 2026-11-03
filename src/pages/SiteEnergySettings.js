@@ -38,8 +38,8 @@ export default function SiteEnergySettings({ userData, siteId }) {
   }, []);
   const current = data.siteId === targetSite ? data : { meters: [], fromCache: true, loading: true };
   return <section className="energy-monitor site-energy-settings" aria-label="Energy automation settings">
-    <h2>Energy automation</h2><p>Configure the automatic EB/DG switch and the Asansol live-triggered operation simulator.</p>
-    {allSites ? <label>Automatic switch settings site<select aria-label="Automatic switch settings site" value={targetSite} onChange={(e) => setSelectedSite(e.target.value)}>{[...sites.entries()].sort((a,b) => a[1].localeCompare(b[1])).map(([id, name]) => <option key={id} value={id}>{name} · {id}</option>)}</select></label> : <p>Settings site: <strong>{siteName || "Unassigned"}</strong> · {targetSite}</p>}
+    <div className="settings-site-context"><div><span className="settings-eyebrow">AUTOMATION WORKSPACE</span><h3>{siteName || 'Choose a site'}</h3><p>{targetSite || 'No site assigned'} · {current.meters.length} registered meters</p><span className={`settings-connection ${current.error ? 'has-error' : ''}`}>{current.error ? 'Connection unavailable' : current.loading ? 'Loading meter feed' : current.fromCache ? 'Reconnecting to cloud' : 'Cloud feed connected'}</span></div>
+    {allSites ? <label>Settings site<select aria-label="Automatic switch settings site" value={targetSite} onChange={(e) => setSelectedSite(e.target.value)}>{[...sites.entries()].sort((a,b) => a[1].localeCompare(b[1])).map(([id, name]) => <option key={id} value={id}>{name} · {id}</option>)}</select><small>Select the site you want to configure.</small></label> : <span className="settings-count-badge">Assigned site</span>}</div>
     {!targetSite && <p role="alert">Assign a site ID before configuring energy automation.</p>}
     {current.loading && targetSite && <p role="status">Loading site meters…</p>}
     {current.error && <p role="alert">{current.error}</p>}

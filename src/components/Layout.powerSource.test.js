@@ -88,3 +88,13 @@ test("DG-2 energized cooldown transfers the header after two zero-load readings 
  expect(commitEnergyChangeover).toHaveBeenCalledWith({},"sitePowerStatus/Asansol",expect.objectContaining({powerSource:"EB"}),expect.objectContaining({automatic:true,dg:"DG-2",loadTransferAtMs:start+10000}));
  expect(screen.getByRole("switch",{name:"EB/DG power source"})).toHaveAttribute("aria-checked","false");
 });
+
+test("failed restoration transaction neither writes a stop log nor navigates",async()=>{
+ source="DG";await act(async()=>{render(<Layout userData={user}/>);});
+ commitEnergyChangeover.mockRejectedValue({code:"permission-denied"});
+ const restored=time=>({docs:[{id:"main",data:()=>({status:"OK",voltage_ll:415,current:100,observedAt:{toMillis:()=>time}})},{id:"dg1",data:()=>({status:"OK",voltage_ll:415,current:0,observedAt:{toMillis:()=>time}})}],metadata:{fromCache:false}});
+ await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(start+10000));});
+ await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(start+20000));});
+ expect(commitEnergyChangeover).toHaveBeenCalled();expect(addDoc).not.toHaveBeenCalled();expect(mockNavigate).not.toHaveBeenCalled();
+ expect(screen.getByRole("switch",{name:"EB/DG power source"})).toHaveAttribute("aria-checked","true");
+});

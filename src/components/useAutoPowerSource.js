@@ -19,6 +19,7 @@ export default function useAutoPowerSource({ siteId, canToggle, powerSource, act
   const config = useMemo(() => resolvePowerMapping(savedConfig, meters), [savedConfig, meters]);
   const configKey = JSON.stringify(config);
   const detector = useRef(initialChangeoverState()), busy = useRef(false);
+  const restorationEvidence = useRef(null);
   const trigger = useRef(onTrigger);
   trigger.current = onTrigger;
   const report = useRef(onMeterData), lastGood = useRef({}), lastGoodSite = useRef(siteId);
@@ -43,11 +44,19 @@ export default function useAutoPowerSource({ siteId, canToggle, powerSource, act
     return () => { active = false; stop(); };
   }, [siteId]);
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
-  useEffect(() => { detector.current = initialChangeoverState(); setError(""); }, [siteId, configKey, powerSource, activeDG]);
+  useEffect(() => { detector.current = initialChangeoverState(); restorationEvidence.current = null; setError(""); }, [siteId, configKey, powerSource, activeDG]);
   useEffect(() => {
-    if (!sharedMapping.ready) { detector.current = initialChangeoverState(); return; }
-    if (!canToggle || busy.current) return;
-    const assessment = assessHeaderPower(config, meters, now, fromCache, powerSource, activeDG);
+    if (!sharedMapping.ready) { detector.current = initialChangeoverState(); restorationEvidence.current = null; return; }
+    if (!canToggle) { detector.current = initialChangeoverState(); restorationEvidence.current = null; return; }
+    if (busy.current) return;
+    const assessment = assessHeaderPower(config, meters, now, fromCache, powerSource, activeDG, restorationEvidence.current);
+    if (assessment.dg === "EB" && assessment.evidenceMode === "live") {
+      const id = activeDG === "DG-2" ? config.dg2MeterId : activeDG === "DG-1" ? config.dg1MeterId : config.dg1MeterId || config.dg2MeterId;
+      const meter = meters.find(meter => meter.id === id);
+      const previous = restorationEvidence.current;
+      const loadTransferAtMs = previous?.id === id ? Math.min(previous.loadTransferAtMs, assessment.transferAtMs) : assessment.transferAtMs;
+      restorationEvidence.current = meter ? {...meter,loadTransferAtMs} : null;
+    } else if (assessment.kind !== "candidate") restorationEvidence.current = null;
     const next = advanceChangeover(detector.current, assessment, 2);
     detector.current = next;
     if (!next.fired) return;
@@ -60,6 +69,6 @@ export default function useAutoPowerSource({ siteId, canToggle, powerSource, act
       setError(failure?.code === "permission-denied" ? "Auto switch blocked: publish the updated Firestore rules for changeover history." : "Automatic source change save failed. Check connection and site permissions.");
     }).finally(() => { busy.current = false; });
   }, [config, meters, now, fromCache, canToggle, powerSource, activeDG, sharedMapping.ready]);
-  const assessment = assessHeaderPower(config, meters, now, fromCache, powerSource, activeDG);
+  const assessment = assessHeaderPower(config, meters, now, fromCache, powerSource, activeDG, restorationEvidence.current);
   return { config, manualDisabled: savedConfig.enabled !== false, status: sharedMapping.error || error || connectionError || (!sharedMapping.ready ? "Automatic switch: loading site settings" : !canToggle ? "Automatic switch: awaiting power-change permission" : assessment.message) };
 }

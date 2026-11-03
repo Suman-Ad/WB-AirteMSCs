@@ -1,13 +1,23 @@
 const {onDocumentCreated} = require('firebase-functions/v2/firestore');
 const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {getMessaging} = require('firebase-admin/messaging');
+function changeoverBody(value) {
+  let result = '', bytes = 0;
+  for (const char of value) {
+    const length = Buffer.byteLength(char, 'utf8');
+    if (bytes + length > 2500) break;
+    result += char; bytes += length;
+  }
+  return result;
+}
 function notificationData(n, uid, id) {
   const routes = {backup_request: '/backup-approvals', registration_request: '/admin',
     change_power_source: '/daily-dashboard', change_dg_select: '/daily-dashboard',
     crq_open_reminder: '/daily-activity-dashboard', crq_close_reminder: '/daily-activity-dashboard'};
   const url = typeof n.url === 'string' && n.url.startsWith('/') && !n.url.startsWith('//') && !n.url.includes('\\') ? n.url : routes[n.actionType] || '/';
+  const body = String(n.message || n.body || 'You have a new notification');
   return {title: String(n.title || 'WB Airtel MSC').slice(0, 200),
-    body: String(n.message || n.body || 'You have a new notification').slice(0, 1000),
+    body: ['energy_dg_start', 'energy_mains_restored'].includes(n.actionType) ? changeoverBody(body) : body.slice(0, 1000),
     url, uid, notificationId: id};
 }
 
