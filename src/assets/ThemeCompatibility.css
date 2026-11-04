@@ -262,7 +262,7 @@
     border-color: var(--theme-border);
   }
 
-  :root[data-theme="dark"] :where(th) {
+  :root[data-theme="dark"] :where(th):not([data-theme-color="preserve"]) {
     color: var(--theme-heading) !important;
     background-color: var(--theme-surface-muted) !important;
   }

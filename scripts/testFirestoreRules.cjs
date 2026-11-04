@@ -149,11 +149,13 @@ async function main() {
   }
   const functionControls=(uid,extra={})=>({writes:[{update:{
     name:`projects/${project}/databases/(default)/documents/energyMonitor/N19106A/config/notifications`,
-    fields:fields({enabled:true,dailyEnabled:true,changeoverEnabled:true,intervalMinutes:120,healthAlertsEnabled:false,recoveryAlertsEnabled:true,crqRemindersEnabled:false,telegramIncidentEnabled:false,telegramActivityEnabled:true,telegramCrqImportEnabled:false,updatedBy:uid,...extra})
+    fields:fields({enabled:true,dailyEnabled:true,changeoverEnabled:true,intervalMinutes:120,healthAlertsEnabled:false,recoveryAlertsEnabled:true,crqRemindersEnabled:false,telegramIncidentEnabled:false,telegramSummaryEnabled:true,telegramDhrEnabled:true,telegramActivityEnabled:true,telegramCrqImportEnabled:false,updatedBy:uid,...extra})
   },updateTransforms:[{fieldPath:'updatedAt',setToServerValue:'REQUEST_TIME'}]}]});
   await check('admin saves site function controls',call(':commit','admin','POST',functionControls('admin')),200);
   for(const uid of ['human','site-superuser','inactive-admin']) await check(`${uid} cannot change function controls`,call(':commit',uid,'POST',functionControls(uid)),403);
   await check('function controls reject non-boolean flags',call(':commit','admin','POST',functionControls('admin',{healthAlertsEnabled:'false'})),403);
+  await check('DHR control rejects non-boolean flag',call(':commit','admin','POST',functionControls('admin',{telegramDhrEnabled:'true'})),403);
+  await check('summary control rejects non-boolean flag',call(':commit','admin','POST',functionControls('admin',{telegramSummaryEnabled:'true'})),403);
   await check('function controls reject unknown flags',call(':commit','admin','POST',functionControls('admin',{unexpected:true})),403);
   await check('function controls reject forged authors',call(':commit','admin','POST',functionControls('human')),403);
   console.log(`${passed} Firestore rules integration checks passed.`);

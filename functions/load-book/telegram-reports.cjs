@@ -1,18 +1,49 @@
 const {currentMeters, notification} = require('./energy-notifications.cjs');
 const {istDate} = require('./meter-history.cjs');
-const {numeric, fuelSnapshot} = require('./energy-changeover-fuel.cjs');
+const {numeric, fuelSnapshot, loadFuelSnapshot} = require('./energy-changeover-fuel.cjs');
 const sites = require('./telegram-sites.cjs');
+const {summaryMessages} = require('./telegram-summary.cjs');
+const {dhrMessages} = require('./telegram-dhr.cjs');
 
-const help = 'WB Airtel MSC bot\n/meter data — every meter reading\n/present fuel — DG-wise saved fuel stock\n/site running load — latest daily average load\n/pue — latest daily PUE\n/segr — latest DG-wise SEGR\n/status — connection status\n/stop — disconnect\nSend a daily activity table photo or JPG/PNG file to combine CRQs in existing activities (Super User/Admin/Super Admin).\nConnect your account using the notification bell in the app.';
-const aliases = {'/incident':'incident', '/activity':'activity', '/meter':'meters', '/meters':'meters', '/meter_data':'meters', '/present':'fuel', '/fuel':'fuel', '/present_fuel':'fuel', '/site':'load', '/load':'load', '/site_running_load':'load', '/pue':'pue', '/segr':'segr'};
+const help = [
+  'WB Airtel MSC',
+  '📊 Site reports',
+  '/summary — monthly site summary',
+  '/dhr — daily health report with yesterday’s run hours',
+  '/meter data — every meter reading',
+  '/present fuel — opening fuel minus day consumption',
+  '/site running load — latest daily average load',
+  '/pue — latest daily PUE',
+  '/segr — latest DG-wise SEGR',
+  '',
+  '📋 Operations',
+  '/activity — today’s activities, CRQs, times and status (IST)',
+  '/incident — open site incident details',
+  'Send a daily activity table photo or JPG/PNG file to combine CRQs in existing activities (Super User/Admin/Super Admin).',
+  '',
+  '🌐 Administrator reports',
+  'Admin and Super Admin only:',
+  '/summary all — summaries for all sites',
+  '/Asansol: summary — summary for a named site',
+  '/Asansol: dhr — DHR for a named site',
+  '/Asansol: Site Status — saved site power status',
+  'Site prefixes also support activity, incident, meter data, present fuel, site running load, pue and segr.',
+  '',
+  '🔗 Your connection',
+  '/status — connection status',
+  '/stop — disconnect',
+  'Connect your account using the notification bell in the app.'
+].join('\n');
+const aliases = {'/dhr':'dhr','/summary':'summary','/incident':'incident', '/activity':'activity', '/meter':'meters', '/meters':'meters', '/meter_data':'meters', '/present':'fuel', '/fuel':'fuel', '/present_fuel':'fuel', '/site':'load', '/load':'load', '/site_running_load':'load', '/pue':'pue', '/segr':'segr'};
 function siteReportCommand(text) {
   const match = /^\/([^:\n]+):\s*(.+)$/i.exec(text.trim());
   if (!match) return null;
   const phrase = match[2].trim().toLowerCase().replace(/\s+/g, ' ');
-  const kinds = {'incident':'incident', 'activity':'activity', 'site status':'siteStatus', 'meter data':'meters', 'present fuel':'fuel', 'site running load':'load', 'pue':'pue', 'segr':'segr'};
+  const kinds = {'dhr':'dhr','summary':'summary','incident':'incident', 'activity':'activity', 'site status':'siteStatus', 'meter data':'meters', 'present fuel':'fuel', 'site running load':'load', 'pue':'pue', 'segr':'segr'};
   return {site:match[1].trim(), kind:kinds[phrase] || null};
 }
 function reportCommand(command, args) {
+  if (command === '/summary' && args === 'all') return 'summaryAll';
   if (command === '/meter' && args && args !== 'data') return null;
   if (command === '/present' && args !== 'fuel') return null;
   if (command === '/site' && args !== 'running load') return null;
@@ -21,6 +52,21 @@ function reportCommand(command, args) {
 }
 const format = value => value !== null && Number.isFinite(value) ? value.toLocaleString('en-IN', {maximumFractionDigits:2}) : 'Unavailable';
 const segment = value => typeof value === 'string' && value.trim() && !value.includes('/') && value !== '.' && value !== '..';
+async function deductDayConsumption(db, stock, siteName, now) {
+  const today = istDate(now);
+  const monthKey = new Date(`${today}T12:00:00+05:30`).toLocaleString('en-US', {month:'short',timeZone:'Asia/Kolkata'}) + '-' + today.slice(0,4);
+  const runs = (await db.collection(`dgLogs/${siteName}/${monthKey}/${today}/runs`).get()).docs.map(doc => doc.data());
+  for (const generator of stock.generators) {
+    const opening = stock.stockDate === today ? generator.openingLitres : generator.dayLitres;
+    const values = runs.filter(run => run.dgNumber === generator.dg).map(run => numeric(run.fuelConsumption));
+    const remaining = opening !== null && values.every(value => value !== null)
+    ? opening - values.reduce((sum,value) => sum + value,0) : null;
+    generator.openingLitres = opening;
+    generator.dayConsumption = values.every(value => value !== null) ? values.reduce((sum,value) => sum + value,0) : null;
+    generator.dayLitres = remaining !== null && remaining >= 0 ? remaining : null;
+  }
+  return today;
+}
 async function reportMessages(db, chatId, kind, now = Date.now(), requestedSite = null) {
   const binding = (await db.doc(`telegramChats/${chatId}`).get()).data();
   if (!binding) return ['Connect Telegram from the app notification bell to view site data.'];
@@ -31,6 +77,16 @@ async function reportMessages(db, chatId, kind, now = Date.now(), requestedSite 
   if (!user || user.isActive !== true || binding.uid === 'n89Dopqa4ybdE8VX6B5zUwJYMcx1' || !pref?.telegramEnabled || pref.telegramChatId !== chatId) {
     return ['Your Telegram connection is inactive. Connect an active account from the app notification bell.'];
   }
+  if (kind === 'summaryAll') {
+    if (!['Admin', 'Super Admin'].includes(user.role)) return ['Only Admin and Super Admin users can request all-site summaries. Use /summary for your assigned site.'];
+    const messages = [];
+    const names = Object.keys(sites);
+    for (let i = 0; i < names.length; i += 4) {
+      const batch = await Promise.all(names.slice(i, i + 4).map(name => reportMessages(db, chatId, 'summary', now, name)));
+      messages.push(...batch.flat());
+    }
+    return [messages.join('\n\n')];
+  }
   let siteId = user.siteId, siteName = segment(user.site) ? user.site.trim() : siteId;
   if (requestedSite !== null) {
     // Check the current stored role before resolving or reading any other site.
@@ -40,9 +96,17 @@ async function reportMessages(db, chatId, kind, now = Date.now(), requestedSite 
     siteName = name; siteId = sites[name];
   }
   if (!segment(siteId)) return ['No site is assigned to your account. Update your app profile first.'];
-  const controlFields = {meters:'telegramMetersEnabled',fuel:'telegramFuelEnabled',load:'telegramLoadEnabled',pue:'telegramPueEnabled',segr:'telegramSegrEnabled',siteStatus:'telegramSiteStatusEnabled',activity:'telegramActivityEnabled',incident:'telegramIncidentEnabled'};
+  const controlFields = {dhr:'telegramDhrEnabled',summary:'telegramSummaryEnabled',meters:'telegramMetersEnabled',fuel:'telegramFuelEnabled',load:'telegramLoadEnabled',pue:'telegramPueEnabled',segr:'telegramSegrEnabled',siteStatus:'telegramSiteStatusEnabled',activity:'telegramActivityEnabled',incident:'telegramIncidentEnabled'};
   const controls = (await db.doc(`energyMonitor/${siteId}/config/notifications`).get()).data() || {};
   if (controls[controlFields[kind]] === false) return [`${siteName}: This Telegram report is paused by an administrator.`];
+  if (kind === 'dhr') {
+    if (!segment(siteName)) return ['No site name is assigned to your account. Update your app profile to view DHR.'];
+    return dhrMessages(db, siteName, siteId, now, user);
+  }
+  if (kind === 'summary') {
+    if (!segment(siteName)) return ['No site name is assigned to your account. Update your app profile to view the summary.'];
+    return summaryMessages(db, siteName, siteId, now);
+  }
   if (kind === 'incident') {
     const snapshot = await db.collection('incidents').where('siteId','==',siteId).get();
     const rows = snapshot.docs.map(doc => ({...doc.data(),id:doc.id}))
@@ -95,11 +159,31 @@ async function reportMessages(db, chatId, kind, now = Date.now(), requestedSite 
     const status = (await db.doc(`sitePowerStatus/${siteName}`).get()).data();
     if (!status) return [`${siteName}: No saved site status available.`];
     const source = ['EB','DG'].includes(status.powerSource) ? status.powerSource : 'Unavailable';
-    const dg = source === 'DG' ? `\nRunning DG: ${String(status.dgNumber || status.selectedDG || 'Unavailable').slice(0,100)}` : '';
+    const dg = String(status.dgNumber || status.selectedDG || 'Unavailable').slice(0,100);
+    const stock = await loadFuelSnapshot(db, {siteName, startAtMs:now, dgNumber:source === 'DG' ? dg : undefined}, 'start', siteId);
+    const today = await deductDayConsumption(db, stock, siteName, now);
+    const litres = value => value !== null && Number.isFinite(value) ? String(Math.round(value * 100) / 100) : 'Unavailable';
+    const complete = stock.generators.length > 0 && stock.generators.every(g => g.dayLitres !== null && g.externalLitres !== null);
+    const external = complete ? stock.generators.reduce((sum,g) => sum + g.externalLitres,0) : null;
+    const total = complete ? stock.generators.reduce((sum,g) => sum + g.dayLitres + g.externalLitres,0) : null;
+    const rate = stock.generators.find(g => g.dg === dg)?.litresPerHour;
+    const backup = total !== null && rate > 0 ? `Approximately ${(total / rate).toFixed(2)} hrs.` : 'Unavailable';
     const at = status.updatedAt?.toMillis?.();
     const observed = Number.isFinite(at) && at > 0 && at <= now + 5000
       ? new Date(at).toLocaleString('en-IN', {timeZone:'Asia/Kolkata'}) + ' IST' : 'Unavailable';
-    return [`${siteName}\nSite Status (last saved)\nPower source: ${source}${dg}\nUpdated: ${observed}`];
+    return [[
+      `Site Name:-${siteName} MSC`,
+      source === 'DG' ? `Site On ${dg} Running.` : source === 'EB' ? 'Site On EB Supply.' : 'Site power source: Unavailable.',
+      'Diesel stock:-',
+      ...stock.generators.map(g => `${g.dg}: ${litres(g.dayLitres)} Ltrs`),
+      `External metal drum stock-${litres(external)} L`,
+      `Total stock-${litres(total)} liters.`,
+      `Diesel Backup :- ${backup}`,
+      status.mainsFailReason ? `Mains fail happened due to ${status.mainsFailReason}` : '',
+      status.expectedRestoration ? `\nAs per discussion with the electricity team, power will be restored approximately ${status.expectedRestoration}` : '',
+      `\nStatus updated: ${observed}`,
+      `Fuel stock base: ${stock.stockDate || 'Unavailable'}; consumption deducted: ${today} (IST)`
+    ].filter(Boolean).join('\n')];
   }
   if (kind === 'meters') {
     const meters = currentMeters((await db.collection(`energyMonitor/${siteId}/meters`).get()).docs, now);
@@ -123,8 +207,9 @@ async function reportMessages(db, chatId, kind, now = Date.now(), requestedSite 
   const row = rows[0], heading = `${siteName}\nSaved daily log: ${row.Date} (IST)\n`;
   if (kind === 'fuel') {
     const stock = fuelSnapshot(config, rows, date);
-    return [heading + 'Fuel stock (saved closing readings)\n' + (stock.generators.map(dg =>
-      `${dg.dg}: Day tank ${format(dg.dayLitres)} L | External ${format(dg.externalLitres)} L`
+    const today = await deductDayConsumption(db, stock, siteName, now);
+    return [heading + `Present fuel: ${today} (IST)\nPresent fuel = opening fuel - day consumption\n` + (stock.generators.map(dg =>
+      `${dg.dg}: Opening fuel ${format(dg.openingLitres)} L | Day consumption ${format(dg.dayConsumption)} L | Present fuel ${format(dg.dayLitres)} L | External ${format(dg.externalLitres)} L`
     ).join('\n') || 'No DG stock recorded.')];
   }
   const count = (key, prefix) => Math.max(0, Math.min(4, Number(config[key]) || Math.max(0, ...Object.keys(row).map(k => Number(new RegExp(`^${prefix}-([1-4]) `).exec(k)?.[1]) || 0))));
@@ -175,4 +260,4 @@ function chunks(messages) {
     return parts;
   });
 }
-module.exports = {help:help + '\n/incident — open site incident details\n/activity — today’s site activities, CRQs, times and status (IST)\nAdmins: /Asansol: activity, /Asansol: Site Status, /Globsyn: meter data, /Kharagpur: present fuel. Site prefixes also support site running load, pue and segr.', reportCommand, siteReportCommand, reportMessages, chunks};
+module.exports = {help, reportCommand, siteReportCommand, reportMessages, chunks};

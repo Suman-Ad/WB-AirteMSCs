@@ -104,7 +104,7 @@ service cloud.firestore {
     match /energyMonitor/{siteId}/config/notifications {
       allow read: if isActiveSiteUser(siteId) || isActiveAdmin();
       allow create, update: if isActiveAdmin()
-        && request.resource.data.keys().hasOnly(['enabled', 'dailyEnabled', 'changeoverEnabled', 'healthAlertsEnabled', 'recoveryAlertsEnabled', 'crqRemindersEnabled', 'telegramMetersEnabled', 'telegramFuelEnabled', 'telegramLoadEnabled', 'telegramPueEnabled', 'telegramSegrEnabled', 'telegramSiteStatusEnabled', 'telegramActivityEnabled', 'telegramIncidentEnabled', 'telegramCrqImportEnabled', 'intervalMinutes', 'updatedBy', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['enabled', 'dailyEnabled', 'changeoverEnabled', 'healthAlertsEnabled', 'recoveryAlertsEnabled', 'crqRemindersEnabled', 'telegramMetersEnabled', 'telegramFuelEnabled', 'telegramLoadEnabled', 'telegramPueEnabled', 'telegramSegrEnabled', 'telegramSiteStatusEnabled', 'telegramActivityEnabled', 'telegramIncidentEnabled', 'telegramSummaryEnabled', 'telegramDhrEnabled', 'telegramCrqImportEnabled', 'intervalMinutes', 'updatedBy', 'updatedAt'])
         && request.resource.data.enabled is bool
         && (!('dailyEnabled' in request.resource.data) || request.resource.data.dailyEnabled is bool)
         && (!('changeoverEnabled' in request.resource.data) || request.resource.data.changeoverEnabled is bool)
@@ -118,6 +118,8 @@ service cloud.firestore {
         && (!('telegramSegrEnabled' in request.resource.data) || request.resource.data.telegramSegrEnabled is bool)
         && (!('telegramSiteStatusEnabled' in request.resource.data) || request.resource.data.telegramSiteStatusEnabled is bool)
         && (!('telegramActivityEnabled' in request.resource.data) || request.resource.data.telegramActivityEnabled is bool)
+        && (!('telegramDhrEnabled' in request.resource.data) || request.resource.data.telegramDhrEnabled is bool)
+        && (!('telegramSummaryEnabled' in request.resource.data) || request.resource.data.telegramSummaryEnabled is bool)
         && (!('telegramIncidentEnabled' in request.resource.data) || request.resource.data.telegramIncidentEnabled is bool)
         && (!('telegramCrqImportEnabled' in request.resource.data) || request.resource.data.telegramCrqImportEnabled is bool)
         && request.resource.data.intervalMinutes in [30, 60, 120, 240, 360, 720, 1440]

@@ -27,7 +27,7 @@ function harness() {
   class HttpsError extends Error {constructor(code, text) {super(text); this.code = code;}}
   const exports = {};
   vm.runInNewContext(fs.readFileSync(__dirname + '/telegram-functions.cjs', 'utf8'), {
-    exports, console, Buffer, AbortSignal, Date: TestDate,
+    exports, console, Buffer, AbortSignal, Date: TestDate, setTimeout:fn => fn(),
     fetch: async (url, options) => {
       requests.push({url, body: JSON.parse(options.body)});
       return {ok: !apiError, status: apiError || 200, json: async () => apiError ? {ok: false, error_code: apiError, description: apiDescription} : {ok: true, result: {message_id: 123}}};
@@ -39,6 +39,7 @@ function harness() {
       'firebase-admin/firestore': {getFirestore: () => db, FieldValue: {delete: () => deletedField, serverTimestamp: () => {const saved = now; return {toMillis: () => saved};}}, Timestamp: {fromMillis: value => ({toMillis: () => value})}},
       'node:crypto': crypto,
       './telegram-reports.cjs': require('./telegram-reports.cjs'),
+      './telegram-message.cjs': require('./telegram-message.cjs'),
       './notification-functions.cjs': {notificationData: n => ({title: n.title || 'Alert', body: n.message || 'Update'})}
     })[name]
   });
@@ -72,7 +73,7 @@ test('link creation requires authenticated active account and hides raw token in
 
 test('report commands route spaced phrases and bot mentions through account checks', async () => {
   const app = harness();
-  for (const command of ['/METER@msc_test_bot   DATA', '/present fuel', '/site running load', '/pue', '/segr', '/present_fuel', '/activity', '/ACTIVITY@msc_test_bot', '/incident', '/INCIDENT@msc_test_bot']) {
+  for (const command of ['/METER@msc_test_bot   DATA', '/present fuel', '/site running load', '/pue', '/segr', '/present_fuel', '/activity', '/ACTIVITY@msc_test_bot', '/incident', '/INCIDENT@msc_test_bot', '/summary', '/SUMMARY@msc_test_bot', '/summary all', '/dhr', '/DHR@msc_test_bot']) {
     assert.equal(await app.webhook(command), 200);
     assert.match(app.requests.at(-1).body.text, /Connect Telegram from the app/);
   }
@@ -111,10 +112,10 @@ test('notifications send only after linking, are not replayed, and stop command 
   assert.equal(app.requests.length, 0);
   await app.link();
   await app.webhook('/status');
-  assert.equal(app.requests.at(-1).body.text, 'Connected. Notification updates are enabled.');
+  assert.match(app.requests.at(-1).body.text, /Connected\. Notification updates are enabled\./);
   await app.exports.telegramBellNotification(app.event());
   await app.exports.telegramBellNotification(app.event());
-  assert.equal(app.requests.filter(r => r.body.text === 'Power\n\nDG running').length, 1);
+  assert.equal(app.requests.filter(r => r.body.text.includes('📬 Power') && r.body.text.includes('DG running')).length, 1);
   assert.equal(app.records.get('notificationDeliveries/user/telegramItems/notice').status, 'sent');
   await app.webhook('/stop');
   await app.exports.telegramBellNotification(app.event('later'));
@@ -153,7 +154,7 @@ test('connected accounts survive ten minutes and expiration of an unused reconne
   await app.link();
   app.advance(11 * 60 * 1000);
   await app.webhook('/status');
-  assert.equal(app.requests.at(-1).body.text, 'Connected. Notification updates are enabled.');
+  assert.match(app.requests.at(-1).body.text, /Connected\. Notification updates are enabled\./);
   const {url} = await app.exports.createTelegramLink({auth: {uid: 'user'}});
   app.advance(11 * 60 * 1000);
   await app.webhook(`/start ${new URL(url).searchParams.get('start')}`);
@@ -193,4 +194,23 @@ test('plain private start replies without linking and failed replies request web
  app.fail(500,'Internal server error');assert.equal(await app.webhook('/start'),503);
  app.fail(401,'Unauthorized');assert.equal(await app.webhook('/start'),503);
  app.fail(403,'Forbidden: bot was blocked by the user');assert.equal(await app.webhook('/start'),200);
+});
+
+
+test('command replies and full notification bodies use safe formatted pages', async () => {
+  const app=harness();
+  await app.webhook('/help');
+  assert.match(app.requests.at(-1).body.text,/<b>📖 Bot commands<\/b>/);
+  assert.equal(app.requests.at(-1).body.parse_mode,'HTML');
+  await app.link();
+  const description='Fault <DG> & UPS '.repeat(400)+'END OF DETAILS';
+  const event=app.event('long-notice');
+  event.data.data=()=>({title:'Power <alert>',message:description,read:false});
+  const before=app.requests.length;
+  await app.exports.telegramBellNotification(event);
+  const pages=app.requests.slice(before).map(r=>r.body);
+  assert.ok(pages.length>1);
+  assert.ok(pages.every(p=>p.parse_mode==='HTML' && !p.text.includes('<DG>')));
+  assert.match(pages.at(-1).text,/END OF DETAILS/);
+  assert.equal(app.records.get('notificationDeliveries/user/telegramItems/long-notice').messageIds.length,pages.length);
 });

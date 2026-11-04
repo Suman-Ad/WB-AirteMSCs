@@ -197,7 +197,9 @@ Linked, active users can request data for their assigned site in a private bot c
 | Typed command | Menu command | Reply |
 | --- | --- | --- |
 | `/meter data` | `/meter_data` | Every current meter: kWh, kW, phase voltage/current, PF, frequency, health and IST observation time |
-| `/present fuel` | `/present_fuel` | Each DG's saved day-tank closing and external stock in litres |
+| `/dhr` (also `/DHR`) | `/dhr` | Daily Health Report matching Preview & Share DHR: yesterday’s run hours, diesel stock, equipment statuses, activities, faults and saved energy |
+| `/summary` | `/summary` | Current-month All Sites DG Logs monthly summary only |
+| `/present fuel` | `/present_fuel` | Each DG's present fuel (opening fuel minus today's run consumption), opening fuel, day consumption and external stock in litres |
 | `/site running load` | `/site_running_load` | Latest saved daily energy / 24, in kW |
 | `/pue` | `/pue` | Latest daily energy excluding office consumption / 24 / IT load |
 | `/segr` | `/segr` | Latest DG generation / on-load fuel, DG-wise and overall, in kWh/L |
@@ -223,3 +225,9 @@ Edit `energy-changeover-fuel.cjs` for stock sources and backup calculations; edi
 ```powershell
 firebase deploy --only "functions:load-book:notifyEnergyChangeover,functions:load-book:pushBellNotification,functions:load-book:telegramBellNotification" --project wb-airtelmscs
 ```
+
+Telegram summary access: `/summary` contains only the current-month summary from All Sites DG Logs, excluding future saved logs. `/summary all` and named-site requests such as `/Asansol: summary` are limited to active Admin and Super Admin accounts; regular users get their assigned site. Each site respects `telegramSummaryEnabled`.
+
+Telegram DHR: `/dhr` and `/DHR` show today's DHR date in IST, yesterday’s on-load DG hours (all run hours minus No Load hours), and yesterday’s EB hours using the Preview & Share DHR formula and 24-hour guard. Data comes from `dgLogs/{site}/{Mon-YYYY}/{yesterday}/runs`; date selection handles month/year boundaries. Other fields are region/circle, latest saved Daily DG Log diesel stock (day plus external tanks), site equipment statuses, major activity, inhouse PM, fault details, and total saved DG+EB+Solar energy. The source dates are displayed. Region/circle prefer Site Settings and fall back to the linked user's profile only for their own site. Admin/Super Admin can request `/Asansol: dhr`; other users are restricted to their assigned site. DHR respects the `telegramDhrEnabled` site setting.
+
+Telegram presentation: command replies and automatic notifications use escaped HTML with report headers, bold field labels, vertical DG metrics, IST generation timestamps and numbered continuation pages. Long notification bodies are preserved across pages. Link previews are disabled. Formatting is applied only when sending to Telegram.

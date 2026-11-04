@@ -8,6 +8,8 @@ import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { saveAs } from "file-saver";
 import HSDPrintTemplate from "../components/HSDPrintTemplate";
+import { openingRunReadings, dailyOpeningReadings } from "../utils/dgOpeningReadings";
+import "../assets/DGLogForm.css";
 // import { toast } from "react-toastify";
 // import "react-toastify/dist/ReactToastify.css";
 
@@ -75,6 +77,7 @@ const DGLogForm = ({ userData }) => {
     });
 
     const [previewOpen, setPreviewOpen] = useState(false);
+    const [openingStatus, setOpeningStatus] = useState("");
 
     const fetchHsdForEdit = async () => {
         const q = query(
@@ -742,95 +745,68 @@ const DGLogForm = ({ userData }) => {
 
 
     useEffect(() => {
+        let cancelled = false;
+        const selectedDate = form.date;
+        const selectedDG = dgNumber;
+        const site = userData?.site;
         const fetchPrevMeterReadings = async () => {
-            if (isEditMode || !dgNumber || !form.date || !userData?.site) return;
-
+            if (isEditMode || !selectedDG || !selectedDate || !site) return;
+            setOpeningStatus("Loading previous closing readings…");
+            setForm(prev => ({...prev, hrMeterStart:"", kwhMeterStart:"", hrMeterEnd:"", kwhMeterEnd:"", kWHReading:""}));
             try {
-                const getMonthKey = (date) =>
-                    date.toLocaleString("en-US", { month: "short" }) + "-" + date.getFullYear();
-
-                const findLatestDGRun = async (monthKey, date) => {
-                    const runsRef = collection(
-                        db,
-                        "dgLogs",
-                        userData.site,
-                        monthKey,
-                        date,
-                        "runs"
-                    );
-                    const snapshot = await getDocs(query(runsRef, orderBy("createdAt", "desc")));
-                    const matchingDoc = snapshot.docs.find(
-                        (runDoc) => runDoc.data().dgNumber === dgNumber
-                    );
-                    return matchingDoc?.data() || null;
+                const dateObj = new Date(selectedDate + "T12:00:00");
+                const monthKey = date => date.toLocaleString("en-US", {month:"short"}) + "-" + date.getFullYear();
+                let readings = {hrMeterStart:"", kwhMeterStart:""};
+                const merge = incoming => {
+                    for (const key of Object.keys(readings)) if (readings[key] === "") readings[key] = incoming[key];
                 };
-
-                const selectedDate = form.date;
-                const selectedDateObj = new Date(`${selectedDate}T00:00:00`);
-                const selectedMonthKey = getMonthKey(selectedDateObj);
-
-                // Prefer the latest run for this DG already saved on the selected date.
-                let found = await findLatestDGRun(selectedMonthKey, selectedDate);
-
-                // Otherwise search prior logged dates, including the previous month.
-                if (!found) {
-                    for (let monthOffset = 0; monthOffset <= 1 && !found; monthOffset += 1) {
-                        const searchMonth = new Date(
-                            selectedDateObj.getFullYear(),
-                            selectedDateObj.getMonth() - monthOffset,
-                            1
-                        );
-                        const monthKey = getMonthKey(searchMonth);
-                        const dateDocsRef = collection(db, "dgLogs", userData.site, monthKey);
-                        const dateQuery = monthOffset === 0
-                            ? query(
-                                dateDocsRef,
-                                where(documentId(), "<", selectedDate),
-                                orderBy(documentId(), "desc"),
-                                limit(31)
-                            )
-                            : query(dateDocsRef, orderBy(documentId(), "desc"), limit(31));
-                        const dateSnapshot = await getDocs(dateQuery);
-
-                        for (const dateDoc of dateSnapshot.docs) {
-                            found = await findLatestDGRun(monthKey, dateDoc.id);
-                            if (found) break;
-                        }
+                const complete = () => Object.values(readings).every(value => value !== "");
+                const readRuns = async (month, date) => {
+                    const snapshot = await getDocs(collection(db,"dgLogs",site,month,date,"runs"));
+                    return openingRunReadings(snapshot.docs.map(d => d.data()), selectedDG);
+                };
+                merge(await readRuns(monthKey(dateObj), selectedDate));
+                for (let offset=0; offset<=1 && !complete(); offset++) {
+                    const month = new Date(dateObj.getFullYear(), dateObj.getMonth()-offset, 1);
+                    const dates = await getDocs(query(collection(db,"dgLogs",site,monthKey(month)),
+                        where(documentId(),"<",selectedDate),orderBy(documentId(),"desc"),limit(31)));
+                    for (const date of dates.docs) {
+                        merge(await readRuns(monthKey(month),date.id));
+                        if (complete() || cancelled) break;
                     }
                 }
-
-                setForm((prev) => {
-                    // Ignore an older async response after the user changes date or DG.
-                    if (prev.date !== selectedDate || prev.dgNumber !== dgNumber) return prev;
-
-                    const hrMeterStart = found?.hrMeterEnd ?? "";
-                    const kwhMeterStart = found?.kwhMeterEnd ?? "";
-                    return {
-                        ...prev,
-                        hrMeterStart,
-                        kwhMeterStart,
-                        kwhMeterEnd: prev.remarks === "No Load" ? kwhMeterStart : "",
-                        kWHReading: prev.remarks === "No Load" ? 0 : "",
-                    };
-                });
-            } catch (err) {
-                console.error("Error fetching previous meter readings:", err);
+                // Daily logs also cover sites without individual run history.
+                if (!complete() && !cancelled) {
+                    for (let offset=0; offset<=1 && !complete(); offset++) {
+                        const month = new Date(dateObj.getFullYear(), dateObj.getMonth()-offset, 1);
+                        const key = month.getFullYear() + "-" + String(month.getMonth()+1).padStart(2,"0");
+                        const snapshot = await getDocs(collection(db,"dailyDGLogs",site,key));
+                        merge(dailyOpeningReadings(snapshot.docs.map(d => ({...d.data(),Date:d.data().Date || d.id})),selectedDG,selectedDate));
+                    }
+                }
+                if (cancelled) return;
+                setForm(prev => prev.date !== selectedDate || prev.dgNumber !== selectedDG ? prev : ({
+                    ...prev, ...readings,
+                    hrMeterStart: prev.hrMeterStart !== "" ? prev.hrMeterStart : readings.hrMeterStart,
+                    kwhMeterStart: prev.kwhMeterStart !== "" ? prev.kwhMeterStart : readings.kwhMeterStart,
+                    kwhMeterEnd: prev.remarks === "No Load" ? (prev.kwhMeterStart !== "" ? prev.kwhMeterStart : readings.kwhMeterStart) : prev.kwhMeterEnd,
+                    kWHReading: prev.remarks === "No Load" ? 0 : "",
+                }));
+                setOpeningStatus(complete() ? "Opening readings filled from saved records. Verify against the DG meters." : "Some previous readings are unavailable. Enter the missing opening readings manually.");
+            } catch (error) {
+                if (!cancelled) setOpeningStatus("Could not load previous readings. Enter opening readings manually.");
+                console.error("Error fetching previous meter readings:",error);
             }
         };
-
-        if (state?.editMode && state?.logData) {
-            setForm({
-                ...state.logData,
-                date: state.selectedDate,
-            });
+        if (isEditMode && state?.logData) {
+            setForm({...state.logData,date:state.selectedDate || state.logData.date});
             setDgNumber(state.logData.dgNumber);
         }
-
         fetchPrevMeterReadings();
         fetchConfig();
-        // ✅ NEW
         fetchTodayFuelFilledDGCount(form.date);
-    }, [dgNumber, form.date, userData.site, state, isEditMode]);
+        return () => { cancelled = true; };
+    }, [dgNumber, form.date, userData?.site, state, isEditMode]);
 
     useEffect(() => {
         if (form.remarks !== "No Load") return;
@@ -905,14 +881,15 @@ const DGLogForm = ({ userData }) => {
 
 
     return (
-        <div className="daily-log-container">
+        <div className="daily-log-container dg-entry-page">
             <h2 className="dashboard-header">
                 <strong>
                     🎯 {isEditMode ? `Update ${siteConfig.dgConfigs?.[dgNumber]?.capacityKva}kVA DG Log` : `New Entry ${siteConfig.dgConfigs?.[dgNumber]?.capacityKva}kVA DG Log`} - {siteKey}
                 </strong>
             </h2>
 
-            <form onSubmit={handleSubmit} className="daily-log-form">
+            {!isEditMode && <p className="dg-opening-status" role="status">{openingStatus}</p>}
+            <form onSubmit={handleSubmit} className="daily-log-form dg-entry-form">
 
                 <label className="form-label">Date:
                     <input
@@ -936,7 +913,7 @@ const DGLogForm = ({ userData }) => {
                         onChange={handleChange}
                         className="w-full p-2 border rounded"
                     >
-                        <option value="On Load" disabled={state.isDGOnLoad === true || userData?.designation !== "Vertiv Site Infra Engineer"}>On Load</option>
+                        <option value="On Load" disabled={state?.isDGOnLoad === true || userData?.designation !== "Vertiv Site Infra Engineer"}>On Load</option>
                         <option value="No Load">No Load</option>
                         <option value="Fuel Filling Only">Fuel Filling Only</option>
                     </select>

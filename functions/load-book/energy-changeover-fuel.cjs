@@ -12,10 +12,14 @@ function consumption(row, dg) {
 function fuelSnapshot(config, rows, asOfDate, runningDG) {
   const valid=rows.filter(row=>/^\d{4}-\d{2}-\d{2}$/.test(row.Date || '') && row.Date<=asOfDate).sort((a,b)=>b.Date.localeCompare(a.Date));
   const latest=valid[0];
-  const count=Number.isInteger(Number(config.dgCount)) ? Math.max(0,Math.min(4,Number(config.dgCount))) : 0;
+  const configured=numeric(config.dgCount)!==null && Number.isInteger(Number(config.dgCount)) && Number(config.dgCount)<=4;
+  const count=configured ? Number(config.dgCount) : 0;
   const ids=new Set(Array.from({length:count},(_,i)=>`DG-${i+1}`));
-  if (/^DG-[1-4]$/.test(runningDG || '')) ids.add(runningDG);
-  for (const key of Object.keys(latest || {})) {const match=/^(DG-[1-4]) Fuel Closing$/.exec(key);if(match && numeric(latest[key])!==null) ids.add(match[1]);}
+  // Logs contain zero-filled fields for unused DGs. An explicit site count is authoritative.
+  if (!configured) {
+    if (/^DG-[1-4]$/.test(runningDG || '')) ids.add(runningDG);
+    for (const key of Object.keys(latest || {})) {const match=/^(DG-[1-4]) Fuel Closing$/.exec(key);if(match && numeric(latest[key])!==null) ids.add(match[1]);}
+  }
   const generators=[...ids].sort().map(dg=>{
     const dayLitres=numeric(latest?.[`${dg} Fuel Closing`]);
     const savedExternal=numeric(latest?.[`${dg} External Fuel Stock`]);
@@ -26,7 +30,7 @@ function fuelSnapshot(config, rows, asOfDate, runningDG) {
     const design=numeric(config.designCph?.[dg]);
     const litresPerHour=actual ?? (design>0 ? design : null);
     const total=dayLitres!==null && externalLitres!==null ? dayLitres+externalLitres : null;
-    return {dg,dayLitres,externalLitres,litresPerHour,rateSource:actual!==null?'Recorded on-load':design>0?'Design':'Unavailable',
+    return {dg,dayLitres,openingLitres:numeric(latest?.[`${dg} Fuel Opening`]),externalLitres,litresPerHour,rateSource:actual!==null?'Recorded on-load':design>0?'Design':'Unavailable',
       backupHours:total!==null && litresPerHour>0 ? total/litresPerHour : null};
   });
   return {stockDate:latest?.Date || null,asOfDate,generators};

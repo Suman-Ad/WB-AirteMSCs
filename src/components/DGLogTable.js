@@ -7,6 +7,7 @@ import { format, set, subDays } from "date-fns";
 import HSDPrintTemplate from "../components/HSDPrintTemplate";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import "../assets/DGLogTable.css";
 
 
 // Convert decimal hours to HH:MM format
@@ -28,6 +29,7 @@ const DGLogTable = ({ userData }) => {
     performance: "ALL",
   });
   const [summary, setSummary] = useState({});
+  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const Navigate = useNavigate();
 
   const configuredDGNumbers = useMemo(() => {
@@ -182,6 +184,7 @@ const DGLogTable = ({ userData }) => {
   };
 
   const fetchMonthlySummary = async () => {
+    setIsSummaryLoading(true);
     try {
       const dateObj = new Date(selectedDate + "T00:00:00");
       const monthKey =
@@ -221,6 +224,8 @@ const DGLogTable = ({ userData }) => {
 
     } catch (err) {
       console.error("Error fetching monthly summary:", err);
+    } finally {
+      setIsSummaryLoading(false);
     }
   };
 
@@ -868,7 +873,7 @@ const DGLogTable = ({ userData }) => {
 
 
   return (
-    <div className="daily-log-container">
+    <div className="daily-log-container dg-log-page">
       <h2 className="dashboard-header">
         <strong>🎯 DG Run Logs – {siteName}</strong>
       </h2>
@@ -880,10 +885,10 @@ const DGLogTable = ({ userData }) => {
       </button>
 
       {/* Summary table */}
-      <div style={{ marginTop: "2rem" }}>
-        <h1><strong>📊 Monthly Summary ({selectedDate.slice(0, 7)})</strong></h1>
-        {configuredDGNumbers.some((dgNumber) => (summary[dgNumber]?.onLoad || 0) > 0 || (summary[dgNumber]?.noLoad || 0) > 0) ? (
-          <table border="1" cellPadding="8" style={{ width: "100%" }}>
+      <section className="dg-log-panel dg-count-panel">
+        <h2>Monthly run counts · {selectedDate.slice(0, 7)}</h2>
+        {!isSummaryLoading ? (
+          <div className="dg-summary-scroll"><table className="dg-count-table">
             <thead>
               <tr>
                 <th>DG No</th>
@@ -900,23 +905,23 @@ const DGLogTable = ({ userData }) => {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         ) : (
-          <h3><strong>Loading.......</strong></h3>
+          <p role="status">Loading monthly run counts…</p>
         )}
-      </div>
+      </section>
       {/* Bulk Upload Section */}
       {userData?.role !== "User" && !(userData?.role === "Super User" && userData?.designation === "Vertiv Technician") && (
-        <div className="child-container" style={{ border: "1px solid #000", borderRadius: "15px", marginTop: "2rem", padding: "1rem" }}>
+        <div className="child-container dg-log-panel dg-upload-panel">
           <h2>📥 Bulk Upload DG Logs (Excel)</h2>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="dg-upload-row">
             <label><strong>📥 Bulk Upload Template: </strong></label>
             <b onClick={downloadDGBulkUploadTemplate}
               style={{ fontSize: "12px", height: "fit-content", cursor: "pointer", color: "blue", textDecoration: "underline" }}>
               📥 Download Excel Upload Template
             </b>
           </div>
-          <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
+          <div className="dg-upload-row">
             <label><strong>⬆️ Upload Filled Excel File: </strong></label>
             <input
               ref={fileInputRef}
@@ -990,10 +995,10 @@ const DGLogTable = ({ userData }) => {
       )}
 
       {/* Date selector & DHR Preview Button */}
-      <div style={{ margin: "1rem 0", display: "flex", alignItems: "center", gap: "15px" }}>
+      <div className="dg-log-toolbar">
         <div>
-          <label>Select Date: </label>
-          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+          <label htmlFor="dg-log-date">Select date</label>
+          <input id="dg-log-date" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
         </div>
         <button onClick={openPreviewModal} className="segr-manage-btn">
           👁️ Preview & Share DHR
@@ -1012,31 +1017,32 @@ const DGLogTable = ({ userData }) => {
         )}
 
       </div>
-      <h2 id="monthly-dg-log-table-title">
-        📅 Daily DG Log Table ({format(new Date(selectedDate + "T00:00:00"), "MMMM yyyy")})
+      <h2 id="daily-dg-log-table-title">
+        Daily DG runs · {format(new Date(selectedDate + "T00:00:00"), "dd MMM yyyy")}
       </h2>
       {logs.length === 0 ? (
         <p>No logs found for {selectedDate}.</p>
       ) : (
-        <div className="table-container">
-          <table border="1" cellPadding="8" style={{ width: "100%" }}>
+        <div className="dg-table-scroll" role="region" aria-labelledby="daily-dg-log-table-title" tabIndex={0}>
+          <table className="dg-run-table dg-daily-table">
+            <caption>Daily DG runs. Scroll horizontally to view all readings and actions.</caption>
             <thead>
               <tr>
-                <th style={{ left: 0, top: 0, zIndex: 2 }}>DG No</th>
+                <th scope="col">DG No</th>
                 <th style={{ whiteSpace: "nowrap" }}>Start Time</th>
                 <th style={{ whiteSpace: "nowrap" }}>Stop Time</th>
                 <th>Hr Meter Start</th>
                 <th>Hr Meter End</th>
                 <th>Total Run Hours</th>
-                <th>Opening kWH</th>
-                <th>Closing kWH</th>
-                <th>kW Reading</th>
+                <th>Opening (kWh)</th>
+                <th>Closing (kWh)</th>
+                <th>Generation (kWh)</th>
                 <th>Fuel Consumption (Ltrs)</th>
                 <th>Remarks</th>
                 <th>Fuel Filling (Ltrs)</th>
                 <th>OEM CPH (Ltrs)</th>
                 <th>Achieve CPH (Ltrs)</th>
-                <th>Running kWH</th>
+                <th>Average load (kW)</th>
                 <th>SEGR</th>
                 <th>DG Run %</th>
                 <th>HSD Template</th>
@@ -1047,10 +1053,11 @@ const DGLogTable = ({ userData }) => {
             </thead>
             <tbody>
               {logs.map((log) => {
-                const runningKWH = ((log.kWHReading || 0) / log.totalRunHours).toFixed(1);
+                const runningKWH = Number(log.totalRunHours) > 0 && Number.isFinite(Number(log.kWHReading))
+                    ? (Number(log.kWHReading) / Number(log.totalRunHours)).toFixed(1) : "—";
                 return (
                   <tr key={log.id}>
-                    <td style={{ whiteSpace: "nowrap", left: 0, zIndex: 1, position: "sticky", background: "white" }}>{log.dgNumber}</td>
+                    <td>{log.dgNumber}</td>
                     <td>{log.startTime} Hrs</td>
                     <td>{log.stopTime} Hrs</td>
                     <td>{log.hrMeterStart}</td>
@@ -1071,7 +1078,7 @@ const DGLogTable = ({ userData }) => {
                     <td>{log.kwhMeterEnd}</td>
                     <td>{log.kWHReading || 0}</td>
                     <td>{log.fuelConsumption || 0}</td>
-                    <td>{log.remarks}</td>
+                    <td><span className={`dg-run-type ${log.remarks === "On Load" ? "is-on-load" : log.remarks === "No Load" ? "is-no-load" : "is-filling"}`}>{log.remarks || "—"}</span></td>
                     <td style={{ fontSize: "12px" }}>
                       {(log.fuelFill || log.exFuelFill) ? (
                         <div>
@@ -1079,14 +1086,14 @@ const DGLogTable = ({ userData }) => {
                           <p style={{ fontSize: "12px" }}>
                             Ex.🛢️:{log.exFuelFill ? log.exFuelFill : 0}L
                           </p>
-                          = {log.fuelFill + log.exFuelFill}L
+                          = {Number(log.fuelFill || 0) + Number(log.exFuelFill || 0)}L
                         </div>
                       ) : 0}
                     </td>
                     <td>{log.oemCPH ? log.oemCPH : "N/A"}</td>
-                    <td style={log.cph > log.oemCPH ? { color: "Red" } : log.cph?.toFixed(0) === log.oemCPH ? { color: "orange" } : { color: "Green" }}
-                      title={log.cph > log.oemCPH ? "High" : log.cph?.toFixed(0) === log.oemCPH ? "In-Line" : "Low"}
-                    >{log.cph?.toFixed(2)}<span style={log.cph > log.oemCPH ? { color: "Red", fontSize: "10px" } : log.cph?.toFixed(0) === log.oemCPH ? { color: "orange", fontSize: "10px" } : { color: "Green", fontSize: "10px" }}>{log.cph > log.oemCPH ? "High" : log.cph?.toFixed(0) === log.oemCPH ? "In-Line" : "Low"}</span></td>
+                    <td style={log.cph > log.oemCPH ? { color: "Red" } : (log.cph != null && Number.isFinite(Number(log.cph)) ? Number(log.cph).toFixed(0) : null) === log.oemCPH ? { color: "orange" } : { color: "Green" }}
+                      title={log.cph > log.oemCPH ? "High" : (log.cph != null && Number.isFinite(Number(log.cph)) ? Number(log.cph).toFixed(0) : null) === log.oemCPH ? "In-Line" : "Low"}
+                    >{log.cph != null && Number.isFinite(Number(log.cph)) ? Number(log.cph).toFixed(2) : "—"}<span style={log.cph > log.oemCPH ? { color: "Red", fontSize: "10px" } : (log.cph != null && Number.isFinite(Number(log.cph)) ? Number(log.cph).toFixed(0) : null) === log.oemCPH ? { color: "orange", fontSize: "10px" } : { color: "Green", fontSize: "10px" }}>{log.cph > log.oemCPH ? "High" : (log.cph != null && Number.isFinite(Number(log.cph)) ? Number(log.cph).toFixed(0) : null) === log.oemCPH ? "In-Line" : "Low"}</span></td>
                     <td style={(runningKWH < avgSiteRunningKw && runningKWH > 0) ? { color: "Red" } : runningKWH === avgSiteRunningKw ? {} : runningKWH <= 0 ? { color: "" } : { color: "Green" }}>{runningKWH}</td>
                     <td style={log.segr < 3 ? { color: "red" } : { color: "green" }}>{log.segr}</td>
                     <td>{log.dgRunPercentage}%</td>
@@ -1101,21 +1108,22 @@ const DGLogTable = ({ userData }) => {
                       )}
                     </td>
 
-                    <td style={{ display: "flex" }}>
-                      <button onClick={() => handleEdit(log)}>Edit</button>
+                    <td><div className="dg-row-actions">
+                      <button type="button" onClick={() => handleEdit(log)}>Edit</button>
                       <button
-                        style={{ marginLeft: "8px", color: "red" }}
+                        className="dg-delete-button"
+                        aria-label={`Delete ${log.dgNumber} run at ${log.startTime || "unspecified time"}`}
                         onClick={() => handleDelete(log)}
                       >
-                        ❌
+                        Delete
                       </button>
-                    </td>
+                    </div></td>
                     <td>
                       {log.enteredBy ? (
                         <>
                           <strong>{log.enteredBy.name}</strong>
                           <br />
-                          <small style={{ color: "#666" }}>{log.enteredBy.empId}</small>
+                          <small className="dg-muted">{log.enteredBy.empId}</small>
                         </>
                       ) : (
                         "—"
@@ -1127,10 +1135,10 @@ const DGLogTable = ({ userData }) => {
                         <>
                           <strong>{log.updatedBy.name}</strong>
                           <br />
-                          <small style={{ color: "#666" }}>{log.updatedBy.empId}</small>
+                          <small className="dg-muted">{log.updatedBy.empId}</small>
                         </>
                       ) : (
-                        <span style={{ color: "#999" }}>Not Updated</span>
+                        <span className="dg-muted">Not updated</span>
                       )}
                     </td>
 
@@ -1142,11 +1150,11 @@ const DGLogTable = ({ userData }) => {
         </div>
       )}
 
-      <section style={{ marginTop: "2rem" }} aria-labelledby="monthly-dg-log-table-title">
+      <section className="dg-monthly-section" aria-labelledby="monthly-dg-log-table-title">
         <h2 id="monthly-dg-log-table-title">
-          📅 Full Month DG Log Table ({format(new Date(selectedDate + "T00:00:00"), "MMMM yyyy")})
+          Full month DG runs ({format(new Date(selectedDate + "T00:00:00"), "MMMM yyyy")})
         </h2>
-        <div className="monthly-log-filters" style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "end", margin: "1rem 0" }}>
+        <div className="monthly-log-filters dg-log-filters">
           <label>
             DG
             <select
@@ -1201,26 +1209,27 @@ const DGLogTable = ({ userData }) => {
         ) : filteredMonthlyLogs.length === 0 ? (
           <p>No monthly logs match the selected filters.</p>
         ) : (
-          <div className="table-container">
-            <table className="dglog-table" cellPadding="8">
+          <div className="dg-table-scroll" role="region" aria-labelledby="monthly-dg-log-table-title" tabIndex={0}>
+            <table className="dg-run-table dg-monthly-table">
+              <caption>Monthly DG runs. Date and DG number remain visible while scrolling.</caption>
               <thead>
                 <tr>
-                  <th style={{ left: 0, top: 0, zIndex: 3 }}>Date</th>
-                  <th style={{ left: 50, top: 0, zIndex: 4 }}>DG No</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">DG No</th>
                   <th>Start Time</th>
                   <th>Stop Time</th>
                   <th>Hr Meter Start</th>
                   <th>Hr Meter End</th>
                   <th>Total Run Hours</th>
-                  <th>Opening kWH</th>
-                  <th>Closing kWH</th>
-                  <th>kW Reading</th>
+                  <th>Opening (kWh)</th>
+                  <th>Closing (kWh)</th>
+                  <th>Generation (kWh)</th>
                   <th>Fuel Consumption (Ltrs)</th>
                   <th>Fuel Filling (Ltrs)</th>
                   <th>Remarks</th>
                   <th>OEM CPH</th>
                   <th>Achieved CPH</th>
-                  <th>Running kWH</th>
+                  <th>Average load (kW)</th>
                   <th>SEGR</th>
                   <th>DG Run %</th>
                   <th>Entry By</th>
@@ -1229,11 +1238,12 @@ const DGLogTable = ({ userData }) => {
               </thead>
               <tbody>
                 {filteredMonthlyLogs.map((log) => {
-                  const runningKWH = ((log.kWHReading || 0) / log.totalRunHours).toFixed(1);
+                  const runningKWH = Number(log.totalRunHours) > 0 && Number.isFinite(Number(log.kWHReading))
+                    ? (Number(log.kWHReading) / Number(log.totalRunHours)).toFixed(1) : "—";
                   return (
                     <tr key={`${log.date}-${log.id}`}>
-                      <td style={{ whiteSpace: "nowrap", left: 0, zIndex: 1, position: "sticky", background: "white" }} >{format(new Date(log.date + "T00:00:00"), "dd MMM yyyy")}</td>
-                      <td style={{ whiteSpace: "nowrap", left: 50, zIndex: 2, position: "sticky", background: "white" }}>{log.dgNumber || "—"}</td>
+                      <td>{format(new Date(log.date + "T00:00:00"), "dd MMM yyyy")}</td>
+                      <td>{log.dgNumber || "—"}</td>
                       <td>{log.startTime ? `${log.startTime} Hrs` : "—"}</td>
                       <td>{log.stopTime ? `${log.stopTime} Hrs` : "—"}</td>
                       <td>{log.hrMeterStart ?? "—"}</td>
@@ -1244,7 +1254,7 @@ const DGLogTable = ({ userData }) => {
                       <td>{log.kWHReading ?? 0}</td>
                       <td>{log.fuelConsumption ?? 0}</td>
                       <td>{Number(log.fuelFill || 0) + Number(log.exFuelFill || 0)}</td>
-                      <td>{log.remarks || "—"}</td>
+                      <td><span className={`dg-run-type ${log.remarks === "On Load" ? "is-on-load" : log.remarks === "No Load" ? "is-no-load" : "is-filling"}`}>{log.remarks || "—"}</span></td>
                       <td>{log.oemCPH ?? "N/A"}</td>
                       <td
                         style={isHighCPH(log) ? { color: "red", fontWeight: "bold" } : {}}

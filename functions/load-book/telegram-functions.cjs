@@ -4,7 +4,8 @@ const {defineSecret, defineString} = require('firebase-functions/params');
 const {getFirestore, FieldValue, Timestamp} = require('firebase-admin/firestore');
 const {randomBytes, createHash, timingSafeEqual} = require('node:crypto');
 const {notificationData} = require('./notification-functions.cjs');
-const {help, reportCommand, siteReportCommand, reportMessages, chunks} = require('./telegram-reports.cjs');
+const {help, reportCommand, siteReportCommand, reportMessages} = require('./telegram-reports.cjs');
+const {formattedMessages} = require('./telegram-message.cjs');
 const botToken = defineSecret('TELEGRAM_BOT_TOKEN');
 const webhookSecret = defineSecret('TELEGRAM_WEBHOOK_SECRET');
 const botUsername = defineString('TELEGRAM_BOT_USERNAME', {default: ''});
@@ -123,13 +124,15 @@ exports.telegramWebhook = onRequest({secrets: [botToken, webhookSecret], maxInst
   const command = rawCommand.split('@')[0].toLowerCase();
   const argument = argumentsList.join(' ');
   const db = getFirestore();
-  let text;
+  let text, messageKind = command.slice(1);
   try {
     const siteRequest = siteReportCommand(typeof message.text === 'string' ? message.text : '');
     if (message.photo?.length || /^image\/(jpeg|png)$/.test(message.document?.mime_type || '')) {
+      messageKind = 'import';
       const {importImage} = require('./telegram-crq.cjs');
       text = await importImage(db, chatId, message, telegram, botToken.value());
     } else if (siteRequest) {
+      messageKind = siteRequest.kind || 'help';
       text = siteRequest.kind
         ? await reportMessages(db, chatId, siteRequest.kind, Date.now(), siteRequest.site)
         : help;
@@ -152,6 +155,7 @@ exports.telegramWebhook = onRequest({secrets: [botToken, webhookSecret], maxInst
       }
       default:
         const kind = reportCommand(command, argument.toLowerCase());
+        messageKind = kind || 'help';
         text = kind ? await reportMessages(db, chatId, kind) : help;
     }
     }
@@ -160,8 +164,13 @@ exports.telegramWebhook = onRequest({secrets: [botToken, webhookSecret], maxInst
     return res.sendStatus(500);
   }
   try {
-    for (const part of chunks(Array.isArray(text) ? text : [text])) {
-      await telegram('sendMessage', {chat_id: chatId, text: part});
+    const parts = formattedMessages(Array.isArray(text) ? text : [text], {kind:messageKind});
+    for (let i = 0; i < parts.length; i++) {
+      // Pace continuation pages to respect Telegram's per-chat send rate.
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1100));
+      }
+      await telegram('sendMessage', {chat_id: chatId, ...parts[i]});
     }
   }
   catch (error) {
@@ -189,8 +198,15 @@ exports.telegramBellNotification = onDocumentCreated({document: 'notifications/{
   if (!claimed) return;
   const data = notificationData(event.data.data(), uid, id);
   try {
-    const result = await telegram('sendMessage', {chat_id: pref.telegramChatId, text: `${data.title}\n\n${data.body}`});
-    await delivery.update({status: 'sent', messageId: result.message_id, updatedAt: FieldValue.serverTimestamp()});
+    const saved = event.data.data();
+    const parts = formattedMessages([String(saved.message || saved.body || data.body)], {title:`📬 ${data.title}`});
+    const messageIds = [];
+    for (let i = 0; i < parts.length; i++) {
+      if (i > 0) await new Promise(resolve => setTimeout(resolve, 1100));
+      const result = await telegram('sendMessage', {chat_id: pref.telegramChatId, ...parts[i]});
+      messageIds.push(result.message_id);
+    }
+    await delivery.update({status: 'sent', messageId:messageIds[0], messageIds, updatedAt: FieldValue.serverTimestamp()});
   } catch (error) {
     await delivery.update({status: 'failed', error: error.message, updatedAt: FieldValue.serverTimestamp()});
     // Only an explicit block/deactivated account revokes the connection; generic failures do not.

@@ -4786,19 +4786,19 @@ const DailyDGLog = ({ userData }) => {
         )}
       </div>
 
-      <div style={{ background: "#091629b9", borderRadius: "10px" }}>
+      <div className="daily-report-card">
         {currentSummary && previousSummary && (
           <div style={{ padding: "15px 2px" }}>
             <h2>📊 YoY Compare Analysis ({formatMonthName(selectedMonth)})</h2>
 
-            <div className="table-container" style={{ scrollbarWidth: "thin" }}>
-              <table>
+            <div className="daily-report-scroll" tabIndex={0} role="region" aria-label="Year over year comparison">
+              <table className="daily-report-table daily-report-yoy">
                 <thead>
                   <tr>
-                    <th>Metric</th>
-                    <th>Current Year</th>
-                    <th>Previous Year</th>
-                    <th>YoY Change</th>
+                    <th data-theme-color="preserve" scope="col">Metric</th>
+                    <th data-theme-color="preserve" scope="col">Current Year</th>
+                    <th data-theme-color="preserve" scope="col">Previous Year</th>
+                    <th data-theme-color="preserve" scope="col">YoY Change</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -4883,7 +4883,7 @@ const DailyDGLog = ({ userData }) => {
       </div>
 
       {/* 🔹 Monthly Diesel Stock Report */}
-      <div className="diesel-summary-card">
+      <div className="diesel-summary-card daily-report-card">
         <h2>⛽ Monthly Diesel Stock Report</h2>
 
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "end", gap: "10px", marginBottom: "12px" }}>
@@ -4915,22 +4915,23 @@ const DailyDGLog = ({ userData }) => {
           </button>
         </div>
 
-        <div style={{ marginBottom: "10px", color: "#666", fontSize: "12px" }}>
+        <div className="daily-report-note">
           Note: For each month, the report uses the opening fuel recorded on the 1st day and the closing fuel recorded on the last calendar day for each DG.
         </div>
 
-        <table className="diesel-summary-table" border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%", fontSize: "12px", overflowX: "auto", display: "block", whiteSpace: "nowrap", borderRadius: "10px", scrollbarWidth: "thin" }}>
+        <div className="daily-report-scroll" tabIndex={0} role="region" aria-label="Monthly diesel stock report">
+        <table className="daily-report-table daily-report-stock">
           <thead>
             <tr>
-              <th>Month</th>
-              <th>Type</th>
-              <th>Date</th>
-              <th>Total Stock</th>
-              <th>Day Tank-1</th>
-              <th>Day Tank-2</th>
-              <th>Day Tank-3</th>
-              <th>Day Tank-4</th>
-              <th>External Stock</th>
+              <th data-theme-color="preserve" scope="col">Month</th>
+              <th data-theme-color="preserve" scope="col">Type</th>
+              <th data-theme-color="preserve" scope="col">Date</th>
+              <th data-theme-color="preserve" scope="col">Total Stock</th>
+              <th data-theme-color="preserve" scope="col">Day Tank-1</th>
+              <th data-theme-color="preserve" scope="col">Day Tank-2</th>
+              <th data-theme-color="preserve" scope="col">Day Tank-3</th>
+              <th data-theme-color="preserve" scope="col">Day Tank-4</th>
+              <th data-theme-color="preserve" scope="col">External Stock</th>
             </tr>
           </thead>
 
@@ -4939,10 +4940,7 @@ const DailyDGLog = ({ userData }) => {
               <tr key={i}>
                 <td>{row.month}</td>
                 <td
-                  style={{
-                    fontWeight: "bold",
-                    color: row.type === "Opening" ? "blue" : "green",
-                  }}
+                  className={row.type === "Opening" ? "stock-opening" : "stock-closing"}
                 >
                   {row.type}
                 </td>
@@ -4957,6 +4955,7 @@ const DailyDGLog = ({ userData }) => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* 🔹 Monthly Diesel Reconciliation */}
@@ -4965,7 +4964,7 @@ const DailyDGLog = ({ userData }) => {
         const { rows: dgReco } = getDieselReconciliationData();
 
         return (
-          <div style={{ marginTop: "30px" }}>
+          <div className="daily-report-card">
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
               <h2>🛢️ Diesel Reconciliation Report</h2>
               <button
@@ -4976,24 +4975,25 @@ const DailyDGLog = ({ userData }) => {
                 ⬇️ Reconciliation Report
               </button>
             </div>
-            <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%", fontSize: "12px", overflowX: "auto", display: "block", maxWidth: "100%", whiteSpace: "nowrap", borderRadius: "10px", scrollbarWidth: "thin" }}>
+            <div className="daily-report-scroll" tabIndex={0} role="region" aria-label="Diesel reconciliation report">
+            <table className="daily-report-table daily-report-reconciliation">
               <thead>
-                <tr style={{ background: "#f0f0f0" }}>
-                  <th>Period</th>
-                  <th>DG#</th>
-                  <th>DG Type</th>
-                  <th>Total Hr</th>
-                  <th>EB Availability Hrs</th>
-                  <th>DG Run Hrs</th>
-                  <th>Excess DG Run Hr</th>
-                  <th>Max DG Run A-Check Hr</th>
-                  <th>Unreconciled DG Run Hr</th>
-                  <th>DG Run for Testing Hr</th>
-                  <th>Design CPH</th>
-                  <th>Ideal Diesel Consumption (Ltr)</th>
-                  <th>Actual Diesel Consumption (Ltr)</th>
-                  <th>Unreconciled Diesel (Ltr)</th>
-                  <th>% Variation Diesel</th>
+                <tr>
+                  <th data-theme-color="preserve" scope="col">Period</th>
+                  <th data-theme-color="preserve" scope="col">DG#</th>
+                  <th data-theme-color="preserve" scope="col">DG Type</th>
+                  <th data-theme-color="preserve" scope="col">Total Hr</th>
+                  <th data-theme-color="preserve" scope="col">EB Availability Hrs</th>
+                  <th data-theme-color="preserve" scope="col">DG Run Hrs</th>
+                  <th data-theme-color="preserve" scope="col">Excess DG Run Hr</th>
+                  <th data-theme-color="preserve" scope="col">Max DG Run A-Check Hr</th>
+                  <th data-theme-color="preserve" scope="col">Unreconciled DG Run Hr</th>
+                  <th data-theme-color="preserve" scope="col">DG Run for Testing Hr</th>
+                  <th data-theme-color="preserve" scope="col">Design CPH</th>
+                  <th data-theme-color="preserve" scope="col">Ideal Diesel Consumption (Ltr)</th>
+                  <th data-theme-color="preserve" scope="col">Actual Diesel Consumption (Ltr)</th>
+                  <th data-theme-color="preserve" scope="col">Unreconciled Diesel (Ltr)</th>
+                  <th data-theme-color="preserve" scope="col">% Variation Diesel</th>
                 </tr>
               </thead>
               <tbody>
@@ -5018,6 +5018,7 @@ const DailyDGLog = ({ userData }) => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         );
       })()}
@@ -5029,13 +5030,14 @@ const DailyDGLog = ({ userData }) => {
         <button className="download-btn" style={{ padding: "5px", margin: "5px" }} onClick={handleDownloadExcel}>⬇️ Full Excel</button>
         <button className="download-btn" style={{ padding: "5px", margin: "5px" }} onClick={handleDownloadExcelOnlyDGLogs}>⬇️ DG Log Excel</button>
       </div>
-      <div className="table-container" style={{ border: "1px solid #ccc", borderRadius: "15px", scrollbarWidth: "thin" }}>
-        <table border="1" cellPadding="8" style={{ width: "100%" }}>
+      <div className="daily-dg-table-scroll" tabIndex={0} role="region" aria-label="Daily DG logs, scroll to view all readings">
+        <table className="daily-dg-data-table">
+          <caption>Daily DG readings — {siteConfig.siteName || siteName} · {formatMonthName(selectedMonth)} {formatYear(selectedMonth)}</caption>
           <thead>
             <tr>
-              <th style={getHeaderStyle(`Location Name`)}>Location Name</th>
-              <th style={getHeaderStyle(`Site ID`)}>Site ID</th>
-              <th className="sticky-col"
+              <th data-theme-color="preserve" style={getHeaderStyle(`Location Name`)}>Location Name</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`Site ID`)}>Site ID</th>
+              <th data-theme-color="preserve" className="sticky-col"
                 style={{
                   ...getHeaderStyle(`Date`),
                   left: 0,
@@ -5045,78 +5047,77 @@ const DailyDGLog = ({ userData }) => {
               {/* 🔹 DG Columns (Dynamic based on siteConfig.dgCount) */}
               {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (
                 <React.Fragment key={`dg-head-${i + 1}`}>
-                  <th style={getHeaderStyle(`DG-${i + 1} OPENING KWH`)}>{`DG-${i + 1} OPENING KWH`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} CLOSING KWH`)}>{`DG-${i + 1} CLOSING KWH`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} KWH Generation`)}>{`DG-${i + 1} KWH Generation`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} OPENING KWH`)}>{`DG-${i + 1} OPENING KWH`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} CLOSING KWH`)}>{`DG-${i + 1} CLOSING KWH`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} KWH Generation`)}>{`DG-${i + 1} KWH Generation`}</th>
                 </React.Fragment>
               ))}
 
               {/* 🔹 EB Columns (Dynamic based on siteConfig.ebCount) */}
               {[...Array(Number(siteConfig.ebCount) || 0)].map((_, i) => (
                 <React.Fragment key={`eb-head-${i + 1}`}>
-                  <th style={getHeaderStyle(`EB-${i + 1} OPENING KWH`)}>{`EB-${i + 1} OPENING KWH`}</th>
-                  <th style={getHeaderStyle(`EB-${i + 1} CLOSING KWH`)}>{`EB-${i + 1} CLOSING KWH`}</th>
-                  <th style={getHeaderStyle(`EB-${i + 1} KWH Generation`)}>{`EB-${i + 1} KWH Generation`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`EB-${i + 1} OPENING KWH`)}>{`EB-${i + 1} OPENING KWH`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`EB-${i + 1} CLOSING KWH`)}>{`EB-${i + 1} CLOSING KWH`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`EB-${i + 1} KWH Generation`)}>{`EB-${i + 1} KWH Generation`}</th>
                 </React.Fragment>
               ))}
 
               {/* 🔹 Solar Columns (Dynamic based on siteConfig.ebCount) */}
               {[...Array(Number(siteConfig.solarCount) || 0)].map((_, i) => (
                 <React.Fragment key={`solar-head-${i + 1}`}>
-                  <th style={getHeaderStyle(`Solar-${i + 1} OPENING KWH`)}>{`Solar-${i + 1} OPENING KWH`}</th>
-                  <th style={getHeaderStyle(`Solar-${i + 1} CLOSING KWH`)}>{`Solar-${i + 1} CLOSING KWH`}</th>
-                  <th style={getHeaderStyle(`Solar-${i + 1} KWH Generation`)}>{`Solar-${i + 1} KWH Generation`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`Solar-${i + 1} OPENING KWH`)}>{`Solar-${i + 1} OPENING KWH`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`Solar-${i + 1} CLOSING KWH`)}>{`Solar-${i + 1} CLOSING KWH`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`Solar-${i + 1} KWH Generation`)}>{`Solar-${i + 1} KWH Generation`}</th>
                 </React.Fragment>
               ))}
 
               {/* 🔹 Common fields (DG fuel, hours, etc.) */}
               {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (
                 <React.Fragment key={`dg-fuel-${i + 1}`}>
-                  <th style={getHeaderStyle(`DG-${i + 1} Run Min`)}>{`DG-${i + 1} Run Min`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} Run Min`)}>{`DG-${i + 1} Run Min`}</th>
                 </React.Fragment>
               ))}
 
               {/* 🔹 Common fields (DG fuel, hours, etc.) */}
               {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (
                 <React.Fragment key={`dg-fuel-${i + 1}`}>
-                  {/* <th style={getHeaderStyle(`DG-${i + 1} Run Min`)}>{`DG-${i + 1} Run Min`}</th> */}
-                  <th style={getHeaderStyle(`DG-${i + 1} Fuel Opening`)}>{`DG-${i + 1} Fuel Opening`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} Fuel Closing`)}>{`DG-${i + 1} Fuel Closing`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} Fuel Filling`)}>{`DG-${i + 1} Fuel Filling`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} Fuel Filling`)}>{`DG-${i + 1} External Fuel Filling`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} External Fuel Stock`)}>{`DG-${i + 1} External Fuel Stock`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} ON Load Consumption`)}>{`DG-${i + 1} ON Load Consumption`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} OFF Load Consumption`)}>{`DG-${i + 1} OFF Load Consumption`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} Fuel Consumption`)}>{`DG-${i + 1} Fuel Consumption`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} Hour Opening`)}>{`DG-${i + 1} Hour Opening`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} Hour Closing`)}>{`DG-${i + 1} Hour Closing`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} ON Load Hour`)}>{`DG-${i + 1} ON Load Hour`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} OFF Load Hour`)}>{`DG-${i + 1} OFF Load Hour`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} Running Hrs`)}>{`DG-${i + 1} Running Hrs`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} CPH`)}>{`DG-${i + 1} CPH`}</th>
-                  <th style={getHeaderStyle(`DG-${i + 1} SEGR`)}>{`DG-${i + 1} SEGR`}</th>
+                  {/* <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} Run Min`)}>{`DG-${i + 1} Run Min`}</th> */}
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} Fuel Opening`)}>{`DG-${i + 1} Fuel Opening`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} Fuel Closing`)}>{`DG-${i + 1} Fuel Closing`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} Fuel Filling`)}>{`DG-${i + 1} Fuel Filling`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} Fuel Filling`)}>{`DG-${i + 1} External Fuel Filling`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} External Fuel Stock`)}>{`DG-${i + 1} External Fuel Stock`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} ON Load Consumption`)}>{`DG-${i + 1} ON Load Consumption`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} OFF Load Consumption`)}>{`DG-${i + 1} OFF Load Consumption`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} Fuel Consumption`)}>{`DG-${i + 1} Fuel Consumption`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} Hour Opening`)}>{`DG-${i + 1} Hour Opening`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} Hour Closing`)}>{`DG-${i + 1} Hour Closing`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} ON Load Hour`)}>{`DG-${i + 1} ON Load Hour`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} OFF Load Hour`)}>{`DG-${i + 1} OFF Load Hour`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} Running Hrs`)}>{`DG-${i + 1} Running Hrs`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} CPH`)}>{`DG-${i + 1} CPH`}</th>
+                  <th data-theme-color="preserve" style={getHeaderStyle(`DG-${i + 1} SEGR`)}>{`DG-${i + 1} SEGR`}</th>
                 </React.Fragment>
               ))}
 
               {/* 🔹 Totals */}
-              <th style={getHeaderStyle(`Total DG KWH Generation`)}>Total DG KWH Generation</th>
-              <th style={getHeaderStyle(`Total EB KWH Reading`)}>Total EB KWH Reading</th>
-              <th style={getHeaderStyle(`Total KWH Consumption (EB+DG)`)}>Total KWH Consumption (EB+DG)</th>
-              <th style={getHeaderStyle(`Total Fuel Consumption`)}>Total Fuel Consumption</th>
-              <th style={getHeaderStyle(`Total DG Run Hours`)}>Total DG Run Hours</th>
-              <th style={getHeaderStyle(`Site Running kW`)}>Site Running (kWh)</th>
-              <th style={getHeaderStyle(`Site Running kW`)}>Cooling Load (kWh)</th>
-              <th style={getHeaderStyle(`DCPS Load Amps`)}>DCPS Load (Amps)</th>
-              <th style={getHeaderStyle(`UPS Load (kWh)`)}>UPS Load (kWh)</th>
-              <th style={getHeaderStyle(`Total IT Load (kWh)`)}>Total IT Load (kWh)</th>
-              <th style={getHeaderStyle(`Office Load (kW)`)}>Office Load (kW)</th>
-              <th style={getHeaderStyle(`PUE`)}>PUE</th>
-              {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.role === "Super User" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM") && (
-                <th>Actions</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`Total DG KWH Generation`)}>Total DG KWH Generation</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`Total EB KWH Reading`)}>Total EB KWH Reading</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`Total KWH Consumption (EB+DG)`)}>Total KWH Consumption (EB+DG)</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`Total Fuel Consumption`)}>Total Fuel Consumption</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`Total DG Run Hours`)}>Total DG Run Hours</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`Site Running kW`)}>Site Running (kWh)</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`Site Running kW`)}>Cooling Load (kWh)</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`DCPS Load Amps`)}>DCPS Load (Amps)</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`UPS Load (kWh)`)}>UPS Load (kWh)</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`Total IT Load (kWh)`)}>Total IT Load (kWh)</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`Office Load (kW)`)}>Office Load (kW)</th>
+              <th data-theme-color="preserve" style={getHeaderStyle(`PUE`)}>PUE</th>
+              {(userData?.role === "Super Admin" || userData?.role === "Admin" || userData?.designation === "Vertiv Site Infra Engineer" || userData?.designation === "Vertiv Supervisor" || userData?.designation === "Vertiv CIH" || userData?.designation === "Vertiv ZM") && (
+                <th data-theme-color="preserve">Actions</th>
               )}
-              <th>Entry By</th>
-              <th>Update By</th>
-              <th>ℹ️</th>
+              <th data-theme-color="preserve">Entry By</th>
+              <th data-theme-color="preserve">Update By</th>
             </tr>
           </thead>
 
@@ -5145,16 +5146,16 @@ const DailyDGLog = ({ userData }) => {
                   {/* Merge Site Name and ID for all rows */}
                   {showSiteInfo && (
                     <>
-                      <td rowSpan={logs.length} style={{ textAlign: "center", verticalAlign: "middle", fontWeight: "bold", transform: "rotate(270deg)" }}>
+                      <td className="daily-dg-site-cell" rowSpan={logs.length}>
                         {siteConfig.siteName}
                       </td>
-                      <td rowSpan={logs.length} style={{ textAlign: "center", verticalAlign: "middle", fontWeight: "bold", transform: "rotate(270deg)", whiteSpace: "nowrap" }}>
+                      <td className="daily-dg-site-cell" rowSpan={logs.length}>
                         {siteConfig.siteId}
                       </td>
                     </>
                   )}
 
-                  <td className="sticky-col" style={{ left: 0, zIndex: 2, background: "linear-gradient(to right, lightgray)" }}>{entry.Date}</td>
+                  <td className="sticky-col">{entry.Date}</td>
 
                   {/* 🔹 DG KWH Data */}
                   {[...Array(Number(siteConfig.dgCount) || 0)].map((_, i) => (

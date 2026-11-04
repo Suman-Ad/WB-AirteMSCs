@@ -10,6 +10,6 @@
     "firebase-functions": "^6.0.0"
   },
   "scripts": {
-    "test": "node --test meter-health-alerts.test.cjs server-power-functions.test.cjs server-power-detector.test.cjs energy-changeover-fuel.test.cjs energy-cooldown.test.cjs energy-cooldown-functions.test.cjs energy-changeover-notifications.test.cjs energy-changeover-functions.test.cjs energy-daily-notifications.test.cjs energy-notifications.test.cjs energy-notification-functions.test.cjs crq-reminders.test.cjs crq-reminder-functions.test.cjs readings.test.cjs meter-history.test.cjs meter-history-functions.test.cjs notification-functions.test.cjs telegram-functions.test.cjs telegram-reports.test.cjs"
+    "test": "node --test meter-health-alerts.test.cjs server-power-functions.test.cjs server-power-detector.test.cjs energy-changeover-fuel.test.cjs energy-cooldown.test.cjs energy-cooldown-functions.test.cjs energy-changeover-notifications.test.cjs energy-changeover-functions.test.cjs energy-daily-notifications.test.cjs energy-notifications.test.cjs energy-notification-functions.test.cjs crq-reminders.test.cjs crq-reminder-functions.test.cjs readings.test.cjs meter-history.test.cjs meter-history-functions.test.cjs notification-functions.test.cjs telegram-functions.test.cjs telegram-reports.test.cjs telegram-message.test.cjs"
   }
 }

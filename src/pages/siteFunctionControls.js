@@ -9,6 +9,8 @@ export const siteFunctionControls = [
   ['telegramSegrEnabled', 'Telegram SEGR report'],
   ['telegramSiteStatusEnabled', 'Telegram site power status'],
   ['telegramActivityEnabled', 'Telegram /activity'],
+  ['telegramDhrEnabled', 'Telegram /dhr'],
+  ['telegramSummaryEnabled', 'Telegram /summary'],
   ['telegramIncidentEnabled', 'Telegram /incident'],
   ['telegramCrqImportEnabled', 'Telegram CRQ image imports'],
 ];

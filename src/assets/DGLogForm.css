@@ -1,0 +1,18 @@
+.dg-entry-page { max-width: 1100px; margin: 0 auto; }
+.dg-entry-page .dashboard-header { padding: 18px; border-radius: 12px; font-size: clamp(18px, 3vw, 26px); line-height: 1.4; }
+.dg-entry-page .dg-opening-status { padding: 12px 16px; border-left: 4px solid #3b82f6; border-radius: 6px; background: var(--theme-surface, #eff6ff); color: var(--theme-text, #1e293b); font-size: 13px; line-height: 1.5; }
+.dg-entry-page .dg-entry-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; padding: 22px; border: 1px solid var(--theme-border, #cbd5e1); border-radius: 14px; background: var(--theme-surface, #fff); color: var(--theme-text, #1e293b); }
+.dg-entry-page .dg-entry-form .form-label { display: flex; flex-direction: column; gap: 7px; margin: 0; min-width: 0; font-size: 14px; font-weight: 600; }
+.dg-entry-page .dg-entry-form .form-label span { color: var(--theme-muted, #64748b) !important; font-size: 12px !important; font-weight: 400; }
+.dg-entry-page .dg-entry-form :is(input, select) { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--theme-border, #cbd5e1); border-radius: 8px; background: var(--theme-surface, #fff); color: var(--theme-text, #1e293b); font: inherit; }
+.dg-entry-page .dg-entry-form :is(input, select):focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+.dg-entry-page .dg-entry-form :is(input, select):disabled { opacity: .75; cursor: not-allowed; background: var(--theme-surface-muted, #e2e8f0); }
+.dg-entry-page .dg-entry-form > .grid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.dg-entry-page .dg-entry-form > .child-container { grid-column: 1 / -1; min-width: 0; margin: 0; }
+.dg-entry-page .dg-entry-form pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.6; }
+.dg-entry-page .dg-entry-form > button[type="submit"] { grid-column: 1 / -1; min-height: 46px; border: 0; border-radius: 8px; background: #2563eb; color: #fff; font-weight: 700; cursor: pointer; }
+.dg-entry-page .dg-entry-form > button:disabled { opacity: .6; cursor: wait; }
+@media (max-width: 640px) {
+  .dg-entry-page .dg-entry-form { grid-template-columns: minmax(0, 1fr); padding: 14px; gap: 16px; }
+  .dg-entry-page .dg-entry-form > .grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
