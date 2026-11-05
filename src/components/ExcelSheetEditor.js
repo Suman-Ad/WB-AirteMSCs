@@ -1,3 +1,4 @@
+import { fillDieselIdentity } from "../utils/dailyDashboardAutofill";
 // src/components/ExcelSheetEditor.js
 import React, { useState, useEffect, useMemo } from "react";
 import "../assets/ExcelSheetEditor.css";
@@ -142,38 +143,6 @@ export const sheetTemplates = {
 
 export const siteWiseDefaults = {
   Diesel_Back_Up: {
-    DG_fuel_tank_capacity: {
-      "Andaman": 1060.00,
-      "Asansol": 1980.00,
-      "Berhampore": 1980.00,
-      "Globsyn": 1400.00,
-      "Mira Tower": 1980.00,
-      "New Alipore": 990.00,
-      "DLF": 1980.00,
-      "Infinity-I": 1890.00,
-      "Infinity-II": 1980.00,
-      "Kharagpur": 1980.00,
-      "SDF": 1980.00,
-      "Siliguri": 2970.00
-
-    },
-
-    External_Stock_capacity_Barrel_UG_Buffer_Ltr: {
-      "Andaman": 850.00,
-      "Asansol": 200.00,
-      "Berhampore": 400.00,
-      "Globsyn": 0.00,
-      "Mira Tower": 0.00,
-      "New Alipore": 0.00,
-      "DLF": 0.00,
-      "Infinity-I": 0.00,
-      "Infinity-II": 0.00,
-      "Kharagpur": 2000.00,
-      "SDF": 0.00,
-      "Siliguri": 1980.00
-
-    },
-
     DG_CPH: {
       "Andaman": 28.00,
       "Asansol": 96.00,
@@ -281,7 +250,7 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
       if ((val === "" || val === null || val === undefined) && !row.__lockedFields?.[key]) {
         // prefer template default number if present
         if (typeof template[key] === "number") r[key] = template[key];
-        else if (numericKeyPattern.test(key)) r[key] = 0;
+        else if (numericKeyPattern.test(key) && !row.__dailyIncidentSource) r[key] = 0;
         else r[key] = "";
       }
     });
@@ -523,6 +492,8 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
       });
     }
 
+    if (sheetKey === "Diesel_Back_Up") init = init.map(row => fillDieselIdentity(row, userData));
+    if (sheetKey === "DG_EB_Backup") init = init.map((row, index) => ({ ...row, SlNo: index + 1 }));
     setRawData(init);
   }, [rows, sheetKey, userData, selectedDate]); // re-init on these changes
 
@@ -572,13 +543,13 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
     const cfg = formulasConfig[sheetKey] || {};
     const newRow = (columns.length ? columns.reduce((acc, k) => ({ ...acc, [k]: baseTemplate[k] ?? (cfg[k] ?? "") }), {}) : baseTemplate);
     const sanitized = sanitizeRowDefaults(newRow, baseTemplate);
-    const updated = [...rawData, sanitized];
+    const updated = [...rawData, sanitized].map((row, index) => sheetKey === "DG_EB_Backup" ? { ...row, SlNo: index + 1 } : row);
     setRawData(updated);
     scheduleSave(updated);
   };
 
   const handleDeleteRow = (rowIndex) => {
-    const updated = rawData.filter((_, idx) => idx !== rowIndex);
+    const updated = rawData.filter((_, idx) => idx !== rowIndex).map((row, index) => sheetKey === "DG_EB_Backup" ? { ...row, SlNo: index + 1 } : row);
     setRawData(updated);
     scheduleSave(updated);
   };
@@ -648,8 +619,9 @@ const ExcelSheetEditor = ({ sheetKey, rows, onSave, lastUpdated, userData, selec
                     type={numericKeyPattern.test(col) ? "number" : "text"}
                     step={numericKeyPattern.test(col) ? "any" : undefined}
                     value={row[col] ?? ""}
-                    // readOnly={rawData[rIdx]?.__lockedFields?.[col]}
-                    disabled={isFormulaCell(rIdx, col)}
+                    readOnly={Boolean(rawData[rIdx]?.__dailyIncidentSource) || (sheetKey === "DG_EB_Backup" && col === "SlNo")}
+                    disabled={isFormulaCell(rIdx, col) || (sheetKey === "Diesel_Back_Up" && ["DG_fuel_tank_capacity", "External_Stock_capacity_Barrel_UG_Buffer_Ltr"].includes(col))}
+                    title={sheetKey === "Diesel_Back_Up" && ["DG_fuel_tank_capacity", "External_Stock_capacity_Barrel_UG_Buffer_Ltr"].includes(col) ? "Total capacity from Site Config. Update DG tank capacities there." : undefined}
                     onChange={(e) => {
                       if (rawData[rIdx]?.__lockedFields?.[col]) return;
                       handleChange(rIdx, col, e.target.value);

@@ -12,7 +12,7 @@ function setup(){
  })[name]});
  const at=Date.parse('2026-11-01T10:00:00+05:30');const run={siteId:'A',siteName:'Site A',status:'Running',startAtMs:at,opening:{kwh:100,observedAtMs:at},dgNumber:'DG-1',trigger:'Automatic'};
  const event=(old,next)=>({params:{siteId:'A',runId:'r'},data:{before:{exists:!!old,data:()=>old},after:{exists:!!next,data:()=>next}}});
- return {records,run,event,options,send:exports.notifyEnergyChangeover,setBefore:fn=>{before=fn;}};
+ return {records,run,event,options,send:exports.notifyEnergyChangeover,sendServer:exports.notifyServerEnergyChangeover,setBefore:fn=>{before=fn;}};
 }
 test('start and stop alert only site users, once per phase; deleted bells are not replayed',async()=>{
  const app=setup();assert.equal(app.options.retry,true);
@@ -85,4 +85,16 @@ test('fuel stock is captured once per phase and is the same for admins and site 
  const completed={...app.run,status:'Completed',endAtMs:app.run.startAtMs+60000};await app.send(app.event(app.run,completed));
  const restore=[...app.records.entries()].find(([p,n])=>p.startsWith('notifications/own/')&&n.actionType==='energy_mains_restored')[1];
  assert.match(restore.message,/DG-1: Day tank 999 L/);
+});
+
+
+test('server runs produce one start and restoration bell for Telegram delivery without browser sessions',async()=>{
+ const app=setup();
+ await app.sendServer(app.event(null,app.run));await app.sendServer(app.event(null,app.run));
+ const complete={...app.run,status:'Completed',endAtMs:app.run.startAtMs+60000,closing:{kwh:102,observedAtMs:app.run.startAtMs+60000}};
+ await app.sendServer(app.event(app.run,complete));await app.sendServer(app.event(app.run,complete));
+ const notices=[...app.records.entries()].filter(([p])=>p.startsWith('notifications/'));
+ assert.equal(notices.length,2);
+ assert.ok(notices.some(([,n])=>n.actionType==='energy_dg_start'));
+ assert.ok(notices.some(([,n])=>n.actionType==='energy_mains_restored'));
 });

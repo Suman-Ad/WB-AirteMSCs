@@ -44,8 +44,11 @@ Object.assign(exports, require("./energy-changeover-functions.cjs"));
 
 Object.assign(exports, require("./energy-cooldown-functions.cjs"));
 
-// Independent backend detector; does not drive the existing browser/header flow.
+// Backend detector supplies Layout status and server changeover notifications.
 Object.assign(exports, require("./server-power-functions.cjs"));
 
 // Meter freshness alerts work independently of browser sessions and periodic reports.
 Object.assign(exports, require("./meter-health-alert-functions.cjs"));
+
+// Completed unattended runs become pending entries in the existing DG Run History.
+Object.assign(exports, require('./server-run-history-functions.cjs'));

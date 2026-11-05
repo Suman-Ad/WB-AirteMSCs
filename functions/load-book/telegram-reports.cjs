@@ -67,7 +67,7 @@ async function deductDayConsumption(db, stock, siteName, now) {
   }
   return today;
 }
-async function reportMessages(db, chatId, kind, now = Date.now(), requestedSite = null) {
+async function reportMessages(db, chatId, kind, now = Date.now(), requestedSite = null, options = {}) {
   const binding = (await db.doc(`telegramChats/${chatId}`).get()).data();
   if (!binding) return ['Connect Telegram from the app notification bell to view site data.'];
   const [prefDoc, userDoc] = await Promise.all([
@@ -83,9 +83,15 @@ async function reportMessages(db, chatId, kind, now = Date.now(), requestedSite 
     const names = Object.keys(sites);
     for (let i = 0; i < names.length; i += 4) {
       const batch = await Promise.all(names.slice(i, i + 4).map(name => reportMessages(db, chatId, 'summary', now, name)));
-      messages.push(...batch.flat());
+      // Preserve the current /summary output and site boundaries instead of
+      // concatenating sites into the legacy all-sites report layout.
+      for (let index=0;index<batch.length;index++) {
+        for (const message of batch[index]) messages.push(options.summaryCards
+          ? {kind:'summary',siteName:names[i+index],message}
+          : message);
+      }
     }
-    return [messages.join('\n\n')];
+    return messages;
   }
   let siteId = user.siteId, siteName = segment(user.site) ? user.site.trim() : siteId;
   if (requestedSite !== null) {
@@ -189,7 +195,7 @@ async function reportMessages(db, chatId, kind, now = Date.now(), requestedSite 
     const meters = currentMeters((await db.collection(`energyMonitor/${siteId}/meters`).get()).docs, now);
     return meters.length ? meters.map(doc => {
       const report = notification(doc.data(), doc.id, siteId, siteName, now);
-      return `${report.title}\n${report.message}`;
+      return options.meterCards ? report : `${report.title}\n${report.message}`;
     }) : [`${siteName}: No meter readings available.`];
   }
   if (requestedSite === null && !segment(user.site)) return ['No site name is assigned to your account. Update your app profile to view DG logs.'];

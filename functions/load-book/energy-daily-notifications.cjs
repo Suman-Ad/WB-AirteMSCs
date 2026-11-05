@@ -1,3 +1,4 @@
+const {meterNotificationStatus,meterStatusIcon} = require('./meter-notification-status.cjs');
 const {createHash} = require('node:crypto');
 const {istDate, shiftDate} = require('./meter-history.cjs');
 const numeric = v => typeof v === 'number' && Number.isFinite(v) && v >= 0;
@@ -7,7 +8,8 @@ function reportDate(scheduledTime, now) {
   const scheduled = typeof scheduledTime === 'string' ? Date.parse(scheduledTime) : NaN;
   return shiftDate(istDate(Number.isFinite(scheduled) ? scheduled : now), -1);
 }
-function dailyNotification(daily, previous, meter, siteId, siteName, date) {
+function dailyNotification(daily, previous, meter, siteId, siteName, date, now = Date.now()) {
+  const status = meterNotificationStatus(meter,now);
   const valid = daily?.date === date;
   const opening = valid ? daily.openingKwh : null, closing = valid ? daily.closingKwh : null;
   const reset = valid && (daily.counterReset === true || (numeric(opening) && numeric(closing) && closing < opening));
@@ -20,13 +22,16 @@ function dailyNotification(daily, previous, meter, siteId, siteName, date) {
     openingAt > Date.parse(`${date}T00:05:00+05:30`) || closingAt < Date.parse(`${date}T23:55:00+05:30`);
   return {title:`Daily kWh · ${String(daily?.meterName || meter?.name || meter?.id || 'Meter').slice(0, 100)}`,
     message:[`${String(siteName || siteId).slice(0, 100)} · ${date} (IST)`,
+      `Meter status now: ${meterStatusIcon(status.meterState)} ${status.readingState}`,
+      `Status assessed: ${time(now)}`,
+      `Daily coverage: ${reset ? "⚠️ Counter reset" : incomplete ? "⚠️ Incomplete / missing readings" : "Complete saved observations"}`,
       `Opening: ${format(opening)} kWh`, `Closing: ${format(closing)} kWh`,
       `Recorded consumption: ${format(consumption)} kWh`,
       `Opening source: ${carried ? 'previous-day closing' : valid ? 'first captured reading' : 'no daily register'}. Observed: ${time(openingAt)}`,
       `Closing observed: ${time(closingAt)}`,
       reset ? 'Counter reset detected; consumption unavailable.' : incomplete ? 'Incomplete coverage / missing readings; values are saved observations, not exact midnight readings.' : 'Values are saved observations; see observation times.'
     ].join('\n'),actionType:'energy_daily_kwh',url:'/energy-monitor',read:false,date,siteId,
-    meterId:daily?.meterId || meter?.id || '', counterReset:!!reset, incompleteCoverage:incomplete};
+    meterId:daily?.meterId || meter?.id || '', counterReset:!!reset, incompleteCoverage:incomplete, ...status};
 }
 const dailyId = (siteId, meterKey, date) => 'energy-daily-' + createHash('sha256').update(JSON.stringify([siteId,meterKey,date])).digest('hex');
 module.exports = {reportDate,dailyNotification,dailyId};

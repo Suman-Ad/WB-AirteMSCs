@@ -6,6 +6,7 @@ const {randomBytes, createHash, timingSafeEqual} = require('node:crypto');
 const {notificationData} = require('./notification-functions.cjs');
 const {help, reportCommand, siteReportCommand, reportMessages} = require('./telegram-reports.cjs');
 const {formattedMessages} = require('./telegram-message.cjs');
+const {alertHeader} = require('./telegram-alert-style.cjs');
 const botToken = defineSecret('TELEGRAM_BOT_TOKEN');
 const webhookSecret = defineSecret('TELEGRAM_WEBHOOK_SECRET');
 const botUsername = defineString('TELEGRAM_BOT_USERNAME', {default: ''});
@@ -15,10 +16,11 @@ const prefRef = (db, uid) => db.doc(`notificationPreferences/${uid}`);
 async function telegram(method, body) {
   // Never log the request URL: Telegram embeds the bot token in it.
   let response;
+  const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
   try {
     response = await fetch(`https://api.telegram.org/bot${botToken.value()}/${method}`, {
       method: 'POST', signal: AbortSignal.timeout(15000),
-      headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+      headers: multipart ? undefined : {'Content-Type': 'application/json'}, body: multipart ? body : JSON.stringify(body)
     });
     const result = await response.json();
     if (!response.ok || !result.ok) {
@@ -32,6 +34,17 @@ async function telegram(method, body) {
     if (error.code && Number.isInteger(error.code)) throw error;
     throw new Error('Telegram request failed or timed out');
   }
+}
+
+function headerUpload(chatId, notice) {
+  const header=alertHeader(notice.actionType,notice);
+  if (!header) return null;
+  const upload=new FormData();
+  upload.set('chat_id',chatId);
+  upload.set('disable_notification','true');
+  upload.set('caption',`${notice.title || 'Meter readings'}\n${String(notice.message || notice.body || '').split(/\r?\n/)[0]}`.slice(0,800));
+  upload.set('photo',new Blob([header.bytes],{type:'image/png'}),header.filename);
+  return upload;
 }
 
 async function activeUser(db, uid) {
@@ -123,7 +136,27 @@ exports.telegramWebhook = onRequest({secrets: [botToken, webhookSecret], maxInst
   const [rawCommand, ...argumentsList] = (typeof message.text === 'string' ? message.text : '').trim().split(/\s+/);
   const command = rawCommand.split('@')[0].toLowerCase();
   const argument = argumentsList.join(' ');
+  // Drain stale all-site retries from the previous revision without sending another report.
+  if (command === '/summary' && argument.toLowerCase() === 'all' && Number.isFinite(message.date) && Date.now()-message.date*1000>120000) return res.sendStatus(200);
   const db = getFirestore();
+  // Telegram retries webhook requests. A long report must never restart at site 1.
+  const updateKey=Number.isSafeInteger(req.body?.update_id) && req.body.update_id>=0
+    ? `update-${req.body.update_id}`
+    : Number.isSafeInteger(message.message_id) ? `message-${chatId}-${message.message_id}` : null;
+  const updateRef=updateKey ? db.doc(`notificationDeliveries/telegramWebhook/updates/${updateKey}`) : null;
+  if (updateRef) {
+    try {
+      const claimed=await db.runTransaction(async tx=>{
+        if ((await tx.get(updateRef)).exists) return false;
+        tx.create(updateRef,{chatId,status:'processing',createdAt:FieldValue.serverTimestamp()});
+        return true;
+      });
+      if (!claimed) return res.sendStatus(200);
+    } catch (_) {
+      console.error('Telegram update claim failed');
+      return res.sendStatus(503);
+    }
+  }
   let text, messageKind = command.slice(1);
   try {
     const siteRequest = siteReportCommand(typeof message.text === 'string' ? message.text : '');
@@ -134,7 +167,7 @@ exports.telegramWebhook = onRequest({secrets: [botToken, webhookSecret], maxInst
     } else if (siteRequest) {
       messageKind = siteRequest.kind || 'help';
       text = siteRequest.kind
-        ? await reportMessages(db, chatId, siteRequest.kind, Date.now(), siteRequest.site)
+        ? await reportMessages(db, chatId, siteRequest.kind, Date.now(), siteRequest.site, {meterCards:true,summaryCards:true})
         : help;
     } else {
     switch (command) {
@@ -156,28 +189,53 @@ exports.telegramWebhook = onRequest({secrets: [botToken, webhookSecret], maxInst
       default:
         const kind = reportCommand(command, argument.toLowerCase());
         messageKind = kind || 'help';
-        text = kind ? await reportMessages(db, chatId, kind) : help;
+        text = kind ? await reportMessages(db, chatId, kind, Date.now(), null, {meterCards:true,summaryCards:true}) : help;
     }
     }
   } catch (_) {
     console.error('Telegram command processing failed');
+    if (updateRef) {await updateRef.update({status:'failed',phase:'processing',updatedAt:FieldValue.serverTimestamp()});return res.sendStatus(200);}
     return res.sendStatus(500);
   }
   try {
-    const parts = formattedMessages(Array.isArray(text) ? text : [text], {kind:messageKind});
-    for (let i = 0; i < parts.length; i++) {
-      // Pace continuation pages to respect Telegram's per-chat send rate.
-      if (i > 0) {
-        await new Promise(resolve => setTimeout(resolve, 1100));
+    let sent=false;
+    const pace=async()=>{if(sent) await new Promise(resolve=>setTimeout(resolve,1100));sent=true;};
+    const replies=Array.isArray(text) ? text : [text];
+    const batches=replies.some(reply=>reply && typeof reply==='object') ? replies : [replies];
+    for (const reply of batches) {
+      const notice=reply && typeof reply==='object' && !Array.isArray(reply) ? reply : null;
+      const parts=formattedMessages(notice ? [notice.message] : Array.isArray(reply) ? reply : [reply],{kind:notice?.kind || messageKind,
+        ...(notice ? {title:notice.title,actionType:notice.actionType,notification:notice} : {})});
+      let deliveredAsCaption=false;
+      if (notice) {
+        try {
+          const upload=headerUpload(chatId,notice);
+          if (upload) {
+            // A complete short reading fits in one photo caption, avoiding duplicate replies.
+            const fits=parts.length===1 && parts[0].text.length<=1024;
+            if (fits) {
+              upload.set('caption',parts[0].text);
+              upload.set('parse_mode','HTML');
+              upload.delete('disable_notification');
+            }
+            await pace();await telegram('sendPhoto',upload);
+            deliveredAsCaption=fits;
+          }
+        } catch(error) {
+          if (error.connectionRevoked) throw error;
+          console.warn('Telegram meter header unavailable; delivering text',{code:error.code || 'render-failed'});
+        }
       }
-      await telegram('sendMessage', {chat_id: chatId, ...parts[i]});
+      if (!deliveredAsCaption) for (const part of parts) {await pace();await telegram('sendMessage',{chat_id:chatId,...part});}
     }
   }
   catch (error) {
     console.warn('Telegram command reply failed', {code: error.code || 'network', connectionRevoked: !!error.connectionRevoked});
     // Acknowledge permanent recipient revocation; retry transient failures instead of silently dropping /start.
+    if (updateRef) {await updateRef.update({status:'failed',phase:'delivery',updatedAt:FieldValue.serverTimestamp()});return res.sendStatus(200);}
     if (!error.connectionRevoked) return res.sendStatus(503);
   }
+  if (updateRef) await updateRef.update({status:'completed',updatedAt:FieldValue.serverTimestamp()});
   return res.sendStatus(200);
 });
 
@@ -199,14 +257,27 @@ exports.telegramBellNotification = onDocumentCreated({document: 'notifications/{
   const data = notificationData(event.data.data(), uid, id);
   try {
     const saved = event.data.data();
-    const parts = formattedMessages([String(saved.message || saved.body || data.body)], {title:`📬 ${data.title}`});
+    const parts = formattedMessages([String(saved.message || saved.body || data.body)], {title:`📬 ${data.title}`,actionType:saved.actionType,notification:saved});
     const messageIds = [];
+    let photoMessageId;
+    try {
+      const upload = headerUpload(pref.telegramChatId,{...saved,title:data.title});
+      if (upload) {
+        const photo = await telegram('sendPhoto', upload);
+        photoMessageId = photo.message_id;
+        await new Promise(resolve => setTimeout(resolve, 1100));
+      }
+    } catch (error) {
+      // An optional visual must never prevent delivery of the full text details.
+      if (error.connectionRevoked) throw error;
+      console.warn('Telegram alert header unavailable; delivering text', {uid, id, code:error.code || 'render-failed'});
+    }
     for (let i = 0; i < parts.length; i++) {
       if (i > 0) await new Promise(resolve => setTimeout(resolve, 1100));
       const result = await telegram('sendMessage', {chat_id: pref.telegramChatId, ...parts[i]});
       messageIds.push(result.message_id);
     }
-    await delivery.update({status: 'sent', messageId:messageIds[0], messageIds, updatedAt: FieldValue.serverTimestamp()});
+    await delivery.update({status: 'sent', messageId:messageIds[0], messageIds, ...(photoMessageId ? {photoMessageId} : {}), updatedAt: FieldValue.serverTimestamp()});
   } catch (error) {
     await delivery.update({status: 'failed', error: error.message, updatedAt: FieldValue.serverTimestamp()});
     // Only an explicit block/deactivated account revokes the connection; generic failures do not.

@@ -64,21 +64,22 @@ exports.sendDailyEnergyReadings = onSchedule({schedule:'0 0 * * *',timeZone:'Asi
     // Include meters recorded during the day even if their collector document was removed.
     for (const record of daily.docs) {
       const data = record.data();
-      if (typeof data.meterKey === 'string' && data.meterKey && !data.meterKey.includes('/')) equipment.set(data.meterKey,{id:data.meterId || '',name:data.meterName || ''});
+      if (typeof data.meterKey === 'string' && data.meterKey && !data.meterKey.includes('/')) equipment.set(data.meterKey,{...equipment.get(data.meterKey),id:equipment.get(data.meterKey)?.id || data.meterId || '',name:data.meterName || equipment.get(data.meterKey)?.name || ''});
     }
     for (const [key, meter] of equipment) {
       const dayRef = db.doc(`energyMonitor/${siteId}/dailyReadings/${date}__${key}`);
       const previousRef = db.doc(`energyMonitor/${siteId}/dailyReadings/${shiftDate(date,-1)}__${key}`);
+      const meterRef = meter.id && !meter.id.includes('/') ? db.doc(`energyMonitor/${siteId}/meters/${meter.id}`) : null;
       const id = dailyId(siteId,key,date);
       for (const user of recipients) {
         const ref = db.doc(`notifications/${user.id}/items/${id}`);
         const claim = db.doc(`notificationDeliveries/${user.id}/energyDailyReadings/${id}`);
         await db.runTransaction(async tx => {
-          const [claimed,saved,latestUser,config,register,previous] = await Promise.all([
-            tx.get(claim),tx.get(ref),tx.get(user.ref),tx.get(configRef),tx.get(dayRef),tx.get(previousRef)
+          const [claimed,saved,latestUser,config,register,previous,currentMeter] = await Promise.all([
+            tx.get(claim),tx.get(ref),tx.get(user.ref),tx.get(configRef),tx.get(dayRef),tx.get(previousRef),meterRef ? tx.get(meterRef) : null
           ]);
           if (claimed.exists || !latestUser.exists || !eligibleUser(latestUser.data(),siteId) || config.data()?.dailyEnabled === false) return;
-          if (!saved.exists) tx.create(ref,{...dailyNotification(register.data(),previous.data(),meter,siteId,latestUser.data().site || siteId,date),createdAt:FieldValue.serverTimestamp()});
+          if (!saved.exists) tx.create(ref,{...dailyNotification(register.data(),previous.data(),currentMeter?.exists ? {...currentMeter.data(),id:meter.id} : {...meter,status:'OFFLINE',communicationState:'OFFLINE'},siteId,latestUser.data().site || siteId,date,now),createdAt:FieldValue.serverTimestamp()});
           tx.create(claim,{siteId,meterKey:key,date,createdAt:FieldValue.serverTimestamp()});
         });
       }

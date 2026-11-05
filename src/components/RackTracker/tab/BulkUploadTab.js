@@ -51,9 +51,10 @@ const BulkUploadTab = ({
 
 
             {isAdmin && !editData && (
-              <p style={{ fontSize: "12px", color: "#aaa" }}>
+              <div style={{ fontSize: "12px", color: "#aaa" }}>
                 {bulkCreatedRefs.length > 0 && !uploadProgress.active && (
                   <button
+                    type="button"
                     className="danger-btn"
                     onClick={handleBulkRollback}
                   >
@@ -78,24 +79,28 @@ const BulkUploadTab = ({
                 {uploadProgress.active && (
                   <div className="bulk-controls">
                     <button
+                      type="button"
                       onClick={() => {
                         bulkControlRef.current.paused = !bulkControlRef.current.paused;
+                        setBulkControl(previous => ({ ...previous, paused: bulkControlRef.current.paused }));
                       }}
                     >
                       {bulkControlRef.current.paused ? "Resume" : "Pause"}
                     </button>
 
                     <button
+                      type="button"
                       className="danger-btn"
                       onClick={() => {
                         bulkControlRef.current.cancelled = true;
+                        setBulkControl(previous => ({ ...previous, cancelled: true }));
                       }}
                     >
                       Cancel
                     </button>
                   </div>
                 )}
-              </p>
+              </div>
             )}
           </div>
         </div>

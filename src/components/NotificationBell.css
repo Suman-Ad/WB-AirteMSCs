@@ -17,6 +17,14 @@
   --notification-unread-bg: #19334b;
 }
 .notification-panel { position:absolute; right:-.5rem; margin-top:12px; width:min(380px,calc(100vw - 24px)); max-height:min(640px,80vh); overflow:auto; background:var(--app-surface); color:var(--app-text); border:1px solid var(--app-border); border-radius:18px; box-shadow:var(--theme-shadow); z-index:100; text-align:left; }
+.notification-panel.notification-panel-unread {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 1px #0ea5e9, 0 0 12px #0ea5e966, 0 0 28px #0ea5e933, 0 12px 32px #0f172a26;
+}
+:root[data-theme="dark"] .notification-panel.notification-panel-unread {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px #38bdf8, 0 0 14px #38bdf866, 0 0 32px #38bdf833, 0 12px 32px #0006;
+}
 .notification-panel-header { padding:18px; background:var(--app-surface); border-bottom:1px solid var(--app-border); position:sticky; top:0; z-index:10; }
 .notification-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; }
 .notification-heading h2 { margin:0 0 4px; font-size:20px; color:var(--app-text); }

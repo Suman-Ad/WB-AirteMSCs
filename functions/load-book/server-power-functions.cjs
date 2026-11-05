@@ -2,7 +2,7 @@ const {onDocumentWritten} = require('firebase-functions/v2/firestore');
 const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {assessHeaderPower, advanceChangeover, initialChangeoverState, fresh} = require('./server-power-detector.cjs');
 
-// Deliberately isolated from sitePowerStatus, energyChangeovers and notification triggers.
+// Runtime drives Layout; server run transitions feed the dedicated notification trigger.
 exports.detectServerPowerSource = onDocumentWritten({
   document: 'energyMonitor/{siteId}/meters/{meterId}', retry: true,
 }, async event => {
@@ -10,8 +10,11 @@ exports.detectServerPowerSource = onDocumentWritten({
   const {siteId, meterId} = event.params;
   const db = getFirestore(), base = `energyMonitor/${siteId}`;
   await db.runTransaction(async tx => {
-    const config = (await tx.get(db.doc(`${base}/config/serverPowerSwitch`))).data();
-    if (!config) return;
+    const activation = (await tx.get(db.doc(`${base}/config/serverPowerSwitch`))).data();
+    if (!activation) return;
+    const shared = (await tx.get(db.doc(`${base}/config/powerSwitch`))).data();
+    // Independent config activates the backend; the existing settings control its operation.
+    const config = shared ? {...shared, enabled: activation.enabled === true && shared.enabled === true} : activation;
     const ids = [config.mainMeterId, config.dg1MeterId, config.dg2MeterId].filter(Boolean);
     if (!config.mainMeterId || ids.length < 2 || new Set(ids).size !== ids.length ||
         ids.some(id => typeof id !== 'string' || id.includes('/'))) return;
@@ -21,7 +24,7 @@ exports.detectServerPowerSource = onDocumentWritten({
     if (config.enabled !== true) {
       if (previous.mappingKey) tx.set(ref, {enabled: false, detector: initialChangeoverState(),
         restorationEvidence: null, assessment: 'disabled', message: 'Server automatic detection disabled',
-        updatedAt: FieldValue.serverTimestamp()}, {merge: true});
+        updatedAt: FieldValue.serverTimestamp()}, {mergeFields: ['enabled', 'detector', 'restorationEvidence', 'assessment', 'message', 'updatedAt']});
       return;
     }
     const meters = [];
@@ -58,13 +61,25 @@ exports.detectServerPowerSource = onDocumentWritten({
       schemaVersion: 1, enabled: true, configRevision: revision,
       mappingKey: previous.activeRunId && previous.mappingKey !== key ? previous.mappingKey : key,
       powerSource: assessment.kind === 'restored' ? 'EB' : powerSource, selectedDG: previous.selectedDG || null,
-      activeRunId: previous.activeRunId || null, detector, restorationEvidence: evidence,
+      activeRunId: previous.activeRunId || null, startAtMs: previous.startAtMs || run?.startAtMs || null, detector, restorationEvidence: evidence,
       assessment: assessment.kind, message: assessment.message, evaluatedAtMs: now,
       // Consumers must check age: a saved source is last observed, not proof of live supply.
       mainObservedAtMs: meters.find(m => m.id === config.mainMeterId)?.observedAt?.toMillis?.() ?? null,
       updatedAt: FieldValue.serverTimestamp(),
     };
-    const sample = id => capture(meters.find(m => m.id === id), now);
+    const lastGoodMeters = {};
+    for (const id of ids) {
+      const current = capture(meters.find(m => m.id === id), now);
+      const prior = previous.lastGoodMeters?.[id];
+      if (current.kwh !== null && (!prior || current.observedAtMs >= prior.observedAtMs)) lastGoodMeters[id] = current;
+      else if (prior?.kwh != null && prior.observedAtMs <= now + 5000) lastGoodMeters[id] = prior;
+    }
+    patch.lastGoodMeters = lastGoodMeters;
+    const sample = id => {
+      const current = capture(meters.find(m => m.id === id), now);
+      const last = lastGoodMeters[id];
+      return {...current, lastKnownKwh: last?.kwh ?? null, lastKnownAtMs: last?.observedAtMs ?? null};
+    };
     if (detector.fired) {
       patch.detector = initialChangeoverState();
       patch.restorationEvidence = null;
@@ -82,7 +97,7 @@ exports.detectServerPowerSource = onDocumentWritten({
           opening, latest: opening, closing: null, ebFailure: sample(config.mainMeterId),
           trigger: 'Server automatic', createdAt: FieldValue.serverTimestamp(),
         });
-        Object.assign(patch, {powerSource: 'DG', selectedDG: detector.dg, activeRunId: runId});
+        Object.assign(patch, {powerSource: 'DG', selectedDG: detector.dg, activeRunId: runId, startAtMs: now});
       } else {
         if (run) {
           let closing = sample(run.meterId);
@@ -93,7 +108,7 @@ exports.detectServerPowerSource = onDocumentWritten({
             runSeconds: Math.max(0, Math.floor((now - run.startAtMs) / 1000)),
             updatedAt: FieldValue.serverTimestamp()}, {merge: true});
         }
-        Object.assign(patch, {powerSource: 'EB', selectedDG: null, activeRunId: null});
+        Object.assign(patch, {powerSource: 'EB', selectedDG: null, activeRunId: null, startAtMs: null});
       }
     } else if (run?.status === 'Running') {
       const latest = sample(run.meterId);
@@ -106,7 +121,8 @@ exports.detectServerPowerSource = onDocumentWritten({
       : patch.powerSource === 'EB' ? config.mainMeterId : null;
     patch.sourceMeterId = sourceMeterId || null;
     patch.sourceObservedAtMs = meters.find(m => m.id === sourceMeterId)?.observedAt?.toMillis?.() ?? null;
-    tx.set(ref, patch, {merge: true});
+    // Replace detector/evidence maps as whole fields: recursive merge retains old phase keys.
+    tx.set(ref, patch, {mergeFields: Object.keys(patch)});
   });
 });
 

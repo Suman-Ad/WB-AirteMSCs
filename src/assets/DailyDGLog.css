@@ -1,3 +1,32 @@
+.daily-log-container .dg-log-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.daily-log-container .dg-log-navigation > label { gap: 6px; }
+.daily-log-container .dg-log-nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 32px;
+  min-height: 36px;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--dg-border, #c9dce8);
+  border-radius: 6px;
+  background: var(--dg-surface, #fdfefe);
+  color: var(--dg-text, #17324d);
+  font-size: 16px;
+  cursor: pointer;
+}
+.daily-log-container .dg-log-nav-button:disabled { opacity: .4; cursor: not-allowed; }
+.daily-log-container .dg-log-nav-button:hover:not(:disabled) { border-color: #3b82f6; }
+.daily-log-container .dg-log-nav-button:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+
 .daily-log-container {
   --dg-page-bg:
     radial-gradient(circle at 100% 0, rgba(20, 184, 166, 0.1), transparent 26%),
@@ -1640,4 +1669,11 @@
 @media (max-width: 640px) {
   .daily-log-container .daily-report-card { padding: 12px; }
   .daily-log-container .daily-report-table :is(th, td) { padding: 9px 10px; }
+}
+
+/* A saved server source is not live while collector readings are stale. */
+.current-status-panel[data-power-source="Unknown"] {
+  --status-accent: #6b7280;
+  --status-accent-soft: #f3f4f6;
+  background: var(--app-surface, #fff);
 }

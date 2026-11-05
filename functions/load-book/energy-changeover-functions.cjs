@@ -1,8 +1,8 @@
 const {onDocumentWritten} = require('firebase-functions/v2/firestore');
 const {getFirestore,FieldValue} = require('firebase-admin/firestore');
 const {transition,changeoverNotification,changeoverId,eligibleChangeoverUser} = require('./energy-changeover-notifications.cjs');
-const {loadFuelSnapshot,fuelSnapshot} = require('./energy-changeover-fuel.cjs');
-exports.notifyEnergyChangeover = onDocumentWritten({document:'energyChangeovers/{siteId}/runs/{runId}',retry:true},async event=>{
+const {loadFuelSnapshot,fuelSnapshot,changeoverSiteName} = require('./energy-changeover-fuel.cjs');
+async function notifyChangeover(event, server = false) {
   const before=event.data?.before.exists ? event.data.before.data() : null;
   const after=event.data?.after.exists ? event.data.after.data() : null;
   const phase=transition(before,after);
@@ -13,7 +13,7 @@ exports.notifyEnergyChangeover = onDocumentWritten({document:'energyChangeovers/
   const configRef=db.doc(`energyMonitor/${siteId}/config/notifications`);
   if((await configRef.get()).data()?.changeoverEnabled === false) return;
   const users=await db.collection('users').where('isActive','==',true).get();
-  const id=changeoverId(siteId,runId,phase);
+  const id=changeoverId(siteId,server ? `server-${runId}` : runId,phase);
   const fuelRef=db.doc(`notificationDeliveries/energyChangeoverFuel/snapshots/${id}`);
   let fuel=(await fuelRef.get()).data();
   if (!fuel) {
@@ -28,7 +28,7 @@ exports.notifyEnergyChangeover = onDocumentWritten({document:'energyChangeovers/
       tx.create(fuelRef,fuel);return fuel;
     });
   }
-  const notice={...changeoverNotification({...after,fuelSnapshot:fuel},phase,siteId),runId};
+  const notice={...changeoverNotification({...after,siteName:changeoverSiteName(after,siteId),fuelSnapshot:fuel},phase,siteId),runId};
   for(const user of users.docs) {
     if(!eligibleChangeoverUser(user.data(),siteId) || user.id === 'n89Dopqa4ybdE8VX6B5zUwJYMcx1') continue;
     const ref=db.doc(`notifications/${user.id}/items/${id}`);
@@ -41,4 +41,6 @@ exports.notifyEnergyChangeover = onDocumentWritten({document:'energyChangeovers/
       tx.create(claim,{siteId,runId,phase,createdAt:FieldValue.serverTimestamp()});
     });
   }
-});
+}
+exports.notifyEnergyChangeover = onDocumentWritten({document:'energyChangeovers/{siteId}/runs/{runId}',retry:true}, event => notifyChangeover(event));
+exports.notifyServerEnergyChangeover = onDocumentWritten({document:'energyMonitor/{siteId}/serverChangeovers/{runId}',retry:true}, event => notifyChangeover(event, true));

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, getDocs, query, where, orderBy, setDoc, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import '../assets/IncidentDashboard.css';
+import IncidentDetailsModal from '../components/IncidentDetailsModal';
 import { Link, useNavigate } from 'react-router-dom';
 import { regions, siteList, siteIdMap} from "../config/siteConfigs";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -524,62 +525,15 @@ const IncidentDashboard = ({ userData }) => {
         </div>
       )}
 
-      {/* Incident Details Modal */}
-      {selectedIncident && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h1 className='noticeboard-header'><strong>🚨Incident Details</strong></h1>
-            <div className='child-container'>
-              <h1><strong> {selectedIncident.incidentTitle || "⚠️Missing"} </strong></h1>
-              <h3><strong>Docket No: #{selectedIncident.ttDocketNo || "To Be Raised"}</strong></h3>
-              <p><strong>Circle: </strong> {selectedIncident.circle || "⚠️Missing"}</p>
-              <p><strong>Site Id:</strong> {selectedIncident.siteId || "⚠️Missing"}</p>
-              <p><strong>Site:</strong> {selectedIncident.siteName || "⚠️Missing"}</p>
-              <p><strong>OEM Name:</strong> {selectedIncident.ompPartner || "⚠️Missing"}</p>
-              <p><strong>Date:</strong> {formatDate(selectedIncident.dateKey || "⚠️Missing")}</p>
-              <p><strong>Time:</strong> {selectedIncident.timeOfIncident || "⚠️Missing"}</p>
-              <p><strong>SA/NSA:</strong> {selectedIncident.saNsa || "⚠️Missing"}</p>
-              <p><strong>Equipment:</strong> {selectedIncident.equipmentCategory || "⚠️Missing"}</p>
-              <p><strong>Title:</strong> {selectedIncident.incidentTitle || "⚠️Missing"}</p>
-              <p><strong>Type:</strong> {selectedIncident.type || "⚠️Missing"}</p>
-              <p><strong>Affected Equipment Details:</strong> {selectedIncident.effectedEquipmentDetails || "⚠️Missing"}</p>
-              <p><strong>ActionsTaken:</strong> {selectedIncident.actionsTaken || "⚠️Missing"}</p>
-              <p><strong>RCA Status:</strong> {selectedIncident.rcaStatus || "⚠️Missing"}</p>
-              <p><strong>Ownership:</strong> {selectedIncident.ownership || "⚠️Missing"}</p>
-              <p><strong>Reason:</strong> {selectedIncident.realReason || "⚠️Missing"}</p>
-              <p><strong>Impact Type:</strong> {selectedIncident.impactType || "⚠️Missing"}</p>
-              <p><strong>Remarks:</strong> {selectedIncident.remarks || "⚠️Missing"}</p>
-              <p><strong>Closure Date:</strong> {selectedIncident.closureDate || "⚠️Missing"}</p>
-              <p><strong>Closure Time:</strong> {selectedIncident.closureTime || "⚠️Missing"}</p>
-              <p><strong>Status:</strong> {selectedIncident.status || "⚠️Missing"}</p>
-              <p><strong>Description:</strong> {selectedIncident.incidentDescription || "⚠️Missing"}</p>
-              <p><strong>Closure Remarks:</strong> {selectedIncident.closureRemarks || "⚠️Missing"}</p>
-              {selectedIncident.rcaFileUrl && (
-                <p>
-                  <strong>RCA File:</strong>{""}
-                  <a href={selectedIncident.rcaFileUrl} target="_blank" rel="noopener noreferrer">
-                    👁️‍🗨️ View File
-                  </a>
-                </p>
-              )}
-            </div>
-            {/* Edit Button - Role & Site Based Access */}
-            {(
-              ["Super Admin", "Admin", "Super User"].includes(userData.role) ||
-              (selectedIncident.siteName === userData.site) // only own site
-            ) && (
-                <button
-                  // to={`/incident-edit/${incident.id}`} 
-                  className="pm-manage-btn small"
-                  onClick={() => navigate(`/incident-edit/${selectedIncident.id}`)}
-                >
-                  ✎ Edit
-                </button>
-              )}
-            <button onClick={() => setSelectedIncident(null)} className='pm-manage-btn btn-danger'>Close</button>
-          </div>
-        </div>
-      )}
+      <IncidentDetailsModal
+        incident={selectedIncident}
+        canEdit={Boolean(selectedIncident && (
+          ["Super Admin", "Admin", "Super User"].includes(userData.role) ||
+          selectedIncident.siteName === userData.site
+        ))}
+        onClose={() => setSelectedIncident(null)}
+        onEdit={() => navigate(`/incident-edit/${selectedIncident.id}`)}
+      />
     </div>
   );
 };

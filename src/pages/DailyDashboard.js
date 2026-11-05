@@ -194,18 +194,44 @@ const DailyDashboard = ({ userData }) => {
 
   // Render
   return (
-    <div className="dhr-dashboard-container daily-details-dashboard">
-      <h1 className="dashboard-header">
-        <strong>📅 Daily Details Dashboard</strong>
-      </h1>
+    <div className="daily-details-dashboard">
+      <header className="daily-dashboard-heading">
+        <div>
+          <p className="daily-dashboard-eyebrow">WB Circle · Daily operations</p>
+          <h1>Daily Details Dashboard</h1>
+          <p className="daily-dashboard-subtitle">Review site submissions, daily summaries and operational details.</p>
+        </div>
+        <span className="daily-dashboard-date-badge">{selectedDate || "Select a reporting date"}</span>
+      </header>
+      <section className="daily-dashboard-controls" aria-label="Dashboard controls">
+      {(userRole === "Super User" || userRole === "Admin" || userRole === "Super Admin") && (
+        <Link to="/excel-live-edit" className="pm-manage-btn">Edit <strong>"{userData?.site}"</strong> Daily Details Dashboard ✎ </Link>
+      )}
+      <div className="daily-dashboard-toolbar">
+        <label htmlFor="daily-dashboard-date">Select Date: </label>
+        <select id="daily-dashboard-date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}>
+          {!dates.includes(today) && <option value={today}>{today} (Today)</option>}
+          <option value="">-- Select Date --</option>
+          {dates.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
 
+        <button onClick={() => setSortAsc(!sortAsc)} className="btn-info">
+          Sort: {sortAsc ? "A-Z" : "Z-A"}
+        </button>
 
+        <button onClick={downloadExcel} className="btn-success pm-manage-btn">📥 Download Compiled Excel</button>
+      </div>
 
-      <p>Reporting period: previous day 4 PM to selected date 4 PM (IST). Closing stock and DG hours autofill after 4 PM. Activities without start times use their scheduled date.</p>
+      </section>
+      <p className="daily-dashboard-reporting-note"><strong>Reporting window:</strong> Previous day 4 PM to selected date 4 PM (IST). DG tank stock is opening fuel minus the selected day’s saved run consumption. External stock uses the latest saved DG log on or before the selected date (this month or the previous month). DG and power-failure hours update from the selected day’s saved runs without waiting for 4 PM. Activities without start times use their scheduled date.</p>
       {autofillError && <p role="alert">{autofillError}</p>}
-      <h3>✅ Completed Site Submission Status</h3>
-      <div style={{ overflowX: "auto" }} className="status-table-container">
-        <table className="status-table child-container" style={{ minWidth: "800px", borderCollapse: "collapse", marginBottom: "2rem" }}>
+      <section className="daily-dashboard-submissions" aria-labelledby="daily-submissions-title">
+      <div className="daily-dashboard-section-heading">
+        <div><h2 id="daily-submissions-title">Site submission status</h2><p>Field completion for the selected reporting date.</p></div>
+        <span className="daily-dashboard-count">{sortedSites.length} sites</span>
+      </div>
+      <div className="status-table-container">
+        <table className="status-table">
           <thead>
             <tr>
               <th>Site</th>
@@ -241,16 +267,18 @@ const DailyDashboard = ({ userData }) => {
                   <td className={isComplete ? "status-complete" : "status-pending"}>
                     {isComplete ? "✅ Completed" : "⛔ Pending"}
                   </td>
-                  <td>{percentage}%</td>
+                  <td><div className="daily-dashboard-progress"><progress max="100" value={percentage} aria-label={`${site} completion`} /><span>{percentage}%</span></div></td>
                 </tr>
               );
             })}
+            {sortedSites.length === 0 && <tr><td colSpan={3} className="daily-dashboard-empty">No site submissions to display for this date.</td></tr>}
           </tbody>
         </table>
       </div>
+      </section>
 
       <div className="instruction-tab">
-        <h2 className="noticeboard-header">📌 Notice Board </h2>
+        <h2 className="noticeboard-header">Notice board</h2>
         {isEditing ? (
           <>
             <textarea
@@ -259,7 +287,7 @@ const DailyDashboard = ({ userData }) => {
               rows={5}
               className="dashboard-instruction-panel"
             />
-            <div className="flex gap-2">
+            <div className="daily-dashboard-actions">
               <button
                 className="daily-dashboard-primary"
                 onClick={async () => {
@@ -294,32 +322,14 @@ const DailyDashboard = ({ userData }) => {
         )}
         <p className="daily-dashboard-signature">Thanks & Regards @Suman Adhikari</p>
       </div>
-      <h2>📘 Daily Details Dashboard - WB Circle</h2>
-      {(userData.role === "Super User" || userData.role === "Admin" || userData.role === "Super Admin") && (
-        <Link to="/excel-live-edit" className="pm-manage-btn">Edit <strong>"{userData.site}"</strong> Daily Details Dashboard ✎ </Link>
-      )}
-      <div className="daily-dashboard-toolbar">
-        <label htmlFor="daily-dashboard-date">Select Date: </label>
-        <select id="daily-dashboard-date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)}>
-          {!dates.includes(today) && <option value={today}>{today} (Today)</option>}
-          <option value="">-- Select Date --</option>
-          {dates.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
-
-        <button onClick={() => setSortAsc(!sortAsc)} className="btn-info">
-          Sort: {sortAsc ? "A-Z" : "Z-A"}
-        </button>
-
-        <button onClick={downloadExcel} className="btn-success pm-manage-btn">📥 Download Compiled Excel</button>
-      </div>
-
       <FinalSummary siteData={siteData} selectedDate={selectedDate} title="Compiled Final Summary — All Sites" />
 
       {sortedSites.map(site => {
         const sheets = siteData[site] || {};
         return (
-          <div key={site} className="daily-dashboard-site">
-            <h3>📍 Site: {site} MSC</h3>
+          <details key={`${selectedDate}-${site}`} className="daily-dashboard-site">
+            <summary><span>{site} MSC</span><span className="daily-dashboard-site-hint">View summary & sheets</span></summary>
+            <div className="daily-dashboard-site-content">
 
             <FinalSummary
               siteData={{ [site]: sheets }}
@@ -335,14 +345,15 @@ const DailyDashboard = ({ userData }) => {
                 const template = sheetTemplates[sheetKey];
                 const cols = template ? Object.keys(template[0]) : (rows.length ? Object.keys(rows[0]).filter(key => !key.startsWith("__")) : []);
                 return (
-                  <div key={sheetKey} className="sheet-block-card">
-                    <h4>Sheet: {sheetLabel} — <span className={`daily-sheet-status daily-sheet-status-${status.toLowerCase()}`}>{status}</span> ({filled}/{total})</h4>
-                    <div style={{ overflowX: "auto" }}>
+                  <details key={sheetKey} className="sheet-block-card">
+                    <summary><span>{sheetLabel}</span><span className={`daily-sheet-status daily-sheet-status-${status.toLowerCase()}`}>{status} · {filled}/{total}</span></summary>
+                    <div className="daily-dashboard-sheet-scroll">
                       <table>
                         <thead>
                           <tr>{cols.map(c => <th key={c}>{c}</th>)}</tr>
                         </thead>
                         <tbody>
+                          {evaluated.length === 0 && <tr><td colSpan={Math.max(cols.length, 1)} className="daily-dashboard-empty">No entries in this sheet.</td></tr>}
                           {evaluated.map((er, rIdx) => (
                             <tr key={rIdx}>
                               {cols.map((c, ci) => (
@@ -350,6 +361,7 @@ const DailyDashboard = ({ userData }) => {
                                   {["Admin", "Super Admin"].includes(userRole) ? (
                                     <input
                                       type="text"
+                                      aria-label={`${sheetLabel}, row ${rIdx + 1}, ${c}`}
                                       key={`${selectedDate}-${rows[rIdx]?.[c] ?? ""}`}
                                       defaultValue={er[c] ?? ""}
                                       onBlur={(e) => handleEdit(site, sheetKey, rIdx, c, e.target.value)}
@@ -365,11 +377,12 @@ const DailyDashboard = ({ userData }) => {
                         </tbody>
                       </table>
                     </div>
-                  </div>
+                  </details>
                 );
               })}
             </div>
-          </div>
+            </div>
+          </details>
         );
       })}
     </div>

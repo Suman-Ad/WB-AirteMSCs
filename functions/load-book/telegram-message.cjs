@@ -1,3 +1,4 @@
+const {alertTheme} = require('./telegram-alert-style.cjs');
 // Format at delivery time so report calculations and app notifications stay independent.
 const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const titles = {
@@ -21,6 +22,7 @@ function styledLine(line, index) {
   }
   // Short field labels remain easy to scan, including labels containing untrusted text.
   const label = /^(\s*(?:• )?[^:\n]{1,70}:)(.*)$/.exec(line);
+  if (label && /\d:$/.test(label[1]) && /^\d{2}/.test(label[2])) return safe;
   return label ? `<b>${escapeHtml(label[1])}</b>${escapeHtml(label[2])}` : safe;
 }
 
@@ -41,8 +43,9 @@ function bodyLines(value, kind) {
   });
 }
 
-function formattedMessages(messages, {kind = 'help', title, now = Date.now()} = {}) {
-  const heading = title || titles[kind] || '📬 Site report';
+function formattedMessages(messages, {kind = 'help', title, actionType, notification, now = Date.now()} = {}) {
+  const theme = alertTheme(actionType, notification);
+  const heading = theme ? `${theme.icon} ${theme.title}${theme.meter && (notification?.title || title) ? `\n${notification?.title || title}` : ''}` : title || titles[kind] || '📬 Site report';
   const pages = [];
   for (const message of messages) {
     let lines = [], length = 0;
@@ -66,8 +69,8 @@ function formattedMessages(messages, {kind = 'help', title, now = Date.now()} = 
   return pages.map((lines, index) => {
     const part = pages.length > 1 ? ` · ${index + 1}/${pages.length}` : '';
     return {
-      text: `<b>${escapeHtml(heading)}${part}</b>\n━━━━━━━━━━━━━━━━━━━━\n\n` +
-        lines.map(styledLine).join('\n').replace(/\n{3,}/g, '\n\n').trim() +
+      text: `<b>${escapeHtml(heading)}${part}</b>\n${theme ? theme.stripe.repeat(10) : '━━━━━━━━━━━━━━━━━━━━'}\n\n` +
+        lines.map((line, lineIndex) => theme && (lineIndex === 0 || /^(?:DG generation:|Run duration:|Mains restored register:|DG start register:|DG closing register:|Last mains register at failure:)/.test(line)) ? `<b>${escapeHtml(line)}</b>` : styledLine(line, lineIndex)).join('\n').replace(/\n{3,}/g, '\n\n').trim() +
         `\n\n────────────────────\n<i>WB Airtel MSC · ${escapeHtml(at)} IST</i>`,
       parse_mode: 'HTML', link_preview_options: {is_disabled:true}
     };

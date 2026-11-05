@@ -13,19 +13,21 @@ jest.mock("./Modal", () => () => null);
 jest.mock("./SOP/AsansolOperationSimulator", () => () => null);
 const mockNavigate = jest.fn();
 jest.mock("react-router-dom", () => ({ useNavigate: () => mockNavigate }), { virtual: true });
-let publish, source, statusListeners, runningDG, powerMapping;
+let publish, source, statusListeners, runningDG, powerMapping, serverEnabled, serverPublish;
 const start = 1792663200000;
 const user = { uid: "human", siteId: "ASL", site: "Asansol", role: "Admin", name: "Operator", empId: "E1", designation: "Engineer" };
 const status = () => ({ powerSource: source, selectedDG: runningDG, dgNumber: runningDG, ...(source === "DG" ? { dgStartTime: { toDate: () => new Date(start), toMillis: () => start } } : {}) });
 const meters = (time) => ({ docs: [["main", "Main Incomer", 0], ["dg1", "DG-1 Meter", 415]].map(([id, name, volts]) => ({ id, data: () => ({ name, status: "OK", voltage_ll: volts, current: volts > 300 ? 100 : 0, fwd_Wh: 100000, observedAt: { toMillis: () => time } }) })), metadata: { fromCache: false, hasPendingWrites: false } });
 beforeEach(() => {
-  jest.clearAllMocks(); localStorage.clear(); jest.useFakeTimers(); jest.setSystemTime(start); source = "EB";statusListeners=[];runningDG="DG-1";powerMapping={enabled:true,mainMeterId:"main",dg1MeterId:"dg1",dg2MeterId:""};
+  jest.clearAllMocks(); serverEnabled=false; localStorage.clear(); jest.useFakeTimers(); jest.setSystemTime(start); source = "EB";statusListeners=[];runningDG="DG-1";powerMapping={enabled:true,mainMeterId:"main",dg1MeterId:"dg1",dg2MeterId:""};
   doc.mockImplementation((db, ...path) => path.join("/")); collection.mockImplementation((db, ...path) => path.join("/")); query.mockImplementation((ref) => ref);
   getDoc.mockImplementation(async (ref) => ref.startsWith("sitePowerStatus/") ? { exists: () => true, data: status } : ref.startsWith("siteConfigs/") ? { exists: () => true, data: () => ({ dgCount: 2 }) } : { exists: () => false });
   getDocs.mockResolvedValue({ docs: [] }); addDoc.mockResolvedValue({ id: "legacy-run" }); serverTimestamp.mockReturnValue("server-time"); checkpointEnergyRun.mockResolvedValue();
   onSnapshot.mockImplementation((ref, options, next) => {
     const callback = typeof options === "function" ? options : next;
     if (ref.endsWith('/config/powerSwitch')) callback({exists:()=>true,data:()=>powerMapping,metadata:{fromCache:false,hasPendingWrites:false}});
+    else if (ref.endsWith("/config/serverPowerSwitch")) callback({exists:()=>serverEnabled,data:()=>({enabled:serverEnabled}),metadata:{fromCache:false,hasPendingWrites:false}});
+    else if (ref.endsWith("/runtime/serverPowerSource")) {serverPublish=callback;callback({exists:()=>false,metadata:{fromCache:false,hasPendingWrites:false}});}
     else if (ref.startsWith("energyMonitor/")) { publish = callback; callback(meters(start)); }
     else if (ref.startsWith("sitePowerStatus/")) {statusListeners.push(callback);callback({ exists: () => true, data: status });}
     else callback({ size: 0, docs: [] });
@@ -97,4 +99,19 @@ test("failed restoration transaction neither writes a stop log nor navigates",as
  await act(async()=>{jest.advanceTimersByTime(10000);publish(restored(start+20000));});
  expect(commitEnergyChangeover).toHaveBeenCalled();expect(addDoc).not.toHaveBeenCalled();expect(mockNavigate).not.toHaveBeenCalled();
  expect(screen.getByRole("switch",{name:"EB/DG power source"})).toHaveAttribute("aria-checked","true");
+});
+
+
+test("server runtime drives the slider and suppresses browser changes, including stale status", async () => {
+  serverEnabled=true;
+  await act(async()=>{render(<Layout userData={user}/>);});
+  const slider=screen.getByRole("switch",{name:"EB/DG power source"});
+  await act(async()=>{serverPublish({exists:()=>true,data:()=>({enabled:true,powerSource:"DG",selectedDG:"DG-1",startAtMs:start,evaluatedAtMs:start,sourceObservedAtMs:start,message:"Server confirmed supply from DG-1"}),metadata:{fromCache:false,hasPendingWrites:false}});});
+  expect(slider).toHaveAttribute("aria-checked","true");
+  await trigger();
+  expect(commitEnergyChangeover).not.toHaveBeenCalled();
+  expect(checkpointEnergyRun).not.toHaveBeenCalled();
+  await act(async()=>{jest.advanceTimersByTime(31000);});
+  expect(screen.getAllByText(/Last observed \/ waiting/).length).toBeGreaterThan(0);
+  expect(slider).toHaveAttribute("aria-disabled","true");
 });

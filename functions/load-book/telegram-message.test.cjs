@@ -44,3 +44,23 @@ test('each report and continuation page carries its own context', () => {
   assert.match(pages[1].text,/⛽ Present fuel · 2\/2/);
   assert.match(pages[1].text,/Site B/);
 });
+
+
+test('changeover timestamps remain intact and reading fields keep labels',()=>{
+ const [page]=formattedMessages(['Asansol · DG-1 · 4/11/2026, 8:11:20 pm IST\nDG start register: 137000 kWh\n  Reading time: 4/11/2026, 8:11:12 pm IST\n  Reading quality: Captured'],{now});
+ assert.ok(page.text.includes('Asansol · DG-1 · 4/11/2026, 8:11:20 pm IST'));
+ assert.ok(!page.text.includes('8:</b>'));
+ assert.ok(page.text.includes('<b>  Reading time:</b>'));
+});
+
+
+test('changeover themes retain escaped full detail and highlight important readings',()=>{
+ for(const [actionType,stripe] of [['energy_dg_start','🟥'],['energy_mains_restored','🟩']]) {
+  const pages=formattedMessages(['Asansol <site> & DG-1\nDG generation: 34.78 kWh\n'+('Full detail '.repeat(700))+'END'],{actionType,now});
+  assert.ok(pages.every(page=>page.text.includes(stripe.repeat(10))));
+  assert.ok(pages[0].text.includes('Asansol &lt;site&gt; &amp; DG-1'));
+  assert.ok(pages[0].text.includes('<b>DG generation: 34.78 kWh</b>'));
+  assert.ok(pages.at(-1).text.includes('END'));
+  assert.ok(pages.every(page=>plain(page.text).length<=4096));
+ }
+});

@@ -16,7 +16,7 @@ function reading(label, sample, beforeAt) {
   const last = !current && number(sample?.lastKnownKwh) && number(sample?.lastKnownAtMs) && sample.lastKnownAtMs > 0 && sample.lastKnownAtMs <= beforeAt + 5000;
   const value = current ? sample.kwh : last ? sample.lastKnownKwh : null;
   const at = current ? sample.observedAtMs : last ? sample.lastKnownAtMs : null;
-  return `${label}: ${fmt(value)} kWh | ${time(at)} | ${last ? 'Last known reading' : sample?.quality || 'Not captured'}`;
+  return `${label}: ${fmt(value)} kWh\n  Reading time: ${time(at)}\n  Reading quality: ${last ? 'Last known reading' : sample?.quality || 'Not captured'}${value === null ? ' (no valid reading captured)' : ''}`;
 }
 function changeoverNotification(run, phase, siteId) {
   const at = phase === 'start' ? run.startAtMs : run.endAtMs;

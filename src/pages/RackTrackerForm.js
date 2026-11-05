@@ -18,6 +18,7 @@ import CapacityAnalysisTab from "../components/RackTracker/tab/CapacityAnalysisT
 import ActivityTab from "../components/RackTracker/tab/ActivityTab";
 import { createInitialFormData } from "../constants/initialFormData.js";
 import { saveRack, rollbackBulkUpload, bulkUploadRacks } from "../services/rackService.js";
+import "../assets/RackTrackerForm.css";
 import { getTabCompletion } from "../utils/tabCompletion.js";
 
 
@@ -164,14 +165,35 @@ const RackTrackerForm = ({ userData }) => {
     );
   };
 
+  const visibleTabs = tabs.filter(tab => tab !== "Bulk Upload" || (isAdmin && !editData));
+  const currentTabIndex = visibleTabs.indexOf(activeTab);
+  const tabDescriptions = {
+    General: "Identify the rack, location, and operating status.",
+    Equipment: "Record rack dimensions and equipment positions in U space.",
+    Temperature: "Record front and rear temperature readings in degrees Celsius.",
+    "Source A": "Enter the primary power source, cabling, and protection details.",
+    "Source B": "Enter the secondary power source, cabling, and protection details.",
+    Capacity: "Review calculated load, cable capacity, and rack occupancy.",
+    "Domain & DR": "Record ownership, network domain, and disaster recovery test details.",
+    "Bulk Upload": "Import multiple rack records using the Excel template.",
+    Activity: "Review the saved change history for this rack.",
+  };
+
   return (
-    <div className="daily-log-container">
-      <h1 style={{ color: "white", textAlign: "center", paddingBottom: "20px" }}>
-        <strong>🗄️UPS / SMPS Equipment Details</strong>
-      </h1>
+    <div className="daily-log-container rack-form-page">
+      <header className="rack-form-header">
+        <div><span className="rack-form-eyebrow">AC / DC infrastructure</span><h1>{editData ? "Edit rack details" : "New rack details"}</h1><p>UPS / SMPS equipment register</p></div>
+        <button type="button" className="rack-form-back" onClick={() => navigate('/acdc-rack-details')}>Back to dashboard</button>
+      </header>
+      <div className="rack-form-summary">
+        <div><span>Site</span><strong>{formData.siteName || userData?.site || "Not selected"}</strong></div>
+        <div><span>Rack</span><strong>{[formData.equipmentRackNo, formData.rackName].filter(Boolean).join(' · ') || "New record"}</strong></div>
+        <div><span>Power / status</span><strong>{[formData.powerType, formData.rackStatus].filter(Boolean).join(' · ') || "Not specified"}</strong></div>
+      </div>
 
       <div
-        className="rack-tabs"
+        className="rack-form-tabs"
+        role="group" aria-label="Rack form sections"
       >
         {tabs.map((tab) => {
           if (tab === "Bulk Upload" && !(isAdmin && !editData)) {
@@ -188,26 +210,24 @@ const RackTrackerForm = ({ userData }) => {
             <button
               key={tab}
               type="button"
-              className={`rack-tab ${activeTab === tab ? "active" : ""}`}
+              className={`rack-form-tab ${activeTab === tab ? "active" : ""}`}
+              aria-pressed={activeTab === tab}
+              aria-controls="rack-form-section"
               onClick={() => setActiveTab(tab)}
-              style={{
-                flexShrink: 0,
-                width: "fit-content"
-              }}
+
             >
               <div>{tab}</div>
 
-              <small>
-                {percent}%
-              </small>
+              {!['Bulk Upload', 'Activity'].includes(tab) && <small aria-label={`${percent}% filled`}>{percent}%</small>}
             </button>
           );
         })}
       </div>
 
 
-      <form onSubmit={handleSubmit}>
-        <div className="child-container" style={{ border: "2px solid #2083a1ff", padding: "10px", marginBottom: "20px" }}>
+      <form onSubmit={handleSubmit} aria-busy={saving}>
+        <section id="rack-form-section" className="rack-form-content" aria-labelledby="rack-form-section-title">
+          <div className="rack-form-section-heading"><div><h2 id="rack-form-section-title">{activeTab}</h2><p>{tabDescriptions[activeTab]}</p></div><span>Section {currentTabIndex + 1} of {visibleTabs.length}</span></div>
           {activeTab === "General" && (
             <GeneralTab
               formData={formData}
@@ -254,6 +274,7 @@ const RackTrackerForm = ({ userData }) => {
               handleDownloadExcelTemplate={handleDownloadExcelTemplate}
               uploadProgress={uploadProgress}
               bulkControl={bulkControl}
+              bulkControlRef={bulkControlRef}
               setUploadProgress={setUploadProgress}
               setBulkControl={setBulkControl}
               handleBulkRollback={handleBulkRollback}
@@ -266,7 +287,7 @@ const RackTrackerForm = ({ userData }) => {
             />
           )}
 
-          <div className="form-section" style={{ display: "flex", gap: "2px", justifyContent: "space-between" }}>
+          <div className="rack-form-source-container">
             {/* Source A */}
             {activeTab === "Source A" && (
               <SourceTab
@@ -312,13 +333,18 @@ const RackTrackerForm = ({ userData }) => {
 
           )}
 
-        </div>
+        </section>
 
-        {/* Submit */}
-        <button type="submit" className="submit-btn">{saving ? "Saving..." : "💾 Save"}</button>
+        <div className="rack-form-actions">
+          <div className="rack-form-step-actions">
+            <button type="button" disabled={currentTabIndex === 0} onClick={() => setActiveTab(visibleTabs[currentTabIndex - 1])}>Previous section</button>
+            <button type="button" disabled={currentTabIndex === visibleTabs.length - 1} onClick={() => setActiveTab(visibleTabs[currentTabIndex + 1])}>Next section</button>
+          </div>
+          <button type="submit" className="rack-form-save" disabled={saving || uploadProgress.active}>{saving ? "Saving…" : editData ? "Save changes" : "Save rack"}</button>
+        </div>
       </form>
 
-      {status && <p>{status}</p>}
+      {status && <p className="rack-form-status" role="status">{status}</p>}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 // src/pages/AssetsDashboard.js
-import React, { useEffect, useState } from "react";
+import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { db } from "../firebase";
-import { collection, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,6 +13,14 @@ import {
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { Link } from "react-router-dom";
+import { assetCatalogue, filterAssetRecords, assetSummary } from "../utils/assetsDashboardData";
+import { subscribeAssets } from "../services/assetsDashboardFeed";
+
+const PAGE_SIZE = 50;
+const CHART_OPTIONS = { responsive: true, animation: false, plugins: { legend: { display: false } } };
+const AssetsChart = React.memo(function AssetsChart({ data }) {
+  return <Bar data={data} options={CHART_OPTIONS} />;
+});
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -37,7 +45,8 @@ const DEFAULT_COLUMNS = [
 
 export default function AssetsDashboard({ userData }) {
   const [assets, setAssets] = useState([]);
-  const [filteredAssets, setFilteredAssets] = useState([]);
+  const [loadError, setLoadError] = useState("");
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   const [selectedRegion, setSelectedRegion] = useState(userData?.region || "");
@@ -47,122 +56,42 @@ export default function AssetsDashboard({ userData }) {
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  // ✅ Load assets in real-time from assets_flat
+  const deferredSearch = useDeferredValue(searchTerm);
+
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "assets_flat"), (snapshot) => {
-      const data = snapshot.docs.map((doc) => doc.data());
-      setAssets(data);
-      // localStorage.setItem("assets", JSON.stringify(data));
+    setLoading(true);
+    setLoadError("");
+    setAssets([]);
+    return subscribeAssets(db,setAssets,() => setLoading(false),() => {
+      setAssets([]);
+      setLoadError("Unable to load assets. Check your connection and site access, then reload this page.");
       setLoading(false);
     });
+  }, [userData?.uid]);
 
-    return () => unsub();
-  }, []);
-
-  // Reset circle & site when region changes
+  // Initialize profile defaults together; changing a filter clears its children in one event.
   useEffect(() => {
-    setSelectedCircle("");
-    setSelectedSite("");
-  }, [selectedRegion]);
+    setSelectedRegion(userData?.region || "");
+    setSelectedCircle(userData?.circle || "");
+    setSelectedSite(userData?.site || "");
+    setPage(1);
+  }, [userData?.uid, userData?.region, userData?.circle, userData?.site]);
 
-  // Reset site when circle changes
-  useEffect(() => {
-    setSelectedSite("");
-  }, [selectedCircle]);
-
-
-  // ✅ Filter logic
-  useEffect(() => {
-    let filtered = assets;
-
-    if (selectedRegion) {
-      filtered = filtered.filter((a) => a.Region === selectedRegion);
-    }
-    if (selectedCircle) {
-      filtered = filtered.filter((a) => a.Circle === selectedCircle);
-    }
-    if (selectedSite) {
-      filtered = filtered.filter((a) => a.SiteName === selectedSite);
-    }
-    if (searchTerm) {
-      filtered = filtered.filter((a) =>
-        Object.values(a).some((val) =>
-          String(val).toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
-    }
-
-    setFilteredAssets(filtered);
-    // const cached = localStorage.getItem("assets");
-    //   if (cached) {
-    //     setAssets(JSON.parse(cached));
-    //   }
-  }, [assets, selectedCircle, selectedRegion, selectedSite, searchTerm]);
-
-  useEffect(() => {
-    if (!assets.length) return;
-
-    // Apply Circle only once
-    if (userData?.circle && !selectedCircle) {
-      const circleExists = assets.some(
-        a => a.Region === selectedRegion && a.Circle === userData.circle
-      );
-      if (circleExists) {
-        setSelectedCircle(userData.circle);
-      }
-    }
-
-    // Apply Site only once
-    if (userData?.site && selectedCircle && !selectedSite) {
-      const siteExists = assets.some(
-        a =>
-          a.Region === selectedRegion &&
-          a.Circle === selectedCircle &&
-          a.SiteName === userData.site
-      );
-      if (siteExists) {
-        setSelectedSite(userData.site);
-      }
-    }
-  }, [assets, selectedRegion, selectedCircle, selectedSite, userData]);
-
-
-  // ✅ Unique filter options
-  const regions = [...new Set(assets.map(a => a.Region))];
-
-  const circles = selectedRegion
-    ? [...new Set(assets
-      .filter(a => a.Region === selectedRegion)
-      .map(a => a.Circle))]
-    : [];
-
-  const sites = selectedCircle
-    ? [...new Set(assets
-      .filter(a =>
-        a.Region === selectedRegion &&
-        a.Circle === selectedCircle
-      )
-      .map(a => a.SiteName))]
-    : [];
-
-
-  // ✅ Chart Data
-  const categoryCounts = filteredAssets.reduce((acc, asset) => {
-    const cat = asset.EquipmentCategory || "Unknown";
-    acc[cat] = (acc[cat] || 0) + 1;
-    return acc;
-  }, {});
-
-  const chartData = {
-    labels: Object.keys(categoryCounts),
-    datasets: [
-      {
-        label: "Equipment Count",
-        data: Object.values(categoryCounts),
-        backgroundColor: "rgba(54, 162, 235, 0.6)",
-      },
-    ],
-  };
+  const catalogue = useMemo(() => assetCatalogue(assets), [assets]);
+  const regions = catalogue.regions;
+  const circles = useMemo(() => [...(catalogue.circles.get(selectedRegion) || [])], [catalogue,selectedRegion]);
+  const sites = useMemo(() => [...(catalogue.sites.get(selectedRegion)?.get(selectedCircle) || [])], [catalogue,selectedRegion,selectedCircle]);
+  const filteredAssets = useMemo(() => filterAssetRecords(assets,selectedRegion,selectedCircle,selectedSite,deferredSearch),
+    [assets,selectedRegion,selectedCircle,selectedSite,deferredSearch]);
+  const {siteCount,categoryCounts} = useMemo(() => assetSummary(filteredAssets), [filteredAssets]);
+  const chartData = useMemo(() => ({
+    labels:Object.keys(categoryCounts),
+    datasets:[{label:"Equipment Count",data:Object.values(categoryCounts),backgroundColor:"rgba(54, 162, 235, 0.6)"}]
+  }), [categoryCounts]);
+  const pageCount = Math.max(1,Math.ceil(filteredAssets.length/PAGE_SIZE));
+  const currentPage = Math.min(page,pageCount);
+  const pageStart = (currentPage-1)*PAGE_SIZE;
+  const visibleAssets = filteredAssets.slice(pageStart,pageStart+PAGE_SIZE);
 
   const [instructionText, setInstructionText] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -286,7 +215,8 @@ export default function AssetsDashboard({ userData }) {
 
         <select
           value={selectedRegion}
-          onChange={(e) => setSelectedRegion(e.target.value)}
+          aria-label="Region"
+          onChange={(e) => { setSelectedRegion(e.target.value); setSelectedCircle(""); setSelectedSite(""); setPage(1); }}
         >
           <option value="">All Regions</option>
           {regions.map(region => (
@@ -297,7 +227,8 @@ export default function AssetsDashboard({ userData }) {
 
         <select
           value={selectedCircle}
-          onChange={(e) => setSelectedCircle(e.target.value)}
+          aria-label="Circle"
+          onChange={(e) => { setSelectedCircle(e.target.value); setSelectedSite(""); setPage(1); }}
           disabled={!selectedRegion}
         >
           <option value="">All Circles</option>
@@ -309,7 +240,8 @@ export default function AssetsDashboard({ userData }) {
 
         <select
           value={selectedSite}
-          onChange={(e) => setSelectedSite(e.target.value)}
+          aria-label="Site"
+          onChange={(e) => { setSelectedSite(e.target.value); setPage(1); }}
           disabled={!selectedCircle}
         >
           <option value="">All Sites</option>
@@ -323,7 +255,8 @@ export default function AssetsDashboard({ userData }) {
           type="text"
           placeholder="Search..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          aria-label="Search assets"
+          onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
         />
       </div>
 
@@ -335,7 +268,7 @@ export default function AssetsDashboard({ userData }) {
         </div>
         <div>
           <h3>Unique Sites</h3>
-          <p>{new Set(filteredAssets.map((a) => a.SiteName)).size}</p>
+          <p>{siteCount}</p>
         </div>
         <div>
           <h3>Categories</h3>
@@ -345,7 +278,7 @@ export default function AssetsDashboard({ userData }) {
 
       {/* ✅ Chart */}
       <div style={{ width: "inherit", marginBottom: "20px" }} className="chart-container">
-        <Bar data={chartData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
+        <AssetsChart data={chartData} />
       </div>
 
       {(userData?.role === "Super User" ||
@@ -356,14 +289,18 @@ export default function AssetsDashboard({ userData }) {
           </Link>
         )}
 
-      {/* ✅ Table */}
+      {loadError && <p role="alert">{loadError}</p>}
+      <nav aria-label="Asset table pages" style={{display:"flex",flexWrap:"wrap",gap:"12px",alignItems:"center",margin:"16px 0"}}>
+        <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage-1)}>Previous</button>
+        <span role="status">{filteredAssets.length ? `${pageStart+1}–${Math.min(pageStart+PAGE_SIZE,filteredAssets.length)} of ${filteredAssets.length} assets` : "No matching assets"} · Page {currentPage} of {pageCount}</span>
+        <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage+1)}>Next</button>
+        {searchTerm !== deferredSearch && <span>Updating search…</span>}
+      </nav>
+      {/* Render only one page; totals, filters and chart still use all matching assets. */}
       <table
         border="1"
         cellPadding="6"
         className="dhr-table"
-        style={
-          { overflowY: "auto", height: "1300px" }
-        }
       >
         <thead>
           <tr>
@@ -373,10 +310,10 @@ export default function AssetsDashboard({ userData }) {
           </tr>
         </thead>
         <tbody>
-          {filteredAssets.map((a, index) => (
-            <tr key={index}>
+          {visibleAssets.map(({id,values:a}) => (
+            <tr key={id}>
               {DEFAULT_COLUMNS.map((col) => (
-                <td key={col.key}>{a[col.key] || ""}</td>
+                <td key={col.key}>{a[col.key] ?? ""}</td>
               ))}
             </tr>
           ))}

@@ -179,3 +179,13 @@
   background-color: rgba(100, 100, 100, 0.4);
   border-radius: 8px;
 }
+
+/* Keep the original white document readable when the surrounding app is dark. */
+#printArea,
+#printArea :is(table, thead, tbody, tr, th, td) {
+  background-color: #fff !important;
+  color: #000 !important;
+  border-color: #000 !important;
+}
+#printArea :is(h2, strong, p) { color: #000 !important; }
+#printArea a { color: #0b6f83 !important; }

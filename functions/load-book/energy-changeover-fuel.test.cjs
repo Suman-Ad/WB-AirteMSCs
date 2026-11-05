@@ -43,3 +43,12 @@ test('lookup loads the correct site and both months at the month boundary',async
  assert.deepEqual(paths,['siteConfigs/ASANSOL','dailyDGLogs/Asansol/2026-11','dailyDGLogs/Asansol/2026-10']);
  assert.equal(snapshot.stockDate,'2026-10-31');
 });
+
+
+test('server runs resolve the site ID to the name used by fuel logs',async()=>{
+ const paths=[];
+ const db={doc:path=>({get:async()=>{paths.push(path);return {data:()=>config};}}),collection:path=>({get:async()=>{paths.push(path);return {docs:[{id:date,data:()=>({...row,Date:date})}]};}})};
+ const snapshot=await loadFuelSnapshot(db,{dgNumber:'DG-1',startAtMs:Date.parse(date+'T12:00:00+05:30')},'start','N19106A');
+ assert.equal(paths[0],'siteConfigs/ASANSOL');assert.ok(paths.includes('dailyDGLogs/Asansol/2026-11'));
+ assert.equal(snapshot.generators[0].dayLitres,400);
+});

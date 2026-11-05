@@ -581,7 +581,7 @@ const DGRunHistory = ({ userData }) => {
                               dgNumber: r.dgNumber,
                               startTime: r.startTime,
                               stopTime: r.endTime,
-                              date: format(new Date(), "yyyy-MM-dd"),
+                              date: r.date,
                               runId: r.id, // 🔑 link back to run history
                             },
                           })

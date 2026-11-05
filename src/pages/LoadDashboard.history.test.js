@@ -9,6 +9,17 @@ jest.mock('../hooks/useLoadBookDay',()=>({...jest.requireActual('../hooks/useLoa
 jest.mock('../firebase',()=>({db:{}}));
 jest.mock('firebase/firestore',()=>({collection:jest.fn(),onSnapshot:jest.fn(),deleteDoc:jest.fn(),doc:jest.fn(),getDocs:jest.fn()}));
 const render = () => renderToString(<LoadDashboard userData={{siteId:'N19106A',role:'User'}}/>);
+
+test.each(['User', 'Admin'])('table headers match row cells for %s', role => {
+ useLoadBookDay.mockReturnValue({data:[{id:'entry',equipmentType:'LT',equipmentId:'LT Panel-1',date:'2026-10-22',time:'08:00',loadKW:10}],loading:false,error:'',cached:false});
+ const html=renderToString(<LoadDashboard userData={{siteId:'N19106A',role}}/>);
+ const header=html.match(/<thead>([\s\S]*?)<\/thead>/)[1];
+ const body=html.match(/<tbody>([\s\S]*?)<\/tbody>/)[1];
+ expect((header.match(/<th\b/g)||[]).length).toBe((body.match(/<td\b/g)||[]).length);
+ expect(header).toContain('Actions');
+ expect(html).toContain('Edit LT Panel-1 at 08:00');
+ expect(html.includes('Delete LT Panel-1 at 08:00')).toBe(role === 'Admin');
+});
 test('historical URL selects Asansol saved date and renders entries',()=>{
  useLoadBookDay.mockReturnValue({data:[{id:'saved-entry',equipmentType:'LT',equipmentId:'LT Panel-1',date:'2026-10-22',time:'08:00',loadKW:10,kwh:'12345'}],loading:false,error:'',cached:false});
  const html=render();expect(useLoadBookDay).toHaveBeenCalledWith('N19106A','2026-10-22');

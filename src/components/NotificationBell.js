@@ -397,7 +397,7 @@ export default function NotificationBell({ user }) {
 
             {/* Dropdown */}
             {(
-                <div id="notification-panel" className="notification-panel" style={{ display: open ? 'block' : 'none' }}>
+                <div id="notification-panel" className={`notification-panel${unreadCount > 0 ? ' notification-panel-unread' : ''}`} style={{ display: open ? 'block' : 'none' }}>
                     <div className="notification-panel-header">
                         <div className="notification-heading">
                             <div><h2>Notifications</h2><span>{unreadCount ? `${unreadCount} unread updates` : "You're all caught up"}</span></div>

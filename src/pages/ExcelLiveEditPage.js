@@ -1,5 +1,5 @@
 // src/pages/ExcelLiveEditPage.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import FinalSummary from "../components/FinalSummary";
 import { Tabs, Tab } from "@mui/material";
 import ExcelSheetEditor, { sheetTemplates, siteWiseDefaults }  from "../components/ExcelSheetEditor";
@@ -7,7 +7,7 @@ import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import "../assets/ExcelLiveEditPage.css";
 import useDailyDashboardAutofill from "../hooks/useDailyDashboardAutofill";
-import { getISTDate, mergeDailyAutofill } from "../utils/dailyDashboardAutofill";
+import { fillDieselIdentity, getISTDate, mergeDailyAutofill } from "../utils/dailyDashboardAutofill";
 
 const sheetKeys = {
   "Final Summary": "Final_Summary",
@@ -36,10 +36,21 @@ const ExcelLiveEditPage = ({ userData }) => {
   const { patches, error: autofillError } = useDailyDashboardAutofill(siteId ? [siteId] : [], selectedDate, Boolean(userData?.role) && userData.role !== "User");
   const [autofillSaveError, setAutofillSaveError] = useState("");
 
+  // Display source updates immediately, independently of the background save.
+  const displayedSheetData = useMemo(() => {
+    const next = mergeDailyAutofill(sheetData, patches[siteId] || {});
+    if (next.Diesel_Back_Up?.length) next.Diesel_Back_Up = next.Diesel_Back_Up.map(row => fillDieselIdentity(row, userData));
+    return next;
+  }, [sheetData, patches, siteId, userData]);
+  const fuelCalculation = patches[siteId]?.Diesel_Back_Up?.[0]?.__fuelCalculation;
+
   useEffect(() => {
-    if (loading || !patches[siteId] || !siteId) return;
-    const next = mergeDailyAutofill(sheetData, patches[siteId]);
-    const changed = Object.keys(patches[siteId]).filter(key => JSON.stringify(next[key]) !== JSON.stringify(sheetData[key]));
+    if (loading || !siteId || !userData?.role || userData.role === "User") return;
+    const next = mergeDailyAutofill(sheetData, patches[siteId] || {});
+    if (next.Diesel_Back_Up?.length) {
+      next.Diesel_Back_Up = next.Diesel_Back_Up.map(row => fillDieselIdentity(row, userData));
+    }
+    const changed = [...new Set([...Object.keys(patches[siteId] || {}), "Diesel_Back_Up"])].filter(key => JSON.stringify(next[key]) !== JSON.stringify(sheetData[key]));
     if (!changed.length) return;
     let active = true;
     const fields = Object.fromEntries(changed.map(key => [key, next[key]]));
@@ -47,7 +58,7 @@ const ExcelLiveEditPage = ({ userData }) => {
       .then(() => { if (active) { setSheetData(previous => ({ ...previous, ...fields })); setAutofillSaveError(""); } })
       .catch(error => { if (active) setAutofillSaveError(`Autofill could not be saved: ${error.message}`); });
     return () => { active = false; };
-  }, [patches, siteId, dateId, loading, sheetData]);
+  }, [patches, siteId, dateId, loading, sheetData, userData]);
 
   useEffect(() => {
     let active = true;
@@ -76,6 +87,8 @@ const ExcelLiveEditPage = ({ userData }) => {
         Object.entries(siteWiseDefaults.Diesel_Back_Up || {}).forEach(([key, values]) => {
           if (values[siteId] !== undefined) defaultData.Diesel_Back_Up[0][key] = values[siteId];
         });
+
+        defaultData.Diesel_Back_Up = defaultData.Diesel_Back_Up.map(row => fillDieselIdentity(row, userData));
 
         // ensure parent date doc exists
         await setDoc(doc(db, "excel_data_by_date", dateId), {
@@ -141,7 +154,7 @@ const ExcelLiveEditPage = ({ userData }) => {
     <div className="dhr-dashboard-container">
       <h2 className="dashboard-header">📘 Daily Details Dashboard Of WB Circle Location: {siteId || "Unknown Site"}</h2>
 
-      <p>Reporting period: previous day 4 PM to selected date 4 PM (IST). DG closing stock and hours autofill after 4 PM. Activities without start times use their scheduled date.</p>
+      <p>Reporting period: previous day 4 PM to selected date 4 PM (IST). DG tank stock is opening fuel minus the selected day’s saved run consumption. External stock uses the latest saved DG log on or before the selected date (this month or the previous month). Both update automatically. DG and power-failure hours update from the selected day’s saved runs without waiting for 4 PM. Activities without start times use their scheduled date.</p>
       {(autofillError || autofillSaveError) && <p role="alert">{autofillError || autofillSaveError}</p>}
       <div style={{ marginBottom: "1rem" }}>
         <label>Select Date: </label>
@@ -161,7 +174,7 @@ const ExcelLiveEditPage = ({ userData }) => {
         >
           {Object.entries(sheetKeys).map(([label, key]) => {
             const isSummary = key === "Final_Summary";
-            const rows = sheetData[key] || [];
+            const rows = displayedSheetData[key] || [];
             const { status, color, filled, total } = getSheetStatus(rows);
             const percentage = total ? Math.round((filled / total) * 100) : 0;
             return (
@@ -184,18 +197,24 @@ const ExcelLiveEditPage = ({ userData }) => {
         ) : (
           <div className="sheet-editor-scroll chart-container">
             {selectedTab === "Final Summary" ? (
-              <FinalSummary siteData={{ [siteId]: sheetData }} selectedDate={selectedDate} title={`Final Summary — ${siteId}`} />
+              <FinalSummary siteData={{ [siteId]: displayedSheetData }} selectedDate={selectedDate} title={`Final Summary — ${siteId}`} />
             ) : (
+              <>
+              {selectedTab === "Fault Details" && <p>Faults sync from Incident Dashboard for this site and reporting window, including carried-over open incidents. Update imported details in Incident Dashboard. Manual fault entries are retained.</p>}
+              {selectedTab === "Diesel Back Up" && fuelCalculation && (
+                <p role="status">DG tank stock: {fuelCalculation.opening} L opening − {fuelCalculation.consumption} L consumption ({fuelCalculation.runs} DGLogTable runs for {selectedDate}) = <strong>{fuelCalculation.stock} L</strong>.</p>
+              )}
               <ExcelSheetEditor
                 key={`${siteId}-${selectedDate}-${selectedTab}`}
                 sheetKey={sheetKeys[selectedTab]}
-                rows={sheetData[sheetKeys[selectedTab]] || []}
+                rows={displayedSheetData[sheetKeys[selectedTab]] || []}
                 lastUpdated={sheetData[`lastUpdated_${sheetKeys[selectedTab]}`]}
                 onSave={(rows) => handleSheetUpdate(sheetKeys[selectedTab], rows)}
                 userData={userData}
                 selectedDate={selectedDate}
-                allSheetsData={sheetData}
+                allSheetsData={displayedSheetData}
               />
+              </>
             )}
           </div>
         )}

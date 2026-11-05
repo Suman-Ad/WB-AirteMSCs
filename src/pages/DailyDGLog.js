@@ -24,6 +24,8 @@ import {
   XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, ReferenceDot, Brush
 } from "recharts";
 import { calculateFields } from "../utils/calculatedDGLogs";
+import { addDays, addMonths, clampDateToMonth } from "../utils/dgLogDateNavigation";
+import useLiveSitePower from "../hooks/useLiveSitePower";
 import { siteIdMap } from "../config/siteConfigs";
 
 
@@ -402,7 +404,10 @@ const DailyDGLog = ({ userData }) => {
   };
 
   // Fetch Power Source Status
-  const [powerSource, setPowerSource] = useState("EB");
+  const [manualPowerSource, setPowerSource] = useState("Unknown");
+  const livePowerMap = useLiveSitePower([siteName], {[siteName?.toUpperCase()]:{powerSource:manualPowerSource}});
+  const livePower = livePowerMap[siteName?.toUpperCase()] || {};
+  const powerSource = livePower.powerSource || "Unknown";
   const [updatedByName, setUpdatedByName] = useState("");
   const [updatedAt, setUpdatedAt] = useState(null);
   const [loadingPower, setLoadingPower] = useState(true);
@@ -582,19 +587,6 @@ const DailyDGLog = ({ userData }) => {
   const formatYear = (ym) => {
     return ym.split("-")[0]; // just the YYYY part
   };
-
-  const addDays = (dateStr, days) => {
-    const d = new Date(`${dateStr}T00:00:00`); // ensure it's treated as local date
-    d.setDate(d.getDate() + days);
-    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-  };
-
-  const addMonths = (ym, diff) => {
-    const [y, m] = ym.split("-").map(Number);
-    const d = new Date(y, m + diff, 1);
-    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7);
-  };
-
 
   // Debounce helper (optional) For EB Rate Fetch
   let timeoutEB;
@@ -2048,16 +2040,9 @@ const DailyDGLog = ({ userData }) => {
 
   const getMonthFromDate = (dateStr) => dateStr?.slice(0, 7);
 
-  const clampDateToMonth = (yearMonth, currentDate) => {
-    if (!currentDate) return `${yearMonth}-01`;
-
-    const [y, m] = yearMonth.split("-").map(Number);
-    const day = Number(currentDate.split("-")[2] || 1);
-
-    const lastDay = new Date(y, m, 0).getDate(); // last day of month
-    const safeDay = Math.min(day, lastDay);
-
-    return `${yearMonth}-${String(safeDay).padStart(2, "0")}`;
+  const handleMonthChange = (newMonth) => {
+    if (!newMonth || newMonth > getISTMonth()) return;
+    handleDateChange(clampDateToMonth(newMonth, form.Date, getFormattedDate()));
   };
 
   const handleDateChange = async (newDate) => {
@@ -2073,7 +2058,13 @@ const DailyDGLog = ({ userData }) => {
       setSelectedMonth(newMonth);
     }
     // 1️⃣ Check if current date already exists
-    const existing = logs.find((entry) => entry.Date === newDate);
+    let existing = newMonth === selectedMonth
+      ? logs.find((entry) => entry.Date === newDate)
+      : null;
+    if (newMonth !== selectedMonth) {
+      const savedLog = await getDoc(doc(db, "dailyDGLogs", siteName, newMonth, newDate));
+      if (savedLog.exists()) existing = { ...savedLog.data(), id: savedLog.id };
+    }
     if (existing) {
       setForm({ ...existing, Date: newDate });
       fetchAndAggregateRuns(newDate);
@@ -2905,13 +2896,16 @@ const DailyDGLog = ({ userData }) => {
   useEffect(() => {
     if (!siteName) return;
 
+    setPowerSource("Unknown");
+    let timer;
     const powerRef = doc(db, "sitePowerStatus", siteName);
 
     const unsub = onSnapshot(powerRef, (snap) => {
-      if (!snap.exists()) return;
+      clearInterval(timer);
+      if (!snap.exists()) { setPowerSource("Unknown"); return; }
 
       const data = snap.data();
-      setPowerSource(data.powerSource);
+      setPowerSource(data.powerSource || "Unknown");
       setUpdatedByName(data.updatedByName || "");
       setUpdatedAt(data.updatedAt ? data.updatedAt.toDate() : null);
 
@@ -2926,18 +2920,15 @@ const DailyDGLog = ({ userData }) => {
         };
 
         tick();
-        const interval = setInterval(tick, 1000);
-        return () => clearInterval(interval);
+        timer = setInterval(tick, 1000);
 
       } else {
-        // default EB if doc not exists
-        setPowerSource("EB");
         setDgSeconds(data.dgTotalSeconds || 0);
       }
       setLoadingPower(false);
     });
 
-    return () => unsub();
+    return () => { unsub(); clearInterval(timer); };
   }, [siteName]);
 
 
@@ -3136,25 +3127,20 @@ const DailyDGLog = ({ userData }) => {
         </b>
       </h2> */}
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "20px" }}>
+      <div className="dg-log-navigation">
         <label style={{ fontSize: "12px", display: "flex", alignItems: "center" }}>
           Select Month:
           <div style={{ display: "flex" }}>
-            <span
+            <button
+              className="dg-log-nav-button"
               type="button"
-              onClick={() => {
-                const prevMonth = addMonths(selectedMonth, -1);
-                setSelectedMonth(prevMonth);
-                setForm(prev => ({
-                  ...prev,
-                  Date: clampDateToMonth(prevMonth, prev.Date),
-                }));
-              }}
+              onClick={() => handleMonthChange(addMonths(selectedMonth, -1))}
+              disabled={!selectedMonth}
+              aria-label="Previous month"
               title="Previous Month"
-              style={{ width: "20px", alignItems: "center", fontSize: "20px" }}
             >
               ◀
-            </span>
+            </button>
 
             <div
               style={inputContainerStyle}
@@ -3164,37 +3150,24 @@ const DailyDGLog = ({ userData }) => {
               <input
                 type="month"
                 value={selectedMonth}
-                onChange={(e) => {
-                  const newMonth = e.target.value;
-                  setSelectedMonth(newMonth);
-                  setForm(prev => ({
-                    ...prev,
-                    Date: clampDateToMonth(newMonth, prev.Date),
-                  }));
-                }}
+                onChange={(e) => handleMonthChange(e.target.value)}
+                max={getISTMonth()}
+                aria-label="Select month"
                 style={inputInnerStyle}
                 required
               />
             </div>
 
-            <span
+            <button
+              className="dg-log-nav-button"
               type="button"
-              onClick={() => {
-                const nextMonth = addMonths(selectedMonth, 1);
-                if (nextMonth <= getFormattedDate().slice(0, 7)) {
-                  setSelectedMonth(nextMonth);
-                  setForm(prev => ({
-                    ...prev,
-                    Date: clampDateToMonth(nextMonth, prev.Date),
-                  }));
-                }
-              }}
-              disabled={selectedMonth >= getFormattedDate().slice(0, 7)}
+              onClick={() => handleMonthChange(addMonths(selectedMonth, 1))}
+              disabled={!selectedMonth || selectedMonth >= getISTMonth()}
+              aria-label="Next month"
               title="Next Month"
-              style={{ width: "20px", alignItems: "center", fontSize: "20px", cursor: "pointer" }}
             >
               ▶
-            </span>
+            </button>
           </div>
         </label>
         {window.innerWidth > 686 && (
@@ -3245,15 +3218,16 @@ const DailyDGLog = ({ userData }) => {
         <label style={{ fontSize: "12px", display: "flex", alignItems: "center" }}>
           Date:
           <div style={{ display: "flex" }}>
-            <span
+            <button
+              className="dg-log-nav-button"
               type="button"
               onClick={() => handleDateChange(addDays(form.Date, -1))}
               disabled={!form.Date}
+              aria-label="previous date"
               title="Previous Date"
-              style={{ width: "20px", alignItems: "center", fontSize: "20px", cursor: "pointer" }}
             >
               ◀
-            </span>
+            </button>
             <div
               style={inputContainerStyle}
               onMouseOver={(e) => e.currentTarget.style.borderColor = "#3b82f6"}
@@ -3262,6 +3236,8 @@ const DailyDGLog = ({ userData }) => {
               <input
                 type="date"
                 name="Date"
+                max={getFormattedDate()}
+                aria-label="Select date"
                 value={form.Date || ""}
                 onChange={(e) => handleDateChange(e.target.value)}
                 style={inputInnerStyle}
@@ -3269,7 +3245,8 @@ const DailyDGLog = ({ userData }) => {
               />
             </div>
 
-            <span
+            <button
+              className="dg-log-nav-button"
               type="button"
               onClick={() => {
                 const nextDate = addDays(form.Date, 1);
@@ -3278,11 +3255,11 @@ const DailyDGLog = ({ userData }) => {
                 }
               }}
               disabled={!form.Date || form.Date >= getFormattedDate()}
+              aria-label="next date"
               title="Next Date"
-              style={{ width: "20px", alignItems: "center", fontSize: "20px", cursor: "pointer" }}
             >
               ▶
-            </span>
+            </button>
           </div>
         </label>
       </div>
@@ -3561,7 +3538,7 @@ const DailyDGLog = ({ userData }) => {
                         : "#6b7280",
                 }}
               >
-                Site Live On:- <strong>{powerSource || "N/A"}</strong> Source
+                Site {livePower.stale ? "Status" : "Live On"}:- <strong>{powerSource === "DG" && livePower.selectedDG ? `DG (${livePower.selectedDG})` : powerSource}</strong> Source{livePower.stale && <small> · {livePower.status}</small>}
               </span>
               <h1 className="current-status-title">
                 <span>

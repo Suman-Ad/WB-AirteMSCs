@@ -231,3 +231,42 @@ Telegram summary access: `/summary` contains only the current-month summary from
 Telegram DHR: `/dhr` and `/DHR` show today's DHR date in IST, yesterday’s on-load DG hours (all run hours minus No Load hours), and yesterday’s EB hours using the Preview & Share DHR formula and 24-hour guard. Data comes from `dgLogs/{site}/{Mon-YYYY}/{yesterday}/runs`; date selection handles month/year boundaries. Other fields are region/circle, latest saved Daily DG Log diesel stock (day plus external tanks), site equipment statuses, major activity, inhouse PM, fault details, and total saved DG+EB+Solar energy. The source dates are displayed. Region/circle prefer Site Settings and fall back to the linked user's profile only for their own site. Admin/Super Admin can request `/Asansol: dhr`; other users are restricted to their assigned site. DHR respects the `telegramDhrEnabled` site setting.
 
 Telegram presentation: command replies and automatic notifications use escaped HTML with report headers, bold field labels, vertical DG metrics, IST generation timestamps and numbered continuation pages. Long notification bodies are preserved across pages. Link previews are disabled. Formatting is applied only when sending to Telegram.
+
+
+## Colored DG/EB alert headers
+
+Changeover Telegram deliveries use packaged 1280x380 PNG headers: a red background/glow for energy_dg_start and a green background/glow for energy_mains_restored. These images provide actual colored backgrounds because standard Telegram HTML text bubbles do not accept CSS styling. Headers are uploaded directly using multipart sendPhoto with a plain-text site/time caption; no public image host or extra native dependency is required. The image is sent silently, followed by the full existing text notification after rate-limit pacing. Normal chat/OS notification preferences continue to apply to the text message.
+
+The accompanying text uses matching red/green markers, a bold status title and highlighted meter registers, generation and duration. It retains HTML escaping, full multi-page details and the IST footer. Optional header upload failures fall back to text delivery; explicit blocked/deactivated responses still revoke the link. Delivery claims cover the image and text together, with photoMessageId retained for diagnostics. Existing delivered messages are not replayed. Non-changeover notifications keep their existing presentation.
+
+Assets are reproducible with scripts/generateTelegramAlertHeaders.ps1 using Windows System.Drawing. The generator does not run in Cloud Functions. Validation: 141 backend tests passed, followed by 21 focused delivery/formatting checks after adding silent image headers and site captions. No live test message was sent during implementation.
+
+
+## Meter Update and Daily kWh status colors
+
+Meter Update and Daily kWh alerts also use glowing PNG headers and matching text markers: red for offline/error/stale, amber for retry/reconnecting/waiting for valid data, and green only for successful fresh readings. Freshness respects the collector interval (minimum 30 seconds, otherwise three upload intervals) and a five-second future timestamp tolerance. An old retry signal becomes offline when its observation is stale. Missing timestamps are amber rather than green.
+
+Notifications record meterState, readingState and status assessment/observation times. Daily kWh reports separately label current meter status and historical daily coverage/counter resets; a current green meter never removes missing-reading warnings. The daily scheduler preserves the current collector ID while merging historical registers and transactionally rechecks the current meter. Removed meters with saved daily registers remain reportable as offline. Meter identity appears in both the photo caption and text heading; all original details remain selectable text. Existing delivered reports are not replayed, and schedule/toggles/recipient scope remain unchanged. Validation: all 152 backend tests passed, including all six report/status delivery combinations and status/coverage separation.
+
+Deployment completed successfully for telegramBellNotification, sendEnergyMeterUpdates and sendDailyEnergyReadings on 5 November 2026. No live test message was sent and no previous notifications were replayed.
+
+
+## /meter data command status cards
+
+The Telegram webhook requests structured per-meter report metadata after existing link, account, site-access and report-toggle checks. The /meter data aliases and administrator site-prefixed meter requests now use the same offline/red, retry-waiting/amber and live/green assets as scheduled meter alerts. Short readings fit entirely in an HTML photo caption, producing one readable card per meter. Longer escaped readings keep the silent header followed by complete paginated text. Optional photo failures fall back to full text, and replies are paced across meters and continuation pages. Non-meter command report pagination remains unchanged. Validation: 51 focused command/report/formatting tests passed across the final runs, covering mixed meter states, long escaped readings, image failure and disabled-report behavior. No live command or test message was sent during implementation.
+
+Successfully deployed telegramWebhook for the /meter data card update on 5 November 2026. No bot webhook registration change or historical-message replay was needed.
+
+
+## /summary all matches /summary
+
+All-site summary results retain independent site boundaries and use the exact same monthly summary renderer as assigned-site and named-site /summary. The webhook requests structured summary replies so each site gets the current Monthly site summary heading and independent pagination rather than joining all sites into one legacy response. No Today/Monthly two-section layout is generated. Monthly formulas, date filtering, administrator access, per-site report pause settings, and no-data messages remain shared with /summary. Validation: 53 focused command/report/formatting tests passed, including exact content comparisons for every configured site, monthly-only data queries and live webhook response formatting. No live command was sent during implementation.
+
+Successfully deployed telegramWebhook for the /summary all monthly-format update on 5 November 2026. Existing sent summaries are unchanged; a new command requests the updated layout.
+
+
+## Emergency command replay protection
+
+The webhook now transactionally claims each Telegram update_id in notificationDeliveries/telegramWebhook/updates before report generation or sending. A duplicate, including one whose first handler is still running, is acknowledged HTTP 200 without sending again. message_id plus chat ID provides a fallback identity. Claimed delivery failures remain recorded and acknowledged rather than restarting a partially sent report; users can issue a new command with a new update ID. /summary all requests older than two minutes are acknowledged without processing to drain retries created by the previous revision. Existing handlers on the retiring revision may finish briefly during rollout. Claims are server-only under the existing notificationDeliveries rules. Validation: 56 focused tests passed, including duplicate completed/in-progress updates, delivery failures, new commands, and stale summary retries. No pending Telegram updates were deleted and no live test message was sent.
+
+The emergency replay-protection webhook deployment completed successfully on 5 November 2026. Firebase reported a successful telegramWebhook update.

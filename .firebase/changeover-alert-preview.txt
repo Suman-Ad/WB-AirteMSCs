@@ -1,0 +1,19 @@
+DG-EB: Mains Restore
+Asansol · DG-1 · 4/11/2026, 8:18:28 pm IST
+Source: Server automatic changeover
+Fuel stock: latest saved Daily DG Log 2026-11-03 (not a live tank reading)
+DG-1: Day tank 683 L | External tank 1,152 L | Est. backup 24.3 h
+  Rate: 75.5 L/h (Recorded on-load); backup includes both tanks
+DG-2: Day tank 700 L | External tank 1,142 L | Est. backup 21.82 h
+  Rate: 84.42 L/h (Recorded on-load); backup includes both tanks
+Mains restored register: 2,42,06,512.13 kWh
+  Reading time: 4/11/2026, 8:18:21 pm IST
+  Reading quality: Captured
+DG start register: 1,37,000.02 kWh
+  Reading time: 4/11/2026, 8:11:12 pm IST
+  Reading quality: Captured
+DG closing register: 1,37,034.8 kWh
+  Reading time: 4/11/2026, 8:18:11 pm IST
+  Reading quality: Captured
+DG generation: 34.78 kWh
+Run duration: 7.13 minutes

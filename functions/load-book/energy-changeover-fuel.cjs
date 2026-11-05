@@ -1,4 +1,6 @@
 const {istDate} = require('./meter-history.cjs');
+const sites = require('./telegram-sites.cjs');
+const changeoverSiteName = (run, siteId) => (typeof run.siteName === 'string' && run.siteName.trim()) || Object.keys(sites).find(name => sites[name] === siteId) || '';
 const numeric = value => value != null && String(value).trim() !== '' && !Array.isArray(value) && ['number','string'].includes(typeof value) && Number.isFinite(Number(value)) && Number(value) >= 0 ? Number(value) : null;
 function consumption(row, dg) {
   const read = field => numeric(row[`${dg} ${field}`]);
@@ -38,7 +40,7 @@ function fuelSnapshot(config, rows, asOfDate, runningDG) {
 async function loadFuelSnapshot(db, run, phase, siteId) {
   const at=phase==='start'?run.startAtMs:run.endAtMs;
   const date=Number.isFinite(at) && at>0 ? istDate(at) : run.date;
-  const name=typeof run.siteName==='string' ? run.siteName.trim() : '';
+  const name=changeoverSiteName(run,siteId);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !name || name.includes('/')) return fuelSnapshot({},[],date || '',run.dgNumber);
   // Daily DG Logs use the site name; Site Config uses its uppercase key.
   const config=(await db.doc(`siteConfigs/${name.toUpperCase()}`).get()).data() || {};
@@ -48,4 +50,4 @@ async function loadFuelSnapshot(db, run, phase, siteId) {
   const rows=snapshots.flatMap(snapshot=>snapshot.docs.map(doc=>({...doc.data(),Date:doc.data().Date || doc.id})));
   return fuelSnapshot(config,rows,date,run.dgNumber);
 }
-module.exports={numeric,consumption,fuelSnapshot,loadFuelSnapshot};
+module.exports={numeric,consumption,fuelSnapshot,loadFuelSnapshot,changeoverSiteName};

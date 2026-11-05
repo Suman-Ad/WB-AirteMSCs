@@ -1,3 +1,4 @@
+import useLiveSitePower from "../hooks/useLiveSitePower";
 import AllSitesLiveMeters from "../components/AllSitesLiveMeters";
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
@@ -53,7 +54,8 @@ const AllSitesDGLogs = ({ userData }) => {
     // You need to provide correct siteConfig for each site (dgCount, ebCount, solarCount)
     const calculatedLogs = logs.map(log => calculateFields(log, siteConfigs[log.site.toUpperCase()] || {}));
     const [popupSite, setPopupSite] = useState(null);
-    const [sitePowerStatus, setSitePowerStatus] = useState({});
+    const [manualPowerStatus, setSitePowerStatus] = useState({});
+    const sitePowerStatus = useLiveSitePower(JSON.parse(sitePathsKey), manualPowerStatus);
     const [dgSecondsMap, setDgSecondsMap] = useState({});
     const [loadingPower, setLoadingPower] = useState(true);
     const [showOnlyDG, setShowOnlyDG] = useState(false);
@@ -159,7 +161,7 @@ const AllSitesDGLogs = ({ userData }) => {
         const interval = setInterval(() => {
             const updated = {};
 
-            Object.entries(sitePowerStatus).forEach(([site, data]) => {
+            Object.entries(manualPowerStatus).forEach(([site, data]) => {
                 if (data?.powerSource === "DG" && data?.dgStartTime) {
                     const start = data.dgStartTime.toDate();
                     const now = new Date();
@@ -175,7 +177,7 @@ const AllSitesDGLogs = ({ userData }) => {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [sitePowerStatus]);
+    }, [manualPowerStatus]);
 
     const formatDuration = (sec) => {
         const h = Math.floor(sec / 3600);
@@ -832,7 +834,8 @@ const AllSitesDGLogs = ({ userData }) => {
                 const thisConfig = siteConfigs[siteKey];
                 const powerInfo = sitePowerStatus[site];
                 const powerSource = powerInfo?.powerSource || "N/A";
-                const dgNumber = powerInfo?.selectedDG;
+                const dgNumber = powerInfo?.selectedDG || powerInfo?.dgNumber;
+                const liveDgSeconds = powerInfo?.authority === "server" ? powerInfo.seconds : dgSecondsMap[site] || 0;
 
                 if (!thisConfig) return <div key={siteKey}>⏳ Loading config for {siteKey}...</div>;
 
@@ -978,7 +981,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                             : "var(--app-text-muted)",
                                             }}
                                         >
-                                            Site Live On:- <strong data-theme-color="preserve">{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
+                                            Site {powerInfo?.stale ? "Status" : "Live On"}:- <strong data-theme-color="preserve">{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source{powerInfo?.stale && <small> · {powerInfo.status}</small>}
                                         </span>
                                         <span style={{ marginLeft: "12px", fontSize: "12px", color: "var(--app-text-muted)" }}>
                                             ({monthKey})
@@ -993,7 +996,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                 fontWeight: "600",
                                                 marginBottom: "6px"
                                             }}>
-                                                ⛽ DG Running: {formatDuration(dgSecondsMap[site] || 0)}
+                                                ⛽ DG Running: {formatDuration(liveDgSeconds)}
 
                                                 {thisConfig?.designCph?.[dgNumber] && (
                                                     <div>
@@ -1006,7 +1009,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                             padding: "2px 5px"
                                                         }}>
                                                             {(
-                                                                ((dgSecondsMap[site] || 0) / 3600) *
+                                                                ((liveDgSeconds) / 3600) *
                                                                 thisConfig.designCph[dgNumber]
                                                             ).toFixed(2)} Ltrs
                                                         </strong>
@@ -1027,7 +1030,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                 fontWeight: "600",
                                                 marginBottom: "6px"
                                             }}>
-                                                ⛽ DG Running: {formatDuration(dgSecondsMap[site] || 0)}
+                                                ⛽ DG Running: {formatDuration(liveDgSeconds)}
 
                                                 {thisConfig?.designCph?.[dgNumber] && (
                                                     <div>
@@ -1040,7 +1043,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                             padding: "2px 5px"
                                                         }}>
                                                             {(
-                                                                ((dgSecondsMap[site] || 0) / 3600) *
+                                                                ((liveDgSeconds) / 3600) *
                                                                 thisConfig.designCph[dgNumber]
                                                             ).toFixed(2)} Ltrs
                                                         </strong>
@@ -1072,7 +1075,7 @@ const AllSitesDGLogs = ({ userData }) => {
                                                         : "var(--app-text-muted)",
                                         }}
                                     >
-                                        Site Live On:- <strong data-theme-color="preserve">{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source
+                                        Site {powerInfo?.stale ? "Status" : "Live On"}:- <strong data-theme-color="preserve">{powerSource === "DG" ? `${powerSource} (${dgNumber})` : powerSource || "N/A"}</strong> Source{powerInfo?.stale && <small> · {powerInfo.status}</small>}
                                     </span>
                                     {isLargeScreen ? (
                                         <div style={{ fontSize: "13px", display: "flex" }}>

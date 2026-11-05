@@ -1,18 +1,14 @@
-import React from "react";
+import React from 'react';
 
-const CapacityAnalysisTab = ( { formData } ) => {
-  return (
-    <div className="chart-container" style={{ marginTop: "20px", padding: "10px", border: "2px solid #2083a1ff" }}>
-          <h2 style={{ borderBottom: "2px solid #2083a1ff", padding: "5px" }}><strong>Capacity Gap Analysis</strong></h2>
-          <p><strong>Total Load on Both Sources:</strong> {formData.totalLoadBoth} A</p>
-          <p><strong>Both Source Cable Load Capacity:</strong> {formData.bothCableCapacity} </p>
-          <p><strong>Both Source % Load Single O/P Cable:</strong> {formData.bothPctLoadCable}%</p>
-          <p><strong>Both Source% Load Single O/P MCB:</strong> {formData.bothPctLoadMcb}%</p>
-          <p><strong>Is Both Source MCB Rating Same?:</strong> {formData.isBothMcbSame}</p>
-          <p><strong>Source Type:</strong> {formData.sourceType}</p>
-          <p><strong>% Rack Occupied:</strong> {formData.pctRackOccupied}</p>
-        </div>
-    );
-};
-
-export default CapacityAnalysisTab;
+export default function CapacityAnalysisTab({ formData }) {
+  const metrics = [
+    ['Total running load', formData.totalLoadBoth, 'A'],
+    ['Cable load capacity', formData.bothCableCapacity, ''],
+    ['Load on output cable', formData.bothPctLoadCable, '%'],
+    ['Load on output MCB', formData.bothPctLoadMcb, '%'],
+    ['Matching source MCB ratings', formData.isBothMcbSame, ''],
+    ['Source type', formData.sourceType, ''],
+    ['Rack occupied', formData.pctRackOccupied, '%'],
+  ];
+  return <><p className="rack-form-hint">Values are calculated from the equipment and power source details.</p><dl className="rack-capacity-grid">{metrics.map(([title, value, unit]) => <div key={title}><dt>{title}</dt><dd>{value === '' || value === undefined || value === null ? '—' : `${value}${unit ? ` ${unit}` : ''}`}</dd></div>)}</dl></>;
+}

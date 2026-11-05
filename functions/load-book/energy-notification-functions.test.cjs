@@ -57,3 +57,19 @@ test('removed meters with daily registers are still reported',async()=>{
  app.records.set('energyMonitor/A/dailyReadings/2026-10-31__point%3A1',{date:'2026-10-31',meterKey:'point%3A1',meterName:'Removed meter',meterId:'old',openingKwh:1,closingKwh:2});
  await app.runDaily();assert.equal([...app.records.keys()].filter(p=>p.startsWith('notifications/')).length,1);
 });
+
+
+test('daily alert retains current meter health when merging historical registers',async()=>{
+ for(const [patch,expected] of [[{},'live'],[{communicationState:'RETRYING'},'retry'],[{status:'ERROR'},'offline']]){
+  const app=setup();Object.assign(app.records.get('energyMonitor/A/meters/m'),patch);
+  app.records.set('energyMonitor/A/dailyReadings/2026-10-31__name%3Amain',{date:'2026-10-31',meterKey:'name%3Amain',meterName:'Main',meterId:'m',openingKwh:100,closingKwh:125});
+  await app.runDaily();const notice=[...app.records.entries()].find(([p])=>p.startsWith('notifications/'))[1];
+  assert.equal(notice.meterState,expected);assert.equal(notice.incompleteCoverage,true);
+  assert.match(notice.message,/Meter status now:/);assert.match(notice.message,/Daily coverage:.*Incomplete/);
+ }
+});
+test('deleted meter is offline in the daily report even if yesterday has readings',async()=>{
+ const app=setup();app.records.delete('energyMonitor/A/meters/m');
+ app.records.set('energyMonitor/A/dailyReadings/2026-10-31__point%3A1',{date:'2026-10-31',meterKey:'point%3A1',meterName:'Removed',meterId:'m',openingKwh:1,closingKwh:2});
+ await app.runDaily();assert.equal([...app.records.entries()].find(([p])=>p.startsWith('notifications/'))[1].meterState,'offline');
+});

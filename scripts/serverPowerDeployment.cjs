@@ -70,7 +70,7 @@ async function main() {
     const afterBrowser = await getDoc(`energyMonitor/${site}/config/powerSwitch`);
     if (afterBrowser.updateTime !== browserDoc.updateTime) throw new Error('Browser configuration changed during operation');
     console.log(JSON.stringify({project, site, mode, functionState: deployed.state, browserUnchanged: true,
-      independentConfig: configDoc ? fields(configDoc) : null,
+      browserConfig: browser, independentConfig: configDoc ? fields(configDoc) : null,
       runtime: runtime ? fields(runtime) : null, meters: meterSummaries}, null, 2));
     return;
   }

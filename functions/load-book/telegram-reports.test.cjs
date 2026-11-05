@@ -392,3 +392,20 @@ test('DHR uses IST yesterday across year boundary and protects named-site access
   app.records.get('users/u').isActive=false;
   assert.match((await app.report('dhr'))[0],/inactive/);
 });
+
+
+test('all-site summaries exactly reuse each named monthly summary without legacy sections or cross-site concatenation',async()=>{
+ const app=harness();app.records.get('users/u').role='Admin';
+ const all=await reportMessages(app.db,'42','summaryAll',now);
+ const names=Object.keys(require('./telegram-sites.cjs'));
+ assert.equal(all.length,names.length);
+ for(const name of names){
+  const expected=await reportMessages(app.db,'42','summary',now,name);
+  assert.ok(all.includes(expected[0]),name);
+ }
+ assert.doesNotMatch(all.join('\n'),/1\. Today:|2\. Monthly summary:|Current EB consumption:|Live source:/);
+ assert.ok(app.queries.every(path=>path.startsWith('dailyDGLogs/')));
+ const cards=await reportMessages(app.db,'42','summaryAll',now,null,{summaryCards:true});
+ assert.equal(cards.length,names.length);
+ for(const card of cards){assert.equal(card.kind,'summary');assert.ok(all.includes(card.message));assert.ok(card.message.startsWith(card.siteName+'\n'));}
+});

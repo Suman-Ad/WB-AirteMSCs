@@ -1,4 +1,5 @@
 import React from "react";
+import "./RackDashboard.css";
 
 const RackTable = ({
     data,
@@ -10,100 +11,100 @@ const RackTable = ({
 }) => {
 
     return (
-        <div className="table-container" style={{ maxHeight: "600px" }}>
-            <table border="1" cellPadding="6" style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div className="rack-table-scroll" role="region" aria-label="Rack register, scroll to view all columns" tabIndex={0}>
+            <table className="rack-data-table rack-register-table" aria-label="AC/DC rack register">
 
                 {/* Paste THEAD */}
 
-                <thead style={{ background: "#e8e8e8" }}>
+                <thead>
                     <tr>
-                        <th style={getHeaderStyle(`gen`)}>Sl. No</th>
-                        <th style={getHeaderStyle(`gen`)}>Region</th>
-                        <th style={getHeaderStyle(`gen`)}>Circle</th>
-                        <th style={getHeaderStyle(`gen`)}>Site Name</th>
-                        <th style={getHeaderStyle(`gen`)}>Equipment Location(Switch Room)</th>
-                        <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 5 }}>Rack No</th>
-                        <th style={{ ...getHeaderStyle(`gen`), position: "sticky", left: 0, zIndex: 4 }}>Rack Name</th>
-                        <th style={getHeaderStyle(`gen`)}>RFAI No.</th>
-                        <th style={getHeaderStyle(`gen`)}>Rack On Date.</th>
-                        <th style={getHeaderStyle(`gen`)}>Power Type</th>
-                        <th style={getHeaderStyle(`gen`)}>Rack Type</th>
-                        <th style={getHeaderStyle(`gen`)}>Rack Status</th>
-                        <th style={getHeaderStyle(`gen`)}>Rack Switched Off Date</th>
-                        <th style={getHeaderStyle(`gen`)}>Rack Size (HxWxD in mm)</th>
-                        <th style={getHeaderStyle(`gen`)}>Rack Temperature (T-M-B)</th>
-                        <th style={getHeaderStyle(`gen`)}>Rack Description</th>
-                        <th style={getHeaderStyle(`gen`)}>Rack Domain Type</th>
-                        <th style={getHeaderStyle(`gen`)}>Rack Owner Details</th>
-                        <th style={getHeaderStyle(`DR Test`)}>DR Test Status</th>
-                        <th style={getHeaderStyle(`DR Test`)}>DR Test Date</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Rating (Amps/kVA)</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Name</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Source DB Number</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) DB Voltage (V)</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Incomer rating of DB (Amps):</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Incomer DB Cable Size (Sq mm)</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Cable Length (Mtr)</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Cable Runs (Nos)</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Equipment Rack No</th>
-                        <th style={getHeaderStyle(`(A)`)} >(A) Rack Name/Equipment Name</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Rack/Node Incoming Power Cable Size (Sq mm)</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Length (Mtr)</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Run (Nos)</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Cable Tagging</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Number</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Rack End Voltage (V)</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) DB MCB Rating (Amps)</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Temp On Mcb/Fuse (°C)</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) MCB Label</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Source Running Load (Amps):</th>
-                        <th style={getHeaderStyle(`Cable Load Capacity`)}>(A) Cable Load Capacity</th>
-                        <th style={getHeaderStyle(`%`)}>(A) % Load Cable</th>
-                        <th style={getHeaderStyle(`%`)}>(A) % PCT Load MCB (Amps)</th>
-                        <th style={getHeaderStyle(`Rack End`)}>(A) Rack End No of DB / Power Strip (nos.)</th>
-                        <th style={getHeaderStyle(`Rack End`)}>(A) Rack End DCDB / Power Strip Name</th>
-                        <th style={getHeaderStyle(`Rack End`)}>(A) Rack End DB Running Load (Amps)</th>
-                        <th style={getHeaderStyle(`Rack End`)}>(A) Rack End DB MCB Rating (Amps)</th>
-                        <th style={getHeaderStyle(`%`)}>(A) Rack End % Load MCB</th>
-                        <th style={getHeaderStyle(`(A)`)}>(A) Remarks</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) SMPS/UPS Rating (Amps/kVA)</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) SMPS/UPS Name</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) DB Number</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) DB Voltage (V)</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Rating (Amps):</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Incomer DB Cable Size (Sq mm)</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Cable Length (Mtr)</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Cable Runs (Nos)</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Equipment Rack No</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Rack Name A</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Rack/Node Incoming Power Cable Size (Sq mm)</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Length (Mtr)</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Run (Nos)</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Cable Tagging</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Number</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Rack End Voltage (V)</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) DB MCB Rating (Amps)</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Temp On Mcb/Fuse (°C)</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) MCB Label</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Running Load (Amps):</th>
-                        <th style={getHeaderStyle(`Cable Load Capacity`)}>(B) Cable Load Capacity</th>
-                        <th style={getHeaderStyle(`%`)}>(B) % Load Cable</th>
-                        <th style={getHeaderStyle(`%`)}>(B) % PCT Load MCB (Amps)</th>
-                        <th style={getHeaderStyle(`Rack End`)}>(B) Rack End No of DB / Power Strip (nos.)</th>
-                        <th style={getHeaderStyle(`Rack End`)}>(B) Rack End DCDB / Power Strip Name</th>
-                        <th style={getHeaderStyle(`Rack End`)}>(B) Rack End DB Running Load (Amps)</th>
-                        <th style={getHeaderStyle(`Rack End`)}>(B) Rack End DB MCB Rating (Amps)</th>
-                        <th style={getHeaderStyle(`%`)}>(B) Rack End % Load MCB</th>
-                        <th style={getHeaderStyle(`(B)`)}>(B) Remarks</th>
-                        <th style={getHeaderStyle(`Total`)}>Total Load Both Sources: A & B</th>
-                        <th style={getHeaderStyle(`Total`)}>Both Cable Capacity</th>
-                        <th style={getHeaderStyle(`Total`)}>% Load on Cable</th>
-                        <th style={getHeaderStyle(`Total`)}>% Load on MCB</th>
-                        <th style={getHeaderStyle(`Total`)}>Both MCB Same</th>
-                        <th style={getHeaderStyle(`Total`)}>Source Type</th>
-                        <th style={getHeaderStyle(`Total`)}>Uploaded By</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Sl. No</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Region</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Circle</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Site Name</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Equipment Location(Switch Room)</th>
+                        <th scope="col" className="rack-number-sticky" style={getHeaderStyle(`gen`)}>Rack No</th>
+                        <th scope="col" className="rack-name-sticky" style={getHeaderStyle(`gen`)}>Rack Name</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>RFAI No.</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Rack On Date.</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Power Type</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Rack Type</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Rack Status</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Rack Switched Off Date</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Rack Size (HxWxD in mm)</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Rack Temperature (T-M-B)</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Rack Description</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Rack Domain Type</th>
+                        <th scope="col" style={getHeaderStyle(`gen`)}>Rack Owner Details</th>
+                        <th scope="col" style={getHeaderStyle(`DR Test`)}>DR Test Status</th>
+                        <th scope="col" style={getHeaderStyle(`DR Test`)}>DR Test Date</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Rating (Amps/kVA)</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) SMPS/UPS Name</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Source DB Number</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) DB Voltage (V)</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Incomer rating of DB (Amps):</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Incomer DB Cable Size (Sq mm)</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Cable Length (Mtr)</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Cable Runs (Nos)</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Equipment Rack No</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)} >(A) Rack Name/Equipment Name</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Rack/Node Incoming Power Cable Size (Sq mm)</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Length (Mtr)</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) DB - RackDB Cable Run (Nos)</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Cable Tagging</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) DB MCB Number</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Rack End Voltage (V)</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) DB MCB Rating (Amps)</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Temp On Mcb/Fuse (°C)</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) MCB Label</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Source Running Load (Amps):</th>
+                        <th scope="col" style={getHeaderStyle(`Cable Load Capacity`)}>(A) Cable Load Capacity</th>
+                        <th scope="col" style={getHeaderStyle(`%`)}>(A) % Load Cable</th>
+                        <th scope="col" style={getHeaderStyle(`%`)}>(A) % PCT Load MCB (Amps)</th>
+                        <th scope="col" style={getHeaderStyle(`Rack End`)}>(A) Rack End No of DB / Power Strip (nos.)</th>
+                        <th scope="col" style={getHeaderStyle(`Rack End`)}>(A) Rack End DCDB / Power Strip Name</th>
+                        <th scope="col" style={getHeaderStyle(`Rack End`)}>(A) Rack End DB Running Load (Amps)</th>
+                        <th scope="col" style={getHeaderStyle(`Rack End`)}>(A) Rack End DB MCB Rating (Amps)</th>
+                        <th scope="col" style={getHeaderStyle(`%`)}>(A) Rack End % Load MCB</th>
+                        <th scope="col" style={getHeaderStyle(`(A)`)}>(A) Remarks</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) SMPS/UPS Rating (Amps/kVA)</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) SMPS/UPS Name</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) DB Number</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) DB Voltage (V)</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Incomer DB Rating (Amps):</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Incomer DB Cable Size (Sq mm)</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Cable Length (Mtr)</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Cable Runs (Nos)</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Equipment Rack No</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Rack Name</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Rack/Node Incoming Power Cable Size (Sq mm)</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Length (Mtr)</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) DB - RackDB Cable Run (Nos)</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Cable Tagging</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) DB MCB Number</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Rack End Voltage (V)</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) DB MCB Rating (Amps)</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Temp On Mcb/Fuse (°C)</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) MCB Label</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Running Load (Amps):</th>
+                        <th scope="col" style={getHeaderStyle(`Cable Load Capacity`)}>(B) Cable Load Capacity</th>
+                        <th scope="col" style={getHeaderStyle(`%`)}>(B) % Load Cable</th>
+                        <th scope="col" style={getHeaderStyle(`%`)}>(B) % PCT Load MCB (Amps)</th>
+                        <th scope="col" style={getHeaderStyle(`Rack End`)}>(B) Rack End No of DB / Power Strip (nos.)</th>
+                        <th scope="col" style={getHeaderStyle(`Rack End`)}>(B) Rack End DCDB / Power Strip Name</th>
+                        <th scope="col" style={getHeaderStyle(`Rack End`)}>(B) Rack End DB Running Load (Amps)</th>
+                        <th scope="col" style={getHeaderStyle(`Rack End`)}>(B) Rack End DB MCB Rating (Amps)</th>
+                        <th scope="col" style={getHeaderStyle(`%`)}>(B) Rack End % Load MCB</th>
+                        <th scope="col" style={getHeaderStyle(`(B)`)}>(B) Remarks</th>
+                        <th scope="col" style={getHeaderStyle(`Total`)}>Total Load Both Sources: A & B</th>
+                        <th scope="col" style={getHeaderStyle(`Total`)}>Both Cable Capacity</th>
+                        <th scope="col" style={getHeaderStyle(`Total`)}>% Load on Cable</th>
+                        <th scope="col" style={getHeaderStyle(`Total`)}>% Load on MCB</th>
+                        <th scope="col" style={getHeaderStyle(`Total`)}>Both MCB Same</th>
+                        <th scope="col" style={getHeaderStyle(`Total`)}>Source Type</th>
+                        <th scope="col" style={getHeaderStyle(`Total`)}>Uploaded By</th>
                         <th
-                            style={{ ...getHeaderStyle(`missing`), position: "sticky", right: 0, zIndex: 5, whiteSpace: "nowrap", width: "200px" }}
+                            scope="col" className="rack-audit-cell" style={getHeaderStyle(`missing`)}
                         >
                             Missing Fields
                         </th>
@@ -115,7 +116,7 @@ const RackTable = ({
                 <tbody>
                     {data.length === 0 && (
                         <tr>
-                            <td colSpan="9" style={{ textAlign: "center" }}>
+                            <td colSpan={86} style={{ textAlign: "center" }}>
                                 No data found
                             </td>
                         </tr>
@@ -141,8 +142,8 @@ const RackTable = ({
                             <td>{item.circle}</td>
                             <td>{item.siteName}</td>
                             <td>{item.equipmentLocation}</td>
-                            <td className="sticky-col" style={{ position: "sticky", left: 0, zIndex: 3 }}>{item.equipmentRackNo}</td>
-                            <td className="sticky-col">{item.rackName}</td>
+                            <td className="rack-number-sticky"><button type="button" className="rack-table-link" aria-label={`View rack ${item.equipmentRackNo || item.rackName || index + 1}`} onClick={(event) => { event.stopPropagation(); onPreview(item); }}>{item.equipmentRackNo || "View rack"}</button></td>
+                            <td className="rack-name-sticky">{item.rackName}</td>
                             <td>{item.rfaiNo ? item.rfaiNo : "---"}</td>
                             <td>{item.rackPowerOnDate ? item.rackPowerOnDate : "---"}</td>
                             <td>{item.powerType}</td>
@@ -150,7 +151,7 @@ const RackTable = ({
                             <td>{item.rackStatus}</td>
                             <td>{item.switchedOffDate}</td>
                             <td>{item.rackSize}</td>
-                            <td style={{ display: "flex", flex: "1" }}>
+                            <td className="rack-temperature-cell">
                                 <p>FT:{item.frontTopTemp}°C FM:{item.frontMiddleTemp}°C FB:{item.frontBottomTemp}°C</p>
                                 <p>BT:{item.backTopTemp}°C BM:{item.backMiddleTemp}°C BB:{item.backBottomTemp}°C</p>
                             </td>
@@ -230,16 +231,13 @@ const RackTable = ({
                             <td
                                 style={{ fontSize: "11px" }}
                             >
-                                {item.updatedBy.name}<br />
-                                {item.updatedBy.empId}<br />
+                                {item.updatedBy?.name || "—"}<br />
+                                {item.updatedBy?.empId || "—"}<br />
                                 {item.updatedAt}
                             </td>
                             <td
-                                className="sticky-col"
+                                className="rack-audit-cell"
                                 style={{
-                                    position: "sticky",
-                                    right: 0,
-                                    zIndex: 3,
                                     fontSize: "11px",
                                     color:
                                         getMissingFields(item).length > 0 ? "#ef4444" : "#10b981",

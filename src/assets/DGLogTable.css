@@ -1,0 +1,155 @@
+.daily-log-container.dg-log-page {
+  --dg-date-width: 132px;
+  --dg-number-width: 88px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  color: var(--app-text);
+}
+.dg-log-page h2 { font-size: clamp(17px, 2vw, 22px); line-height: 1.4; }
+.dg-log-page .dg-log-panel {
+  margin: 24px 0;
+  padding: 18px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+}
+.dg-log-page .dg-log-panel h2 { margin: 0 0 16px; }
+.dg-log-page :is(.dg-log-toolbar, .dg-upload-row, .dg-log-filters) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 16px 0;
+}
+.dg-log-page :is(.dg-log-toolbar > div, .dg-log-filters label) { display: grid; gap: 6px; min-width: 145px; }
+.dg-log-page :is(input[type="date"], .dg-log-filters select) {
+  box-sizing: border-box;
+  min-height: 42px;
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+}
+.dg-log-page input[type="file"] { max-width: 100%; min-width: 0; }
+.dg-log-page .dg-table-scroll {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 100%;
+  max-height: 65vh;
+  overflow: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  scrollbar-gutter: stable;
+}
+.dg-log-page :is(.dg-table-scroll, button, input, select):focus-visible { outline: 3px solid #3b82f6; outline-offset: 3px; }
+.dg-log-page .dg-run-table {
+  width: max(100%, 2580px);
+  margin: 0;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  background: var(--app-surface);
+  color: var(--app-text);
+}
+.dg-log-page .dg-run-table caption {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 12px;
+  color: var(--app-text-muted);
+  background: var(--app-surface);
+}
+.dg-log-page .dg-run-table :is(th, td) {
+  box-sizing: border-box;
+  padding: 12px;
+  border: 0;
+  border-right: 1px solid var(--app-border);
+  border-bottom: 1px solid var(--app-border);
+  vertical-align: middle;
+  text-align: right;
+  background: var(--app-surface);
+  overflow-wrap: anywhere;
+}
+.dg-log-page .dg-run-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: 64px;
+  white-space: normal;
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+  box-shadow: 0 1px 0 var(--app-border);
+}
+.dg-log-page .dg-run-table tbody tr:nth-child(even) td { background: var(--app-surface-muted); }
+.dg-log-page .dg-run-table tbody tr:hover td { background: var(--dg-hover, #dbeafe); }
+:root[data-theme="dark"] .dg-log-page { --dg-hover: #253750; }
+.dg-log-page .dg-run-table :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: var(--dg-number-width);
+  text-align: left;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 2px 0 0 var(--app-border);
+}
+.dg-log-page .dg-monthly-table :is(th, td):first-child { width: var(--dg-date-width); }
+.dg-log-page .dg-monthly-table :is(th, td):nth-child(2) {
+  position: sticky;
+  left: var(--dg-date-width);
+  z-index: 2;
+  width: var(--dg-number-width);
+  text-align: left;
+  white-space: nowrap;
+  box-shadow: 2px 0 0 var(--app-border);
+}
+.dg-log-page .dg-run-table thead th:first-child,
+.dg-log-page .dg-monthly-table thead th:nth-child(2) { z-index: 4; }
+.dg-log-page .dg-run-table :is(th, td):nth-last-child(-n+2) { width: 152px; text-align: left; }
+.dg-log-page .dg-daily-table :is(th, td):nth-child(19) { width: 164px; text-align: left; }
+.dg-log-page .dg-run-table small { display: block; margin-top: 4px; }
+.dg-log-page .dg-muted { color: var(--app-text-muted); }
+.dg-log-page .dg-row-actions { display: flex; align-items: center; gap: 8px; }
+.dg-log-page .dg-row-actions button {
+  min-height: 36px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+.dg-log-page .dg-row-actions .dg-delete-button { color: #b91c1c; border-color: #fca5a5; }
+:root[data-theme="dark"] .dg-log-page .dg-delete-button { color: #fca5a5; border-color: #7f1d1d; }
+.dg-log-page .dg-run-type { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; text-align: center; }
+.dg-log-page .is-on-load { background: #dcfce7; color: #166534; }
+.dg-log-page .is-no-load { background: #fef3c7; color: #92400e; }
+.dg-log-page .is-filling { background: #dbeafe; color: #1e40af; }
+.dg-log-page .dg-summary-scroll { overflow-x: auto; }
+.dg-log-page .dg-count-table { width: 100%; min-width: 360px; border-collapse: collapse; }
+.dg-log-page .dg-count-table :is(th, td) { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--app-border); background: var(--app-surface); }
+.dg-log-page .dg-count-table th { background: var(--app-surface-muted); }
+.dg-log-page .dg-monthly-section { margin-top: 32px; }
+@media (max-width: 640px) {
+  .daily-log-container.dg-log-page { padding: 12px; --dg-date-width: 116px; --dg-number-width: 76px; }
+  .dg-log-page .dg-log-panel { padding: 12px; }
+  .dg-log-page .dg-log-toolbar > div,
+  .dg-log-page .dg-log-filters label { flex: 1 1 140px; min-width: 0; }
+  .dg-log-page .dg-log-toolbar > button { width: 100%; }
+  .dg-log-page .dg-run-table :is(th, td) { padding: 10px; }
+}

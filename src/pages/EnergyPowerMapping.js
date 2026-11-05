@@ -48,7 +48,7 @@ function PowerMappingEditor({siteId, meters, userData}) {
     }
     setSaving(true);
     try {
-      await setDoc(doc(db,'energyMonitor',siteId,'config','powerSwitch'),{...normalizePowerMapping(config),updatedBy:userData.uid,updatedAt:serverTimestamp()});
+      await setDoc(doc(db,'energyMonitor',siteId,'config','powerSwitch'),{...normalizePowerMapping(resolved),updatedBy:userData.uid,updatedAt:serverTimestamp()});
       setDraft(null);setMessage('Automatic switch settings saved for this site.');
     } catch(error) {setMessage(`Settings could not be saved: ${error.message || error.code}`);}
     finally {setSaving(false);}
@@ -65,7 +65,7 @@ function PowerMappingEditor({siteId, meters, userData}) {
       </select><small>Using: {meters.find(m=>m.id===resolved[field])?.name || resolved[field] || 'Map a meter'}</small></label>)}
     </div>
     <button type="button" disabled={!shared.ready || saving} onClick={save}>{saving ? 'Saving…' : 'Save site switch settings'}</button>
-    <p className="energy-muted">Settings are shared with this site's users after saving. Admins can edit every site's settings; Super Users can edit only their assigned site's settings. An authorized site session must remain open for the existing automatic header switch to run.</p>
+    <p className="energy-muted">Settings are shared with this site's users after saving. Admins can edit every site's settings; Super Users can edit only their assigned site's settings. Sites with the server detector activated run automatically from collector uploads even when no user is online. These settings control both the server detector and the header switch.</p>
     {shared.error && <p role="alert">{shared.error}</p>}{message && <p role="status">{message}</p>}
   </details></section>;
 }

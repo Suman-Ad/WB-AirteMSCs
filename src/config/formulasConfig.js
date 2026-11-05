@@ -2,6 +2,7 @@
 export const formulasConfig = {
   
   Diesel_Back_Up: {
+    Remark: '=IF(Fuel_back_up_Hrs>12, "Ok", "Not Ok, Fuel topup required")',
     Tota_Stock_Capacity: "=DG_fuel_tank_capacity + External_Stock_capacity_Barrel_UG_Buffer_Ltr",
     Total_Stock_available: "=Present_Diesel_Stock_in_DG_tank_Ltr + External_Stock_availiabl_at_MSC_Ltr",
     Fuel_back_up_Hrs: "=(Total_Stock_available / DG_CPH)",
@@ -10,6 +11,9 @@ export const formulasConfig = {
     Including_Day_tank: "=IF(Tota_Stock_Capacity>2500, \">2500\", \"<2500\")",
     MSC_Status_Grater_Less_2500_Lts: "=IF(Tota_Stock_Capacity>2500, \">2500\", \"<2500\")",
     Status: "=IF(Fuel_back_up_Hrs>12, \"Ok\", \"Not Ok\")",
+  },
+  DG_EB_Backup: {
+    Remark: '=IF(AND(Total_DG_Run_hrs>0,Total_Power_Failure_hrs=0),"No Load DG Run",IF(Total_DG_Run_hrs=Total_Power_Failure_hrs,"EB Fail DG Run",IF(AND(Total_DG_Run_hrs>Total_Power_Failure_hrs,Total_Power_Failure_hrs>0),"EB fail  and No load DG run","")))',
   },
   Infra_Update: {
     Infra_Uptime_Percentage: "=((238*60*60)-(((1*0*60)+0)*0))/(238*60*60)*100"

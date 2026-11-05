@@ -21,7 +21,7 @@ import useRackData from "../hooks/useRackData";
 import { exportRackExcel } from "../utils/excelExport";
 import { buildRackAudit, getMissingFields } from "../utils/rackAudit";
 import RackTable from "../components/rackDashboard/RackTable";
-import ActivityTab from "../components/RackTracker/tab/ActivityTab";
+import RackDetailsPreview from "../components/rackDashboard/RackDetailsPreview";
 
 
 const AcDcRackDashboard = ({ userData }) => {
@@ -211,7 +211,7 @@ const AcDcRackDashboard = ({ userData }) => {
         return Object.values(siteSummaryMap);
     }, [filteredData]);
 
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
 
     const paginatedData = useMemo(() => {
         const startIndex = (currentPage - 1) * rowsPerPage;
@@ -231,7 +231,7 @@ const AcDcRackDashboard = ({ userData }) => {
         if (header.includes("Cable Load Capacity") || header.startsWith("%")) return { backgroundColor: "#FFD700", color: "#000" };
         if (header.includes("Rack End")) return { backgroundColor: "#FFC000", color: "#000" };
         if (header.includes("Total")) return { backgroundColor: "#C4D79B", color: "#000" };
-        if (header.includes("gen")) return { backgroundColor: "#336e3d", color: "#000" };
+        if (header.includes("gen")) return { backgroundColor: "#164e63", color: "#fff" };
         if (header.includes("DR Test")) return { backgroundColor: "#faef52", color: "#000" };
         if (header.includes("missing")) return { backgroundColor: "#dc2626", color: "#fff" };
         // if (header.startsWith("%") || header === "PUE" || header === "Site Running kW") return { backgroundColor: "#F57C00", color: "#fff" };
@@ -276,25 +276,13 @@ const AcDcRackDashboard = ({ userData }) => {
         }, 100);
     };
 
-    const thStyle = {
-        padding: "10px",
-        borderBottom: "2px solid #334155",
-        fontWeight: "bold",
-        textAlign: "center",
-    };
-
-    const tdStyle = {
-        padding: "8px",
-        textAlign: "center",
-    };
-
     useEffect(() => {
         setCurrentPage(1);
     }, [filteredData.length]);
 
 
     return (
-        <div className="daily-log-container">
+        <div className="daily-log-container acdc-rack-dashboard">
             {loading && (
                 <div
                     style={{
@@ -394,28 +382,18 @@ const AcDcRackDashboard = ({ userData }) => {
 
 
             {/* 🔹 Site-wise Summary Table */}
-            <div style={{ marginTop: "20px", overflowX: "auto" }}>
-                <table
-                    style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
-                        fontSize: "13px",
-                        background: "#020617",
-                        color: "#e5e7eb",
-                        borderRadius: "8px",
-                        overflow: "hidden",
-                    }}
-                >
+            <div className="rack-table-scroll rack-summary-scroll" role="region" aria-label="Site rack summary" tabIndex={0}>
+                <table className="rack-data-table rack-summary-table">
                     <thead>
-                        <tr style={{ background: "#0f172a" }}>
-                            <th style={thStyle}>Site</th>
-                            <th style={thStyle}>Installed</th>
-                            <th style={thStyle}>Active</th>
-                            <th style={thStyle}>Passive</th>
-                            <th style={thStyle}>Core</th>
-                            <th style={thStyle}>TNG</th>
-                            <th style={thStyle}>Other</th>
-                            <th style={thStyle}>Switch Off</th>
+                        <tr>
+                            <th scope="col">Site</th>
+                            <th scope="col">Installed</th>
+                            <th scope="col">Active</th>
+                            <th scope="col">Passive</th>
+                            <th scope="col">Core</th>
+                            <th scope="col">TNG</th>
+                            <th scope="col">Other</th>
+                            <th scope="col">Switch Off</th>
                         </tr>
                     </thead>
 
@@ -424,33 +402,17 @@ const AcDcRackDashboard = ({ userData }) => {
                             <tr
                                 key={row.site}
                                 onClick={() => handleSiteRowClick(row.site)}
-                                style={{
-                                    textAlign: "center",
-                                    cursor: "pointer",
-                                    background:
-                                        filters.site === row.site ? "#1e293b" : "#020617",
-                                    borderBottom: "1px solid #1e293b",
-                                    transition: "background 0.2s",
-                                }}
-                                onMouseEnter={(e) =>
-                                    e.currentTarget.style.backgroundColor = "#0f172a"
-                                }
-                                onMouseLeave={(e) =>
-                                    e.currentTarget.style.backgroundColor =
-                                    filters.site === row.site ? "#1e293b" : "#020617"
-                                }
+                                className={filters.site === row.site ? "rack-summary-selected" : ""}
                             >
 
-                                <td style={{ ...tdStyle, textAlign: "left", fontWeight: "bold" }}>
-                                    {row.site}
-                                </td>
-                                <td style={tdStyle}>{row.totalInstalled}</td>
-                                <td style={{ ...tdStyle, color: "#60a5fa" }}>{row.totalActive}</td>
-                                <td style={{ ...tdStyle, color: "#94a3b8" }}>{row.totalPassive}</td>
-                                <td style={{ ...tdStyle, color: "#fb923c" }}>{row.totalCore}</td>
-                                <td style={{ ...tdStyle, color: "#c084fc" }}>{row.totalTNG}</td>
-                                <td style={{ ...tdStyle, color: "#9ca3af" }}>{row.totalOther}</td>
-                                <td style={{ ...tdStyle, color: "#ef4444", fontWeight: "bold" }}>
+                                <td><button type="button" className="rack-table-link" onClick={(event) => { event.stopPropagation(); handleSiteRowClick(row.site); }}>{row.site}</button></td>
+                                <td>{row.totalInstalled}</td>
+                                <td>{row.totalActive}</td>
+                                <td>{row.totalPassive}</td>
+                                <td>{row.totalCore}</td>
+                                <td>{row.totalTNG}</td>
+                                <td>{row.totalOther}</td>
+                                <td>
                                     {row.totalSwitchOff}
                                 </td>
                             </tr>
@@ -800,7 +762,7 @@ const AcDcRackDashboard = ({ userData }) => {
                 />
             </div>
             <div style={{ display: "flex", justifyContent: "center", marginTop: "10px", alignItems: "center" }}>
-                <div className="flex items-center justify-center gap-2 mt-4">
+                <div className="rack-pagination">
                     <button
                         disabled={currentPage === 1}
                         onClick={() => setCurrentPage((p) => p - 1)}
@@ -840,472 +802,17 @@ const AcDcRackDashboard = ({ userData }) => {
 
             {status && <p style={{ marginTop: "10px" }}>{status}</p>}
             {previewOpen && previewData && (
-                <div
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        background: "rgba(0,0,0,0.6)",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        zIndex: 1000,
-                        // fontSize: "10px"
+                <RackDetailsPreview
+                    rack={previewData}
+                    canEdit={userData?.site?.toLowerCase() === previewData.siteName?.toLowerCase() || userData.role === "Super Admin" || userData.role === "Admin" || isAdminAssignmentValid(userData)}
+                    onClose={() => setPreviewOpen(false)}
+                    onEdit={() => {
+                        setPreviewOpen(false);
+                        navigate("/rack-details-form", { state: { editData: previewData } });
                     }}
-                >
-
-                    <div
-                        className="child-container"
-
-                        style={{
-                            // background: "white",
-                            padding: "20px",
-                            borderRadius: "10px",
-                            width: "100%",
-                            // maxWidth: "700px",
-                            maxHeight: "99%",
-                            overflowY: "auto",
-                            boxShadow: "0 4px 20px rgb(0, 0, 0)",
-                        }}
-                    >
-                        <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "2px solid #2083a1ff", position: "sticky", top: "0", zIndex: 2000, background: "#0c334d" }}>
-                            <div style={{ left: 0, textAlign: "center", }}>
-                                <h2 style={{ cursor: "pointer", borderBottom: "2px solid #2083a1ff", borderRadius: "5px", padding: 2 }}
-                                    onClick={() => setEquipPopupOpen(true)}
-                                    onMouseMove={(e) => { e.currentTarget.style.backgroundColor = "#c72525ff" }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#3ba2b4a6" }}
-                                >
-                                    🗄️ Viwe Rack Details Preview
-                                </h2>
-                            </div>
-
-                            {/*Action Button */}
-                            <div style={{ marginTop: "15px", textAlign: "center" }}>
-                                {(userData?.site?.toLowerCase() === previewData.siteName?.toLowerCase() || userData.role === "Super Admin" || userData.role === "Admin" || isAdminAssignmentValid(userData)) && (
-                                    <div style={{ display: "inline-flex", gap: "10px" }}>
-                                        <button
-                                            onClick={() => {
-                                                setPreviewOpen(false);
-                                                navigate("/rack-details-form", { state: { editData: previewData } });
-                                            }}
-                                            style={{
-                                                background: "#10b981",
-                                                color: "white",
-                                                padding: "8px 15px",
-                                                border: "none",
-                                                borderRadius: "6px",
-                                                cursor: "pointer",
-                                            }}
-                                        >
-                                            ✏️ Edit
-                                        </button>
-
-                                        <>&nbsp;&nbsp;</>
-
-                                        <button onClick={() => handleDelete(previewData.id)}
-                                            style={{
-                                                background: "#b91010ff",
-                                                color: "white",
-                                                padding: "8px 15px",
-                                                border: "none",
-                                                borderRadius: "6px",
-                                                cursor: "pointer",
-                                            }}
-                                        >🗑️</button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div>
-                                <button
-                                    onClick={() => setPreviewOpen(false)}
-                                    style={{
-                                        background: "#ef44442d",
-                                        color: "white",
-                                        padding: "8px 15px",
-                                        border: "none",
-                                        borderRadius: "6px",
-                                        cursor: "pointer",
-                                        marginRight: "10px",
-                                        position: "sticky",
-                                        top: 0,
-                                        left: 0,
-                                        zIndex: 1,
-                                        float: "right",
-                                        width: "fit-content",
-
-                                    }}
-                                >
-                                    ❌
-                                </button>
-                            </div>
-                        </div>
-
-                        <div
-                            style={{
-                                background: "grey",
-                                padding: "20px 20px 30px",
-                                borderRadius: "10px",
-                                width: "99%",
-                                // maxWidth: "700px",
-                                maxHeight: "90%",
-                                overflowY: "auto",
-                                // position: "relative",
-                            }}
-                        >
-
-                            {/* Rack Dimensions */}
-                            {(() => {
-                                const dim = getRackDimensions(equipPopupData);
-                                return (
-                                    <div style={{ textAlign: "center", marginBottom: "15px" }}>
-                                        <div style={{ fontSize: "14px", fontWeight: "bold" }}>
-                                            📐 Rack Dimensions
-                                        </div>
-
-                                        <div style={{ marginTop: "5px", fontSize: "13px" }}>
-                                            Height: <b>{dim.H} mm</b> &nbsp; | &nbsp;
-                                            Width: <b>{dim.W} mm</b> &nbsp; | &nbsp;
-                                            Depth: <b>{dim.D} mm</b>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-
-                            <div style={{ display: "flex", overflowX: "auto" }}>
-                                <div >
-                                    {/* 3D Rack View */}
-                                    <div className="rack-3d-wrapper">
-                                        <div className="rack-3d-left"></div>
-
-                                        <div className="rack-3d-main">
-
-                                            {Array.from({ length: getTotalRackU(equipPopupData) }, (_, i) => {
-                                                const totalU = getTotalRackU(equipPopupData);
-                                                const u = totalU - i;
-
-                                                const allEq = equipPopupData.rackEquipments || [];
-
-                                                // find equipment that spans this U
-                                                const eq = allEq.find(item =>
-                                                    Number(item.startU) === u ||
-                                                    (u <= Number(item.startU) && u >= Number(item.endU))
-                                                );
-
-                                                const isStart = eq && Number(eq.startU) === u;
-                                                const isInside = eq && u < Number(eq.startU) && u >= Number(eq.endU);
-
-                                                return (
-                                                    <div key={u} className="rack-u-row" style={{ height: "18px" }}>
-                                                        <div className="u-label">{u}</div>
-
-                                                        {isStart ? (
-                                                            // Draw full-size block ONLY at startU
-                                                            <div
-                                                                className="u-equipment"
-                                                                style={{
-                                                                    height: `${eq.sizeU * 18}px`,
-                                                                    position: "relative",
-                                                                    background: "cyan",
-                                                                    border: "1px solid #8bb6ff",
-                                                                    zIndex: 9,
-                                                                    display: "flex",
-                                                                    alignItems: "center",
-                                                                    paddingLeft: "5px",
-                                                                    borderTop: "2px solid rgba(30, 79, 134, 1)",
-                                                                    borderRadius: "6px"
-                                                                }}
-                                                            >
-                                                                {isStart && (
-                                                                    <div
-                                                                        className="u-details"
-                                                                        style={{ maxHeight: `${eq.sizeU * 18}px` }}
-                                                                    >
-
-                                                                        <div className="equipment-details"
-                                                                        >
-                                                                            <b
-                                                                                style={{
-                                                                                    color: "rgba(44, 42, 156, 1)",
-                                                                                    borderRadius: "3px",
-                                                                                    borderBottom: "1px solid",
-                                                                                    borderTop: "1px solid",
-                                                                                    borderBottomColor: "ActiveBorder",
-                                                                                }}>{eq.name}</b><br />
-                                                                            {eq.remarks || "—"}
-                                                                        </div>
-
-                                                                    </div>
-                                                                )}
-
-                                                            </div>
-                                                        ) : isInside ? (
-                                                            // Middle U rows (equipment covers this, but no block here)
-                                                            <div className="u-gap"></div>
-                                                        ) : (
-                                                            // Normal empty U
-                                                            <div className="u-empty"><span>empty</span></div>
-                                                        )}
-
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    {/* Table */}
-                                    <div style={{ overflowY: "auto", maxHeight: window.innerHeight, borderRadius: "8px" }}>
-                                        <table style={{ width: "100%", marginTop: "10px" }}>
-                                            {/* ---- Preview table body with explicit ordering & grouping ---- */}
-                                            <tbody>
-                                                {/* define ordered keys in the exact sequence you want */}
-                                                {(() => {
-                                                    const formatLabel = (k) =>
-                                                        k
-                                                            .replace(/([A-Z])/g, " $1")      // split camelCase / camelCaps
-                                                            .replace(/[_\-]+/g, " ")         // replace underscores/hyphens
-                                                            .replace(/\s+/g, " ")            // normalize spaces
-                                                            .trim()
-                                                            .replace(/\b\w/g, (c) => c.toUpperCase()); // Title Case
-
-                                                    // Grouped and ordered keys (customize this list to your full fields)
-
-                                                    const generalKeys = [
-                                                        "circle",
-                                                        "siteName",
-                                                        "equipmentLocation",
-                                                        "equipmentRackNo",
-                                                        "rackName",
-                                                        "powerType",
-                                                        "sourceType",
-                                                        "rackSize",
-                                                        "rackDescription",
-                                                        "rackOwnerName",
-                                                    ];
-
-                                                    const sourceAKeys = [
-                                                        "smpsRatingA",
-                                                        "smpsNameA",
-                                                        "dbNumberA",
-                                                        "incomerRatingA",
-                                                        "cableSizeA",
-                                                        "cableRunA",
-                                                        "equipmentRackNoA",
-                                                        "rackNameA",
-                                                        "rackIncomingCableSizeA",
-                                                        "rackCableRunA",
-                                                        "dbMcbNumberA",
-                                                        "dbMcbRatingA",
-                                                        "tempOnMcbA",
-                                                        "runningLoadA",
-                                                        "cableCapacityA",
-                                                        "pctLoadCableA",
-                                                        "pctLoadMcbA",
-                                                        "rackEndNoDbA",
-                                                        "rackEndDcdbNameA",
-                                                        "rackEndRunningLoadA",
-                                                        "rackEndMcbRatingA",
-                                                        "rackEndPctLoadMcbA",
-                                                        "remarksA",
-                                                    ];
-
-                                                    const sourceBKeys = [
-                                                        "smpsRatingB",
-                                                        "smpsNameB",
-                                                        "dbNumberB",
-                                                        "incomerRatingB",
-                                                        "cableSizeB",
-                                                        "cableRunB",
-                                                        "equipmentRackNoB",
-                                                        "rackNameB",
-                                                        "rackIncomingCableSizeB",
-                                                        "rackCableRunB",
-                                                        "dbMcbNumberB",
-                                                        "dbMcbRatingB",
-                                                        "tempOnMcbB",
-                                                        "runningLoadB",
-                                                        "cableCapacityB",
-                                                        "pctLoadCableB",
-                                                        "pctLoadMcbB",
-                                                        "rackEndNoDbB",
-                                                        "rackEndDcdbNameB",
-                                                        "rackEndRunningLoadB",
-                                                        "rackEndMcbRatingB",
-                                                        "rackEndPctLoadMcbB",
-                                                        "remarksB",
-                                                    ];
-
-                                                    const analysisKeys = [
-                                                        "totalLoadBoth",
-                                                        "bothCableCapacity",
-                                                        "bothPctLoadCable",
-                                                        "bothPctLoadMcb",
-                                                        "isBothMcbSame",
-                                                    ];
-
-                                                    // Merge everything in order; you can rearrange groups or items above
-                                                    const orderedKeys = [
-                                                        ...generalKeys,
-                                                        ...sourceAKeys,
-                                                        ...sourceBKeys,
-                                                        ...analysisKeys,
-                                                    ];
-
-                                                    // Helper to safely get display value
-                                                    const display = (v) =>
-                                                        v === null || v === undefined || String(v).trim() === "" ? "-" : String(v);
-
-                                                    // Build rows: render section headers when a new group starts
-                                                    const rows = [];
-                                                    const pushSectionHeader = (title) =>
-                                                        rows.push(
-                                                            <tr key={`hdr-${title}`}>
-                                                                <td colSpan="2"
-                                                                    style={title === "Rack Equipments (U-by-U)" ? { background: 'linear-gradient(105deg, #3ba2b4a6 10%, #a3a360 100%)', cursor: "pointer", borderRadius: "8px" } : { background: "#f3f4f6", fontWeight: "700", padding: "8px 10px", borderBottom: "1px solid #ddd", borderRadius: "8px" }}
-                                                                    onClick={() => title === "Rack Equipments (U-by-U)" ? setEquipPopupOpen(true) : ""}
-                                                                    onMouseMove={(e) => title === "Rack Equipments (U-by-U)" ? e.currentTarget.style.backgroundColor = "#ec1414ff" : ""}
-                                                                    onMouseLeave={(e) => title === "Rack Equipments (U-by-U)" ? e.currentTarget.style.backgroundColor = "#3ba2b4a6" : ""}
-                                                                >
-                                                                    {title}
-                                                                </td>
-                                                            </tr>
-                                                        );
-
-                                                    // Add General header
-                                                    pushSectionHeader("General");
-
-                                                    orderedKeys.forEach((key) => {
-                                                        // insert section headers where appropriate
-                                                        if (sourceAKeys.includes(key) && !rows.some(r => r.key === "hdr-Source A")) pushSectionHeader("Source A");
-                                                        if (sourceBKeys.includes(key) && !rows.some(r => r.key === "hdr-Source B")) pushSectionHeader("Source B");
-                                                        if (analysisKeys.includes(key) && !rows.some(r => r.key === "hdr-Capacity Analysis")) pushSectionHeader("Capacity Analysis");
-
-                                                        rows.push(
-                                                            <tr key={key}>
-                                                                <td style={{ fontWeight: "bold", textTransform: "none", padding: "6px 10px", borderBottom: "1px solid #eee", width: "45%" }}>
-                                                                    {formatLabel(key)}
-                                                                </td>
-                                                                <td style={{ padding: "6px 10px", borderBottom: "1px solid #eee", width: "55%" }}>
-                                                                    {display(previewData[key])}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    });
-
-                                                    // 🔹 Show Rack Dimensions properly
-                                                    if (previewData.rackDimensions) {
-                                                        pushSectionHeader("Rack Dimensions");
-
-                                                        rows.push(
-                                                            <tr key="dim-height">
-                                                                <td style={{ fontWeight: "bold" }}>Height</td>
-                                                                <td>{previewData.rackDimensions.height} mm</td>
-                                                            </tr>
-                                                        );
-                                                        rows.push(
-                                                            <tr key="dim-width">
-                                                                <td style={{ fontWeight: "bold" }}>Width</td>
-                                                                <td>{previewData.rackDimensions.width} mm</td>
-                                                            </tr>
-                                                        );
-                                                        rows.push(
-                                                            <tr key="dim-depth">
-                                                                <td style={{ fontWeight: "bold" }}>Depth</td>
-                                                                <td>{previewData.rackDimensions.depth} mm</td>
-                                                            </tr>
-                                                        );
-                                                    }
-
-                                                    // 🔹 Show Rack Equipments properly
-                                                    if (previewData.rackEquipments && previewData.rackEquipments.length > 0) {
-                                                        pushSectionHeader("Rack Equipments (U-by-U)");
-
-                                                        previewData.rackEquipments.forEach((eq, i) => {
-                                                            rows.push(
-                                                                <tr key={`eq-${i}`}>
-                                                                    <td style={{ fontWeight: "bold", verticalAlign: "top" }}>
-                                                                        {eq.name}
-                                                                    </td>
-                                                                    <td>
-                                                                        <div><b>Start U:</b> {eq.startU}</div>
-                                                                        <div><b>End U:</b> {eq.endU}</div>
-                                                                        <div><b>Size U:</b> {eq.sizeU}</div>
-                                                                        <div><b>Remarks:</b> {eq.remarks || "—"}</div>
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        });
-                                                    }
-
-                                                    // If there are any extra keys in previewData not listed in orderedKeys, show them at the end
-                                                    const extraKeys = Object.keys(previewData || {}).filter(
-                                                        (k) => !orderedKeys.includes(k) && k !== "rackDimensions" && k !== "rackEquipments" && k !== "updatedBy" && k !== "updatedAt"
-                                                    )
-                                                    if (extraKeys.length > 0) {
-                                                        pushSectionHeader("Other Fields");
-                                                        extraKeys.forEach((k) =>
-                                                            rows.push(
-                                                                <tr key={`extra-${k}`}>
-                                                                    <td style={{ fontWeight: "bold", padding: "6px 10px", borderBottom: "1px solid #eee" }}>{formatLabel(k)}</td>
-                                                                    <td style={{ padding: "6px 10px", borderBottom: "1px solid #eee" }}>{display(previewData[k])}</td>
-                                                                </tr>
-                                                            )
-                                                        );
-                                                    }
-
-                                                    // Update By
-                                                    if (previewData?.updatedBy && typeof previewData.updatedBy === "object") {
-                                                        pushSectionHeader("Updated By");
-
-                                                        rows.push(
-                                                            <tr key="updatedBy-name">
-                                                                <td style={{ fontWeight: "bold" }}>Name</td>
-                                                                <td>Mr. {previewData.updatedBy.name || "-"}</td>
-                                                            </tr>
-                                                        );
-
-                                                        rows.push(
-                                                            <tr key="updatedBy-empId">
-                                                                <td style={{ fontWeight: "bold" }}>Emp. ID</td>
-                                                                <td>{previewData.updatedBy.empId || "-"}</td>
-                                                            </tr>
-                                                        );
-
-                                                        rows.push(
-                                                            <tr key="updatedBy-role">
-                                                                <td style={{ fontWeight: "bold" }}>Role</td>
-                                                                <td>{previewData.updatedBy.role || "-"}</td>
-                                                            </tr>
-                                                        );
-
-                                                        rows.push(
-                                                            <tr key="updatedAt">
-                                                                <td style={{ fontWeight: "bold" }}>Update At</td>
-                                                                <td>{previewData.updatedAt || "-"}</td>
-                                                            </tr>
-                                                        );
-                                                    }
-
-                                                    return rows;
-                                                })()}
-                                            </tbody>
-
-                                        </table>
-                                    </div>
-
-                                    <div style={{ marginTop: "20px", borderTop: "2px solid #2083a1ff", paddingTop: "10px" }}>
-                                        <ActivityTab formData={previewData} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-                </div>
+                    onDelete={() => handleDelete(previewData.id)}
+                    onViewLayout={() => setEquipPopupOpen(true)}
+                />
             )}
 
             {/* 🟦 SEPARATE RACK 3D POPUP VIEW */}

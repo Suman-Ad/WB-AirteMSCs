@@ -13,6 +13,7 @@ import { useRef } from "react";
 import Modal from "./Modal";
 import AsansolOperationSimulator from "./SOP/AsansolOperationSimulator";
 import LiveClockWeather from "./LiveClockWeather";
+import useServerPowerSource from "../hooks/useServerPowerSource";
 import useAutoPowerSource from "./useAutoPowerSource";
 import { commitEnergyChangeover, checkpointEnergyRun } from "../services/energyChangeoverHistory";
 
@@ -139,12 +140,16 @@ const Layout = ({ userData, children }) => {
   const [showDrawer, setShowDrawer] = useState(false);
   const [drawerShift, setDrawerShift] = useState(null);
   // Power Source Change
-  const [powerSource, setPowerSource] = useState("EB");
-  const [runningDG, setRunningDG] = useState(null);
+  const [legacyPowerSource, setPowerSource] = useState("EB");
+  const [legacyRunningDG, setRunningDG] = useState(null);
   const [updatedByName, setUpdatedByName] = useState("");
   const [updatedAt, setUpdatedAt] = useState(null);
   const [loadingPower, setLoadingPower] = useState(true);
-  const [dgSeconds, setDgSeconds] = useState(0);
+  const [legacyDgSeconds, setDgSeconds] = useState(0);
+  const serverPower = useServerPowerSource(userData?.siteId);
+  const powerSource = serverPower.controlled ? serverPower.source : legacyPowerSource;
+  const runningDG = serverPower.controlled ? serverPower.runtime?.selectedDG : legacyRunningDG;
+  const dgSeconds = serverPower.controlled ? serverPower.seconds : legacyDgSeconds;
   // Timer Count
   const formatDuration = (sec) => {
     const h = Math.floor(sec / 3600);
@@ -171,7 +176,8 @@ const Layout = ({ userData, children }) => {
   // Fetch Site Config
   const [siteConfig, setSiteConfig] = useState({});
   const siteKey = userData?.site?.toUpperCase();
-  const [selectedDG, setSelectedDG] = useState(null);
+  const [legacySelectedDG, setSelectedDG] = useState(null);
+  const selectedDG = serverPower.controlled ? serverPower.runtime?.selectedDG || legacySelectedDG : legacySelectedDG;
 
   const callUser = (mobile) => {
     if (!mobile || mobile === "N/A") return;
@@ -441,7 +447,7 @@ const Layout = ({ userData, children }) => {
   const updatePowerSource = async (options) => {
     const automatic = options?.automatic === true;
     const activeDG = automatic ? options.source === "EB" ? runningDG || selectedDG : options.dg : selectedDG;
-    if (!automatic && manualPowerDisabled) return false;
+    if (serverPower.controlled || (!automatic && manualPowerDisabled)) return false;
     if (powerLockRef.current) return false;
 
     if (!canTogglePower) {
@@ -694,6 +700,10 @@ const Layout = ({ userData, children }) => {
   };
 
   const confirmAndSelectDG = async (dg) => {
+    if (serverPower.controlled) {
+      window.alert("Server automatic detection selects the running DG from meter readings.");
+      return;
+    }
     // If already selected, do nothing
     if (selectedDG === dg) return;
 
@@ -786,12 +796,12 @@ const Layout = ({ userData, children }) => {
   }, [userData?.site]);
 
 
-  const { status: autoPowerStatus, manualDisabled: manualPowerDisabled } = useAutoPowerSource({
-    siteId: userData?.siteId, canToggle: canTogglePower, powerSource, activeDG: runningDG,
+  const { status: browserPowerStatus, manualDisabled: browserManualDisabled } = useAutoPowerSource({
+    siteId: userData?.siteId, canToggle: canTogglePower && !serverPower.controlled, powerSource, activeDG: runningDG,
     onTrigger: (dg, details) => updatePowerSource({ automatic: true, dg, loadTransferAtMs: details?.loadTransferAtMs, source: dg === "EB" ? "EB" : "DG" }),
     onMeterData: (data) => {
       energyMeterDataRef.current = data;
-      if (!data || data.fromCache || powerSource !== "DG" || !canTogglePower) return;
+      if (serverPower.controlled || !data || data.fromCache || powerSource !== "DG" || !canTogglePower) return;
       const key = `${data.siteId}:${data.meters.map((m) => `${m.id}:${m.observedAt?.toMillis?.()}`).join(",")}`;
       if (key === energyCheckpointRef.current) return;
       energyCheckpointRef.current = key;
@@ -800,6 +810,8 @@ const Layout = ({ userData, children }) => {
     },
   });
 
+  const autoPowerStatus = serverPower.controlled ? serverPower.status : browserPowerStatus;
+  const manualPowerDisabled = serverPower.controlled || browserManualDisabled;
   const autoPowerLabel = /blocked|failed|unavailable/i.test(autoPowerStatus) ? "Auto: blocked"
     : /loading site settings/i.test(autoPowerStatus) ? "Auto: loading"
     : /map meters/i.test(autoPowerStatus) ? "Auto: map meters"
@@ -1467,7 +1479,7 @@ const Layout = ({ userData, children }) => {
                   {/* existing content */}
                   <small style={{ fontSize: "9px", color: "#94a3b8" }}>
 
-                    <b>{loadingPower ? "Loading..." : `Updated By: ${updatedByName} on ${updatedAt ? updatedAt.toLocaleString() : "N/A"} Site on "${powerSource}" Source (Live) `}</b>
+                    <b>{loadingPower && !serverPower.controlled ? "Loading..." : `Updated By: ${serverPower.controlled ? "Server automatic detector" : updatedByName} on ${serverPower.controlled ? (serverPower.runtime?.evaluatedAtMs ? new Date(serverPower.runtime.evaluatedAtMs).toLocaleString() : "N/A") : updatedAt ? updatedAt.toLocaleString() : "N/A"} Site on "${powerSource}" Source (${serverPower.controlled && !serverPower.fresh ? "Last observed / waiting" : "Live"}) `}</b>
                   </small>
                 </p>
               )}
@@ -1476,7 +1488,7 @@ const Layout = ({ userData, children }) => {
             {isMobile && (
               <small style={{ fontSize: "9px", color: "#94a3b8" }}>
 
-                <b>{loadingPower ? "Loading..." : `Updated By: ${updatedByName} on ${updatedAt ? updatedAt.toLocaleString() : "N/A"} Site on "${powerSource}" Source (Live) `}</b>
+                <b>{loadingPower && !serverPower.controlled ? "Loading..." : `Updated By: ${serverPower.controlled ? "Server automatic detector" : updatedByName} on ${serverPower.controlled ? (serverPower.runtime?.evaluatedAtMs ? new Date(serverPower.runtime.evaluatedAtMs).toLocaleString() : "N/A") : updatedAt ? updatedAt.toLocaleString() : "N/A"} Site on "${powerSource}" Source (${serverPower.controlled && !serverPower.fresh ? "Last observed / waiting" : "Live"}) `}</b>
               </small>
             )}
           </div>

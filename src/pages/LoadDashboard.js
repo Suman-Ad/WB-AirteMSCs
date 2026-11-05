@@ -1,4 +1,5 @@
 import {istDateKey, shiftDateKey, useLoadBookDay} from "../hooks/useLoadBookDay";
+import "../assets/LoadDashboard.css";
 import LTAutoFillSettings from "../components/LTAutoFillSettings";
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
@@ -828,11 +829,11 @@ const LoadDashboard = ({ userData }) => {
 
 
   return (
-    <div className="daily-log-container">
+    <div className="daily-log-container load-book-page">
       <h2>⚡ Live Load Dashboard 🟢</h2>
       {["Admin", "Super Admin"].includes(userData?.role) && <LTAutoFillSettings userData={userData} />}
 
-      <div style={{ padding: "5px 5px", borderRadius: "8px", borderBottom: "2px solid #fff", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
+      <div className="load-book-toolbar" style={{ padding: "5px 5px", borderRadius: "8px", borderBottom: "2px solid #fff", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
         <Link to="/load-entry" style={{ textDecoration: "none", color: "#00e6e6", fontWeight: "bold", border: "1px solid #00e6e625", padding: "4px 8px", borderRadius: "4px", backgroundColor: "#1e647952", transition: "background-color 0.3s" }}
           onMouseMove={(e) => e.currentTarget.style.backgroundColor = "#1e6479bb"}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1e647952"}
@@ -848,7 +849,7 @@ const LoadDashboard = ({ userData }) => {
       </div>
 
 
-      <div style={{ display: "flex", gap: "10px", margin: "10px 0" }}>
+      <div className="load-book-filters" style={{ display: "flex", gap: "10px", margin: "10px 0" }}>
 
         <select value={rangeType} onChange={(e) => setRangeType(e.target.value)}>
           <option value="daily">Daily</option>
@@ -951,12 +952,10 @@ const LoadDashboard = ({ userData }) => {
       ) : (
         <div>
           <h3>Total Load: {totalLoad.toFixed(2)} kW</h3>
-          <h4 >Hilighted Row Notes:- <br />
-            <small>
-              ⚠️If show <b style={{ background: "red", color: "white" }}>"Red Row"</b>, Check & filled the unfield values. <br />
-              ⚠️If show <b style={{ background: "yellow", color: "purple" }}>"Yellow Row"</b>, Check Unbalance values.
-            </small>
-          </h4>
+          <p className="load-book-legend">
+            <span className="load-book-legend-missing">Red: missing readings</span>
+            <span className="load-book-legend-warning">Amber: readings need review</span>
+          </p>
           {Object.keys(missingSlots).length > 0 && (
             <div style={{
               background: "#ff4d4d22",
@@ -979,8 +978,8 @@ const LoadDashboard = ({ userData }) => {
             const config = tableConfig[type] || tableConfig.DEFAULT;
 
             return (
-              <div key={type} style={{ marginBottom: "10px", padding: "5px 10px", borderRadius: "8px", backgroundColor: "#1e647952", border: "1px solid #00e6e625" }}>
-                <div style={{ display: "flex", flexDirection: "row", gap: "10px" }}>
+              <section key={type} className="load-book-card" aria-label={`${type} load entries`}>
+                <div className="load-book-card-header">
                   {/* <h4 style={{ color: "#00e6e6" }}>🔹 {type} Load</h4> */}
                   <h4 style={{
                     color: Object.keys(missingSlots).some(id =>
@@ -1019,25 +1018,14 @@ const LoadDashboard = ({ userData }) => {
                   )}
                 </div>
 
-                <table border="1" cellPadding="6" style={{
-                  borderCollapse: "collapse",
-                  width: "100%",
-                  fontSize: "12px",
-                  overflowX: "auto",
-                  display: "block",
-                  whiteSpace: "nowrap",
-                  borderRadius: "8px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                  scrollbarWidth: "thin",
-                  scrollbarColor: "#888 #f1f1f1",
-                  maxHeight: "400px"
-                }}>
+                <div className="load-book-table-scroll" role="region" aria-label={`${type} load readings, scroll to view all columns`} tabIndex={0}>
+                <table className="load-book-table" aria-label={`${type} load readings`}>
                   <thead>
                     <tr>
                       {config.headers.map((h, i) => (
-                        <th key={i}>{h}</th>
+                        <th key={i} scope="col">{h}</th>
                       ))}
-                      {isAdmin && <th>Action</th>}
+                      <th scope="col">Actions</th>
                     </tr>
                   </thead>
 
@@ -1048,42 +1036,28 @@ const LoadDashboard = ({ userData }) => {
                         <tr
                           key={row.id}
                           title={getRowIssues(row, type).join(", ")}
-                          style={{
-                            backgroundColor:
-                              hasMissingData(row, type)
-                                ? "#f82121ab" // missing = red
-                                : issues.length > 0
-                                  ? "#ff9800a8" // abnormal = orange
-                                  : "transparent",
-
-                            border: hasMissingData(row, type)
-                              ? "1px solid red"
-                              : issues.length > 0
-                                ? "1px solid #ff9800"
-                                : "1px solid transparent",
-                            color: hasMissingData(row, type) || issues.length > 0 ? "#7b099e" : "inherit",
-                            fontWeight: hasMissingData(row, type) || issues.length > 0 ? "bold" : "normal",
-                          }}
+                          className={hasMissingData(row, type) ? "load-book-row-missing" : issues.length > 0 ? "load-book-row-warning" : ""}
                         >
                           {config.renderRow(row)}
 
-                          <td style={{ justifyContent: "space-around", flexWrap: "wrap", display: "flex", gap: "5px" }}>
-                            <button style={{ padding: "2px 2px", background: "#24556b6e" }}
+                          <td className="load-book-actions"><div className="load-book-action-buttons">
+                            <button type="button" aria-label={`Edit ${row.equipmentId} at ${row.time}`} style={{ padding: "2px 2px", background: "#24556b6e" }}
                               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#24556b"}
                               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#24556b6e"}
                               onClick={() => handleEdit(row)}>✏️</button>
                             {isAdmin && (
-                              <button style={{ padding: "2px 2px", background: "#6b26246e" }}
+                              <button type="button" aria-label={`Delete ${row.equipmentId} at ${row.time}`} style={{ padding: "2px 2px", background: "#6b26246e" }}
                                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#6b2624"}
                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#6b26246e"}
                                 onClick={() => handleDelete(row.id)}>🗑️</button>
                             )}
-                          </td>
+                          </div></td>
                         </tr>)
                     })}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </section>
             );
           })}
         </div>
