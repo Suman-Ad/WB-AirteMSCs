@@ -262,7 +262,7 @@ export default function ComplianceDashboard({ userData }) {
             )}
           </>
         )}
-        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @{instructionText?.editedBy?.name ? instructionText?.editedBy?.name : "Crash Algo"}</h6>
+        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @{instructionText?.editedBy?.name ? instructionText?.editedBy?.name : "NOLINI TechEngineering Pvt Ltd"}</h6>
       </div>
 
       {(userRole === "Admin" || userRole === "Super Admin" || userRole === "Super User") && (

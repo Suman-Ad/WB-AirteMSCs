@@ -30,7 +30,7 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage(payload => {
   const data = payload.data || {};
   return self.registration.showNotification(data.title || "WB Airtel MSC", {
-    body: data.body || "You have a new notification", icon: "/logo192.png",
+    body: data.body || "You have a new notification", icon: "/nolini-icon-192.png",
     tag: data.notificationId, data: { url: data.url || "/" }
   });
 });

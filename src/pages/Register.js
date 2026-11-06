@@ -1,3 +1,4 @@
+import CompanyLogo from "../components/CompanyLogo";
 // src/pages/Register.js
 import React, { useState } from "react";
 import { auth, db } from "../firebase";
@@ -9,7 +10,6 @@ import {
 import { doc, setDoc, query, collection, getDocs, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import "../assets/Register.css";
-import Vertiv from "../assets/vertiv.png";
 import { regions, siteList, siteIdMap } from "../config/siteConfigs";
 
 const Register = () => {
@@ -192,10 +192,9 @@ Designation: ${formData.designation}`,
       }}>
 
         <h2>
-          <img
-            src={Vertiv}
-            alt="Vertiv Logo"
-            className="logo"
+          <CompanyLogo
+            alt="NOLINI TechEngineering Pvt Ltd"
+            className="logo nolini-logo"
             style={{
               height: '2.5em',
               verticalAlign: 'middle',
@@ -203,6 +202,7 @@ Designation: ${formData.designation}`,
             }}
           />
         </h2>
+        <p className="company-project-name">WB-AirtelMSCS · NOLINI TechEngineering Pvt Ltd</p>
         <h2 style={{ color: "white" }}>Employee Register</h2>
         {error && <p className="auth-error">{error}</p>}
         {successMsg && <p className="auth-success">{successMsg}</p>}

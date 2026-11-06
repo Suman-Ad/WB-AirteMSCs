@@ -71,7 +71,7 @@ export async function enableDeviceNotifications(uid, requestPermission = true) {
   return onMessage(messaging, async ({ data = {} }) => {
     if (auth.currentUser?.uid !== uid || data.uid !== uid) return;
     await registration.showNotification(data.title || "WB Airtel MSC", {
-      body: data.body || "You have a new notification", icon: "/logo192.png",
+      body: data.body || "You have a new notification", icon: "/nolini-icon-192.png",
       tag: data.notificationId, data: { url: data.url || "/" }
     });
   });

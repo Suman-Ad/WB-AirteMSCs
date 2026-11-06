@@ -1,9 +1,9 @@
+import CompanyLogo from "./CompanyLogo";
 // src/components/Layout.js
 import React, { useState, useEffect, use } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import "../assets/Layout.css";
-import Vertiv from "../assets/Vertiv1.png";
 import { FaArrowLeft } from "react-icons/fa"; // Using react-icons for the arrow
 import NotificationBell from "./NotificationBell";
 import { doc, getDoc, collection, query, where, getDocs, onSnapshot, serverTimestamp, setDoc, addDoc } from "firebase/firestore";
@@ -919,11 +919,10 @@ const Layout = ({ userData, children }) => {
                     {userData.name.charAt(0).toUpperCase()}
                   </div>
                 ) : null}
-                <img
-                  src={Vertiv}
-                  alt="Vertiv Logo"
-                  className="logo"
-                  title="Prepaired By @Sumen Adhikari"
+                <CompanyLogo
+                  alt="NOLINI TechEngineering Pvt Ltd"
+                  className="logo nolini-logo header-company-logo"
+                  title="WB-AirtelMSCS by NOLINI TechEngineering Pvt Ltd"
                   style={{
                     height: '4em',
                     verticalAlign: 'middle',
@@ -1658,7 +1657,7 @@ const Layout = ({ userData, children }) => {
               </div>
             </>
           )}
-          <p className="layout-footer-copy">© 2025 Crash Algo. All rights reserved. Version: <button type="button" className="layout-footer-link" onClick={() => userData && userData.email === ("crash.algo@gmail.com" || "admin@crashalgo.com" || "sumanadhikari0@gmail.com" || "asansol.airtelmsc@geniusconsultants.in") && handleEditVersion()}>{lastHandledVersion}</button></p>
+          <p className="layout-footer-copy">© {new Date().getFullYear()} NOLINI TechEngineering Pvt Ltd. All rights reserved. Version: <button type="button" className="layout-footer-link" onClick={() => userData && userData.email === ("crash.algo@gmail.com" || "admin@crashalgo.com" || "sumanadhikari0@gmail.com" || "asansol.airtelmsc@geniusconsultants.in") && handleEditVersion()}>{lastHandledVersion}</button></p>
           <button type="button" className="layout-footer-link" onClick={() => navigate("/vendor-dashboard")}>
             Vendor Escalation Matrix
           </button>

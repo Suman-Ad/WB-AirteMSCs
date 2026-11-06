@@ -87,3 +87,46 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+/* Supplied company logo stays legible across header and authentication themes. */
+.nolini-logo.logo {
+  width: 176px;
+  max-width: min(176px, 100%);
+  height: auto !important;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 6px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+.auth-form .nolini-logo.logo {
+  width: 100%;
+  max-width: 300px;
+}
+.company-project-name {
+  color: white;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Only the active theme image participates in layout and accessibility. */
+.company-logo-dark {
+  display: none;
+}
+:root[data-theme="dark"] .company-logo-light {
+  display: none;
+}
+:root[data-theme="dark"] .company-logo-dark {
+  display: inline-block;
+  background: #020813;
+}
+
+/* Let the header surface show through the transparent logo in both themes. */
+.nolini-logo.logo.header-company-logo,
+:root[data-theme="dark"] .nolini-logo.logo.header-company-logo {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}

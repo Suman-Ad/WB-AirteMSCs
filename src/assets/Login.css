@@ -52,3 +52,198 @@ input {
   background: rgba(21, 184, 56, 0.9) !important; /* Semi-transparent button */
   border: none !important;
 }
+.auth-container:has(.company-auth-footer) {
+  flex-direction: column;
+  gap: 24px;
+  box-sizing: border-box;
+}
+.company-auth-footer {
+  width: 100%;
+  max-width: 600px;
+}
+
+/* Login reference: a frosted panel over the supplied control-room photograph. */
+.nolini-login {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 48px 20px 84px;
+  box-sizing: border-box;
+  background-color: #142c39;
+  background-size: cover;
+  background-position: center;
+  color: #123449;
+  font-family: inherit;
+}
+.nolini-login::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(8, 24, 34, 0.12);
+}
+.nolini-login .nolini-login-card {
+  width: min(100%, 340px);
+  box-sizing: border-box;
+  padding: 28px 26px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  /* background: transparent; */
+  background: linear-gradient(135deg, rgba(227, 238, 243, 0.21), rgba(201, 221, 229, 0.265));
+  box-shadow: 0 20px 55px rgba(0, 17, 29, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  text-align: center;
+}
+.nolini-login-brand { margin: 0 auto 8px; }
+.nolini-login .nolini-logo.logo {
+  width: 235px;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border-radius: 4px;
+}
+.nolini-login .nolini-login-project {
+  margin: 8px 0 4px;
+  color: #254c60;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+}
+.nolini-login h1 {
+  margin: 0 0 18px;
+  color: #123449;
+  font-size: 16px;
+  font-weight: 500;
+}
+.nolini-login-form { display: grid; gap: 14px; }
+.nolini-login .nolini-login-form input {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #8cabb9 !important;
+  border-radius: 6px;
+  background: rgba(243, 248, 250, 0.78) !important;
+  color: #14384b !important;
+  font: inherit;
+  font-size: 14px;
+  box-shadow: inset 0 1px 3px rgba(30, 58, 75, 0.08);
+}
+.nolini-login input::placeholder { color: #516874; opacity: 1; }
+.nolini-login-password { position: relative; }
+.nolini-login .nolini-login-password input { padding-right: 44px; }
+.nolini-login .nolini-login-eye {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #526e7e;
+  cursor: pointer;
+}
+.nolini-login .nolini-login-submit {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid #078389;
+  border-radius: 6px;
+  background: #0b8189;
+  color: white;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 97, 105, 0.15);
+}
+.nolini-login-submit:hover { background: #086b73; }
+.nolini-login-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 16px;
+}
+.nolini-login-links a, .nolini-login-links button {
+  border: 0;
+  padding: 3px 0;
+  background: transparent;
+  color: #173f54;
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.nolini-login :is(input, button, a):focus-visible {
+  outline: 3px solid #056a81;
+  outline-offset: 3px;
+}
+.nolini-login .nolini-login-error, .nolini-login .nolini-login-success {
+  margin: 0;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.nolini-login .nolini-login-error { background: #fff0ef; color: #8a2424; }
+.nolini-login .nolini-login-success { background: #e6fff3; color: #15583e; }
+.nolini-login-footer {
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0;
+  padding: 14px 20px;
+  background: rgba(5, 23, 35, 0.72);
+  color: #eff8fc;
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
+}
+.nolini-login-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 480px) {
+  .nolini-login { padding-inline: 18px; }
+  .nolini-login .nolini-login-card { padding: 24px 22px; }
+}
+/* The frosted panel uses dark ink in either app theme. */
+:root[data-theme="dark"] .nolini-login h1 { color: #123449; }
+:root[data-theme="dark"] .nolini-login .nolini-login-project { color: #254c60; }
+:root[data-theme="dark"] .nolini-login .nolini-login-error { color: #8a2424; }
+:root[data-theme="dark"] .nolini-login .nolini-login-success { color: #15583e; }
+.nolini-login .nolini-reset-help {
+  margin: 0;
+  color: #254c60;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+}
+:root[data-theme="dark"] .nolini-login .nolini-reset-help { color: #254c60; }
+.nolini-login button:disabled { opacity: 0.65; cursor: wait; }
+
+/* Preserve the PNG alpha so the glass panel shows through the logo. */
+.nolini-login .nolini-logo.nolini-login-transparent-logo {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}

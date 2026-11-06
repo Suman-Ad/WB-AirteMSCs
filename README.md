@@ -1,3 +1,9 @@
+# WB-AirtelMSCS
+
+A site infrastructure management project by **NOLINI TechEngineering Pvt Ltd**.
+
+Company branding assets: `public/nolini-logo.png` and `public/nolini-background.png`.
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
