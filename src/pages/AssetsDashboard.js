@@ -1,5 +1,5 @@
 // src/pages/AssetsDashboard.js
-import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
+import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
@@ -16,10 +16,29 @@ import { Link } from "react-router-dom";
 import { assetCatalogue, filterAssetRecords, assetSummary } from "../utils/assetsDashboardData";
 import { subscribeAssets } from "../services/assetsDashboardFeed";
 
+import { applyActivityChartTheme } from "./activityChartTheme";
+import "../assets/AssetsDashboard.css";
+
 const PAGE_SIZE = 50;
-const CHART_OPTIONS = { responsive: true, animation: false, plugins: { legend: { display: false } } };
+const CHART_OPTIONS = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } } };
 const AssetsChart = React.memo(function AssetsChart({ data }) {
-  return <Bar data={data} options={CHART_OPTIONS} />;
+  const chartRef = useRef(null);
+  useEffect(() => {
+    const updateTheme = () => {
+      if (!chartRef.current) return;
+      const style = getComputedStyle(document.documentElement);
+      applyActivityChartTheme(chartRef.current, {
+        text: style.getPropertyValue("--app-text").trim(),
+        muted: style.getPropertyValue("--app-text-muted").trim(),
+        border: style.getPropertyValue("--app-border").trim(),
+      });
+    };
+    updateTheme();
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+  return <Bar ref={chartRef} data={data} options={CHART_OPTIONS} />;
 });
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -86,7 +105,7 @@ export default function AssetsDashboard({ userData }) {
   const {siteCount,categoryCounts} = useMemo(() => assetSummary(filteredAssets), [filteredAssets]);
   const chartData = useMemo(() => ({
     labels:Object.keys(categoryCounts),
-    datasets:[{label:"Equipment Count",data:Object.values(categoryCounts),backgroundColor:"rgba(54, 162, 235, 0.6)"}]
+    datasets:[{label:"Equipment Count",data:Object.values(categoryCounts),backgroundColor:["#0d9488", "#0284c7", "#8b5cf6", "#d97706", "#e11d48"],borderRadius:5,maxBarThickness:64}]
   }), [categoryCounts]);
   const pageCount = Math.max(1,Math.ceil(filteredAssets.length/PAGE_SIZE));
   const currentPage = Math.min(page,pageCount);
@@ -109,56 +128,14 @@ export default function AssetsDashboard({ userData }) {
   }, []);
 
   return (
-    <div className="dhr-dashboard-container">
-      {loading && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-          }}
-        >
-          <div
-            style={{
-              background: "#0f172a",
-              padding: "30px 40px",
-              borderRadius: "12px",
-              textAlign: "center",
-              color: "white",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-            }}
-          >
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                border: "4px solid #334155",
-                borderTop: "4px solid #38bdf8",
-                borderRadius: "50%",
-                margin: "0 auto 15px",
-                animation: "spin 1s linear infinite",
-              }}
-            />
-            <div style={{ fontSize: "15px", fontWeight: "bold" }}>
-              Fetching Assets Data…
-            </div>
-            <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "4px" }}>
-              Please wait
-            </div>
-          </div>
-        </div>
-      )}
-      <h1 className="dashboard-header">
-        <strong>
-          💼 Assets Dashboard
-        </strong>
-      </h1>
+    <div className="assets-workspace">
+      <header className="assets-header">
+        <div><span className="assets-eyebrow">EQUIPMENT INVENTORY</span><h1>Assets Dashboard</h1><p>Explore equipment, site coverage, and your asset register.</p></div>
+        {["Super User", "Admin", "Super Admin"].includes(userData?.role) && <Link className="assets-primary-button" to="/assets-register">Manage Assets Register <span aria-hidden="true">↗</span></Link>}
+      </header>
+      {loading && <div className="assets-loading" role="status"><span className="assets-spinner" aria-hidden="true" /> Fetching assets data…</div>}
       <div className="instruction-tab">
-        <h2 className="noticeboard-header">📌 Notice Board </h2>
+        <h2 className="noticeboard-header">Notice board</h2>
         {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>
@@ -167,12 +144,13 @@ export default function AssetsDashboard({ userData }) {
               onChange={(e) => setEditText(e.target.value)}
               rows={5}
               className="dashboard-instruction-panel"
+              aria-label="Notice board instruction"
             />
-            <div className="flex gap-2">
+            <div className="assets-notice-actions">
               <button
-                className="bg-blue-600 text-white px-3 py-1 rounded"
+                className="assets-primary-button"
                 onClick={async () => {
-                  const docRef = doc(db, "config", "assets_dashboard_instructionn");
+                  const docRef = doc(db, "config", "assets_dashboard_instruction");
                   await setDoc(docRef, { text: editText });
                   setInstructionText(editText);
                   setIsEditing(false);
@@ -181,7 +159,7 @@ export default function AssetsDashboard({ userData }) {
                 Save
               </button>
               <button
-                className="bg-gray-400 text-white px-3 py-1 rounded"
+                className="assets-button"
                 onClick={() => setIsEditing(false)}
               >
                 Cancel
@@ -193,26 +171,21 @@ export default function AssetsDashboard({ userData }) {
             <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
             {["Admin", "Super Admin"].includes(userData?.role) && (
               <button
-                className="text-blue-600 underline"
-                onClick={() => setIsEditing(true)}
+                className="assets-button"
+                onClick={() => { setEditText(instructionText); setIsEditing(true); }}
               >
                 Edit Instruction
               </button>
             )}
           </>
         )}
-        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @Suman Adhikari</h6>
+        <span className="assets-notice-author">Suman Adhikari</span>
       </div>
-      <p>
-        <em>
-          *Only WB Circle Assets Data Available - You Can Filter Your Site*
-        </em>
-      </p>
-
-
-
-      <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
-
+      <section className="assets-filter-panel" aria-label="Asset filters">
+        <div className="assets-section-heading"><div><h2>Find assets</h2><p>WB Circle assets are currently available. Narrow the view by site or search.</p></div>
+          <button className="assets-button" onClick={() => { setSelectedRegion(""); setSelectedCircle(""); setSelectedSite(""); setSearchTerm(""); setPage(1); }}>Clear filters</button>
+        </div>
+      <div className="assets-filters">
         <select
           value={selectedRegion}
           aria-label="Region"
@@ -253,15 +226,16 @@ export default function AssetsDashboard({ userData }) {
 
         <input
           type="text"
-          placeholder="Search..."
+          placeholder="Search equipment, ID, or site…"
           value={searchTerm}
           aria-label="Search assets"
           onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
         />
       </div>
 
-      {/* ✅ Summary */}
-      <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }} className="child-container">
+      </section>
+      {/* Summary */}
+      <div className="assets-summary">
         <div>
           <h3>Total Assets</h3>
           <p>{filteredAssets.length}</p>
@@ -277,35 +251,27 @@ export default function AssetsDashboard({ userData }) {
       </div>
 
       {/* ✅ Chart */}
-      <div style={{ width: "inherit", marginBottom: "20px" }} className="chart-container">
-        <AssetsChart data={chartData} />
-      </div>
-
-      {(userData?.role === "Super User" ||
-        userData?.role === "Admin" ||
-        userData?.role === "Super Admin") && (
-          <Link to="/assets-register">
-            <span className="btn-secondary pm-manage-btn">💼 Manage Assets Register</span>
-          </Link>
-        )}
-
+      <section className="assets-chart-panel" aria-label="Equipment distribution">
+        <div className="assets-section-heading"><div><h2>Equipment distribution</h2><p>Asset records by category for the current filters.</p></div></div>
+        {filteredAssets.length ? <div className="assets-chart"><AssetsChart data={chartData} /></div> : <div className="assets-empty">No equipment to chart for this selection.</div>}
+      </section>
+      <section className="assets-register-panel" aria-label="Asset register">
+      <h2>Asset register</h2>
       {loadError && <p role="alert">{loadError}</p>}
-      <nav aria-label="Asset table pages" style={{display:"flex",flexWrap:"wrap",gap:"12px",alignItems:"center",margin:"16px 0"}}>
+      <nav aria-label="Asset table pages" className="assets-pagination">
         <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage-1)}>Previous</button>
         <span role="status">{filteredAssets.length ? `${pageStart+1}–${Math.min(pageStart+PAGE_SIZE,filteredAssets.length)} of ${filteredAssets.length} assets` : "No matching assets"} · Page {currentPage} of {pageCount}</span>
         <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage+1)}>Next</button>
         {searchTerm !== deferredSearch && <span>Updating search…</span>}
       </nav>
       {/* Render only one page; totals, filters and chart still use all matching assets. */}
-      <table
-        border="1"
-        cellPadding="6"
-        className="dhr-table"
-      >
+      <div className="assets-table-scroll" tabIndex={0} role="region" aria-label="Asset records">
+      <table>
+        <caption className="assets-sr-only">Equipment asset records for the selected filters</caption>
         <thead>
           <tr>
             {DEFAULT_COLUMNS.map((col) => (
-              <th key={col.key}>{col.label}</th>
+              <th scope="col" key={col.key}>{col.label}</th>
             ))}
           </tr>
         </thead>
@@ -317,8 +283,11 @@ export default function AssetsDashboard({ userData }) {
               ))}
             </tr>
           ))}
+          {!visibleAssets.length && <tr><td colSpan={DEFAULT_COLUMNS.length}><div className="assets-empty">{loading ? "Loading asset records…" : loadError ? "Asset records are unavailable." : "No assets match these filters. Try another site or clear your search."}</div></td></tr>}
         </tbody>
       </table>
+      </div>
+      </section>
     </div>
   );
 }

@@ -1,14 +1,14 @@
 // src/components/DGLogForm.js
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { collection, doc, setDoc, serverTimestamp, getDocs, query, orderBy, limit, where, getDoc, addDoc, updateDoc, documentId } from "firebase/firestore";
+import { collection, doc, setDoc, serverTimestamp, getDocs, query, limit, where, getDoc, addDoc, updateDoc } from "firebase/firestore";
 import { oemDieselCphData } from "../config/oemDieselCphData";
 import { useNavigate, useLocation } from "react-router-dom";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { saveAs } from "file-saver";
 import HSDPrintTemplate from "../components/HSDPrintTemplate";
-import { openingRunReadings, dailyOpeningReadings } from "../utils/dgOpeningReadings";
+import { findPreviousRunReadings, dailyOpeningReadings } from "../utils/dgOpeningReadings";
 import "../assets/DGLogForm.css";
 // import { toast } from "react-toastify";
 // import "react-toastify/dist/ReactToastify.css";
@@ -755,26 +755,18 @@ const DGLogForm = ({ userData }) => {
             setForm(prev => ({...prev, hrMeterStart:"", kwhMeterStart:"", hrMeterEnd:"", kwhMeterEnd:"", kWHReading:""}));
             try {
                 const dateObj = new Date(selectedDate + "T12:00:00");
-                const monthKey = date => date.toLocaleString("en-US", {month:"short"}) + "-" + date.getFullYear();
                 let readings = {hrMeterStart:"", kwhMeterStart:""};
                 const merge = incoming => {
                     for (const key of Object.keys(readings)) if (readings[key] === "") readings[key] = incoming[key];
                 };
                 const complete = () => Object.values(readings).every(value => value !== "");
-                const readRuns = async (month, date) => {
-                    const snapshot = await getDocs(collection(db,"dgLogs",site,month,date,"runs"));
-                    return openingRunReadings(snapshot.docs.map(d => d.data()), selectedDG);
-                };
-                merge(await readRuns(monthKey(dateObj), selectedDate));
-                for (let offset=0; offset<=1 && !complete(); offset++) {
-                    const month = new Date(dateObj.getFullYear(), dateObj.getMonth()-offset, 1);
-                    const dates = await getDocs(query(collection(db,"dgLogs",site,monthKey(month)),
-                        where(documentId(),"<",selectedDate),orderBy(documentId(),"desc"),limit(31)));
-                    for (const date of dates.docs) {
-                        merge(await readRuns(monthKey(month),date.id));
-                        if (complete() || cancelled) break;
-                    }
-                }
+                merge(await findPreviousRunReadings({
+                    date:selectedDate, dg:selectedDG, cancelled:() => cancelled,
+                    readRuns:async (month, date) => {
+                        const snapshot = await getDocs(collection(db,"dgLogs",site,month,date,"runs"));
+                        return snapshot.docs.map(entry => entry.data());
+                    },
+                }));
                 // Daily logs also cover sites without individual run history.
                 if (!complete() && !cancelled) {
                     for (let offset=0; offset<=1 && !complete(); offset++) {

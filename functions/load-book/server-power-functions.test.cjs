@@ -177,3 +177,35 @@ test('offline mains retains the last valid observed register for the start alert
  assert.equal(app.runs()[0].ebFailure.lastKnownKwh,250);
  assert.equal(app.runs()[0].ebFailure.lastKnownAtMs,100000);
 });
+
+test('next start carries the same meter closing register while retaining the live checkpoint', async () => {
+  const app = setup();
+  for (const [time, mains, amps, kwh] of [
+    [100000, 0, 100, 100], [110000, 0, 100, 101],
+    [120000, 415, 0, 105], [130000, 415, 0, 106],
+    [140000, 0, 100, 107], [150000, 0, 100, 108],
+  ]) {
+    app.tick(time); app.meter('main', mains, mains ? 100 : 0);
+    app.meter('dg', 415, amps, time, {fwd_Wh: kwh * 1000}); await app.run();
+  }
+  assert.equal(app.runs().length, 2);
+  assert.equal(app.runs()[1].opening.kwh, app.runs()[0].closing.kwh);
+  assert.equal(app.runs()[1].opening.observedAtMs, 130000);
+  assert.equal(app.runs()[1].opening.quality, 'Previous DG closing reading');
+  assert.equal(app.runs()[1].latest.kwh, 108);
+});
+
+test('previous closing is ignored for a different meter or a reset counter', async () => {
+  for (const closing of [
+    {meterId: 'other', kwh: 90, observedAtMs: 90000},
+    {meterId: 'dg', kwh: 200, observedAtMs: 90000},
+  ]) {
+    const app = setup();
+    app.store.set(`${base}/runtime/serverPowerSource`, {dgClosingReadings: {dg: closing}});
+    for (const time of [100000, 110000]) {
+      app.tick(time); app.meter('main', 0, 0); app.meter('dg', 415, 100); await app.run();
+    }
+    assert.equal(app.runs()[0].opening.kwh, 100);
+    assert.equal(app.runs()[0].opening.quality, 'Captured');
+  }
+});

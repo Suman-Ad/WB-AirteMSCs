@@ -1,8 +1,10 @@
 // src/pages/AssetsRegister.js
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { db } from "../firebase";
 import * as XLSX from "xlsx";
-import "../assets/DHRStyle.css";
+import { Link } from "react-router-dom";
+import "../assets/AssetsDashboard.css";
+import "../assets/AssetsRegister.css";
 import { collection, doc, setDoc, updateDoc, onSnapshot, getDoc, serverTimestamp, getDocs, deleteDoc, writeBatch } from "firebase/firestore";
 
 
@@ -48,7 +50,7 @@ export default function AssetsRegister({ userData }) {
   const isAdmin =
     userData?.role === "Super Admin" ||
     userData?.role === "Admin" ||
-    userData.isAdminAssigned ||
+    userData?.isAdminAssigned ||
     isAdminAssignmentValid(userData) ||
     userData?.designation === "Vertiv Site Infra Engineer" ||
     userData?.designation === "Vertiv CIH" ||
@@ -464,9 +466,29 @@ export default function AssetsRegister({ userData }) {
   const [newRowForm, setNewRowForm] = useState(blankForm);
   // 🪟 Add Asset Modal
   const [showAddAssetModal, setShowAddAssetModal] = useState(false);
+  const assetDialogRef = useRef(null);
   const [modalMode, setModalMode] = useState("add"); // add | edit
   const [editingRowId, setEditingRowId] = useState(null);
   const [editingRowForm, setEditingRowForm] = useState({});
+
+  useEffect(() => {
+    if (!showAddAssetModal) return;
+    const previousFocus = document.activeElement;
+    const dialog = assetDialogRef.current;
+    const focusable = () => Array.from(dialog?.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || []);
+    focusable()[0]?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setShowAddAssetModal(false);
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    dialog?.addEventListener("keydown", onKeyDown);
+    return () => { dialog?.removeEventListener("keydown", onKeyDown); previousFocus?.focus(); };
+  }, [showAddAssetModal]);
 
   const openEditModal = (row) => {
     setModalMode("edit");
@@ -527,16 +549,16 @@ export default function AssetsRegister({ userData }) {
   };
 
   const moveColumn = async (index, direction) => {
-    setColumnMoving(true);
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= columns.length) return;
 
+    setColumnMoving(true);
     const reordered = [...columns];
     const [moved] = reordered.splice(index, 1);
     reordered.splice(newIndex, 0, moved);
 
-    await saveColumnsToFirestore(reordered);
-    setColumnMoving(false);
+    try { await saveColumnsToFirestore(reordered); }
+    finally { setColumnMoving(false); }
   };
 
   const filteredRows = useMemo(() => {
@@ -1283,99 +1305,16 @@ export default function AssetsRegister({ userData }) {
 
   // ---------- rendering ----------
   return (
-    <div className="dhr-dashboard-container" style={{ padding: 16 }}>
-      {loading && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-          }}
-        >
-          <div
-            style={{
-              background: "#0f172a",
-              padding: "30px 40px",
-              borderRadius: "12px",
-              textAlign: "center",
-              color: "white",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-            }}
-          >
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                border: "4px solid #334155",
-                borderTop: "4px solid #38bdf8",
-                borderRadius: "50%",
-                margin: "0 auto 15px",
-                animation: "spin 1s linear infinite",
-              }}
-            />
-            <div style={{ fontSize: "15px", fontWeight: "bold" }}>
-              Fetching Assets Data…
-            </div>
-            <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "4px" }}>
-              Please wait
-            </div>
-          </div>
-        </div>
-      )}
-      {columnMoving && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-          }}
-        >
-          <div
-            style={{
-              background: "#0f172a",
-              padding: "30px 40px",
-              borderRadius: "12px",
-              textAlign: "center",
-              color: "white",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-            }}
-          >
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                border: "4px solid #334155",
-                borderTop: "4px solid #38bdf8",
-                borderRadius: "50%",
-                margin: "0 auto 15px",
-                animation: "spin 1s linear infinite",
-              }}
-            />
-            <div style={{ fontSize: "15px", fontWeight: "bold" }}>
-              Moving Column…
-            </div>
-            <div style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "4px" }}>
-              Please wait
-            </div>
-          </div>
-        </div>
-      )}
-      <h1 className="dashboard-header">
-        <strong>
-          🏷️💼 Assets Management
-        </strong>
-      </h1>
-
+    <div className="assets-workspace assets-register-workspace" aria-busy={loading || columnMoving}>
+      <header className="assets-header">
+        <div><span className="assets-eyebrow">EQUIPMENT INVENTORY</span><h1>Assets Register</h1><p>Manage equipment records, imports, and register columns.</p></div>
+        <Link className="assets-button" to="/assets-dashboard">View dashboard <span aria-hidden="true">↗</span></Link>
+      </header>
+      {(loading || columnMoving) && <div className="register-busy-overlay">
+        <div className="register-busy-card" role="status"><span className="assets-spinner" aria-hidden="true" /><strong>{loading ? "Fetching asset records…" : "Saving column order…"}</strong><span>Please wait before making changes.</span></div>
+      </div>}
       <div className="instruction-tab">
-        <h2 className="noticeboard-header">📌 Notice Board </h2>
+        <h2 className="noticeboard-header">Notice board</h2>
         {/* <h3 className="dashboard-header">📘 App Overview </h3> */}
         {isEditing ? (
           <>
@@ -1384,10 +1323,11 @@ export default function AssetsRegister({ userData }) {
               onChange={(e) => setEditText(e.target.value)}
               rows={5}
               className="dashboard-instruction-panel"
+              aria-label="Notice board instruction"
             />
-            <div className="flex gap-2">
+            <div className="assets-notice-actions">
               <button
-                className="bg-blue-600 text-white px-3 py-1 rounded"
+                className="btn-primary"
                 onClick={async () => {
                   const docRef = doc(db, "config", "assets_register_instruction");
                   await setDoc(docRef, { text: editText });
@@ -1398,7 +1338,7 @@ export default function AssetsRegister({ userData }) {
                 Save
               </button>
               <button
-                className="bg-gray-400 text-white px-3 py-1 rounded"
+                className="btn-secondary"
                 onClick={() => setIsEditing(false)}
               >
                 Cancel
@@ -1410,38 +1350,31 @@ export default function AssetsRegister({ userData }) {
             <p className="dashboard-instruction-panel">{instructionText || "No instructions available."}</p>
             {["Admin", "Super Admin"].includes(userData?.role) && (
               <button
-                className="text-blue-600 underline"
-                onClick={() => setIsEditing(true)}
+                className="btn-secondary"
+                onClick={() => { setEditText(instructionText); setIsEditing(true); }}
               >
                 Edit Instruction
               </button>
             )}
           </>
         )}
-        <h6 style={{ marginLeft: "90%" }}>Thanks & Regurds @Suman Adhikari</h6>
+        <span className="assets-notice-author">Suman Adhikari</span>
       </div>
 
-      <div className="noticeboard-header">
+      <div className="register-management">
 
         {isAdmin && (
 
-          <div
-            style={{
-              marginTop: 16,
-              padding: 14,
-              border: "1px solid #000",
-              borderRadius: 12,
-              background: "#eef6ff",
-            }}
-          >
-            <div style={{ marginTop: 16, padding: 14, border: "1px solid #000", borderRadius: 12, background: "#f0fdf4" }}>
-              <h4>✏️ Rename Master Data</h4>
+          <section className="register-panel register-rename-panel">
+            <div className="register-master-rename">
+              <h2>Rename master data</h2>
+              <p className="register-description">Update a shared value across matching asset records.</p>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10 }}>
 
                 {/* Type */}
                 <select
-                  value={renameMaster.type}
+                  aria-label="Master data type" value={renameMaster.type}
                   onChange={(e) =>
                     setRenameMaster({ type: e.target.value, oldValue: "", newValue: "" })
                   }
@@ -1455,7 +1388,7 @@ export default function AssetsRegister({ userData }) {
 
                 {/* Old Value */}
                 <select
-                  value={renameMaster.oldValue}
+                  aria-label="Existing master value" value={renameMaster.oldValue}
                   disabled={!renameMaster.type}
                   onChange={(e) =>
                     setRenameMaster(prev => ({ ...prev, oldValue: e.target.value }))
@@ -1479,7 +1412,7 @@ export default function AssetsRegister({ userData }) {
                 {/* New Value */}
                 <input
                   placeholder="New Value"
-                  value={renameMaster.newValue}
+                  aria-label="New master value" value={renameMaster.newValue}
                   onChange={(e) =>
                     setRenameMaster(prev => ({ ...prev, newValue: e.target.value }))
                   }
@@ -1493,11 +1426,11 @@ export default function AssetsRegister({ userData }) {
               {renamingMaster && renameMasterProgress.total > 0 && (
 
                 <div style={{ marginTop: 12 }}>
-                  <div style={{ fontSize: 13, color: "blueviolet" }}>
+                  <div style={{ fontSize: 13, color: "var(--app-text)" }}>
                     ⏳ {renameMasterProgress.completed} / {renameMasterProgress.total}
                   </div>
 
-                  <div style={{ background: "#e5e7eb", height: 8, borderRadius: 6 }}>
+                  <div style={{ background: "var(--app-surface-muted)", height: 8, borderRadius: 6 }}>
                     <div
                       style={{
                         background: "#22c55e",
@@ -1509,7 +1442,7 @@ export default function AssetsRegister({ userData }) {
                     />
                   </div>
 
-                  <div style={{ fontSize: 12, marginTop: 4, color: "blueviolet" }}>
+                  <div style={{ fontSize: 12, marginTop: 4, color: "var(--app-text)" }}>
                     ⚡ Speed: <b>{speed}</b> records/sec
                     ⏱ ETA: <b>{remaining}</b> sec
                   </div>
@@ -1548,7 +1481,7 @@ export default function AssetsRegister({ userData }) {
               )}
 
             </div>
-            <h4>✏️ Rename Site Name</h4>
+            <h2>Rename a site</h2><p className="register-description">Update the site name for all equipment at the selected site.</p>
 
             <div
               style={{
@@ -1559,7 +1492,7 @@ export default function AssetsRegister({ userData }) {
             >
               {/* Circle */}
               <select
-                value={renameSite.circle}
+                aria-label="Site circle" value={renameSite.circle}
                 onChange={(e) =>
                   setRenameSite({
                     circle: e.target.value,
@@ -1577,7 +1510,7 @@ export default function AssetsRegister({ userData }) {
 
               {/* Site ID */}
               <select
-                value={renameSite.siteId}
+                aria-label="Site ID" value={renameSite.siteId}
                 disabled={!renameSite.circle}
                 onChange={(e) =>
                   setRenameSite(prev => ({
@@ -1596,7 +1529,7 @@ export default function AssetsRegister({ userData }) {
 
               {/* Current Site Name */}
               <select
-                value={renameSite.currentSiteName}
+                aria-label="Current site name" value={renameSite.currentSiteName}
                 disabled={!renameSite.siteId}
                 onChange={(e) =>
                   setRenameSite(prev => ({
@@ -1614,7 +1547,7 @@ export default function AssetsRegister({ userData }) {
               {/* New Site Name */}
               <input
                 placeholder="New Site Name"
-                value={renameSite.newSiteName}
+                aria-label="New site name" value={renameSite.newSiteName}
                 onChange={(e) =>
                   setRenameSite(prev => ({
                     ...prev,
@@ -1633,11 +1566,11 @@ export default function AssetsRegister({ userData }) {
             </div>
             {renaming && renameProgress.total > 0 && (
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 13, color: "blueviolet" }}>
+                <div style={{ fontSize: 13, color: "var(--app-text)" }}>
                   ⏳ {renameProgress.completed} / {renameProgress.total}
                 </div>
 
-                <div style={{ background: "#e5e7eb", height: 8, borderRadius: 6 }}>
+                <div style={{ background: "var(--app-surface-muted)", height: 8, borderRadius: 6 }}>
                   <div
                     style={{
                       background: "#22c55e",
@@ -1649,7 +1582,7 @@ export default function AssetsRegister({ userData }) {
                   />
                 </div>
 
-                <div style={{ fontSize: 12, marginTop: 6, color: "blueviolet" }}>
+                <div style={{ fontSize: 12, marginTop: 6, color: "var(--app-text)" }}>
                   ⚡ <b>{speed}</b> records/sec &nbsp; | &nbsp;
                   ⏱ ETA: <b>{remaining}</b> sec
                 </div>
@@ -1687,69 +1620,71 @@ export default function AssetsRegister({ userData }) {
               </div>
             )}
 
-          </div>
+          </section>
         )}
 
 
         {/* Column management */}
         {isAdmin && (
-          <div style={{ marginBottom: 12, border: "1px solid #fff", borderRadius: "5px", padding: "5px 5px", background: "#5b7d88d8" }}>
-            <h3 style={{ color: "white" }} >Add Columns</h3>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", border: "1px solid #fff", borderRadius: "5px", maxHeight: "250px", overflowY: "auto", padding: "5px 3px" }}>
+          <div className="register-panel register-columns-panel">
+            <h2>Register columns</h2><p className="register-description">Reorder, rename, or add columns to the register.</p>
+            <div className="register-column-list">
               {columns.map((c, i) => (
-                <div key={c.key} style={{ gap: 6, border: "1px solid #131212", borderRadius: "4px", background: "rgb(247, 247, 247)", color: "white", padding: "3px 4px" }}>
+                <div key={c.key} className="register-column-card">
                   <div style={{ display: "flex", gap: 6 }}>
-                    <p
+                    <button type="button"
                       className="btn-small"
-                      disabled={i === 0}
+                      aria-label={`Move ${c.label} earlier`}
+                      disabled={columnMoving || i === 0}
                       onClick={() => moveColumn(i, -1)}
                       style={{ cursor: "pointer", }}
                     >
                       ⬆️
-                    </p>
+                    </button>
                     {editingColumnKey === c.key ? (
                       <>
                         <input
-                          value={editingColumnLabel}
+                          aria-label="Column label" value={editingColumnLabel}
                           onChange={(e) => setEditingColumnLabel(e.target.value)}
                           style={{ width: 140 }}
                         />
-                        <p className="btn-success btn-small" onClick={saveEditColumn}>✔</p>
-                        <p
+                        <button type="button" className="btn-success btn-small" aria-label="Save column label" onClick={saveEditColumn}>✔</button>
+                        <button type="button"
                           // className="btn-secondary btn-small"
-                          onClick={() => setEditingColumnKey(null)}
+                          aria-label="Cancel column edit" onClick={() => setEditingColumnKey(null)}
                           style={{ cursor: "pointer" }}
                         >
                           ✕
-                        </p>
+                        </button>
                       </>
                     ) : (
                       <>
-                        <strong style={{ color: "black" }}>({i + 1}) {c.label}</strong>
-                        <p
+                        <strong>({i + 1}) {c.label}</strong>
+                        <button type="button"
                           // className="btn-primary btn-small"
-                          onClick={() => startEditColumn(c)}
+                          aria-label={`Rename ${c.label} column`} onClick={() => startEditColumn(c)}
                           style={{ cursor: "pointer" }}
                         >
                           ✏️
-                        </p>
-                        <p
+                        </button>
+                        <button type="button"
                           // className="btn-danger btn-small"
-                          onClick={() => handleDeleteColumn(c.key)}
+                          aria-label={`Delete ${c.label} column`} onClick={() => handleDeleteColumn(c.key)}
                           style={{ cursor: "pointer" }}
                         >
                           🗑
-                        </p>
+                        </button>
                       </>
                     )}
-                    <p
+                    <button type="button"
                       className="btn-small"
-                      disabled={i === columns.length - 1}
+                      aria-label={`Move ${c.label} later`}
+                      disabled={columnMoving || i === columns.length - 1}
                       onClick={() => moveColumn(i, 1)}
                       style={{ cursor: "pointer" }}
                     >
                       ⬇️
-                    </p>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1759,7 +1694,7 @@ export default function AssetsRegister({ userData }) {
                 <button className="btn-primary" onClick={() => setAddingColumn(true)}>+ Add Column</button>
               ) : (
                 <>
-                  <input value={newColumnLabel} onChange={(e) => setNewColumnLabel(e.target.value)} placeholder="Column label" />
+                  <input value={newColumnLabel} onChange={(e) => setNewColumnLabel(e.target.value)} aria-label="New column label" placeholder="Column label" />
                   <button className="btn-primary" onClick={handleAddColumn}>Save</button>
                   <button className="btn-secondary" onClick={() => { setAddingColumn(false); setNewColumnLabel(""); }}>Cancel</button>
                 </>
@@ -1770,31 +1705,32 @@ export default function AssetsRegister({ userData }) {
 
         {/* Import */}
         {isAdmin && (
-          <div className="child-container" style={{ border: "1px solid #000", borderRadius: "15px", padding: "2px 5px" }}>
-            <p style={{ color: 'white', padding: "0px 4px", gap: 6 }}>Download Template:
-              <b
+          <div className="register-panel register-import-panel">
+            <h2>Import asset records</h2>
+            <p style={{ color: "var(--app-text)", padding: "0px 4px", gap: 6 }}>Download Template:
+              <button type="button" className="register-text-button"
                 onClick={downloadDynamicImportTemplate}
-                style={{ textDecoration: "underline", color: "blue", cursor: "pointer" }}
+
               >
-                ⬇️ Download Import Format
-              </b>
+                Download import template
+              </button>
             </p>
 
-            <label style={{ display: "block", marginBottom: 6 }}>Import Excel/CSV</label>
-            <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChange} />
+            <label htmlFor="register-import-file" style={{ display: "block", marginBottom: 6 }}>Import Excel/CSV</label>
+            <input id="register-import-file" type="file" accept=".xlsx,.xls,.csv" onChange={handleFileChange} />
             <button className="btn-success" onClick={importFileToFirestore} disabled={!fileToImport}>Import</button>
             {importProgress.total > 0 && (
               <div style={{ marginTop: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                     <span><b>Processed:</b> {importProgress.loaded}/{importProgress.total}</span>
-                    <span style={{ color: "green" }}><b>✅ Added:</b> {importProgress.success}</span>
-                    <span style={{ color: "orange" }}><b>⏭ Skipped:</b> {importProgress.skipped}</span>
+                    <span><b>✅ Added:</b> {importProgress.success}</span>
+                    <span><b>⏭ Skipped:</b> {importProgress.skipped}</span>
                     <strong>{importProgress.percent}%</strong>
                   </div>
                   <strong>{importProgress.percent}%</strong>
                 </div>
-                <div style={{ background: "#eee", height: 8, width: "100%", borderRadius: 4, marginBottom: 8 }}>
+                <div style={{ background: "var(--app-surface-muted)", height: 8, width: "100%", borderRadius: 4, marginBottom: 8 }}>
                   <div style={{ background: "#1976d2", width: `${importProgress.percent}%`, height: 8, borderRadius: 4 }} />
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -1830,15 +1766,15 @@ export default function AssetsRegister({ userData }) {
 
           {showAddAssetModal && (
             <div className="modal-overlay">
-              <div className="modal-box">
+              <div className="modal-box" ref={assetDialogRef} role="dialog" aria-modal="true" aria-labelledby="register-editor-title">
 
                 {/* Header */}
                 <div className="modal-header">
-                  <h3>
+                  <h3 id="register-editor-title">
                     {modalMode === "add" ? "➕💼 Add New Asset" : "✏️ Edit Asset"}
                   </h3>
                   <button
-                    className="modal-close"
+                    className="modal-close" aria-label="Close asset editor"
                     onClick={() => setShowAddAssetModal(false)}
                   >
                     ✕
@@ -1857,8 +1793,9 @@ export default function AssetsRegister({ userData }) {
                   >
                     {columns.map((c) => (
                       <div key={c.key}>
-                        <label style={{ fontSize: 12 }}>{c.label}</label>
+                        <label htmlFor={`asset-field-${c.key}`} style={{ fontSize: 12 }}>{c.label}</label>
                         <input
+                          id={`asset-field-${c.key}`}
                           value={newRowForm[c.key] ?? ""}
                           onChange={(e) =>
                             setNewRowForm({
@@ -1916,14 +1853,15 @@ export default function AssetsRegister({ userData }) {
       )}
 
       {/* 🔍 Advanced Filter */}
-      <div style={{ marginBottom: 12, background: "#f9fafb", padding: 10, borderRadius: 6 }}>
-        <h4><strong>🔍 Advanced Filters</strong></h4>
+      <div className="register-panel register-filter-panel">
+        <h2>Filter assets</h2><p className="register-description">All filter conditions must match. Export uses every matching record.</p>
 
         {filters.map((f, index) => (
-          <div key={index} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+          <div key={index} className="register-filter-row">
 
             {/* Column */}
             <select
+              aria-label={`Filter ${index + 1} column`}
               value={f.column}
               onChange={(e) => {
                 const copy = [...filters];
@@ -1938,6 +1876,7 @@ export default function AssetsRegister({ userData }) {
 
             {/* Operator */}
             <select
+              aria-label={`Filter ${index + 1} operator`}
               value={f.operator}
               onChange={(e) => {
                 const copy = [...filters];
@@ -1953,7 +1892,7 @@ export default function AssetsRegister({ userData }) {
             {/* Value input + dropdown */}
             <div style={{ display: "flex", gap: 4 }}>
               <input
-                placeholder="Type value"
+                aria-label={`Filter ${index + 1} value`} placeholder="Type value"
                 value={f.value}
                 onChange={(e) => {
                   const copy = [...filters];
@@ -1964,6 +1903,7 @@ export default function AssetsRegister({ userData }) {
               />
 
               <select
+                aria-label={`Filter ${index + 1} suggested value`}
                 defaultValue=""
                 onChange={(e) => {
                   const val = e.target.value;
@@ -2000,6 +1940,7 @@ export default function AssetsRegister({ userData }) {
             {/* Remove */}
             <button
               className="btn-danger"
+              aria-label={`Remove filter ${index + 1}`}
               onClick={() => setFilters(filters.filter((_, i) => i !== index))}
             >
               ✕
@@ -2024,27 +1965,27 @@ export default function AssetsRegister({ userData }) {
       </div>
 
       {/* Loading progress */}
-      <div style={{ marginBottom: 12 }}>
+      <div className="register-results" role="status">
         {loading ? (
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="register-results-row">
               <strong>Loading assets…</strong>
               <span>{loadProgress.loaded}/{loadProgress.total}</span>
               <span>{loadProgress.percent}%</span>
             </div>
-            <div style={{ background: "#eee", height: 8, width: "100%", borderRadius: 4 }}>
+            <div style={{ background: "var(--app-surface-muted)", height: 8, width: "100%", borderRadius: 4 }}>
               <div style={{ background: "#4caf50", width: `${loadProgress.percent}%`, height: 8, borderRadius: 4 }} />
             </div>
           </div>
         ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="register-results-row">
             <strong>📦 Loaded :</strong>
-            <span>{filteredRows.length} item{rows.length === 1 ? "" : "s"}</span>
+            <span>{filteredRows.length} item{filteredRows.length === 1 ? "" : "s"}</span>
             {filteredRows.length > 0 && (
               <button
                 onClick={downloadFilteredExcel}
                 className="daily-activity-btn"
-                style={{ background: "#16a34a", color: "#fff", marginLeft: 8 }}
+                style={{ marginLeft: 8 }}
               >
                 ⬇ Download Asset Data
               </button>
@@ -2055,14 +1996,16 @@ export default function AssetsRegister({ userData }) {
 
       {/* Table */}
       {isAdmin && (
-        <div style={{ overflowX: "auto", overflowY: "auto", height: "700px" }}>
-          <h4><strong>💼 Asset Data</strong></h4>
+        <section className="register-panel register-table-panel">
+          <h2>Asset records</h2>
           {!loading && (
-            <table className="dhr-table" style={{ width: "100%", minWidth: 900 }}>
+            <div className="assets-table-scroll" role="region" aria-label="Asset records" tabIndex={0}>
+            <table>
+              <caption className="assets-sr-only">Asset register records matching all selected filters</caption>
               <thead>
                 <tr>
-                  {columns.map((c) => <th key={c.key}>{c.label}</th>)}
-                  <th>Actions</th>
+                  {columns.map((c) => <th scope="col" key={c.key}>{c.label}</th>)}
+                  <th scope="col">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -2073,8 +2016,8 @@ export default function AssetsRegister({ userData }) {
                         {row[col.key] ?? row._raw?.[col.key] ?? ""}
                       </td>
                     ))}
-                    <td>
-
+                    <td className="register-row-actions">
+                      <button className="btn-primary" onClick={() => openEditModal(row)} aria-label={`Edit asset ${row.UniqueID || row.id}`}>Edit</button>
                       <>
                         {/* {(isAdmin || (userData?.role === "Super User" && (row.UniqueCode || row.SiteName) === userData.site)) && (
                             <button className="btn-primary" onClick={() => openEditModal(row)}>Edit</button>
@@ -2087,10 +2030,12 @@ export default function AssetsRegister({ userData }) {
                     </td>
                   </tr>
                 ))}
+                {!filteredRows.length && <tr><td colSpan={columns.length + 1}><div className="assets-empty">No assets match these filters. Clear filters or import new records.</div></td></tr>}
               </tbody>
             </table>
+            </div>
           )}
-        </div>
+        </section>
       )}
     </div>
   );

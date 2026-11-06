@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, set } from "date-fns";
 import { motion } from "framer-motion";
 import {
@@ -22,6 +22,8 @@ import { regions, siteList as siteConfigList, siteIdMap } from "../config/siteCo
 
 
 // ---------- Helper utils ----------
+const SHIFT_LABELS = { M: "Morning", E: "Evening", N: "Night", G: "General", WO: "Weekly off" };
+
 const SITE_DOC_ID = (siteId, date) => `${siteId}_${date}`; // use siteId slug + 2025-11-30
 
 function formatISODate(date) {
@@ -30,9 +32,11 @@ function formatISODate(date) {
 }
 
 // Small UI atoms
-function Button({ children, onClick, className = "" }) {
+function Button({ children, onClick, className = "", ...props }) {
   return (
     <button
+      type="button"
+      {...props}
       onClick={onClick}
       className={`button ${className}`}
     >
@@ -44,7 +48,7 @@ function Button({ children, onClick, className = "" }) {
 
 function Badge({ children }) {
   return (
-    <span className="px-2 py-0.5 rounded bg-slate-200 text-sm">{children}</span>
+    <span className="duty-badge">{children}</span>
   );
 }
 
@@ -78,9 +82,13 @@ async function notifyAssignedMembers(shifts, date) {
 // ---------- useDutyRoster hook ----------
 function useDutyRoster(siteId, monthDate) {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [rosters, setRosters] = useState({}); // key: YYYY-MM-DD -> roster doc
 
   useEffect(() => {
+    setRosters({});
+    setLoadError("");
+    setLoading(Boolean(siteId));
     if (!siteId) return;
     const start = formatISODate(startOfMonth(monthDate));
     const end = formatISODate(endOfMonth(monthDate));
@@ -104,6 +112,7 @@ function useDutyRoster(siteId, monthDate) {
       },
       (err) => {
         console.error("dutyRoster listen error", err);
+        setLoadError("Unable to load this roster. Check your connection and site access, then reload.");
         setLoading(false);
       }
     );
@@ -137,7 +146,7 @@ function useDutyRoster(siteId, monthDate) {
     });
   }
 
-  return { rosters, loading, saveRosterForDate };
+  return { rosters, loading, loadError, saveRosterForDate };
 }
 
 // Save weekday template for shifts
@@ -184,18 +193,20 @@ export default function DutyTrackerPage({ currentUser }) {
   const isAdmin =
     currentUser?.role === "Super Admin" ||
     currentUser?.role === "Admin" ||
-    currentUser.isAdminAssigned ||
+    currentUser?.isAdminAssigned ||
     isAdminAssignmentValid(currentUser) ||
     // currentUser?.designation === "Vertiv Site Infra Engineer" ||
     currentUser?.designation === "Vertiv CIH" ||
     currentUser?.designation === "Vertiv ZM";
+
+  const canEdit = isAdmin || currentUser?.designation === "Vertiv Site Infra Engineer";
 
   const [selectedRegion, setSelectedRegion] = useState(currentUser?.region || "");
   const [selectedCircle, setSelectedCircle] = useState(currentUser?.circle || "");
   const [selectedSite, setSelectedSite] = useState(currentUser?.site || "");
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const regionList = Object.keys(regions);
-  const circleList = selectedRegion ? regions[selectedRegion] : [];
+  const circleList = selectedRegion ? regions[selectedRegion] || [] : [];
   const siteList =
     selectedRegion && selectedCircle
       ? siteConfigList[selectedRegion]?.[selectedCircle] || []
@@ -204,12 +215,12 @@ export default function DutyTrackerPage({ currentUser }) {
   const [applingTemplate, setApplingTemplate] = useState(false);
   const navigate = useNavigate();
 
-  const { rosters, loading: rosterLoading, saveRosterForDate } = useDutyRoster(
+  const { rosters, loading: rosterLoading, loadError, saveRosterForDate } = useDutyRoster(
     selectedSite,
     selectedMonth
   );
 
-  const [calendarDays, setCalendarDays] = useState([]);
+
   const [activeDateISO, setActiveDateISO] = useState(formatISODate(new Date()));
   const [activeRoster, setActiveRoster] = useState(null);
   const [siteUsers, setSiteUsers] = useState([]);
@@ -227,7 +238,7 @@ export default function DutyTrackerPage({ currentUser }) {
 
   const [isRosterView, setIsRosterView] = useState(false);
 
-  useEffect(() => {
+  const calendarDays = useMemo(() => {
     const start = startOfMonth(selectedMonth);
     const end = endOfMonth(selectedMonth);
 
@@ -240,7 +251,7 @@ export default function DutyTrackerPage({ currentUser }) {
       blanks.push(null); // empty cells
     }
 
-    setCalendarDays([...blanks, ...days]);
+    return [...blanks, ...days];
   }, [selectedMonth]);
 
   useEffect(() => {
@@ -438,14 +449,18 @@ export default function DutyTrackerPage({ currentUser }) {
 
 
   return (
-    <div className="daily-log-container">
-      <h2>Duty Tracker</h2>
+    <div className="duty-workspace">
+      <header className="duty-page-header">
+        <div><span className="duty-eyebrow">TEAM OPERATIONS</span><h1>Duty Tracker</h1><p>View site coverage and organize daily shifts and weekday templates.</p></div>
+        <Badge>{canEdit ? "Roster management" : "Roster overview"}</Badge>
+      </header>
 
       {/* Filters */}
-      <div className="flex filter-bar">
+      <div className="duty-filter-bar">
         {isAdmin && (
-          <div>
+          <div className="duty-site-filters">
             <select
+              aria-label="Region"
               value={selectedRegion}
               onChange={(e) => {
                 setSelectedRegion(e.target.value);
@@ -461,6 +476,7 @@ export default function DutyTrackerPage({ currentUser }) {
             </select>
 
             <select
+              aria-label="Circle"
               value={selectedCircle}
               onChange={(e) => {
                 setSelectedCircle(e.target.value);
@@ -477,6 +493,7 @@ export default function DutyTrackerPage({ currentUser }) {
 
 
             <select
+              aria-label="Site"
               value={selectedSite}
               onChange={(e) => setSelectedSite(e.target.value)}
               className="border rounded px-2 py-1"
@@ -493,34 +510,46 @@ export default function DutyTrackerPage({ currentUser }) {
         )}
 
         <input
+          aria-label="Roster month"
           type="month"
           value={format(selectedMonth, "yyyy-MM")}
-          onChange={(e) => setSelectedMonth(new Date(e.target.value + "-01"))}
+          onChange={(e) => {
+            if (!e.target.value) return;
+            const [year, month] = e.target.value.split("-").map(Number);
+            const nextMonth = new Date(year, month - 1, 1);
+            setSelectedMonth(nextMonth);
+            setActiveDateISO(formatISODate(nextMonth));
+          }}
           className="border px-2 py-1 rounded"
         />
 
         <div style={{ marginLeft: "auto" }}>
-          {rosterLoading ? <Badge>Loading...</Badge> : <Badge>Live</Badge>}
+          {!selectedSite ? <Badge>Select a site</Badge> : loadError ? <Badge>Roster unavailable</Badge> : rosterLoading ? <Badge>Loading roster…</Badge> : <Badge>Roster connected</Badge>}
         </div>
       </div>
 
 
-      <div className={`grid duty-tracker-layout ${isRosterView ? "calendar-collapsed" : ""}`}>
+      {loadError && <div className="duty-error" role="alert">{loadError}</div>}
+      <div className="duty-shift-legend" aria-label="Shift key">{Object.entries(SHIFT_LABELS).map(([code, label]) => <span key={code}><b>{code}</b> {label}</span>)}</div>
+      <div className={`duty-tracker-layout ${canEdit ? "has-editor" : ""} ${isRosterView ? "calendar-collapsed" : ""}`}>
         <div className={`calendar-panel ${isRosterView ? "is-collapsed" : ""}`}>
           <button
             type="button"
             className="calendar-collapse-button"
             onClick={() => setIsRosterView(prev => !prev)}
             aria-expanded={!isRosterView}
+            aria-controls="duty-calendar-content"
+            hidden={!canEdit}
           >
             {isRosterView ? "Expand Calendar ▶" : "Collapse Calendar ◀"}
           </button>
 
           {!isRosterView && (
-            <div className="calendar-panel-content">
-              <div className="calendar-panel">
-
-                <b>{selectedSite} - {siteIdMap[selectedSite]}</b>
+            <div className="calendar-panel-content" id="duty-calendar-content">
+              <div className="duty-calendar-heading"><div><h2>{format(selectedMonth, "MMMM yyyy")}</h2><p>{selectedSite ? `${selectedSite}${siteIdMap[selectedSite] ? ` · ${siteIdMap[selectedSite]}` : ""}` : "Select a site to view its duty roster."}</p></div></div>
+              {!selectedSite && <div className="duty-empty" role="status">{isAdmin ? "Choose a region, circle, and site above to get started." : "A site must be assigned to your profile to view a roster."}</div>}
+              <div className="duty-calendar-scroll" role="region" aria-label="Monthly duty calendar" tabIndex={0}>
+              <div className="duty-calendar-surface">
                 <div className="calendar-days-header">
                   {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
                     <div key={d} style={{
@@ -546,181 +575,54 @@ export default function DutyTrackerPage({ currentUser }) {
                     const iso = formatISODate(day);
                     const roster = rosters[iso];
                     return (
-                      <div className="calendar-day-cell" onClick={() => openDate(day)}>
-                        <div className="flex">
-                          <div style={{ fontSize: "0.875rem", fontWeight: "500" }}>
-                            {format(day, "d MMM")}
-                          </div>
-                          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
-                            {iso === formatISODate(new Date()) ? "Today" : ""}
-                          </div>
-                        </div>
-
-
-
-                        <div className="shift-title">
-
-                          <div style={{ fontSize: "12px" }}> 🅶 Genarel:</div>
-                          <div
-                            style={{
-                              // display: "flex",
-                              gap: "0.25rem",
-                              marginTop: "0.25rem"
-                            }}
-                          >
-                            {(roster?.shifts?.G || []).map((uid) => {
-                              const u = siteUsers.find((su) => su.uid === uid);
-                              return (
-                                <div className="initial-badge">
-                                  {u?.name ? initials(u.name) : uid.slice(0, 4)}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🌅 Morning:</div>
-                          {/* <div style={{ fontSize: "12px" }}>🌅 Morning:</div> */}
-                          <div
-                            style={{
-                              // display: "flex",
-                              gap: "0.25rem",
-                              marginTop: "0.25rem"
-                            }}
-                          >
-                            {(roster?.shifts?.M || []).map((uid) => {
-                              const u = siteUsers.find((su) => su.uid === uid);
-                              return (
-                                <div
-                                  key={uid}
-                                  style={{
-                                    paddingLeft: "0.25rem",
-                                    paddingRight: "0.25rem",
-                                    paddingTop: "0.125rem",
-                                    paddingBottom: "0.125rem",
-                                    border: "1px solid #e5e7eb",
-                                    borderRadius: "0.375rem",
-                                    fontSize: "0.75rem"
-                                  }}
-                                >
-                                  {u?.name ? initials(u.name) : uid.slice(0, 4)}
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🌇 Evening:</div>
-                          <div
-                            style={{
-                              // display: "flex",
-                              gap: "0.25rem",
-                              marginTop: "0.25rem"
-                            }}
-                          >
-                            {(roster?.shifts?.E || []).map((uid) => {
-                              const u = siteUsers.find((su) => su.uid === uid);
-                              return (
-                                <div
-                                  key={uid}
-                                  style={{
-                                    paddingLeft: "0.25rem",
-                                    paddingRight: "0.25rem",
-                                    paddingTop: "0.125rem",
-                                    paddingBottom: "0.125rem",
-                                    border: "1px solid #e5e7eb",
-                                    borderRadius: "0.375rem",
-                                    fontSize: "0.75rem"
-                                  }}
-                                >
-                                  {u?.name ? initials(u.name) : uid.slice(0, 4)}
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🌙 Night:</div>
-                          <div
-                            style={{
-                              // display: "flex",
-                              gap: "0.25rem",
-                              marginTop: "0.25rem"
-                            }}
-                          >
-                            {(roster?.shifts?.N || []).map((uid) => {
-                              const u = siteUsers.find((su) => su.uid === uid);
-                              return (
-                                <div
-                                  key={uid}
-                                  style={{
-                                    paddingLeft: "0.25rem",
-                                    paddingRight: "0.25rem",
-                                    paddingTop: "0.125rem",
-                                    paddingBottom: "0.125rem",
-                                    border: "1px solid #e5e7eb",
-                                    borderRadius: "0.375rem",
-                                    fontSize: "0.75rem"
-                                  }}
-                                >
-                                  {u?.name ? initials(u.name) : uid.slice(0, 4)}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <div style={{ marginTop: "8px", fontSize: "0.75rem", color: "#475569", lineHeight: "1.25rem", borderTop: "1px solid #e5e7eb", paddingTop: "4px" }}>🅾 Weekly OFF:</div>
-                          <div
-                            style={{
-                              // display: "flex",
-                              gap: "0.25rem",
-                              marginTop: "0.25rem"
-                            }}
-                          >
-                            {(roster?.shifts?.WO || []).map((uid) => {
-                              const u = siteUsers.find((su) => su.uid === uid);
-                              return (
-                                <div
-                                  key={uid}
-                                  style={{
-                                    paddingLeft: "0.25rem",
-                                    paddingRight: "0.25rem",
-                                    paddingTop: "0.125rem",
-                                    paddingBottom: "0.125rem",
-                                    border: "1px solid #e5e7eb",
-                                    borderRadius: "0.375rem",
-                                    fontSize: "0.75rem"
-                                  }}
-                                >
-                                  {u?.name ? initials(u.name) : uid.slice(0, 4)}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
+                      <button type="button" key={iso}
+                        className={`calendar-day-cell ${iso === activeDateISO ? "is-selected" : ""} ${iso === formatISODate(new Date()) ? "is-today" : ""}`}
+                        aria-label={`Select ${format(day, "EEEE, d MMMM yyyy")}`}
+                        aria-pressed={iso === activeDateISO}
+                        onClick={() => openDate(day)}>
+                        <span className="duty-day-heading"><span>{format(day, "d")}</span>{iso === formatISODate(new Date()) && <span className="duty-today">Today</span>}</span>
+                        <span className="duty-day-shifts">
+                          {Object.entries(SHIFT_LABELS).map(([shift, label]) => (
+                            <span className="duty-calendar-shift" key={shift}>
+                              <span className="duty-shift-code">{shift}</span>
+                              <span className="duty-shift-people" title={label}>
+                                {(roster?.shifts?.[shift] || []).length ? roster.shifts[shift].map(uid => {
+                                  const user = siteUsers.find(member => member.uid === uid);
+                                  return <span className="initial-badge" key={uid}>{user?.name ? initials(user.name) : uid.slice(0, 4)}</span>;
+                                }) : <span className="duty-unassigned">—</span>}
+                              </span>
+                            </span>
+                          ))}
+                        </span>
+                      </button>
                     );
                   })}
                 </div>
-                {(isAdmin || currentUser?.designation === "Vertiv Site Infra Engineer") && (
-                  <div>
-                    <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-approve")}>1) Check <strong>"CL"</strong> Status</p>
-                    <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/cl-calendar")}>2) CL Calendar</p>
-                    <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/my-leave")}>3) My Leave</p>
-                    <p style={{ marginTop: "12px", fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }} onClick={() => navigate("/monthly-cl-summary")}>4) Monthly CL Summary</p>
+              </div>
+              </div>
+                {canEdit && (
+                  <div className="duty-leave-links">
+                    <button type="button" onClick={() => navigate("/cl-approve")}>1) Check <strong>"CL"</strong> Status</button>
+                    <button type="button" onClick={() => navigate("/cl-calendar")}>2) CL Calendar</button>
+                    <button type="button" onClick={() => navigate("/my-leave")}>3) My Leave</button>
+                    <button type="button" onClick={() => navigate("/monthly-cl-summary")}>4) Monthly CL Summary</button>
                   </div>
                 )}
-              </div>
             </div>
           )}
         </div>
         {/* Right side panel: date editor */}
-        {(isAdmin || currentUser?.designation === "Vertiv Site Infra Engineer") && (
+        {canEdit && (
           <motion.div
             initial={{ x: 50, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             className="editor-panel">
-            <h3>{activeDateISO}</h3>
-            <div style={{ fontSize: "0.875rem", color: "#475569", marginBottom: "0.75rem" }}>
+            <span className="duty-eyebrow">DAILY ROSTER</span><h2>{activeDateISO}</h2>
+            <div style={{ fontSize: "0.875rem", color: "var(--app-text-muted)", marginBottom: "0.75rem" }}>
               Site: {selectedSite || "—"}
             </div>
 
-            <div style={{ padding: "9px 5px" }}>
+            <fieldset className="duty-editor-fields" disabled={!selectedSite || rosterLoading || !!loadError}>
               {/* Shift editors */}
               {["M", "E", "N", "G", "WO"].map((shift) => (
                 <ShiftEditor
@@ -735,11 +637,11 @@ export default function DutyTrackerPage({ currentUser }) {
               ))}
 
               <div style={{ marginTop: "12px" }}>
-                <label style={{ display: "block", fontSize: "0.875rem" }}>Remarks</label>
-                <textarea
+                <label htmlFor="duty-remarks">Remarks</label>
+                <textarea id="duty-remarks" rows={3}
                   value={activeRoster?.remarks || ""}
                   onChange={(e) => setActiveRoster((prev) => ({ ...prev, remarks: e.target.value }))}
-                  style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: "0.375rem", padding: "0.5rem" }}
+                  style={{ width: "100%", border: "1px solid var(--app-border)", borderRadius: "0.375rem", padding: "0.5rem" }}
                 />
               </div>
 
@@ -749,14 +651,14 @@ export default function DutyTrackerPage({ currentUser }) {
                   Save & Notify
                 </Button>
               </div>
-            </div>
+            </fieldset>
 
-            {/* Weekly Tamplate */}
-            <div style={{ borderTop: "2px solid #000", padding: "5px 5px" }}>
-              <h3 className="mt-4 mb-2">Weekday Template</h3>
+            {/* Weekday template */}
+            <fieldset className="duty-template" disabled={!selectedSite || rosterLoading || !!loadError || applingTemplate}>
+              <h2>Weekday template</h2><p className="duty-description">Set recurring assignments for each day of the week.</p>
               {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((wd) => (
-                <div key={wd} className="border p-2 mt-2 rounded" style={{ border: "1px solid #4694dd", borderRadius: "5px", padding: "5px 5px" }}>
-                  <h4 className="font-semibold" style={{ background: "#74bcce", cursor: "pointer", padding: "5px 5px", borderRadius: "5px" }} onClick={() => toggleWDay(wd)}>{dayCollaps[wd] ? `${wd} ▶` : `${wd} ▼`}</h4>
+                <div key={wd} className="duty-template-day">
+                  <button type="button" className="duty-disclosure" aria-expanded={!!dayCollaps[wd]} onClick={() => toggleWDay(wd)}><span>{wd}</span><span aria-hidden="true">{dayCollaps[wd] ? "−" : "+"}</span></button>
 
                   {dayCollaps[wd] && ["M", "E", "N", "G", "WO"].map((shift) => (
                     <ShiftEditor
@@ -780,7 +682,7 @@ export default function DutyTrackerPage({ currentUser }) {
                   onClick={() => applyTemplateToMonth(currentUser, selectedMonth, weekdayTemplate)}
                   style={{ marginTop: "5px", fontSize: "12px" }}
                 >
-                  {applingTemplate ? "Appling...." : "Apply Template to This Month"}
+                  {applingTemplate ? "Applying template…" : "Apply Template to This Month"}
                 </button>
 
                 <button
@@ -791,7 +693,7 @@ export default function DutyTrackerPage({ currentUser }) {
                   Save Weekday Template
                 </button>
               </div>
-            </div>
+            </fieldset>
           </motion.div>
         )}
       </div>
@@ -823,17 +725,17 @@ function ShiftEditor({ shift, roster, siteUsers, onChange }) {
 
   return (
     <div className="shift-editor">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }} onClick={() => toggleShift(shift)}>
-        <div style={{ fontWeight: "500", cursor: "pointer" }}>{shiftCollaps[shift] ? `Shift "${shift}" ▶` : `Shift "${shift}" ▼`}</div>
-        <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Max 3</div>
-      </div>
+      <button type="button" className="duty-disclosure" aria-expanded={!!shiftCollaps[shift]} onClick={() => toggleShift(shift)}>
+        <span>{SHIFT_LABELS[shift]} <span className="duty-shift-count">{current.length} assigned</span></span>
+        <span aria-hidden="true">{shiftCollaps[shift] ? "−" : "+"}</span>
+      </button>
       {shiftCollaps[shift] && (
         <div>
           <div style={{ marginTop: "12px" }}>
             {current.length === 0 ? (
-              <div style={{ fontSize: "0.875rem", color: "#64748b" }}>No one assigned</div>
+              <div style={{ fontSize: "0.875rem", color: "var(--app-text-muted)" }}>No one assigned</div>
             ) : (
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div className="duty-assigned-users">
                 {current.map((uid) => {
                   const u = siteUsers.find((su) => su.uid === uid);
                   return (
@@ -843,7 +745,7 @@ function ShiftEditor({ shift, roster, siteUsers, onChange }) {
                         display: "flex",
                         alignItems: "center",
                         gap: "0.5rem",
-                        border: "1px solid #e5e7eb",
+                        border: "1px solid var(--app-border)",
                         borderRadius: "0.375rem",
                         paddingLeft: "0.5rem",
                         paddingRight: "0.5rem",
@@ -852,7 +754,7 @@ function ShiftEditor({ shift, roster, siteUsers, onChange }) {
                       }}
                     >
                       <div style={{ fontWeight: "500" }}>{u?.name || uid}</div>
-                      <button style={{ color: "#ef4444" }} onClick={() => removeUser(uid)}>
+                      <button type="button" className="duty-remove" aria-label={`Remove ${u?.name || uid} from ${SHIFT_LABELS[shift]}`} onClick={() => removeUser(uid)}>
                         Remove
                       </button>
                     </div>
@@ -863,8 +765,8 @@ function ShiftEditor({ shift, roster, siteUsers, onChange }) {
           </div>
 
           <div style={{ marginTop: "0.5rem" }}>
-            <label style={{ fontSize: "14px" }}>Add user</label>
-            <UserSelect siteUsers={siteUsers} onSelect={addUser} disabled={!siteUsers.length} />
+            <div className="duty-description">Add a team member</div>
+            <UserSelect shift={shift} siteUsers={siteUsers} onSelect={addUser} disabled={!siteUsers.length} />
           </div>
         </div>
       )}
@@ -872,13 +774,14 @@ function ShiftEditor({ shift, roster, siteUsers, onChange }) {
   );
 }
 
-function UserSelect({ siteUsers, onSelect, disabled }) {
+function UserSelect({ shift, siteUsers, onSelect, disabled }) {
+  const searchId = useId();
   const [q, setQ] = useState("");
 
   if (disabled) {
     return (
-      <div style={{ fontSize: "0.875rem", color: "#64748b" }}>
-        Select a site to load users
+      <div style={{ fontSize: "0.875rem", color: "var(--app-text-muted)" }}>
+        No team members are available for this site.
       </div>
     );
   }
@@ -891,32 +794,30 @@ function UserSelect({ siteUsers, onSelect, disabled }) {
 
   return (
     <div>
-      <input
+      <label className="duty-search-label" htmlFor={searchId}>Search team members for {SHIFT_LABELS[shift]}</label>
+      <input id={searchId}
         className="user-select-input"
         placeholder="Search user"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
       <div className="user-select-list">
+        {!filtered.length && <div className="duty-empty">No team members match your search.</div>}
         {filtered.map((u) => (
           <div
             key={u.uid}
             className="user-select-item"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#f8fafc";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "";
-            }}
+
           >
             <div>
               <div style={{ fontWeight: "500" }}>{u?.name || ""}</div>
-              <div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+              <div style={{ fontSize: "0.75rem", color: "var(--app-text-muted)" }}>
                 {u.designation} • {u.empId} • {u.mobileNo}
               </div>
             </div>
             <button
               className="bg-green-600"
+              aria-label={`Add ${u.name || u.uid} to ${SHIFT_LABELS[shift]}`}
               onClick={() => onSelect(u.uid)}
             >
               Add

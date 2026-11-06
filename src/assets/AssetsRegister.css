@@ -1,0 +1,46 @@
+/* Register styles stay scoped so administrative controls do not affect other pages. */
+.assets-register-workspace .register-management { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px; align-items:start; }
+.assets-register-workspace .register-panel { min-width:0; padding:22px; margin-bottom:20px; border:1px solid var(--app-border); border-radius:12px; background:var(--app-surface); color:var(--app-text); text-align:left; box-shadow:none; }
+.assets-register-workspace .register-management > .register-panel { margin:0; }
+.assets-register-workspace .register-rename-panel { grid-column:1 / -1; }
+.assets-register-workspace .register-master-rename { padding-bottom:24px; margin-bottom:24px; border-bottom:1px solid var(--app-border); }
+.assets-register-workspace .register-description { margin:0 0 18px; font-size:12px; line-height:1.7; }
+.assets-register-workspace .register-management { margin-bottom:20px; }
+.assets-register-workspace :is(button,.daily-activity-btn) { display:inline-flex; justify-content:center; align-items:center; gap:6px; width:auto; height:auto; margin:0; padding:10px 14px; border:1px solid var(--app-border); border-radius:8px; background:var(--app-surface); color:var(--app-text); font:inherit; font-size:12px; font-weight:600; line-height:1.4; text-decoration:none; box-shadow:none; cursor:pointer; }
+.assets-register-workspace :is(.btn-primary,.btn-success,.daily-activity-btn) { background:#0f766e; color:#fff; border-color:#0f766e; }
+.assets-register-workspace .btn-danger { color:#be123c; background:var(--app-surface); border-color:color-mix(in srgb,#e11d48 35%,var(--app-border)); }
+.assets-register-workspace .btn-warning { color:#92400e; background:var(--app-surface); border-color:color-mix(in srgb,#d97706 40%,var(--app-border)); }
+:root[data-theme=dark] .assets-register-workspace .btn-danger { color:#fda4af; }
+:root[data-theme=dark] .assets-register-workspace .btn-warning { color:#fcd34d; }
+.assets-register-workspace .register-text-button { padding:4px 8px; margin-left:6px; color:var(--theme-link); background:transparent; border:0; text-decoration:underline; }
+.assets-register-workspace .register-column-list { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px; max-height:280px; overflow:auto; padding:2px; }
+.assets-register-workspace .register-column-card { max-width:100%; padding:10px; border:1px solid var(--app-border); border-radius:8px; background:var(--app-surface-muted); font-size:12px; }
+.assets-register-workspace .register-column-card > div { flex-wrap:wrap; align-items:center; }
+.assets-register-workspace .register-column-card button { padding:5px 7px; min-width:30px; min-height:30px; font-size:11px; }
+.assets-register-workspace .register-column-card strong { font-weight:500; overflow-wrap:anywhere; }
+.assets-register-workspace .register-import-panel input[type=file] { display:block; width:100%; margin:8px 0 12px; }
+.assets-register-workspace input[type=file]::file-selector-button { padding:8px 10px; margin-right:10px; border:1px solid var(--app-border); border-radius:6px; background:var(--app-surface-muted); color:var(--app-text); cursor:pointer; }
+.assets-register-workspace .register-filter-row { display:grid; grid-template-columns:minmax(130px,1fr) minmax(120px,.8fr) minmax(200px,1.6fr) auto; gap:10px; align-items:start; margin-bottom:12px; }
+.assets-register-workspace .register-filter-row > div { min-width:0; }
+.assets-register-workspace .register-results { margin:20px 0; padding:16px; border:1px solid var(--app-border); background:var(--app-surface); border-radius:10px; font-size:12px; }
+.assets-register-workspace .register-results-row { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.assets-register-workspace .register-table-panel > h2 { margin-bottom:18px; }
+.assets-register-workspace .register-row-actions { white-space:nowrap; }
+.assets-register-workspace .register-row-actions button + button { margin-left:8px; }
+.assets-register-workspace .register-row-actions button { padding:7px 10px; }
+.assets-register-workspace .modal-overlay { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; background:rgb(0 0 0 / 60%); }
+.assets-register-workspace .modal-box { display:flex; flex-direction:column; width:min(960px,100%); max-width:100%; max-height:calc(100dvh - 40px); padding:0; margin:0; overflow:hidden; background:var(--app-surface); color:var(--app-text); border:1px solid var(--app-border); border-radius:12px; box-shadow:0 20px 60px rgb(0 0 0 / 25%); }
+.assets-register-workspace :is(.modal-header,.modal-footer) { display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:12px; padding:18px 22px; background:var(--app-surface-muted); }
+.assets-register-workspace .modal-header { border-bottom:1px solid var(--app-border); }
+.assets-register-workspace .modal-header h3 { margin:0; padding:0; font-size:18px; }
+.assets-register-workspace .modal-footer { justify-content:flex-end; border-top:1px solid var(--app-border); }
+.assets-register-workspace .modal-body { min-height:0; padding:22px; overflow-y:auto; }
+.assets-register-workspace .modal-body label { display:block; margin-bottom:8px; }
+.assets-register-workspace .modal-body .form-grid { grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr)) !important; gap:18px !important; }
+.assets-register-workspace .modal-close { padding:6px 10px; }
+@media(max-width:1000px) { .assets-register-workspace .register-management { grid-template-columns:minmax(0,1fr); } .assets-register-workspace .register-filter-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
+@media(max-width:540px) { .assets-register-workspace .register-panel { padding:16px; } .assets-register-workspace .register-filter-row { grid-template-columns:minmax(0,1fr); } .assets-register-workspace .register-filter-row > button { justify-self:start; } .assets-register-workspace .modal-overlay { padding:10px; } .assets-register-workspace .modal-box { max-height:calc(100dvh - 20px); } .assets-register-workspace :is(.modal-header,.modal-footer,.modal-body) { padding:16px; } }
+
+.assets-register-workspace .register-busy-overlay { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:20px; background:rgb(0 0 0 / 55%); }
+.assets-register-workspace .register-busy-card { display:flex; flex-direction:column; align-items:center; gap:14px; padding:28px 32px; max-width:100%; border:1px solid var(--app-border); border-radius:12px; background:var(--app-surface); color:var(--app-text); font-size:14px; text-align:center; }
+.assets-register-workspace .register-busy-card > span:last-child { color:var(--app-text-muted); font-size:12px; }

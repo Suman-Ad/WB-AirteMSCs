@@ -90,11 +90,19 @@ exports.detectServerPowerSource = onDocumentWritten({
         const dgId = detector.dg === 'DG-2' ? config.dg2MeterId : config.dg1MeterId;
         // Deterministic identity is also useful when reviewing retries operationally.
         const runId = `${detector.dg}-${detector.mainTime}-${detector.dgTime}`;
-        const opening = sample(dgId);
+        const liveOpening = sample(dgId);
+        const previousClosing = previous.dgClosingReadings?.[dgId];
+        // Preserve register continuity across runs, including startup/cooldown energy.
+        // A decreased live counter indicates a reset or replacement: start afresh.
+        const opening = previousClosing?.meterId === dgId &&
+          typeof previousClosing.kwh === 'number' && Number.isFinite(previousClosing.kwh) && previousClosing.kwh >= 0 &&
+          previousClosing.observedAtMs <= now &&
+          (liveOpening.kwh === null || liveOpening.kwh >= previousClosing.kwh)
+          ? {...previousClosing, quality: 'Previous DG closing reading'} : liveOpening;
         tx.set(db.doc(`${base}/serverChangeovers/${runId}`), {
           siteId, status: 'Running', dgNumber: detector.dg, meterId: dgId,
           mainMeterId: config.mainMeterId, startAtMs: now, endAtMs: null,
-          opening, latest: opening, closing: null, ebFailure: sample(config.mainMeterId),
+          opening, latest: liveOpening, closing: null, ebFailure: sample(config.mainMeterId),
           trigger: 'Server automatic', createdAt: FieldValue.serverTimestamp(),
         });
         Object.assign(patch, {powerSource: 'DG', selectedDG: detector.dg, activeRunId: runId, startAtMs: now});
@@ -102,6 +110,7 @@ exports.detectServerPowerSource = onDocumentWritten({
         if (run) {
           let closing = sample(run.meterId);
           if (closing.kwh === null && run.latest?.kwh != null) closing = {...run.latest, quality: 'Last valid reading before restoration'};
+          if (closing.kwh !== null) patch.dgClosingReadings = {...previous.dgClosingReadings, [run.meterId]: closing};
           const generationKwh = run.opening?.kwh != null && closing.kwh != null && closing.kwh >= run.opening.kwh ? closing.kwh - run.opening.kwh : null;
           tx.set(activeRef, {status: 'Completed', endAtMs: now, closing, generationKwh,
             loadTransferAtMs: detector.transferAtMs ?? null, ebRestoration: sample(config.mainMeterId),
